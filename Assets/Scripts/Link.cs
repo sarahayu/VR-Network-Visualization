@@ -23,8 +23,8 @@ namespace VidiGraph
         {
             //TODO There has to some better way to do this, and also to provide a constant number of control points
 
-            var clusterS = network.communities[network[sourceIdx].communityIdx];
-            var clusterT = network.communities[network[targetIdx].communityIdx];
+            var clusterS = network.communities[network.nodes[sourceIdx].communityIdx];
+            var clusterT = network.communities[network.nodes[targetIdx].communityIdx];
             var sCenter = clusterS.massCenter;
             var tCenter = clusterT.massCenter;
             if (network.is2D)
@@ -36,19 +36,19 @@ namespace VidiGraph
             if (clusterS.focus && !clusterT.focus)
             {
                 return new[] {
-                    network[sourceIdx].Position3D,
+                    network.nodes[sourceIdx].Position3D,
                     (sCenter + tCenter) / 2,
                     tCenter,
-                    network[targetIdx].Position3D
+                    network.nodes[targetIdx].Position3D
                 };
             }
             if (clusterT.focus && !clusterS.focus)
             {
                 return new[] {
-                    network[sourceIdx].Position3D,
+                    network.nodes[sourceIdx].Position3D,
                     sCenter,
                     (sCenter + tCenter) / 2,
-                    network[targetIdx].Position3D
+                    network.nodes[targetIdx].Position3D
                 };
             }
 
@@ -68,6 +68,20 @@ namespace VidiGraph
             //return retval;
 
             return result;
+        }
+
+        public Link(LinkFileData linkData)
+        {
+            spline = linkData.spline;
+            linkIdx = linkData.linkIdx;
+            sourceIdx = linkData.sourceIdx;
+            targetIdx = linkData.targetIdx;
+        }
+
+        public Link(int source, int target)
+        {
+            sourceIdx = source;
+            targetIdx = target;
         }
     }
 }

@@ -81,7 +81,7 @@ namespace VidiGraph
         }
         public static int[,] ShortestPathMatrix(NetworkDataStructure network)
         {
-            var nodesNumber = network.nodes.Length;
+            var nodesNumber = network.nodes.Count;
             var matrix = new int[nodesNumber, nodesNumber];
 
             foreach (var link in network.links)

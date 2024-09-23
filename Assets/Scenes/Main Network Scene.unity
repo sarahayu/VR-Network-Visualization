@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.18028334, g: 0.22571328, b: 0.3069217, a: 1}
+  m_IndirectSpecularColor: {r: 0.18028378, g: 0.22571412, b: 0.30692285, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -177,9 +177,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 101019194}
-  - component: {fileID: 101019196}
   - component: {fileID: 101019197}
   - component: {fileID: 101019195}
+  - component: {fileID: 101019198}
+  - component: {fileID: 101019196}
   m_Layer: 0
   m_Name: Network
   m_TagString: Untagged
@@ -214,16 +215,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   coded: 0
-  rootIdx: 0
+  rootIdx: 137
   is2D: 0
-  numRealNode: 0
   numVirtualNode: 0
-  realNodeIdx: 
-  virtualNodeIdx: 
-  maxDistance: 0
-  maxLimitation: 0.9
-  importanceNumberBound: 10
-  depthLevel: 2
+  realNodeIdx: 000000000100000002000000030000000400000005000000060000000700000008000000090000000a0000000b0000000c0000000d0000000e0000000f000000100000001100000012000000130000001400000015000000160000001700000018000000190000001a0000001b0000001c0000001d0000001e0000001f000000200000002100000022000000230000002400000025000000260000002700000028000000290000002a0000002b0000002c0000002d0000002e0000002f000000300000003100000032000000330000003400000035000000360000003700000038000000390000003a0000003b0000003c0000003d0000003e0000003f000000400000004100000042000000430000004400000045000000460000004700000048000000490000004a0000004b0000004c0000004d0000004e0000004f000000500000005100000052000000530000005400000055000000560000005700000058000000590000005a0000005b0000005c0000005d0000005e0000005f000000600000006100000062000000630000006400000065000000660000006700000068000000690000006a0000006b0000006c0000006d0000006e0000006f000000700000007100000072000000
+  virtualNodeIdx: 730000007400000075000000760000007700000078000000790000007a0000007b0000007c0000007d0000007e00000089000000
 --- !u!114 &101019196
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -250,6 +246,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   datasetName: football
   is2D: 0
+--- !u!114 &101019198
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 101019193}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c784205574c8aae4da70bd9880ff5e69, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nodePrefab: {fileID: 8073032549276498647, guid: d7c24cc782664d146afcfbbf76f5af2d, type: 3}
+  spaceScale: 1000
+  drawVirtualNodes: 1
 --- !u!1 &381106815
 GameObject:
   m_ObjectHideFlags: 0
@@ -477,6 +488,10 @@ PrefabInstance:
     - target: {fileID: 6598815579406187037, guid: 18ddb545287c546e19cc77dc9fbb2189, type: 3}
       propertyPath: m_Name
       value: XR Device Simulator
+      objectReference: {fileID: 0}
+    - target: {fileID: 6598815579406187037, guid: 18ddb545287c546e19cc77dc9fbb2189, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 18ddb545287c546e19cc77dc9fbb2189, type: 3}
@@ -1079,7 +1094,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1401907202}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.1176, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 381106816}
@@ -1229,7 +1244,7 @@ MonoBehaviour:
   m_OriginBaseGameObject: {fileID: 2060076630}
   m_CameraFloorOffsetObject: {fileID: 1401907202}
   m_RequestedTrackingOriginMode: 0
-  m_CameraYOffset: 1.1176
+  m_CameraYOffset: 0
 --- !u!4 &2060076633
 Transform:
   m_ObjectHideFlags: 0

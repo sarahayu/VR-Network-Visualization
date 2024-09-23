@@ -1,6 +1,6 @@
 /*
 *
-* NetworkFileData stores our JSON file data
+* NetworkFileData stores ONLY our JSON file data (no in game variables like in game position, animation time, etc)
 *
 */
 

@@ -14,18 +14,20 @@ namespace VidiGraph
     {
         void Start()
         {
-
+            Initialize();
         }
 
         public void Initialize()
         {
             var fileLoader = GetComponent<NetworkFilesLoader>();
             var dataStruct = GetComponent<NetworkDataStructure>();
+            var renderer = GetComponent<NetworkRenderer>();
 
             bool is2D = fileLoader.is2D;
 
             fileLoader.LoadFiles();
             dataStruct.InitNetwork(is2D);
+            renderer.DrawNetwork();
         }
     }
 }

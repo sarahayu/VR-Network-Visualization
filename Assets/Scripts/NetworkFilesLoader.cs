@@ -14,12 +14,12 @@ namespace VidiGraph
     public class NetworkFilesLoader : MonoBehaviour
     {
 
-        static string layoutSuffix = "-layout.json";
-        static string spider2DSuffix = "2D-spiders.dat";
-        static string spider3DSuffix = "-spiders.dat";
-        static string flatSuffix = "-layout.json-flat.json";
-        static string sphericalSuffix = "-layout.json-spherical.json";
-        static string hairballSuffix = "-layout.json-hairball.json";
+        static readonly string layoutSuffix = "-layout.json";
+        static readonly string spider2DSuffix = "2D-spiders.dat";
+        static readonly string spider3DSuffix = "-spiders.dat";
+        static readonly string flatSuffix = "-layout.json-flat.json";
+        static readonly string sphericalSuffix = "-layout.json-spherical.json";
+        static readonly string hairballSuffix = "-layout.json-hairball.json";
 
         public string datasetName;
         public bool is2D = false;

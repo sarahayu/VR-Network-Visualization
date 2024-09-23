@@ -20,7 +20,6 @@ namespace VidiGraph
         // precomputed 2D layout position
         public float[] pos2D;
         public float[] pos3D;
-        public List<int> onRunChildIdx;
         public IList<int> ancIdxOrderList = new List<int>();
         public bool isSpider = false;
 
@@ -95,6 +94,21 @@ namespace VidiGraph
         {
             get => _phi;
             set => _phi = value;
+        }
+
+        public Node(NodeFileData nodeData)
+        {
+            communityIdx = nodeData.communityIdx;
+            label = nodeData.label;
+            idx = nodeData.idx;
+            color = nodeData.color;
+            virtualNode = nodeData.virtualNode;
+            degree = nodeData.degree;
+            height = nodeData.height;
+            ancIdx = nodeData.ancIdx;
+            childIdx = nodeData.childIdx;
+            pos2D = nodeData.pos2D;
+            pos3D = nodeData.pos3D;
         }
 
     }
