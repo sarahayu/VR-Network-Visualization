@@ -21,12 +21,10 @@ namespace VidiGraph
         {
             var fileLoader = GetComponent<NetworkFilesLoader>();
             var dataStruct = GetComponent<NetworkDataStructure>();
-            var renderer = GetComponent<NetworkRenderer>();
-
-            bool is2D = fileLoader.is2D;
+            var renderer = GetComponentInChildren<NetworkRenderer>();
 
             fileLoader.LoadFiles();
-            dataStruct.InitNetwork(is2D);
+            dataStruct.InitNetwork();
             renderer.DrawNetwork();
         }
     }

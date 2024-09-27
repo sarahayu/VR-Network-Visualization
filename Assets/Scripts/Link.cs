@@ -13,6 +13,8 @@ namespace VidiGraph
         public int targetIdx;
         public bool localLayout = false;
 
+        public Node sourceNode;
+        public Node targetNode;
         // the shortest path between two nodes in the hierarchical tree
         public List<Node> pathInTree = new List<Node>();
 
@@ -78,10 +80,12 @@ namespace VidiGraph
             targetIdx = linkData.targetIdx;
         }
 
-        public Link(int source, int target)
+        public Link(Node source, Node target)
         {
-            sourceIdx = source;
-            targetIdx = target;
+            sourceNode = source;
+            targetNode = target;
+            sourceIdx = source.idx;
+            targetIdx = target.idx;
         }
     }
 }

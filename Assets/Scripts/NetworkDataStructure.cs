@@ -51,7 +51,7 @@ namespace VidiGraph
             communities.Clear();
         }
 
-        public void InitNetwork(bool in2D)
+        public void InitNetwork()
         {
             Reset();
 
@@ -59,7 +59,7 @@ namespace VidiGraph
             var fileNodes = fileLoader.GraphData.nodes;
             var fileLinks = fileLoader.GraphData.links;
 
-            is2D = in2D;
+            is2D = fileLoader.is2D;
 
             coded = fileLoader.GraphData.coded;
             rootIdx = fileLoader.GraphData.rootIdx;
@@ -105,6 +105,9 @@ namespace VidiGraph
             for (var i = 0; i < fileLinks.Length; i++)
             {
                 var link = new Link(fileLinks[i]);
+
+                link.sourceNode = nodes[link.sourceIdx];
+                link.targetNode = nodes[link.targetIdx];
 
                 // Build Node-Link Matrix
                 nodeLinkMatrix[link.sourceIdx].Add(link);
@@ -269,7 +272,7 @@ namespace VidiGraph
 
             foreach (var childIdx in nodes[nodeIdx].childIdx)
             {
-                treeLinks.Add(new Link(nodeIdx, childIdx));
+                treeLinks.Add(new Link(nodes[nodeIdx], nodes[childIdx]));
 
                 BuildTreeLinks(childIdx);
             }
