@@ -11,6 +11,7 @@ namespace VidiGraph
         public string label;
         public int idx;
         public string color = null;
+        public Color colorParsed = Color.black;
         public bool virtualNode;
         public double degree = 0;
         public int height;
@@ -102,6 +103,10 @@ namespace VidiGraph
             label = nodeData.label;
             idx = nodeData.idx;
             color = nodeData.color;
+
+            if (color != null)
+                colorParsed = ColorUtils.StringToColor(color.ToUpper());
+
             virtualNode = nodeData.virtualNode;
             degree = nodeData.degree;
             height = nodeData.height;

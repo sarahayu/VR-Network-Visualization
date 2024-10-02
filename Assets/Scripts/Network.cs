@@ -12,20 +12,38 @@ namespace VidiGraph
 {
     public class Network : MonoBehaviour
     {
+        NetworkFilesLoader fileLoader;
+        NetworkDataStructure dataStruct;
+        NetworkRenderer networkRenderer;
+
+        void Awake()
+        {
+        }
+
         void Start()
         {
             Initialize();
         }
 
+        void Update()
+        {
+            Draw();
+        }
+
         public void Initialize()
         {
-            var fileLoader = GetComponent<NetworkFilesLoader>();
-            var dataStruct = GetComponent<NetworkDataStructure>();
-            var renderer = GetComponentInChildren<NetworkRenderer>();
+            fileLoader = GetComponent<NetworkFilesLoader>();
+            dataStruct = GetComponent<NetworkDataStructure>();
+            networkRenderer = GetComponentInChildren<NetworkRenderer>();
 
             fileLoader.LoadFiles();
             dataStruct.InitNetwork();
-            renderer.DrawNetwork();
+            networkRenderer.Initialize();
+        }
+
+        public void Draw()
+        {
+            networkRenderer.DrawNetwork();
         }
     }
 }

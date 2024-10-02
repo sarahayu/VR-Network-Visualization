@@ -21,7 +21,7 @@ namespace VidiGraph
             }
             else
             {
-                colorActual = ColorUtils.StringToColor(node.color.ToUpper());
+                colorActual = node.colorParsed;
             }
 
             MaterialPropertyBlock props = new MaterialPropertyBlock();
@@ -44,8 +44,9 @@ namespace VidiGraph
             return linkObj;
         }
 
-        public static GameObject MakeBSplineLink(GameObject linkObj, Link link)
+        public static GameObject MakeBSplineLink(GameObject prefab, Transform transform, Link link)
         {
+            GameObject linkObj = UnityEngine.Object.Instantiate(prefab, transform);
             // currently do nothing
             return linkObj;
         }

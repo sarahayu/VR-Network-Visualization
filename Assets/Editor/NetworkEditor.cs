@@ -24,6 +24,7 @@ namespace VidiGraph
             if (GUILayout.Button("Reload"))
             {
                 network.Initialize();
+                network.Draw();
             }
         }
     }

@@ -29,25 +29,9 @@ namespace VidiGraph
         {
             if (communityNodes.Count != 0)
             {
-                massCenter = Vector3.zero;
-                foreach (var node in communityNodes)
-                {
-                    mass += node.degree + 0.01;
-                    massCenter += node.Position3D;
-                }
+                CommunityUtils.ComputeMassProperties(communityNodes, out mass, out massCenter);
 
-                massCenter /= communityNodes.Count;
-
-                ComputeSize();
-            }
-        }
-
-        void ComputeSize()
-        {
-            foreach (var node in communityNodes)
-            {
-                var dist = Vector3.Distance(massCenter, node.Position3D);
-                size = Math.Max(dist, size);
+                size = CommunityUtils.ComputeSize(communityNodes, massCenter);
             }
         }
     }

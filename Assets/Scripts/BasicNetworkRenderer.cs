@@ -9,9 +9,6 @@ namespace VidiGraph
         public GameObject nodePrefab;
         public GameObject straightLinkPrefab;
 
-        [Range(0.001f, 1000f)]
-        public float spaceScale = 10f;
-
         [Range(0.0f, 0.1f)]
         public float linkWidth = 0.005f;
         public bool drawVirtualNodes = true;
@@ -34,18 +31,23 @@ namespace VidiGraph
             gameObjects.Clear();
         }
 
-        public override void DrawNetwork()
+        public override void Initialize()
         {
             Reset();
 
             var networkData = GetComponentInParent<NetworkDataStructure>();
 
-            DrawNodes(networkData);
-            DrawLinks(networkData);
+            CreateNodes(networkData);
+            CreateLinks(networkData);
 
         }
 
-        void DrawNodes(NetworkDataStructure networkData)
+        public override void DrawNetwork()
+        {
+            // nothing to call
+        }
+
+        void CreateNodes(NetworkDataStructure networkData)
         {
             foreach (var node in networkData.nodes)
             {
@@ -58,7 +60,7 @@ namespace VidiGraph
             }
         }
 
-        void DrawLinks(NetworkDataStructure networkData)
+        void CreateLinks(NetworkDataStructure networkData)
         {
             // This will draw a 'debug' tree structure to emphasize the underlying hierarchy...
             if (drawTreeStructure)
