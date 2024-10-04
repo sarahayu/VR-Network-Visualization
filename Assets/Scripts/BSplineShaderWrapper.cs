@@ -117,7 +117,6 @@ namespace VidiGraph
 
 
             // Bind the buffers to the LineRenderer Material
-            material.SetBuffer("InSplineData", InSplineData);
             material.SetBuffer("OutSamplePointData", OutSampleControlPointData);
         }
 

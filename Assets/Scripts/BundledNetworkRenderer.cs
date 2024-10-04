@@ -65,7 +65,7 @@ namespace VidiGraph
             CreateNodes(networkData);
             CreateLinks(networkData);
 
-            FinishDraw(networkData);
+            CreateGPULinks(networkData);
         }
 
         public override void DrawNetwork()
@@ -115,7 +115,7 @@ namespace VidiGraph
             }
         }
 
-        void FinishDraw(NetworkDataStructure networkData)
+        void CreateGPULinks(NetworkDataStructure networkData)
         {
             ComputeControlPoints(networkData);
             shaderWrapper.PrepareBuffers(networkData);

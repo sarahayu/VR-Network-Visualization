@@ -50,4 +50,8 @@ StructuredBuffer<SplineData> InSplineData;
 StructuredBuffer<SplineSegmentData> InSplineSegmentData;
 StructuredBuffer<SplineControlPointData> InSplineControlPointData;
 
-RWStructuredBuffer<SplineSamplePointData> OutSamplePointData;
+#ifdef SHADER_CODE
+	StructuredBuffer<SplineSamplePointData> OutSamplePointData;
+#else
+	RWStructuredBuffer<SplineSamplePointData> OutSamplePointData;
+#endif

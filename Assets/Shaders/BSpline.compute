@@ -1,8 +1,7 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
 
-#include "./BSplineData.cginc"
-
+#include "BSplineData.cginc"
 
 [numthreads(32,1,1)]
 void CSMain(uint3 id : SV_DispatchThreadID, uint3 GroupThreadId : SV_GroupThreadID, uint GroupId : SV_GroupID)

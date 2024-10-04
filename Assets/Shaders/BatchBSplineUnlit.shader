@@ -8,10 +8,6 @@ Shader "Custom/Batch BSpline Unlit"
     {
         Tags { "RenderType"="Transparent" }
         LOD 200
-        //Blend SrcAlpha OneMinusSrcAlpha
-        //Blend SrcAlpha One
-        // BlendOp Add
-		// Blend SrcAlpha One
         BlendOp Add
 		Blend SrcAlpha OneMinusSrcAlpha
 	    ZWrite Off
@@ -23,7 +19,7 @@ Shader "Custom/Batch BSpline Unlit"
             #pragma vertex vert
             #pragma fragment frag
            
-
+            #define SHADER_CODE
             #include "UnityCG.cginc"
 			#include "BSplineData.cginc"
 
