@@ -15,6 +15,7 @@ namespace VidiGraph
         NetworkFilesLoader fileLoader;
         NetworkDataStructure dataStruct;
         NetworkRenderer networkRenderer;
+        NetworkLayout networkLayout;
 
         void Awake()
         {
@@ -34,16 +35,21 @@ namespace VidiGraph
         {
             fileLoader = GetComponent<NetworkFilesLoader>();
             dataStruct = GetComponent<NetworkDataStructure>();
+            networkLayout = GetComponentInChildren<NetworkLayout>();
             networkRenderer = GetComponentInChildren<NetworkRenderer>();
 
             fileLoader.LoadFiles();
             dataStruct.InitNetwork();
+            networkLayout.Initialize();
             networkRenderer.Initialize();
+
+            networkLayout.ApplyLayout();
+            networkRenderer.Update();
         }
 
         public void Draw()
         {
-            networkRenderer.DrawNetwork();
+            networkRenderer.Draw();
         }
     }
 }

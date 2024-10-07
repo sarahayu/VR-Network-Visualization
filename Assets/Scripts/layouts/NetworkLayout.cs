@@ -4,10 +4,10 @@ using UnityEngine;
 
 namespace VidiGraph
 {
-    abstract public class NetworkRenderer : MonoBehaviour
+    abstract public class NetworkLayout : MonoBehaviour
     {
         public abstract void Initialize();
-        public abstract void DrawNetwork();
+        public abstract void ApplyLayout();
     }
 
 }

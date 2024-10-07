@@ -8,24 +8,17 @@ namespace VidiGraph
 
     public static class NodeLinkRenderer
     {
-        public static GameObject MakeNode(GameObject prefab, Transform transform, Node node, Color? color)
+        public static GameObject MakeNode(GameObject prefab, Transform transform, Node node)
+        {
+            return MakeNode(prefab, transform, node, node.colorParsed);
+        }
+        public static GameObject MakeNode(GameObject prefab, Transform transform, Node node, Color color)
         {
             GameObject nodeObj = UnityEngine.Object.Instantiate(prefab, transform);
-            nodeObj.transform.localPosition = MathUtils.ArrToVec(node.pos3D);
-
-            Color colorActual;
-
-            if (color != null)
-            {
-                colorActual = (Color)color;
-            }
-            else
-            {
-                colorActual = node.colorParsed;
-            }
+            nodeObj.transform.localPosition = node.Position3D;
 
             MaterialPropertyBlock props = new MaterialPropertyBlock();
-            props.SetColor("_Color", colorActual);
+            props.SetColor("_Color", color);
             nodeObj.GetComponent<Renderer>().SetPropertyBlock(props);
 
             return nodeObj;
@@ -34,8 +27,8 @@ namespace VidiGraph
         public static GameObject MakeStraightLink(GameObject prefab, Transform transform, Link link, float linkWidth)
         {
             GameObject linkObj = UnityEngine.Object.Instantiate(prefab, transform);
-            var start = MathUtils.ArrToVec(link.sourceNode.pos3D);
-            var end = MathUtils.ArrToVec(link.targetNode.pos3D);
+            var start = link.sourceNode.Position3D;
+            var end = link.targetNode.Position3D;
 
             linkObj.transform.localPosition = (start + end) / 2.0f;
             linkObj.transform.localRotation = Quaternion.FromToRotation(Vector3.up, end - start);

@@ -8,7 +8,7 @@ namespace VidiGraph
     {
         public static Vector3 ArrToVec(float[] arr)
         {
-            return new Vector3(arr[0], arr[2], arr[1]);
+            return new Vector3(arr[0], arr[1], arr[2]);
         }
     }
 }

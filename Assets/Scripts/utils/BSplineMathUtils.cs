@@ -27,19 +27,19 @@ namespace VidiGraph
             if (clusterS.focus && !clusterT.focus)
             {
                 return new[] {
-                    MathUtils.ArrToVec(sourceNode.pos3D),
+                    sourceNode.Position3D,
                     (sCenter + tCenter) / 2,
                     tCenter,
-                    MathUtils.ArrToVec(targetNode.pos3D)
+                    targetNode.Position3D
                 };
             }
             if (clusterT.focus && !clusterS.focus)
             {
                 return new[] {
-                    MathUtils.ArrToVec(sourceNode.pos3D),
+                    sourceNode.Position3D,
                     sCenter,
                     (sCenter + tCenter) / 2,
-                    MathUtils.ArrToVec(targetNode.pos3D)
+                    targetNode.Position3D
                 };
             }
 
@@ -47,7 +47,7 @@ namespace VidiGraph
 
             for (int i = 0; i < link.pathInTree.Count; i++)
             {
-                result[i] = MathUtils.ArrToVec(link.pathInTree[i].pos3D);
+                result[i] = link.pathInTree[i].Position3D;
             }
 
             return result;

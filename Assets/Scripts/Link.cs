@@ -17,8 +17,6 @@ namespace VidiGraph
         public Node targetNode;
         // the shortest path between two nodes in the hierarchical tree
         public List<Node> pathInTree = new List<Node>();
-
-        public IList<Vector3> straightenPoints = new List<Vector3>();
         public LinkStateStack state = new LinkStateStack();
 
         public Link(LinkFileData linkData)

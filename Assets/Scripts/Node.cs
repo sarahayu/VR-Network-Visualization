@@ -18,9 +18,7 @@ namespace VidiGraph
         public int ancIdx;
         public int[] childIdx;
 
-        // precomputed 2D layout position
-        public float[] pos2D;
-        public float[] pos3D;
+        public Vector3 precompPos3D;
         public IList<int> ancIdxOrderList = new List<int>();
         public bool isSpider = false;
 
@@ -29,23 +27,13 @@ namespace VidiGraph
         // For position bias caused by interaction
         public Vector3 positionChange = Vector3.zero;
 
-        private Vector3 _lastPosition3D;
-        public Vector3 LastPosition3D
-        {
-            get => _lastPosition3D;
-            set => _lastPosition3D = value;
-        }
+        public Vector3 LastPosition3D;
 
         // Target position after transformation
         public Vector3 targetPosition3D;
         public Vector4 targetPosition4D;
         // unity movement when doing transformation
-        private Vector3 _transformStep;
-        public Vector4 TransformStep
-        {
-            get => _transformStep;
-            set => _transformStep = value;
-        }
+        public Vector4 TransformStep;
 
         public Vector3 transformStep3D;
 
@@ -59,43 +47,26 @@ namespace VidiGraph
             {
                 _position4D = value;
                 // transform from homogeneous coordinates
-                _position3D.x = _position4D.x / _position4D.w;
-                _position3D.y = _position4D.y / _position4D.w;
-                _position3D.z = _position4D.z / _position4D.w;
+                Position3D.x = _position4D.x / _position4D.w;
+                Position3D.y = _position4D.y / _position4D.w;
+                Position3D.z = _position4D.z / _position4D.w;
 
             }
         }
 
-        public Vector3 _position3D;
-
         public Vector3 spiderPos = Vector3.zero;
 
-        public Vector3 Position3D
-        {
-            get => _position3D;
-            set => _position3D = value;
-        }
+        public Vector3 Position3D;
 
         // the sphere radius for the nodex
         public double radius;
 
         public double euclideanRadius;
         // the position in parent's hemisphere
-        private double _theta;
 
-        public double Theta
-        {
-            get => _theta;
-            set => _theta = value;
-        }
+        public double Theta;
 
-        private double _phi;
-
-        public double Phi
-        {
-            get => _phi;
-            set => _phi = value;
-        }
+        public double Phi;
 
         public Node(NodeFileData nodeData)
         {
@@ -112,8 +83,7 @@ namespace VidiGraph
             height = nodeData.height;
             ancIdx = nodeData.ancIdx;
             childIdx = nodeData.childIdx;
-            pos2D = nodeData.pos2D;
-            pos3D = nodeData.pos3D;
+            precompPos3D = nodeData._position3D;
         }
 
     }

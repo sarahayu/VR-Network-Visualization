@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace VidiGraph
 {
-
     public class BundledNetworkRenderer : NetworkRenderer
     {
         public GameObject nodePrefab;
@@ -19,14 +18,11 @@ namespace VidiGraph
         public Color linkHighlightColor;
         public Color linkFocusColor;
         [Range(0.0f, 0.1f)]
-        public
-         float linkMinimumAlpha = 0.01f;
+        public float linkMinimumAlpha = 0.01f;
         [Range(0.0f, 1.0f)]
-        public
-         float linkNormalAlphaFactor = 1f;
+        public float linkNormalAlphaFactor = 1f;
         [Range(0.0f, 1.0f)]
-        public
-         float linkContextAlphaFactor = 0.5f;
+        public float linkContextAlphaFactor = 0.5f;
         [Range(0.0f, 1.0f)]
         public float linkContext2FocusAlphaFactor = 0.8f;
 
@@ -36,9 +32,11 @@ namespace VidiGraph
         public ComputeShader computeShader;
 
         List<GameObject> gameObjects = new List<GameObject>();
+        Dictionary<int, List<Vector3>> ControlPointsMap = new Dictionary<int, List<Vector3>>();
         Material batchSplineMaterial;
 
         BSplineShaderWrapper shaderWrapper = new BSplineShaderWrapper();
+        NetworkDataStructure NetworkData;
 
         void Reset()
         {
@@ -60,15 +58,27 @@ namespace VidiGraph
 
             InitializeShaders();
 
-            var networkData = GetComponentInParent<NetworkDataStructure>();
+            NetworkData = GetComponentInParent<NetworkDataStructure>();
 
-            CreateNodes(networkData);
-            CreateLinks(networkData);
+            CreateNodes();
+            CreateLinks();
 
-            CreateGPULinks(networkData);
+            CreateGPULinks();
         }
 
-        public override void DrawNetwork()
+        public override void Update()
+        {
+            // TODO create proper updater
+            Reset();
+
+            CreateNodes();
+            CreateLinks();
+
+            ComputeControlPoints();
+            shaderWrapper.UpdateBuffers(NetworkData, ControlPointsMap);
+        }
+
+        public override void Draw()
         {
             shaderWrapper.Draw();
         }
@@ -89,25 +99,26 @@ namespace VidiGraph
             shaderWrapper.Initialize(computeShader, batchSplineMaterial);
         }
 
-        void CreateNodes(NetworkDataStructure networkData)
+        void CreateNodes()
         {
-            foreach (var node in networkData.nodes)
+            foreach (var node in NetworkData.nodes)
             {
                 if (drawVirtualNodes || !node.virtualNode)
                 {
-                    Color? col = node.virtualNode ? (Color?)Color.black : null;
-                    var nodeObj = NodeLinkRenderer.MakeNode(nodePrefab, networkTransform, node, col);
+                    var nodeObj = node.virtualNode
+                        ? NodeLinkRenderer.MakeNode(nodePrefab, networkTransform, node, Color.black)
+                        : NodeLinkRenderer.MakeNode(nodePrefab, networkTransform, node);
 
                     gameObjects.Add(nodeObj);
                 }
             }
         }
 
-        void CreateLinks(NetworkDataStructure networkData)
+        void CreateLinks()
         {
             if (drawTreeStructure)
             {
-                foreach (var link in networkData.treeLinks)
+                foreach (var link in NetworkData.treeLinks)
                 {
                     var linkObj = NodeLinkRenderer.MakeStraightLink(straightLinkPrefab, networkTransform, link, linkWidth);
                     gameObjects.Add(linkObj);
@@ -115,41 +126,40 @@ namespace VidiGraph
             }
         }
 
-        void CreateGPULinks(NetworkDataStructure networkData)
+        void CreateGPULinks()
         {
-            ComputeControlPoints(networkData);
-            shaderWrapper.PrepareBuffers(networkData);
-            // shaderWrapper.UpdateBuffers(networkData);
+            ComputeControlPoints();
+            shaderWrapper.PrepareBuffers(NetworkData, ControlPointsMap);
         }
 
-        void ComputeControlPoints(NetworkDataStructure networkData)
+        void ComputeControlPoints()
         {
-            foreach (var link in networkData.links)
+            foreach (var link in NetworkData.links)
             {
                 float beta = edgeBundlingStrength;
 
-                Vector3[] controlPoints = BSplineMathUtils.ControlPoints(link, networkData);
-                int length = controlPoints.Length;
+                Vector3[] cp = BSplineMathUtils.ControlPoints(link, NetworkData);
+                int length = cp.Length;
 
-                Vector3 source = controlPoints[0];
-                Vector3 target = controlPoints[length - 1];
+                Vector3 source = cp[0];
+                Vector3 target = cp[length - 1];
                 Vector3 dVector3 = target - source;
 
-                Vector3[] straightenPoints = new Vector3[length + 2];
+                Vector3[] cpDistributed = new Vector3[length + 2];
 
-                straightenPoints[0] = source;
+                cpDistributed[0] = source;
 
                 for (int i = 0; i < length; i++)
                 {
-                    Vector3 point = controlPoints[i];
+                    Vector3 point = cp[i];
 
-                    straightenPoints[i + 1].x = beta * point.x + (1 - beta) * (source.x + (i + 1) * dVector3.x / length);
-                    straightenPoints[i + 1].y = beta * point.y + (1 - beta) * (source.y + (i + 1) * dVector3.y / length);
-                    straightenPoints[i + 1].z = beta * point.z + (1 - beta) * (source.z + (i + 1) * dVector3.z / length);
+                    cpDistributed[i + 1].x = beta * point.x + (1 - beta) * (source.x + (i + 1) * dVector3.x / length);
+                    cpDistributed[i + 1].y = beta * point.y + (1 - beta) * (source.y + (i + 1) * dVector3.y / length);
+                    cpDistributed[i + 1].z = beta * point.z + (1 - beta) * (source.z + (i + 1) * dVector3.z / length);
                 }
-                straightenPoints[length + 1] = target;
+                cpDistributed[length + 1] = target;
 
-                link.straightenPoints = new List<Vector3>(straightenPoints);
+                ControlPointsMap[link.linkIdx] = new List<Vector3>(cpDistributed);
             }
         }
 

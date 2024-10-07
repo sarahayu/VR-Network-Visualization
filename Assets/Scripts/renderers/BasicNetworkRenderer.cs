@@ -17,6 +17,8 @@ namespace VidiGraph
 
         List<GameObject> gameObjects = new List<GameObject>();
 
+        NetworkDataStructure NetworkData;
+
         void Reset()
         {
             if (Application.isEditor)
@@ -35,37 +37,45 @@ namespace VidiGraph
         {
             Reset();
 
-            var networkData = GetComponentInParent<NetworkDataStructure>();
+            NetworkData = GetComponentInParent<NetworkDataStructure>();
 
-            CreateNodes(networkData);
-            CreateLinks(networkData);
+            CreateNodes();
+            CreateLinks();
 
         }
 
-        public override void DrawNetwork()
+        public override void Update()
+        {
+            // TODO create updater
+            Initialize();
+        }
+
+        public override void Draw()
         {
             // nothing to call
         }
 
-        void CreateNodes(NetworkDataStructure networkData)
+        void CreateNodes()
         {
-            foreach (var node in networkData.nodes)
+            foreach (var node in NetworkData.nodes)
             {
                 if (drawVirtualNodes || !node.virtualNode)
                 {
-                    Color? col = node.virtualNode ? (Color?)Color.black : null;
-                    var nodeObj = NodeLinkRenderer.MakeNode(nodePrefab, networkTransform, node, col);
+                    var nodeObj = node.virtualNode
+                        ? NodeLinkRenderer.MakeNode(nodePrefab, networkTransform, node, Color.black)
+                        : NodeLinkRenderer.MakeNode(nodePrefab, networkTransform, node);
+
                     gameObjects.Add(nodeObj);
                 }
             }
         }
 
-        void CreateLinks(NetworkDataStructure networkData)
+        void CreateLinks()
         {
             // This will draw a 'debug' tree structure to emphasize the underlying hierarchy...
             if (drawTreeStructure)
             {
-                foreach (var link in networkData.treeLinks)
+                foreach (var link in NetworkData.treeLinks)
                 {
                     var linkObj = NodeLinkRenderer.MakeStraightLink(straightLinkPrefab, networkTransform, link, linkWidth);
                     gameObjects.Add(linkObj);
@@ -73,7 +83,7 @@ namespace VidiGraph
             }
             // ...whereas this is concerned with the visible links between nodes in the graph
 
-            foreach (var link in networkData.links)
+            foreach (var link in NetworkData.links)
             {
                 var linkObj = NodeLinkRenderer.MakeStraightLink(straightLinkPrefab, networkTransform, link, linkWidth);
                 gameObjects.Add(linkObj);

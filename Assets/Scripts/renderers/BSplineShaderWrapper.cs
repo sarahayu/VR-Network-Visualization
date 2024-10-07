@@ -24,16 +24,16 @@ namespace VidiGraph
         List<SplineSegmentData> SplineSegments;
         List<SplineControlPointData> SplineControlPoints;
 
-        ComputeShader computeShader;
-        Material material;
+        ComputeShader BatchComputeShader;
+        Material SplineMaterial;
 
         public void Initialize(ComputeShader computeShader, Material material)
         {
-            this.computeShader = computeShader;
-            this.material = material;
+            BatchComputeShader = computeShader;
+            SplineMaterial = material;
         }
 
-        public void PrepareBuffers(NetworkDataStructure networkData)
+        public void PrepareBuffers(NetworkDataStructure networkData, Dictionary<int, List<Vector3>> controlPoints)
         {
             // Initialize Compute Shader data
             Splines = new List<SplineData>();
@@ -51,12 +51,13 @@ namespace VidiGraph
                  * Add Compute Shader data
                  */
 
-                int NumSegments = link.straightenPoints.Count + BSplineDegree - 2; //NumControlPoints + Degree - 2 (First/Last Point)
+                var cp = controlPoints[link.linkIdx];
+                int NumSegments = cp.Count + BSplineDegree - 2; //NumControlPoints + Degree - 2 (First/Last Point)
                 Color sourceColor = link.sourceNode.colorParsed;
                 Color targetColor = link.targetNode.colorParsed;
 
-                Vector3 startPosition = link.straightenPoints[0];
-                Vector3 endPosition = link.straightenPoints[link.straightenPoints.Count - 1];
+                Vector3 startPosition = cp[0];
+                Vector3 endPosition = cp[cp.Count - 1];
                 uint linkState = (uint)link.state.CurState;
                 SplineData spline = new SplineData(splineIdx++, (uint)NumSegments, splineSegmentCount, (uint)(NumSegments * BSplineSamplesPerSegment),
                     splineSampleCount, startPosition, endPosition, sourceColor, targetColor, linkState);
@@ -82,25 +83,25 @@ namespace VidiGraph
                 // See: https://web.mit.edu/hyperbook/Patrikalakis-Maekawa-Cho/node17.html
                 for (int i = 0; i < BSplineDegree - 1; i++)
                 {
-                    SplineControlPoints.Add(new SplineControlPointData(link.straightenPoints[0]));
+                    SplineControlPoints.Add(new SplineControlPointData(cp[0]));
                     splineControlPointCount += 1;
                 }
-                for (int i = 0; i < link.straightenPoints.Count; i++)
+                for (int i = 0; i < cp.Count; i++)
                 {
                     SplineControlPoints.Add(new SplineControlPointData(
-                            link.straightenPoints[i]
+                            cp[i]
                         ));
                     splineControlPointCount += 1;
                 }
                 for (int i = 0; i < BSplineDegree - 1; i++)
                 {
-                    SplineControlPoints.Add(new SplineControlPointData(link.straightenPoints[link.straightenPoints.Count - 1]));
+                    SplineControlPoints.Add(new SplineControlPointData(cp[cp.Count - 1]));
                     splineControlPointCount += 1;
                 }
             }
 
             // Finally, set up buffers and bind them to the shader
-            int kernel = computeShader.FindKernel("CSMain");
+            int kernel = BatchComputeShader.FindKernel("CSMain");
             InSplineData = new ComputeBuffer(Splines.Count, SplineData.size());
             InSplineControlPointData = new ComputeBuffer(SplineControlPoints.Count, SplineControlPointData.size());
             InSplineSegmentData = new ComputeBuffer(SplineSegments.Count, SplineSegmentData.size());
@@ -110,17 +111,17 @@ namespace VidiGraph
             InSplineControlPointData.SetData(SplineControlPoints);
             InSplineSegmentData.SetData(SplineSegments);
 
-            computeShader.SetBuffer(kernel, "InSplineData", InSplineData);
-            computeShader.SetBuffer(kernel, "InSplineControlPointData", InSplineControlPointData);
-            computeShader.SetBuffer(kernel, "InSplineSegmentData", InSplineSegmentData);
-            computeShader.SetBuffer(kernel, "OutSamplePointData", OutSampleControlPointData);
+            BatchComputeShader.SetBuffer(kernel, "InSplineData", InSplineData);
+            BatchComputeShader.SetBuffer(kernel, "InSplineControlPointData", InSplineControlPointData);
+            BatchComputeShader.SetBuffer(kernel, "InSplineSegmentData", InSplineSegmentData);
+            BatchComputeShader.SetBuffer(kernel, "OutSamplePointData", OutSampleControlPointData);
 
 
             // Bind the buffers to the LineRenderer Material
-            material.SetBuffer("OutSamplePointData", OutSampleControlPointData);
+            SplineMaterial.SetBuffer("OutSamplePointData", OutSampleControlPointData);
         }
 
-        public void UpdateBuffers(NetworkDataStructure networkData)
+        public void UpdateBuffers(NetworkDataStructure networkData, Dictionary<int, List<Vector3>> controlPoints)
         {
             // Initialize Compute Shader data
             SplineControlPoints = new List<SplineControlPointData>();
@@ -133,15 +134,16 @@ namespace VidiGraph
 
             foreach (var link in networkData.links)
             {
-                int ControlPointCount = link.straightenPoints.Count;
+                var cp = controlPoints[link.linkIdx];
+                int ControlPointCount = cp.Count;
                 int NumSegments = ControlPointCount + BSplineDegree - 2; //NumControlPoints + Degree - 2 (First/Last Point)
 
 
                 /*
                 * Add Compute Shader data
                 */
-                Vector3 startPosition = link.straightenPoints[0];
-                Vector3 endPosition = link.straightenPoints[ControlPointCount - 1];
+                Vector3 startPosition = cp[0];
+                Vector3 endPosition = cp[ControlPointCount - 1];
                 uint linkState = (uint)link.state.CurState;
 
                 // Update spline information, we can preserve colors since their lookup is expensive
@@ -201,21 +203,21 @@ namespace VidiGraph
                 // We have to add *degree* times the first and last control points to make the spline coincide with its endpoints
                 // Remember to add cp0 degree-1 times, because the loop that adds all the points will add the last remaining cp0
                 // See: https://web.mit.edu/hyperbook/Patrikalakis-Maekawa-Cho/node17.html
-                SplineControlPointData[] controlPoints = new SplineControlPointData[2 * (BSplineDegree - 1) + ControlPointCount];
+                SplineControlPointData[] controlPointsData = new SplineControlPointData[2 * (BSplineDegree - 1) + ControlPointCount];
                 for (int i = 0; i < BSplineDegree; i++)
                 {
-                    controlPoints[i].Position = link.straightenPoints[0];
+                    controlPointsData[i].Position = cp[0];
                 }
                 for (int i = 1; i < ControlPointCount - 1; i++)
                 {
-                    controlPoints[BSplineDegree - 1 + i].Position = link.straightenPoints[i];
+                    controlPointsData[BSplineDegree - 1 + i].Position = cp[i];
                 }
-                for (int i = BSplineDegree + (ControlPointCount - 1) - 1; i < controlPoints.Length; i++)
+                for (int i = BSplineDegree + (ControlPointCount - 1) - 1; i < controlPointsData.Length; i++)
                 {
-                    controlPoints[i].Position = link.straightenPoints[ControlPointCount - 1];
+                    controlPointsData[i].Position = cp[ControlPointCount - 1];
                 }
-                SplineControlPoints.AddRange(controlPoints); // AddRange is faster than adding items in a loop
-                splineControlPointCount += (uint)controlPoints.Length;
+                SplineControlPoints.AddRange(controlPointsData); // AddRange is faster than adding items in a loop
+                splineControlPointCount += (uint)controlPointsData.Length;
             }
 
 
@@ -228,10 +230,10 @@ namespace VidiGraph
         public void Draw()
         {
             // Run the ComputeShader. 1 Thread per segment.
-            int kernel = computeShader.FindKernel("CSMain");
-            computeShader.Dispatch(kernel, SplineSegments.Count / 32, 1, 1);
+            int kernel = BatchComputeShader.FindKernel("CSMain");
+            BatchComputeShader.Dispatch(kernel, SplineSegments.Count / 32, 1, 1);
 
-            Graphics.DrawProcedural(material, new Bounds(Vector3.zero, Vector3.one * 500),
+            Graphics.DrawProcedural(SplineMaterial, new Bounds(Vector3.zero, Vector3.one * 500),
                 MeshTopology.Triangles, OutSampleControlPointData.count * 6);
         }
     }
