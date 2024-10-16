@@ -12,10 +12,10 @@ namespace VidiGraph
 {
     public class Network : MonoBehaviour
     {
-        NetworkFilesLoader fileLoader;
-        NetworkDataStructure dataStruct;
-        NetworkRenderer networkRenderer;
-        NetworkLayout networkLayout;
+        NetworkFilesLoader _fileLoader;
+        NetworkDataStructure _dataStruct;
+        NetworkRenderer _renderer;
+        NetworkLayout _layout;
 
         void Awake()
         {
@@ -33,23 +33,23 @@ namespace VidiGraph
 
         public void Initialize()
         {
-            fileLoader = GetComponent<NetworkFilesLoader>();
-            dataStruct = GetComponent<NetworkDataStructure>();
-            networkLayout = GetComponentInChildren<NetworkLayout>();
-            networkRenderer = GetComponentInChildren<NetworkRenderer>();
+            _fileLoader = GetComponent<NetworkFilesLoader>();
+            _dataStruct = GetComponent<NetworkDataStructure>();
+            _layout = GetComponentInChildren<NetworkLayout>();
+            _renderer = GetComponentInChildren<NetworkRenderer>();
 
-            fileLoader.LoadFiles();
-            dataStruct.InitNetwork();
-            networkLayout.Initialize();
-            networkRenderer.Initialize();
+            _fileLoader.LoadFiles();
+            _dataStruct.InitNetwork();
+            _layout.Initialize();
+            _renderer.Initialize();
 
-            networkLayout.ApplyLayout();
-            networkRenderer.Update();
+            _layout.ApplyLayout();
+            _renderer.UpdateRenderElements();
         }
 
         public void Draw()
         {
-            networkRenderer.Draw();
+            _renderer.Draw();
         }
     }
 }

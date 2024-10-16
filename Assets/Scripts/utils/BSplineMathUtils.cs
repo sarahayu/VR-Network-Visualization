@@ -13,12 +13,12 @@ namespace VidiGraph
             var sourceNode = link.sourceNode;
             var targetNode = link.targetNode;
 
-            var clusterS = networkData.communities[sourceNode.communityIdx];
-            var clusterT = networkData.communities[targetNode.communityIdx];
+            var clusterS = networkData.Communities[sourceNode.communityIdx];
+            var clusterT = networkData.Communities[targetNode.communityIdx];
             var sCenter = clusterS.massCenter;
             var tCenter = clusterT.massCenter;
 
-            if (networkData.is2D)
+            if (networkData.Is2D)
             {
                 sCenter.z = 0.25f;
                 tCenter.z = 0.25f;

@@ -6,50 +6,50 @@ namespace VidiGraph
 {
     public class BundledNetworkRenderer : NetworkRenderer
     {
-        public GameObject nodePrefab;
-        public GameObject straightLinkPrefab;
+        public GameObject NodePrefab;
+        public GameObject StraightLinkPrefab;
 
         [Range(0.0f, 0.1f)]
-        public float linkWidth = 0.005f;
+        public float LinkWidth = 0.005f;
         [Range(0.0f, 1.0f)]
-        public float edgeBundlingStrength = 0.8f;
+        public float EdgeBundlingStrength = 0.8f;
 
-        public Color nodeHighlightColor;
-        public Color linkHighlightColor;
-        public Color linkFocusColor;
+        public Color NodeHighlightColor;
+        public Color LinkHighlightColor;
+        public Color LinkFocusColor;
         [Range(0.0f, 0.1f)]
-        public float linkMinimumAlpha = 0.01f;
+        public float LinkMinimumAlpha = 0.01f;
         [Range(0.0f, 1.0f)]
-        public float linkNormalAlphaFactor = 1f;
+        public float LinkNormalAlphaFactor = 1f;
         [Range(0.0f, 1.0f)]
-        public float linkContextAlphaFactor = 0.5f;
+        public float LinkContextAlphaFactor = 0.5f;
         [Range(0.0f, 1.0f)]
-        public float linkContext2FocusAlphaFactor = 0.8f;
+        public float LinkContext2FocusAlphaFactor = 0.8f;
 
-        public bool drawVirtualNodes = true;
-        public bool drawTreeStructure = false;
-        public Transform networkTransform;
-        public ComputeShader computeShader;
+        public bool DrawVirtualNodes = true;
+        public bool DrawTreeStructure = false;
+        public Transform NetworkTransform;
+        public ComputeShader SplineComputeShader;
 
-        List<GameObject> gameObjects = new List<GameObject>();
-        Dictionary<int, List<Vector3>> ControlPointsMap = new Dictionary<int, List<Vector3>>();
-        Material batchSplineMaterial;
+        List<GameObject> _gameObjects = new List<GameObject>();
+        Dictionary<int, List<Vector3>> _controlPointsMap = new Dictionary<int, List<Vector3>>();
+        Material _batchSplineMaterial;
 
-        BSplineShaderWrapper shaderWrapper = new BSplineShaderWrapper();
-        NetworkDataStructure NetworkData;
+        BSplineShaderWrapper _shaderWrapper = new BSplineShaderWrapper();
+        NetworkDataStructure _networkData;
 
         void Reset()
         {
             if (Application.isEditor)
             {
-                GameObjectUtils.ChildrenDestroyImmediate(networkTransform);
+                GameObjectUtils.ChildrenDestroyImmediate(NetworkTransform);
             }
             else
             {
-                GameObjectUtils.ChildrenDestroy(networkTransform);
+                GameObjectUtils.ChildrenDestroy(NetworkTransform);
             }
 
-            gameObjects.Clear();
+            _gameObjects.Clear();
         }
 
         public override void Initialize()
@@ -58,7 +58,7 @@ namespace VidiGraph
 
             InitializeShaders();
 
-            NetworkData = GetComponentInParent<NetworkDataStructure>();
+            _networkData = GetComponentInParent<NetworkDataStructure>();
 
             CreateNodes();
             CreateLinks();
@@ -66,7 +66,7 @@ namespace VidiGraph
             CreateGPULinks();
         }
 
-        public override void Update()
+        public override void UpdateRenderElements()
         {
             // TODO create proper updater
             Reset();
@@ -75,53 +75,53 @@ namespace VidiGraph
             CreateLinks();
 
             ComputeControlPoints();
-            shaderWrapper.UpdateBuffers(NetworkData, ControlPointsMap);
+            _shaderWrapper.UpdateBuffers(_networkData, _controlPointsMap);
         }
 
         public override void Draw()
         {
-            shaderWrapper.Draw();
+            _shaderWrapper.Draw();
         }
 
         void InitializeShaders()
         {
-            batchSplineMaterial = new Material(Shader.Find("Custom/Batch BSpline Unlit"));
-            batchSplineMaterial.SetFloat("_LineWidth", linkWidth);
+            _batchSplineMaterial = new Material(Shader.Find("Custom/Batch BSpline Unlit"));
+            _batchSplineMaterial.SetFloat("_LineWidth", LinkWidth);
 
             // Configure the spline compute shader
-            computeShader.SetVector("COLOR_HIGHLIGHT", linkHighlightColor);
-            computeShader.SetVector("COLOR_FOCUS", linkFocusColor);
-            computeShader.SetFloat("COLOR_MINIMUM_ALPHA", linkMinimumAlpha);
-            computeShader.SetFloat("COLOR_NORMAL_ALPHA_FACTOR", linkNormalAlphaFactor);
-            computeShader.SetFloat("COLOR_CONTEXT_ALPHA_FACTOR", linkContextAlphaFactor);
-            computeShader.SetFloat("COLOR_FOCUS2CONTEXT_ALPHA_FACTOR", linkContext2FocusAlphaFactor);
+            SplineComputeShader.SetVector("COLOR_HIGHLIGHT", LinkHighlightColor);
+            SplineComputeShader.SetVector("COLOR_FOCUS", LinkFocusColor);
+            SplineComputeShader.SetFloat("COLOR_MINIMUM_ALPHA", LinkMinimumAlpha);
+            SplineComputeShader.SetFloat("COLOR_NORMAL_ALPHA_FACTOR", LinkNormalAlphaFactor);
+            SplineComputeShader.SetFloat("COLOR_CONTEXT_ALPHA_FACTOR", LinkContextAlphaFactor);
+            SplineComputeShader.SetFloat("COLOR_FOCUS2CONTEXT_ALPHA_FACTOR", LinkContext2FocusAlphaFactor);
 
-            shaderWrapper.Initialize(computeShader, batchSplineMaterial);
+            _shaderWrapper.Initialize(SplineComputeShader, _batchSplineMaterial);
         }
 
         void CreateNodes()
         {
-            foreach (var node in NetworkData.nodes)
+            foreach (var node in _networkData.Nodes)
             {
-                if (drawVirtualNodes || !node.virtualNode)
+                if (DrawVirtualNodes || !node.virtualNode)
                 {
                     var nodeObj = node.virtualNode
-                        ? NodeLinkRenderer.MakeNode(nodePrefab, networkTransform, node, Color.black)
-                        : NodeLinkRenderer.MakeNode(nodePrefab, networkTransform, node);
+                        ? NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node, Color.black)
+                        : NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node);
 
-                    gameObjects.Add(nodeObj);
+                    _gameObjects.Add(nodeObj);
                 }
             }
         }
 
         void CreateLinks()
         {
-            if (drawTreeStructure)
+            if (DrawTreeStructure)
             {
-                foreach (var link in NetworkData.treeLinks)
+                foreach (var link in _networkData.TreeLinks)
                 {
-                    var linkObj = NodeLinkRenderer.MakeStraightLink(straightLinkPrefab, networkTransform, link, linkWidth);
-                    gameObjects.Add(linkObj);
+                    var linkObj = NodeLinkRenderer.MakeStraightLink(StraightLinkPrefab, NetworkTransform, link, LinkWidth);
+                    _gameObjects.Add(linkObj);
                 }
             }
         }
@@ -129,16 +129,16 @@ namespace VidiGraph
         void CreateGPULinks()
         {
             ComputeControlPoints();
-            shaderWrapper.PrepareBuffers(NetworkData, ControlPointsMap);
+            _shaderWrapper.PrepareBuffers(_networkData, _controlPointsMap);
         }
 
         void ComputeControlPoints()
         {
-            foreach (var link in NetworkData.links)
+            foreach (var link in _networkData.Links)
             {
-                float beta = edgeBundlingStrength;
+                float beta = EdgeBundlingStrength;
 
-                Vector3[] cp = BSplineMathUtils.ControlPoints(link, NetworkData);
+                Vector3[] cp = BSplineMathUtils.ControlPoints(link, _networkData);
                 int length = cp.Length;
 
                 Vector3 source = cp[0];
@@ -159,7 +159,7 @@ namespace VidiGraph
                 }
                 cpDistributed[length + 1] = target;
 
-                ControlPointsMap[link.linkIdx] = new List<Vector3>(cpDistributed);
+                _controlPointsMap[link.linkIdx] = new List<Vector3>(cpDistributed);
             }
         }
 

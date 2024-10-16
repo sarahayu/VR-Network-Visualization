@@ -14,15 +14,15 @@ namespace VidiGraph
     public class NetworkFilesLoader : MonoBehaviour
     {
 
-        static readonly string layoutSuffix = "-layout.json";
-        static readonly string spider2DSuffix = "2D-spiders.dat";
-        static readonly string spider3DSuffix = "-spiders.dat";
-        static readonly string flatSuffix = "-layout.json-flat.json";
-        static readonly string sphericalSuffix = "-layout.json-spherical.json";
-        static readonly string hairballSuffix = "-layout.json-hairball.json";
+        const string LayoutSuffix = "-layout.json";
+        const string Spider2DSuffix = "2D-spiders.dat";
+        const string Spider3DSuffix = "-spiders.dat";
+        const string FlatSuffix = "-layout.json-flat.json";
+        const string SphericalSuffix = "-layout.json-spherical.json";
+        const string HairballSuffix = "-layout.json-hairball.json";
 
-        public string datasetName;
-        public bool is2D = false;
+        public string DatasetName;
+        public bool Is2D = false;
 
         [HideInInspector]
         public NetworkFileData GraphData { get; private set; }
@@ -38,13 +38,13 @@ namespace VidiGraph
 
         public void LoadFiles()
         {
-            print($"loading dataset {datasetName}");
+            print($"loading dataset {DatasetName}");
 
-            string layoutFile = $"{datasetName}{layoutSuffix}";
-            string spiderFile = $"{datasetName}{(is2D ? spider2DSuffix : spider3DSuffix)}";
-            string flatFile = $"{datasetName}{flatSuffix}";
-            string sphericalFile = $"{datasetName}{sphericalSuffix}";
-            string hairballFile = $"{datasetName}{hairballSuffix}";
+            string layoutFile = $"{DatasetName}{LayoutSuffix}";
+            string spiderFile = $"{DatasetName}{(Is2D ? Spider2DSuffix : Spider3DSuffix)}";
+            string flatFile = $"{DatasetName}{FlatSuffix}";
+            string sphericalFile = $"{DatasetName}{SphericalSuffix}";
+            string hairballFile = $"{DatasetName}{HairballSuffix}";
 
             GraphData = Decode<NetworkFileData>(layoutFile);
             SpiderData = SpiderFileDecoder.Decode(spiderFile);

@@ -6,46 +6,46 @@ namespace VidiGraph
 {
     public class BSplineShaderWrapper
     {
-        static readonly int BSplineDegree = 3;
-        static readonly int BSplineSamplesPerSegment = 10;
+        const int BSplineDegree = 3;
+        const int BSplineSamplesPerSegment = 10;
 
         /*
          * Compute Shader Buffers
          */
-        ComputeBuffer InSplineData;
-        ComputeBuffer InSplineSegmentData;
-        ComputeBuffer InSplineControlPointData;
-        ComputeBuffer OutSampleControlPointData;
+        ComputeBuffer _inSplineData;
+        ComputeBuffer _inSplineSegmentData;
+        ComputeBuffer _inSplineControlPointData;
+        ComputeBuffer _outSampleControlPointData;
 
         /*
          * Data Sources for Compute Shader Buffers
          */
-        List<SplineData> Splines;
-        List<SplineSegmentData> SplineSegments;
-        List<SplineControlPointData> SplineControlPoints;
+        List<SplineData> _splines;
+        List<SplineSegmentData> _splineSegments;
+        List<SplineControlPointData> _splineControlPoints;
 
-        ComputeShader BatchComputeShader;
-        Material SplineMaterial;
+        ComputeShader _batchComputeShader;
+        Material _splineMaterial;
 
         public void Initialize(ComputeShader computeShader, Material material)
         {
-            BatchComputeShader = computeShader;
-            SplineMaterial = material;
+            _batchComputeShader = computeShader;
+            _splineMaterial = material;
         }
 
         public void PrepareBuffers(NetworkDataStructure networkData, Dictionary<int, List<Vector3>> controlPoints)
         {
             // Initialize Compute Shader data
-            Splines = new List<SplineData>();
-            SplineSegments = new List<SplineSegmentData>();
-            SplineControlPoints = new List<SplineControlPointData>();
+            _splines = new List<SplineData>();
+            _splineSegments = new List<SplineSegmentData>();
+            _splineControlPoints = new List<SplineControlPointData>();
 
             uint splineSegmentCount = 0;
             uint splineControlPointCount = 0;
             uint splineSampleCount = 0;
 
             uint splineIdx = 0;
-            foreach (var link in networkData.links)
+            foreach (var link in networkData.Links)
             {
                 /*
                  * Add Compute Shader data
@@ -61,12 +61,12 @@ namespace VidiGraph
                 uint linkState = (uint)link.state.CurState;
                 SplineData spline = new SplineData(splineIdx++, (uint)NumSegments, splineSegmentCount, (uint)(NumSegments * BSplineSamplesPerSegment),
                     splineSampleCount, startPosition, endPosition, sourceColor, targetColor, linkState);
-                Splines.Add(spline);
+                _splines.Add(spline);
 
                 // Add all segments of this spline
                 for (int i = 0; i < NumSegments; i++)
                 {
-                    SplineSegments.Add(new SplineSegmentData(
+                    _splineSegments.Add(new SplineSegmentData(
                         spline.Idx,
                         (uint)(splineControlPointCount + i),
                         (uint)BSplineSamplesPerSegment,
@@ -83,48 +83,48 @@ namespace VidiGraph
                 // See: https://web.mit.edu/hyperbook/Patrikalakis-Maekawa-Cho/node17.html
                 for (int i = 0; i < BSplineDegree - 1; i++)
                 {
-                    SplineControlPoints.Add(new SplineControlPointData(cp[0]));
+                    _splineControlPoints.Add(new SplineControlPointData(cp[0]));
                     splineControlPointCount += 1;
                 }
                 for (int i = 0; i < cp.Count; i++)
                 {
-                    SplineControlPoints.Add(new SplineControlPointData(
+                    _splineControlPoints.Add(new SplineControlPointData(
                             cp[i]
                         ));
                     splineControlPointCount += 1;
                 }
                 for (int i = 0; i < BSplineDegree - 1; i++)
                 {
-                    SplineControlPoints.Add(new SplineControlPointData(cp[cp.Count - 1]));
+                    _splineControlPoints.Add(new SplineControlPointData(cp[cp.Count - 1]));
                     splineControlPointCount += 1;
                 }
             }
 
             // Finally, set up buffers and bind them to the shader
-            int kernel = BatchComputeShader.FindKernel("CSMain");
-            InSplineData = new ComputeBuffer(Splines.Count, SplineData.size());
-            InSplineControlPointData = new ComputeBuffer(SplineControlPoints.Count, SplineControlPointData.size());
-            InSplineSegmentData = new ComputeBuffer(SplineSegments.Count, SplineSegmentData.size());
-            OutSampleControlPointData = new ComputeBuffer((int)splineSampleCount, SplineSamplePointData.size());
+            int kernel = _batchComputeShader.FindKernel("CSMain");
+            _inSplineData = new ComputeBuffer(_splines.Count, SplineData.size());
+            _inSplineControlPointData = new ComputeBuffer(_splineControlPoints.Count, SplineControlPointData.size());
+            _inSplineSegmentData = new ComputeBuffer(_splineSegments.Count, SplineSegmentData.size());
+            _outSampleControlPointData = new ComputeBuffer((int)splineSampleCount, SplineSamplePointData.size());
 
-            InSplineData.SetData(Splines);
-            InSplineControlPointData.SetData(SplineControlPoints);
-            InSplineSegmentData.SetData(SplineSegments);
+            _inSplineData.SetData(_splines);
+            _inSplineControlPointData.SetData(_splineControlPoints);
+            _inSplineSegmentData.SetData(_splineSegments);
 
-            BatchComputeShader.SetBuffer(kernel, "InSplineData", InSplineData);
-            BatchComputeShader.SetBuffer(kernel, "InSplineControlPointData", InSplineControlPointData);
-            BatchComputeShader.SetBuffer(kernel, "InSplineSegmentData", InSplineSegmentData);
-            BatchComputeShader.SetBuffer(kernel, "OutSamplePointData", OutSampleControlPointData);
+            _batchComputeShader.SetBuffer(kernel, "InSplineData", _inSplineData);
+            _batchComputeShader.SetBuffer(kernel, "InSplineControlPointData", _inSplineControlPointData);
+            _batchComputeShader.SetBuffer(kernel, "InSplineSegmentData", _inSplineSegmentData);
+            _batchComputeShader.SetBuffer(kernel, "OutSamplePointData", _outSampleControlPointData);
 
 
             // Bind the buffers to the LineRenderer Material
-            SplineMaterial.SetBuffer("OutSamplePointData", OutSampleControlPointData);
+            _splineMaterial.SetBuffer("OutSamplePointData", _outSampleControlPointData);
         }
 
         public void UpdateBuffers(NetworkDataStructure networkData, Dictionary<int, List<Vector3>> controlPoints)
         {
             // Initialize Compute Shader data
-            SplineControlPoints = new List<SplineControlPointData>();
+            _splineControlPoints = new List<SplineControlPointData>();
 
             uint splineSegmentCount = 0;
             uint splineControlPointCount = 0;
@@ -132,7 +132,7 @@ namespace VidiGraph
 
             int splineIdx = 0;
 
-            foreach (var link in networkData.links)
+            foreach (var link in networkData.Links)
             {
                 var cp = controlPoints[link.linkIdx];
                 int ControlPointCount = cp.Count;
@@ -147,7 +147,7 @@ namespace VidiGraph
                 uint linkState = (uint)link.state.CurState;
 
                 // Update spline information, we can preserve colors since their lookup is expensive
-                SplineData spline = Splines[splineIdx];
+                SplineData spline = _splines[splineIdx];
                 int OldNumSegments = (int)spline.NumSegments;
                 spline.StartPosition = startPosition;
                 spline.EndPosition = endPosition;
@@ -156,7 +156,7 @@ namespace VidiGraph
                 spline.BeginSplineSegmentIdx = splineSegmentCount;
                 spline.NumSamples = (uint)(NumSegments * BSplineSamplesPerSegment);
                 spline.BeginSamplePointIdx = splineSampleCount;
-                Splines[splineIdx++] = spline;
+                _splines[splineIdx++] = spline;
 
                 // To improve performance, we differentiate between cases where there's the same number of segments and where the number differs
                 // For same number of segments, we only update the data without creating now instances
@@ -164,12 +164,12 @@ namespace VidiGraph
                 if (NumSegments != OldNumSegments)
                 {
                     // Remove old segment data
-                    SplineSegments.RemoveRange((int)splineSegmentCount, OldNumSegments);
+                    _splineSegments.RemoveRange((int)splineSegmentCount, OldNumSegments);
 
                     // Add new segment data
                     for (int i = 0; i < NumSegments; i++)
                     {
-                        SplineSegments.Insert((int)splineSegmentCount, new SplineSegmentData(
+                        _splineSegments.Insert((int)splineSegmentCount, new SplineSegmentData(
                             spline.Idx,
                             (uint)(splineControlPointCount + i),
                             (uint)BSplineSamplesPerSegment,
@@ -185,12 +185,12 @@ namespace VidiGraph
                     // Update segment
                     for (int i = 0; i < NumSegments; i++)
                     {
-                        SplineSegmentData splineSegment = SplineSegments[(int)splineSegmentCount];
+                        SplineSegmentData splineSegment = _splineSegments[(int)splineSegmentCount];
                         splineSegment.SplineIdx = spline.Idx;
                         splineSegment.BeginControlPointIdx = (uint)(splineControlPointCount + i);
                         splineSegment.NumSamples = (uint)BSplineSamplesPerSegment;
                         splineSegment.BeginSamplePointIdx = (uint)(splineSegmentCount * BSplineSamplesPerSegment);
-                        SplineSegments[(int)splineSegmentCount] = splineSegment;
+                        _splineSegments[(int)splineSegmentCount] = splineSegment;
 
                         splineSampleCount += (uint)BSplineSamplesPerSegment;
                         splineSegmentCount += 1;
@@ -216,25 +216,25 @@ namespace VidiGraph
                 {
                     controlPointsData[i].Position = cp[ControlPointCount - 1];
                 }
-                SplineControlPoints.AddRange(controlPointsData); // AddRange is faster than adding items in a loop
+                _splineControlPoints.AddRange(controlPointsData); // AddRange is faster than adding items in a loop
                 splineControlPointCount += (uint)controlPointsData.Length;
             }
 
 
             // Finally, set up buffers
-            InSplineData.SetData(Splines);
-            InSplineControlPointData.SetData(SplineControlPoints);
-            InSplineSegmentData.SetData(SplineSegments);
+            _inSplineData.SetData(_splines);
+            _inSplineControlPointData.SetData(_splineControlPoints);
+            _inSplineSegmentData.SetData(_splineSegments);
         }
 
         public void Draw()
         {
             // Run the ComputeShader. 1 Thread per segment.
-            int kernel = BatchComputeShader.FindKernel("CSMain");
-            BatchComputeShader.Dispatch(kernel, SplineSegments.Count / 32, 1, 1);
+            int kernel = _batchComputeShader.FindKernel("CSMain");
+            _batchComputeShader.Dispatch(kernel, _splineSegments.Count / 32, 1, 1);
 
-            Graphics.DrawProcedural(SplineMaterial, new Bounds(Vector3.zero, Vector3.one * 500),
-                MeshTopology.Triangles, OutSampleControlPointData.count * 6);
+            Graphics.DrawProcedural(_splineMaterial, new Bounds(Vector3.zero, Vector3.one * 500),
+                MeshTopology.Triangles, _outSampleControlPointData.count * 6);
         }
     }
 

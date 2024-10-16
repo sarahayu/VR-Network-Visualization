@@ -6,45 +6,44 @@ namespace VidiGraph
 {
     public class BasicNetworkRenderer : NetworkRenderer
     {
-        public GameObject nodePrefab;
-        public GameObject straightLinkPrefab;
+        public GameObject NodePrefab;
+        public GameObject StraightLinkPrefab;
 
         [Range(0.0f, 0.1f)]
-        public float linkWidth = 0.005f;
-        public bool drawVirtualNodes = true;
-        public bool drawTreeStructure = false;
-        public Transform networkTransform;
+        public float LinkWidth = 0.005f;
+        public bool DrawVirtualNodes = true;
+        public bool DrawTreeStructure = false;
+        public Transform NetworkTransform;
 
-        List<GameObject> gameObjects = new List<GameObject>();
-
-        NetworkDataStructure NetworkData;
+        List<GameObject> _gameObjects = new List<GameObject>();
+        NetworkDataStructure _networkData;
 
         void Reset()
         {
             if (Application.isEditor)
             {
-                GameObjectUtils.ChildrenDestroyImmediate(networkTransform);
+                GameObjectUtils.ChildrenDestroyImmediate(NetworkTransform);
             }
             else
             {
-                GameObjectUtils.ChildrenDestroy(networkTransform);
+                GameObjectUtils.ChildrenDestroy(NetworkTransform);
             }
 
-            gameObjects.Clear();
+            _gameObjects.Clear();
         }
 
         public override void Initialize()
         {
             Reset();
 
-            NetworkData = GetComponentInParent<NetworkDataStructure>();
+            _networkData = GetComponentInParent<NetworkDataStructure>();
 
             CreateNodes();
             CreateLinks();
 
         }
 
-        public override void Update()
+        public override void UpdateRenderElements()
         {
             // TODO create updater
             Initialize();
@@ -57,15 +56,15 @@ namespace VidiGraph
 
         void CreateNodes()
         {
-            foreach (var node in NetworkData.nodes)
+            foreach (var node in _networkData.Nodes)
             {
-                if (drawVirtualNodes || !node.virtualNode)
+                if (DrawVirtualNodes || !node.virtualNode)
                 {
                     var nodeObj = node.virtualNode
-                        ? NodeLinkRenderer.MakeNode(nodePrefab, networkTransform, node, Color.black)
-                        : NodeLinkRenderer.MakeNode(nodePrefab, networkTransform, node);
+                        ? NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node, Color.black)
+                        : NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node);
 
-                    gameObjects.Add(nodeObj);
+                    _gameObjects.Add(nodeObj);
                 }
             }
         }
@@ -73,20 +72,20 @@ namespace VidiGraph
         void CreateLinks()
         {
             // This will draw a 'debug' tree structure to emphasize the underlying hierarchy...
-            if (drawTreeStructure)
+            if (DrawTreeStructure)
             {
-                foreach (var link in NetworkData.treeLinks)
+                foreach (var link in _networkData.TreeLinks)
                 {
-                    var linkObj = NodeLinkRenderer.MakeStraightLink(straightLinkPrefab, networkTransform, link, linkWidth);
-                    gameObjects.Add(linkObj);
+                    var linkObj = NodeLinkRenderer.MakeStraightLink(StraightLinkPrefab, NetworkTransform, link, LinkWidth);
+                    _gameObjects.Add(linkObj);
                 }
             }
             // ...whereas this is concerned with the visible links between nodes in the graph
 
-            foreach (var link in NetworkData.links)
+            foreach (var link in _networkData.Links)
             {
-                var linkObj = NodeLinkRenderer.MakeStraightLink(straightLinkPrefab, networkTransform, link, linkWidth);
-                gameObjects.Add(linkObj);
+                var linkObj = NodeLinkRenderer.MakeStraightLink(StraightLinkPrefab, NetworkTransform, link, LinkWidth);
+                _gameObjects.Add(linkObj);
             }
         }
     }

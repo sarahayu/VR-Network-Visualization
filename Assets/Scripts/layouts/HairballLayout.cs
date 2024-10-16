@@ -25,7 +25,7 @@ namespace VidiGraph
 
             foreach (var node in fileLoader.HairballLayout.nodes)
             {
-                networkData.nodes[node.idx].Position3D = node._position3D;
+                networkData.Nodes[node.idx].Position3D = node._position3D;
             }
         }
     }

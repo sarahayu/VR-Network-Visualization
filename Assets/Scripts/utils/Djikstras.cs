@@ -16,7 +16,7 @@ namespace VidiGraph
         public void BuildInvertedIdx(NetworkDataStructure _network, int _communityIdx)
         {
             var idx = 0;
-            foreach (var node in _network.communities[_communityIdx].communityNodes)
+            foreach (var node in _network.Communities[_communityIdx].communityNodes)
             {
                 N2CIdxMap.Add(node.idx, idx);
                 C2NIdxMap.Add(idx, node.idx);
@@ -81,10 +81,10 @@ namespace VidiGraph
         }
         public static int[,] ShortestPathMatrix(NetworkDataStructure network)
         {
-            var nodesNumber = network.nodes.Count;
+            var nodesNumber = network.Nodes.Count;
             var matrix = new int[nodesNumber, nodesNumber];
 
-            foreach (var link in network.links)
+            foreach (var link in network.Links)
             {
                 matrix[link.sourceIdx, link.targetIdx] = 1;
                 matrix[link.targetIdx, link.sourceIdx] = 1;
@@ -95,10 +95,10 @@ namespace VidiGraph
 
         public static int[,] ShortestPathAggregateMatrix(NetworkDataStructure network)
         {
-            var nodesNumber = network.communities.Count;
+            var nodesNumber = network.Communities.Count;
             var matrix = new int[nodesNumber, nodesNumber];
 
-            foreach (var entry1 in network.communities)
+            foreach (var entry1 in network.Communities)
             {
                 var communiity = entry1.Value;
                 foreach (var entry in communiity.aggregateLinks)
