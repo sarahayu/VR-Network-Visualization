@@ -273,7 +273,10 @@ namespace VidiGraph
 
             foreach (var childIdx in Nodes[nodeIdx].childIdx)
             {
-                TreeLinks.Add(new Link(Nodes[nodeIdx], Nodes[childIdx]));
+                // just make link idx the negative count to ensure it's unique from real links
+                int treeLinkIdx = -TreeLinks.Count;
+
+                TreeLinks.Add(new Link(Nodes[nodeIdx], Nodes[childIdx], treeLinkIdx));
 
                 BuildTreeLinks(childIdx);
             }

@@ -27,12 +27,13 @@ namespace VidiGraph
             targetIdx = linkData.targetIdx;
         }
 
-        public Link(Node source, Node target)
+        public Link(Node source, Node target, int id)
         {
             sourceNode = source;
             targetNode = target;
             sourceIdx = source.idx;
             targetIdx = target.idx;
+            linkIdx = id;
         }
     }
 

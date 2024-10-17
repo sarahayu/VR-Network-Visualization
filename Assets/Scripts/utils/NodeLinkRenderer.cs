@@ -37,6 +37,16 @@ namespace VidiGraph
             return linkObj;
         }
 
+        public static void UpdateStraightLink(GameObject linkObj, Link link, float linkWidth)
+        {
+            var start = link.sourceNode.Position3D;
+            var end = link.targetNode.Position3D;
+
+            linkObj.transform.localPosition = (start + end) / 2.0f;
+            linkObj.transform.localRotation = Quaternion.FromToRotation(Vector3.up, end - start);
+            linkObj.transform.localScale = new Vector3(linkWidth, Vector3.Distance(start, end) * 0.5f, linkWidth);
+        }
+
         public static GameObject MakeBSplineLink(GameObject prefab, Transform transform, Link link)
         {
             GameObject linkObj = UnityEngine.Object.Instantiate(prefab, transform);

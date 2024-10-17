@@ -14,6 +14,7 @@ namespace VidiGraph
     {
         NetworkFilesLoader _fileLoader;
         NetworkDataStructure _dataStruct;
+        NetworkInput _input;
         NetworkRenderer _renderer;
         NetworkLayout _layout;
 
@@ -35,11 +36,13 @@ namespace VidiGraph
         {
             _fileLoader = GetComponent<NetworkFilesLoader>();
             _dataStruct = GetComponent<NetworkDataStructure>();
+            _input = GetComponent<NetworkInput>();
             _layout = GetComponentInChildren<NetworkLayout>();
             _renderer = GetComponentInChildren<NetworkRenderer>();
 
             _fileLoader.LoadFiles();
             _dataStruct.InitNetwork();
+            _input.Initialize();
             _layout.Initialize();
             _renderer.Initialize();
 

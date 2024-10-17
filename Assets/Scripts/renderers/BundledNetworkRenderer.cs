@@ -31,7 +31,8 @@ namespace VidiGraph
         public Transform NetworkTransform;
         public ComputeShader SplineComputeShader;
 
-        List<GameObject> _gameObjects = new List<GameObject>();
+        Dictionary<int, GameObject> _nodeGameObjs = new Dictionary<int, GameObject>();
+        Dictionary<int, GameObject> _linkGameObjs = new Dictionary<int, GameObject>();
         Dictionary<int, List<Vector3>> _controlPointsMap = new Dictionary<int, List<Vector3>>();
         Material _batchSplineMaterial;
 
@@ -49,7 +50,8 @@ namespace VidiGraph
                 GameObjectUtils.ChildrenDestroy(NetworkTransform);
             }
 
-            _gameObjects.Clear();
+            _nodeGameObjs.Clear();
+            _linkGameObjs.Clear();
         }
 
         public override void Initialize()
@@ -68,11 +70,8 @@ namespace VidiGraph
 
         public override void UpdateRenderElements()
         {
-            // TODO create proper updater
-            Reset();
-
-            CreateNodes();
-            CreateLinks();
+            UpdateNodes();
+            UpdateLinks();
 
             ComputeControlPoints();
             _shaderWrapper.UpdateBuffers(_networkData, _controlPointsMap);
@@ -109,7 +108,7 @@ namespace VidiGraph
                         ? NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node, Color.black)
                         : NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node);
 
-                    _gameObjects.Add(nodeObj);
+                    _nodeGameObjs[node.idx] = nodeObj;
                 }
             }
         }
@@ -121,7 +120,7 @@ namespace VidiGraph
                 foreach (var link in _networkData.TreeLinks)
                 {
                     var linkObj = NodeLinkRenderer.MakeStraightLink(StraightLinkPrefab, NetworkTransform, link, LinkWidth);
-                    _gameObjects.Add(linkObj);
+                    _linkGameObjs[link.linkIdx] = linkObj;
                 }
             }
         }
@@ -160,6 +159,28 @@ namespace VidiGraph
                 cpDistributed[length + 1] = target;
 
                 _controlPointsMap[link.linkIdx] = new List<Vector3>(cpDistributed);
+            }
+        }
+
+        void UpdateNodes()
+        {
+            foreach (var node in _networkData.Nodes)
+            {
+                if (DrawVirtualNodes || !node.virtualNode)
+                {
+                    _nodeGameObjs[node.idx].transform.localPosition = node.Position3D;
+                }
+            }
+        }
+
+        void UpdateLinks()
+        {
+            if (DrawTreeStructure)
+            {
+                foreach (var link in _networkData.TreeLinks)
+                {
+                    NodeLinkRenderer.UpdateStraightLink(_linkGameObjs[link.linkIdx], link, LinkWidth);
+                }
             }
         }
 

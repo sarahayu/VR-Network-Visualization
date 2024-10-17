@@ -15,7 +15,8 @@ namespace VidiGraph
         public bool DrawTreeStructure = false;
         public Transform NetworkTransform;
 
-        List<GameObject> _gameObjects = new List<GameObject>();
+        Dictionary<int, GameObject> _nodeGameObjs = new Dictionary<int, GameObject>();
+        Dictionary<int, GameObject> _linkGameObjs = new Dictionary<int, GameObject>();
         NetworkDataStructure _networkData;
 
         void Reset()
@@ -29,7 +30,8 @@ namespace VidiGraph
                 GameObjectUtils.ChildrenDestroy(NetworkTransform);
             }
 
-            _gameObjects.Clear();
+            _nodeGameObjs.Clear();
+            _linkGameObjs.Clear();
         }
 
         public override void Initialize()
@@ -45,8 +47,8 @@ namespace VidiGraph
 
         public override void UpdateRenderElements()
         {
-            // TODO create updater
-            Initialize();
+            UpdateNodes();
+            UpdateLinks();
         }
 
         public override void Draw()
@@ -64,7 +66,7 @@ namespace VidiGraph
                         ? NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node, Color.black)
                         : NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node);
 
-                    _gameObjects.Add(nodeObj);
+                    _nodeGameObjs[node.idx] = nodeObj;
                 }
             }
         }
@@ -77,7 +79,7 @@ namespace VidiGraph
                 foreach (var link in _networkData.TreeLinks)
                 {
                     var linkObj = NodeLinkRenderer.MakeStraightLink(StraightLinkPrefab, NetworkTransform, link, LinkWidth);
-                    _gameObjects.Add(linkObj);
+                    _linkGameObjs[link.linkIdx] = linkObj;
                 }
             }
             // ...whereas this is concerned with the visible links between nodes in the graph
@@ -85,7 +87,36 @@ namespace VidiGraph
             foreach (var link in _networkData.Links)
             {
                 var linkObj = NodeLinkRenderer.MakeStraightLink(StraightLinkPrefab, NetworkTransform, link, LinkWidth);
-                _gameObjects.Add(linkObj);
+                _linkGameObjs[link.linkIdx] = linkObj;
+            }
+        }
+
+        void UpdateNodes()
+        {
+            foreach (var node in _networkData.Nodes)
+            {
+                if (DrawVirtualNodes || !node.virtualNode)
+                {
+                    _nodeGameObjs[node.idx].transform.localPosition = node.Position3D;
+                }
+            }
+        }
+
+        void UpdateLinks()
+        {
+            // This will draw a 'debug' tree structure to emphasize the underlying hierarchy...
+            if (DrawTreeStructure)
+            {
+                foreach (var link in _networkData.TreeLinks)
+                {
+                    NodeLinkRenderer.UpdateStraightLink(_linkGameObjs[link.linkIdx], link, LinkWidth);
+                }
+            }
+            // ...whereas this is concerned with the visible links between nodes in the graph
+
+            foreach (var link in _networkData.Links)
+            {
+                NodeLinkRenderer.UpdateStraightLink(_linkGameObjs[link.linkIdx], link, LinkWidth);
             }
         }
     }
