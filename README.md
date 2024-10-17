@@ -1,4 +1,4 @@
 # VR Network Visualization
 
-Unity 2020.3.24f1
+Unity 2022.3.50f1
 Oculus Rift
