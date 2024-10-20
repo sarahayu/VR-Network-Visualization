@@ -6,26 +6,64 @@ namespace VidiGraph
 {
     public class SphericalLayout : NetworkLayout
     {
+        NetworkDataStructure _network;
+
         public override void Initialize()
         {
-            // leave empty for now
+            _network = GetComponentInParent<NetworkDataStructure>();
         }
 
         public override void ApplyLayout()
-        {
-            var networkData = GetComponentInParent<NetworkDataStructure>();
-
-            ApplySphericalPositions(networkData);
-        }
-
-        void ApplySphericalPositions(NetworkDataStructure networkData)
         {
             // TODO calculate at runtime
             var fileLoader = GetComponentInParent<NetworkFilesLoader>();
 
             foreach (var node in fileLoader.SphericalLayout.nodes)
             {
-                networkData.Nodes[node.idx].Position3D = node._position3D;
+                _network.Nodes[node.idx].Position3D = node._position3D;
+            }
+        }
+
+        public override LayoutInterpolator GetInterpolator()
+        {
+            var fileLoader = GetComponentInParent<NetworkFilesLoader>();
+
+            return new SphericalInterpolator(_network, fileLoader);
+        }
+    }
+
+    public class SphericalInterpolator : LayoutInterpolator
+    {
+        List<Node> _nodes;
+        List<Vector3> _startPositions;
+        List<Vector3> _endPositions;
+
+        public SphericalInterpolator(NetworkDataStructure networkData, NetworkFilesLoader fileLoader)
+        {
+            // get actual array instead of the node collection so we can use list indices rather than 
+            // their ids specified in data
+            _nodes = networkData.Nodes.NodeArray;
+            var nodeCount = _nodes.Count;
+            var nodeIdToIndex = networkData.Nodes.IdToIndex;
+
+            _startPositions = new List<Vector3>(nodeCount);
+            _endPositions = new List<Vector3>(nodeCount);
+
+            for (int i = 0; i < nodeCount; i++)
+            {
+                var node = _nodes[i];
+
+                _startPositions.Add(node.Position3D);
+                // TODO calculate at runtime
+                _endPositions.Add(fileLoader.SphericalLayout.nodes[nodeIdToIndex[node.id]]._position3D);
+            }
+        }
+
+        public override void Interpolate(float t)
+        {
+            for (int i = 0; i < _nodes.Count; i++)
+            {
+                _nodes[i].Position3D = Vector3.Lerp(_startPositions[i], _endPositions[i], Mathf.SmoothStep(0f, 1f, t));
             }
         }
     }

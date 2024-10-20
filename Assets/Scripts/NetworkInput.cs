@@ -10,29 +10,42 @@ namespace VidiGraph
 
         public XRInputValueReader<float> GripInput = new XRInputValueReader<float>("Grip");
 
+        int lastGripValue = 0;
+
+        Network network;
+
         public void Initialize()
         {
+            network = GetComponent<Network>();
         }
 
         void OnEnable()
         {
-            GripInput?.EnableDirectActionIfModeUsed();
+            GripInput.EnableDirectActionIfModeUsed();
         }
 
-        // Start is called before the first frame update
         void Start()
         {
         }
 
-        // Update is called once per frame
         void Update()
         {
+            var gripVal = (int)GripInput.ReadValue();
 
-            if (GripInput != null)
+            // pressed
+            if (gripVal == 1 && gripVal != lastGripValue)
             {
-                var gripVal = GripInput.ReadValue();
-                print(gripVal);
+                if (network.CurLayout == "spherical")
+                {
+                    network.ChangeToLayout("hairball");
+                }
+                else if (network.CurLayout == "hairball")
+                {
+                    network.ChangeToLayout("spherical");
+                }
             }
+
+            lastGripValue = gripVal;
         }
     }
 

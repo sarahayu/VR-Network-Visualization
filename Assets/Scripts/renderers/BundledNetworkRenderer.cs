@@ -108,7 +108,7 @@ namespace VidiGraph
                         ? NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node, Color.black)
                         : NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node);
 
-                    _nodeGameObjs[node.idx] = nodeObj;
+                    _nodeGameObjs[node.id] = nodeObj;
                 }
             }
         }
@@ -146,7 +146,7 @@ namespace VidiGraph
 
                 Vector3[] cpDistributed = new Vector3[length + 2];
 
-                cpDistributed[0] = source;
+                cpDistributed[0] = NetworkTransform.TransformPoint(source);
 
                 for (int i = 0; i < length; i++)
                 {
@@ -155,8 +155,10 @@ namespace VidiGraph
                     cpDistributed[i + 1].x = beta * point.x + (1 - beta) * (source.x + (i + 1) * dVector3.x / length);
                     cpDistributed[i + 1].y = beta * point.y + (1 - beta) * (source.y + (i + 1) * dVector3.y / length);
                     cpDistributed[i + 1].z = beta * point.z + (1 - beta) * (source.z + (i + 1) * dVector3.z / length);
+
+                    cpDistributed[i + 1] = NetworkTransform.TransformPoint(cpDistributed[i + 1]);
                 }
-                cpDistributed[length + 1] = target;
+                cpDistributed[length + 1] = NetworkTransform.TransformPoint(target);
 
                 _controlPointsMap[link.linkIdx] = new List<Vector3>(cpDistributed);
             }
@@ -168,7 +170,7 @@ namespace VidiGraph
             {
                 if (DrawVirtualNodes || !node.virtualNode)
                 {
-                    _nodeGameObjs[node.idx].transform.localPosition = node.Position3D;
+                    _nodeGameObjs[node.id].transform.localPosition = node.Position3D;
                 }
             }
         }

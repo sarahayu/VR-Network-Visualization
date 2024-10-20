@@ -6,5 +6,11 @@ namespace VidiGraph
     {
         public abstract void Initialize();
         public abstract void ApplyLayout();
+        public abstract LayoutInterpolator GetInterpolator();
+    }
+
+    abstract public class LayoutInterpolator
+    {
+        public abstract void Interpolate(float t);
     }
 }

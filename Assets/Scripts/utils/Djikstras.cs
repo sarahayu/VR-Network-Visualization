@@ -18,8 +18,8 @@ namespace VidiGraph
             var idx = 0;
             foreach (var node in _network.Communities[_communityIdx].communityNodes)
             {
-                N2CIdxMap.Add(node.idx, idx);
-                C2NIdxMap.Add(idx, node.idx);
+                N2CIdxMap.Add(node.id, idx);
+                C2NIdxMap.Add(idx, node.id);
                 idx++;
             }
         }

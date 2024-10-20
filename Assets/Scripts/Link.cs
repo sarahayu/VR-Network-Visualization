@@ -31,8 +31,8 @@ namespace VidiGraph
         {
             sourceNode = source;
             targetNode = target;
-            sourceIdx = source.idx;
-            targetIdx = target.idx;
+            sourceIdx = source.id;
+            targetIdx = target.id;
             linkIdx = id;
         }
     }

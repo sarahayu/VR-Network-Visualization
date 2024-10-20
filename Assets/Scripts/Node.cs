@@ -9,7 +9,7 @@ namespace VidiGraph
     {
         public int communityIdx = Int32.MaxValue;
         public string label;
-        public int idx;
+        public int id;
         public string color = null;
         public Color colorParsed = Color.black;
         public bool virtualNode;
@@ -72,7 +72,8 @@ namespace VidiGraph
         {
             communityIdx = nodeData.communityIdx;
             label = nodeData.label;
-            idx = nodeData.idx;
+            // idx gets remapped to node id, because we do not assume it's the same as the order stated in datafile. why? idk the original code didn't either.
+            id = nodeData.idx;
             color = nodeData.color;
 
             if (color != null)

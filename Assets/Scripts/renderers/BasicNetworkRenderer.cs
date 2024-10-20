@@ -66,7 +66,7 @@ namespace VidiGraph
                         ? NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node, Color.black)
                         : NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node);
 
-                    _nodeGameObjs[node.idx] = nodeObj;
+                    _nodeGameObjs[node.id] = nodeObj;
                 }
             }
         }
@@ -97,7 +97,7 @@ namespace VidiGraph
             {
                 if (DrawVirtualNodes || !node.virtualNode)
                 {
-                    _nodeGameObjs[node.idx].transform.localPosition = node.Position3D;
+                    _nodeGameObjs[node.id].transform.localPosition = node.Position3D;
                 }
             }
         }

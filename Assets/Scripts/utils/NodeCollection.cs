@@ -14,27 +14,28 @@ namespace VidiGraph
 {
     public class NodeCollection : IEnumerable
     {
-        public List<Node> nodeList { get; } = new List<Node>();
+        // leave this public in case you want access to underlying array (e.g. for array traversion)
+        public List<Node> NodeArray { get; } = new List<Node>();
 
         // A inverted index allow reference the node by its own idx
-        public IDictionary<int, int> nodeInvertedIndex = new Dictionary<int, int>();
+        public IDictionary<int, int> IdToIndex { get; } = new Dictionary<int, int>();
 
         public void Clear()
         {
-            nodeList.Clear();
-            nodeInvertedIndex.Clear();
+            NodeArray.Clear();
+            IdToIndex.Clear();
         }
 
         public void Add(Node node)
         {
-            nodeInvertedIndex.Add(node.idx, nodeList.Count);
+            IdToIndex.Add(node.id, NodeArray.Count);
 
-            nodeList.Add(node);
+            NodeArray.Add(node);
         }
 
         public IEnumerator<Node> GetEnumerator()
         {
-            return new NodeEnumerator { nodeList = nodeList };
+            return new NodeEnumerator { nodeList = NodeArray };
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -42,12 +43,12 @@ namespace VidiGraph
             return GetEnumerator();
         }
 
-        public Node this[int index]
+        public Node this[int id]
         {
-            get { return nodeList[nodeInvertedIndex[index]]; }
+            get { return NodeArray[IdToIndex[id]]; }
             set { }
         }
-        public int Count { get { return nodeList.Count; } }
+        public int Count { get { return NodeArray.Count; } }
 
         private class NodeEnumerator : IEnumerator<Node>
         {

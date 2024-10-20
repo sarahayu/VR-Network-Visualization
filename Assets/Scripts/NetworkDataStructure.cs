@@ -72,11 +72,11 @@ namespace VidiGraph
                 var node = new Node(fileNodes[i]);
 
                 // Initialize the node-link matrix
-                NodeLinkMatrix.Add(node.idx, new List<Link>());
+                NodeLinkMatrix.Add(node.id, new List<Link>());
 
                 // Group the nodes by virtual or not
-                if (node.virtualNode) VirtualNodeIdx.Add(node.idx);
-                else RealNodeIdx.Add(node.idx);
+                if (node.virtualNode) VirtualNodeIdx.Add(node.id);
+                else RealNodeIdx.Add(node.id);
 
                 Nodes.Add(node);
             }
@@ -85,7 +85,7 @@ namespace VidiGraph
             // TODO turn into function
             foreach (var node in Nodes)
             {
-                if (node.idx == RootIdx)
+                if (node.id == RootIdx)
                 {
                     continue;
                 }
@@ -237,7 +237,7 @@ namespace VidiGraph
 
             var community = new Community
             {
-                root = node.idx,
+                root = node.id,
                 communityIdx = clusterIdx
             };
 

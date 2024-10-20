@@ -16,7 +16,12 @@ namespace VidiGraph
         NetworkDataStructure _dataStruct;
         NetworkInput _input;
         NetworkRenderer _renderer;
-        NetworkLayout _layout;
+
+        Dictionary<string, NetworkLayout> _layouts = new Dictionary<string, NetworkLayout>();
+
+        string _curLayout;
+
+        public string CurLayout { get { return _curLayout; } }
 
         void Awake()
         {
@@ -37,22 +42,65 @@ namespace VidiGraph
             _fileLoader = GetComponent<NetworkFilesLoader>();
             _dataStruct = GetComponent<NetworkDataStructure>();
             _input = GetComponent<NetworkInput>();
-            _layout = GetComponentInChildren<NetworkLayout>();
             _renderer = GetComponentInChildren<NetworkRenderer>();
 
             _fileLoader.LoadFiles();
             _dataStruct.InitNetwork();
             _input.Initialize();
-            _layout.Initialize();
             _renderer.Initialize();
 
-            _layout.ApplyLayout();
-            _renderer.UpdateRenderElements();
+            InitializeLayouts();
+            ChangeToLayout("spherical");
         }
 
         public void Draw()
         {
             _renderer.Draw();
+        }
+
+        void InitializeLayouts()
+        {
+            _layouts["hairball"] = GetComponentInChildren<HairballLayout>();
+            _layouts["hairball"].Initialize();
+            _layouts["spherical"] = GetComponentInChildren<SphericalLayout>();
+            _layouts["spherical"].Initialize();
+        }
+
+        public void ChangeToLayout(string layout, bool animated = true)
+        {
+            _curLayout = layout;
+
+            if (animated)
+            {
+                ChangeToLayoutAnimated(layout);
+            }
+            else
+            {
+                ChangeToLayoutUnanimated(layout);
+            }
+        }
+
+        void ChangeToLayoutAnimated(string layout)
+        {
+            StartCoroutine(CRAnimateLayout(layout));
+        }
+
+        void ChangeToLayoutUnanimated(string layout)
+        {
+            _layouts[layout].ApplyLayout();
+            _renderer.UpdateRenderElements();
+        }
+
+        IEnumerator CRAnimateLayout(string layout)
+        {
+            float dur = 1.0f;
+            var interpolator = _layouts[layout].GetInterpolator();
+
+            yield return AnimationUtils.Lerp(dur, t =>
+            {
+                interpolator.Interpolate(t);
+                _renderer.UpdateRenderElements();
+            });
         }
     }
 }
