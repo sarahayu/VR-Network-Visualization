@@ -18,8 +18,11 @@ namespace VidiGraph
         NetworkRenderer _renderer;
 
         Dictionary<string, NetworkLayout> _layouts = new Dictionary<string, NetworkLayout>();
+        // keep a reference to spiderlayout specifically to focus on individual communities
+        SpiderLayout _spiderLayout;
 
         string _curLayout;
+        Coroutine _curAnim = null;
 
         public string CurLayout { get { return _curLayout; } }
 
@@ -50,7 +53,7 @@ namespace VidiGraph
             _renderer.Initialize();
 
             InitializeLayouts();
-            ChangeToLayout("spherical");
+            ChangeToLayout("spherical", false);
         }
 
         public void Draw()
@@ -62,8 +65,18 @@ namespace VidiGraph
         {
             _layouts["hairball"] = GetComponentInChildren<HairballLayout>();
             _layouts["hairball"].Initialize();
+
             _layouts["spherical"] = GetComponentInChildren<SphericalLayout>();
             _layouts["spherical"].Initialize();
+
+            _spiderLayout = GetComponentInChildren<SpiderLayout>();
+            _layouts["spider"] = _spiderLayout;
+            _layouts["spider"].Initialize();
+        }
+
+        public void FocusToCommunity(int community)
+        {
+
         }
 
         public void ChangeToLayout(string layout, bool animated = true)
@@ -82,7 +95,12 @@ namespace VidiGraph
 
         void ChangeToLayoutAnimated(string layout)
         {
-            StartCoroutine(CRAnimateLayout(layout));
+            if (_curAnim != null)
+            {
+                StopCoroutine(_curAnim);
+            }
+
+            _curAnim = StartCoroutine(CRAnimateLayout(layout));
         }
 
         void ChangeToLayoutUnanimated(string layout)
@@ -101,6 +119,8 @@ namespace VidiGraph
                 interpolator.Interpolate(t);
                 _renderer.UpdateRenderElements();
             });
+
+            _curAnim = null;
         }
     }
 }

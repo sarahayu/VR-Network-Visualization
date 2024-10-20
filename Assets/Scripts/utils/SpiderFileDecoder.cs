@@ -5,6 +5,7 @@
 */
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
@@ -16,6 +17,9 @@ namespace VidiGraph
     {
         public RNode[] nodes;
         public RLink[] links;
+
+        // use for reverse search into nodes array, this data is not found in the file but will be initialized later
+        public Dictionary<int, int> idToIdx;
     }
 
     [Serializable]

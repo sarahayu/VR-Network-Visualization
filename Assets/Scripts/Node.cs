@@ -54,8 +54,6 @@ namespace VidiGraph
             }
         }
 
-        public Vector3 spiderPos = Vector3.zero;
-
         public Vector3 Position3D;
 
         // the sphere radius for the nodex

@@ -1,12 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace VidiGraph
 {
-    public class SphericalLayout : NetworkLayout
+    public class SpiderLayout : NetworkLayout
     {
         NetworkDataStructure _network;
+        int _prevFocusCommunity = -1;
+        int _focusCommunity = -1;
 
         public override void Initialize()
         {
@@ -18,9 +21,13 @@ namespace VidiGraph
             // TODO calculate at runtime
             var fileLoader = GetComponentInParent<NetworkFilesLoader>();
 
-            foreach (var node in fileLoader.SphericalLayout.nodes)
+            var spiderNodes = fileLoader.SpiderData.nodes;
+            var idToIdx = fileLoader.SpiderData.idToIdx;
+
+            foreach (var node in _network.Communities[_focusCommunity].communityNodes)
             {
-                _network.Nodes[node.idx].Position3D = node._position3D;
+                var spiderPos = spiderNodes[idToIdx[node.id]].spiderPos;
+                _network.Nodes[node.id].Position3D = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
             }
         }
 
@@ -28,28 +35,33 @@ namespace VidiGraph
         {
             var fileLoader = GetComponentInParent<NetworkFilesLoader>();
 
-            return new SphericalInterpolator(_network, fileLoader);
+            return new SpiderInterpolator(_network, fileLoader, _focusCommunity);
+        }
+
+        // TODO change focusCommunity to array to allow multiple focusCommunitys
+        public void SetFocusCommunity(int focusCommunity)
+        {
+            _prevFocusCommunity = _focusCommunity;
+            _focusCommunity = focusCommunity;
         }
     }
 
-    public class SphericalInterpolator : LayoutInterpolator
+    public class SpiderInterpolator : LayoutInterpolator
     {
         List<Node> _nodes;
         List<Vector3> _startPositions;
         List<Vector3> _endPositions;
 
-        public SphericalInterpolator(NetworkDataStructure networkData, NetworkFilesLoader fileLoader)
+        public SpiderInterpolator(NetworkDataStructure networkData, NetworkFilesLoader fileLoader, int focusCommunity)
         {
-            // get actual array instead of the node collection so we can use list indices rather than 
-            // their ids specified in data
-            _nodes = networkData.Nodes.NodeArray;
+            _nodes = networkData.Communities[focusCommunity].communityNodes;
             var nodeCount = _nodes.Count;
 
             _startPositions = new List<Vector3>(nodeCount);
             _endPositions = new List<Vector3>(nodeCount);
 
-            var sphericalNodes = fileLoader.SphericalLayout.nodes;
-            var idToIdx = fileLoader.SphericalLayout.idToIdx;
+            var spiderNodes = fileLoader.SpiderData.nodes;
+            var idToIdx = fileLoader.SpiderData.idToIdx;
 
             for (int i = 0; i < nodeCount; i++)
             {
@@ -57,7 +69,8 @@ namespace VidiGraph
 
                 _startPositions.Add(node.Position3D);
                 // TODO calculate at runtime
-                _endPositions.Add(sphericalNodes[idToIdx[node.id]]._position3D);
+                var spiderPos = spiderNodes[idToIdx[node.id]].spiderPos;
+                _endPositions.Add(new Vector3(spiderPos.x, spiderPos.y, spiderPos.z));
             }
         }
 

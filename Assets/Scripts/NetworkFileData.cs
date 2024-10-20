@@ -20,6 +20,8 @@ namespace VidiGraph
         public LinkFileData[] links;
         public bool is2D;
 
+        // use for reverse search into nodes array, this data is not found in the file but will be initialized later
+        public Dictionary<int, int> idToIdx;
     }
 
     [Serializable]

@@ -7,6 +7,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 namespace VidiGraph
@@ -24,16 +25,11 @@ namespace VidiGraph
         public string DatasetName;
         public bool Is2D = false;
 
-        [HideInInspector]
         public NetworkFileData GraphData { get; private set; }
-        [HideInInspector]
         public RNetwork SpiderData { get; private set; }
 
-        [HideInInspector]
         public NetworkFileData FlatLayout { get; private set; }
-        [HideInInspector]
         public NetworkFileData SphericalLayout { get; private set; }
-        [HideInInspector]
         public NetworkFileData HairballLayout { get; private set; }
 
         public void LoadFiles()
@@ -53,6 +49,32 @@ namespace VidiGraph
             SphericalLayout = Decode<NetworkFileData>(sphericalFile);
             HairballLayout = Decode<NetworkFileData>(hairballFile);
 
+            InitializeIdMap(GraphData);
+            InitializeIdMap(SpiderData);
+            InitializeIdMap(FlatLayout);
+            InitializeIdMap(SphericalLayout);
+            InitializeIdMap(HairballLayout);
+
+        }
+
+        void InitializeIdMap(NetworkFileData network)
+        {
+            network.idToIdx = new Dictionary<int, int>();
+
+            for (int i = 0; i < network.nodes.Count(); i++)
+            {
+                network.idToIdx[network.nodes[i].idx] = i;
+            }
+        }
+
+        void InitializeIdMap(RNetwork network)
+        {
+            network.idToIdx = new Dictionary<int, int>();
+
+            for (int i = 0; i < network.nodes.Count(); i++)
+            {
+                network.idToIdx[network.nodes[i].idx] = i;
+            }
         }
 
         T Decode<T>(string filename)

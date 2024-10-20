@@ -44,10 +44,12 @@ namespace VidiGraph
             // their ids specified in data
             _nodes = networkData.Nodes.NodeArray;
             var nodeCount = _nodes.Count;
-            var nodeIdToIndex = networkData.Nodes.IdToIndex;
 
             _startPositions = new List<Vector3>(nodeCount);
             _endPositions = new List<Vector3>(nodeCount);
+
+            var hairballNodes = fileLoader.HairballLayout.nodes;
+            var idToIdx = fileLoader.HairballLayout.idToIdx;
 
             for (int i = 0; i < nodeCount; i++)
             {
@@ -55,7 +57,7 @@ namespace VidiGraph
 
                 _startPositions.Add(node.Position3D);
                 // TODO calculate at runtime
-                _endPositions.Add(fileLoader.HairballLayout.nodes[nodeIdToIndex[node.id]]._position3D);
+                _endPositions.Add(hairballNodes[idToIdx[node.id]]._position3D);
             }
         }
 
