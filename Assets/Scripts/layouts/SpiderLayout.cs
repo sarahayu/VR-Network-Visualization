@@ -8,8 +8,8 @@ namespace VidiGraph
     public class SpiderLayout : NetworkLayout
     {
         NetworkDataStructure _network;
-        int _prevFocusCommunity = -1;
-        int _focusCommunity = -1;
+        // use hashset to prevent duplicates
+        HashSet<int> _focusCommunities = new HashSet<int>();
 
         public override void Initialize()
         {
@@ -22,12 +22,63 @@ namespace VidiGraph
             var fileLoader = GetComponentInParent<NetworkFilesLoader>();
 
             var spiderNodes = fileLoader.SpiderData.nodes;
-            var idToIdx = fileLoader.SpiderData.idToIdx;
+            var spiderIdToIdx = fileLoader.SpiderData.idToIdx;
 
-            foreach (var node in _network.Communities[_focusCommunity].communityNodes)
+            var sphericalNodes = fileLoader.SphericalLayout.nodes;
+            var sphericalIdToIdx = fileLoader.SphericalLayout.idToIdx;
+
+            foreach (var (communityIdx, community) in _network.Communities)
             {
-                var spiderPos = spiderNodes[idToIdx[node.id]].spiderPos;
-                _network.Nodes[node.id].Position3D = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
+                // reset to original position
+                if (community.focus && !_focusCommunities.Contains(communityIdx))
+                {
+                    community.focus = false;
+
+                    foreach (var node in community.communityNodes)
+                    {
+                        var sphericalPos = sphericalNodes[sphericalIdToIdx[node.id]]._position3D;
+                        _network.Nodes[node.id].Position3D = sphericalPos;
+                    }
+                }
+                // move to spider position
+                else if (!community.focus && _focusCommunities.Contains(communityIdx))
+                {
+                    community.focus = true;
+
+                    foreach (var node in community.communityNodes)
+                    {
+                        var spiderPos = spiderNodes[spiderIdToIdx[node.id]].spiderPos;
+                        _network.Nodes[node.id].Position3D = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
+                    }
+                }
+            }
+
+            if (_focusCommunities.Count == 0)
+            {
+                foreach (var link in _network.Links)
+                {
+                    link.state.SetLinkState(LinkState.Normal);
+                }
+            }
+            else
+            {
+                foreach (var link in _network.Links)
+                {
+                    var a = _network.Communities[link.sourceNode.communityIdx];
+                    var b = _network.Communities[link.targetNode.communityIdx];
+                    if (a.focus && b.focus)
+                    {
+                        link.state.SetLinkState(LinkState.Focus);
+                    }
+                    else if (a.focus || b.focus)
+                    {
+                        link.state.SetLinkState(LinkState.Focus2Context);
+                    }
+                    else
+                    {
+                        link.state.SetLinkState(LinkState.Context);
+                    }
+                }
             }
         }
 
@@ -35,14 +86,19 @@ namespace VidiGraph
         {
             var fileLoader = GetComponentInParent<NetworkFilesLoader>();
 
-            return new SpiderInterpolator(_network, fileLoader, _focusCommunity);
+            return new SpiderInterpolator(_network, fileLoader, _focusCommunities);
         }
 
-        // TODO change focusCommunity to array to allow multiple focusCommunitys
-        public void SetFocusCommunity(int focusCommunity)
+        public void SetFocusCommunity(int focusCommunity, bool isFocused)
         {
-            _prevFocusCommunity = _focusCommunity;
-            _focusCommunity = focusCommunity;
+            if (isFocused)
+            {
+                _focusCommunities.Add(focusCommunity);
+            }
+            else
+            {
+                _focusCommunities.Remove(focusCommunity);
+            }
         }
     }
 
@@ -52,25 +108,74 @@ namespace VidiGraph
         List<Vector3> _startPositions;
         List<Vector3> _endPositions;
 
-        public SpiderInterpolator(NetworkDataStructure networkData, NetworkFilesLoader fileLoader, int focusCommunity)
+        public SpiderInterpolator(NetworkDataStructure networkData, NetworkFilesLoader fileLoader, HashSet<int> focusCommunities)
         {
-            _nodes = networkData.Communities[focusCommunity].communityNodes;
-            var nodeCount = _nodes.Count;
+            _nodes = new List<Node>();
 
-            _startPositions = new List<Vector3>(nodeCount);
-            _endPositions = new List<Vector3>(nodeCount);
+            _startPositions = new List<Vector3>();
+            _endPositions = new List<Vector3>();
 
             var spiderNodes = fileLoader.SpiderData.nodes;
-            var idToIdx = fileLoader.SpiderData.idToIdx;
+            var spiderIdToIdx = fileLoader.SpiderData.idToIdx;
 
-            for (int i = 0; i < nodeCount; i++)
+            var sphericalNodes = fileLoader.SphericalLayout.nodes;
+            var sphericalIdToIdx = fileLoader.SphericalLayout.idToIdx;
+
+            foreach (var (communityIdx, community) in networkData.Communities)
             {
-                var node = _nodes[i];
+                // reset to original position
+                if (community.focus && !focusCommunities.Contains(communityIdx))
+                {
+                    community.focus = false;
 
-                _startPositions.Add(node.Position3D);
-                // TODO calculate at runtime
-                var spiderPos = spiderNodes[idToIdx[node.id]].spiderPos;
-                _endPositions.Add(new Vector3(spiderPos.x, spiderPos.y, spiderPos.z));
+                    foreach (var node in community.communityNodes)
+                    {
+                        _nodes.Add(node);
+                        _startPositions.Add(networkData.Nodes[node.id].Position3D);
+                        _endPositions.Add(sphericalNodes[sphericalIdToIdx[node.id]]._position3D);
+                    }
+                }
+                // move to spider position
+                else if (!community.focus && focusCommunities.Contains(communityIdx))
+                {
+                    community.focus = true;
+
+                    foreach (var node in community.communityNodes)
+                    {
+                        _nodes.Add(node);
+                        _startPositions.Add(networkData.Nodes[node.id].Position3D);
+                        var spiderPos = spiderNodes[spiderIdToIdx[node.id]].spiderPos;
+                        _endPositions.Add(new Vector3(spiderPos.x, spiderPos.y, spiderPos.z));
+                    }
+                }
+            }
+
+            if (focusCommunities.Count == 0)
+            {
+                foreach (var link in networkData.Links)
+                {
+                    link.state.SetLinkState(LinkState.Normal);
+                }
+            }
+            else
+            {
+                foreach (var link in networkData.Links)
+                {
+                    var a = networkData.Communities[link.sourceNode.communityIdx];
+                    var b = networkData.Communities[link.targetNode.communityIdx];
+                    if (a.focus && b.focus)
+                    {
+                        link.state.SetLinkState(LinkState.Focus);
+                    }
+                    else if (a.focus || b.focus)
+                    {
+                        link.state.SetLinkState(LinkState.Focus2Context);
+                    }
+                    else
+                    {
+                        link.state.SetLinkState(LinkState.Context);
+                    }
+                }
             }
         }
 

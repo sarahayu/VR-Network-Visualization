@@ -73,6 +73,7 @@ namespace VidiGraph
 
             for (int i = 0; i < network.nodes.Count(); i++)
             {
+                if (network.nodes[i] == null) continue; // why would this be null??
                 network.idToIdx[network.nodes[i].idx] = i;
             }
         }

@@ -74,9 +74,22 @@ namespace VidiGraph
             _layouts["spider"].Initialize();
         }
 
-        public void FocusToCommunity(int community)
+        public void ToggleCommunityFocus(int community, bool animated = true)
         {
+            bool isFocused = _dataStruct.Communities[community].focus;
 
+            _spiderLayout.SetFocusCommunity(community, !isFocused);
+
+            _curLayout = "spider";
+
+            if (animated)
+            {
+                ToggleCommunityFocusAnimated();
+            }
+            else
+            {
+                ToggleCommunityFocusUnanimated();
+            }
         }
 
         public void ChangeToLayout(string layout, bool animated = true)
@@ -106,6 +119,23 @@ namespace VidiGraph
         void ChangeToLayoutUnanimated(string layout)
         {
             _layouts[layout].ApplyLayout();
+            _dataStruct.RecomputeGeometricProps();
+            _renderer.UpdateRenderElements();
+        }
+
+        void ToggleCommunityFocusAnimated()
+        {
+            if (_curAnim != null)
+            {
+                StopCoroutine(_curAnim);
+            }
+
+            _curAnim = StartCoroutine(CRAnimateLayout("spider"));
+        }
+
+        void ToggleCommunityFocusUnanimated()
+        {
+            _layouts["spider"].ApplyLayout();
             _renderer.UpdateRenderElements();
         }
 
@@ -119,6 +149,8 @@ namespace VidiGraph
                 interpolator.Interpolate(t);
                 _renderer.UpdateRenderElements();
             });
+
+            _dataStruct.RecomputeGeometricProps();
 
             _curAnim = null;
         }

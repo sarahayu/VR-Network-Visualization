@@ -126,16 +126,25 @@ namespace VidiGraph
 
             BuildTreeLinks(RootIdx);
             TagCommunities();
+            CommunitiesInit();
         }
 
-        public void CommunitiesInit()
+        public void RecomputeGeometricProps()
+        {
+            foreach (var entry in Communities)
+            {
+                entry.Value.ComputeGeometricProperty();
+            }
+        }
+
+        void CommunitiesInit()
         {
             FindLinks4Communities();
             FindNodesInCommunities();
 
             // buildmatrix (sy: why was this a to do?)
         }
-        public void FindLinks4Communities()
+        void FindLinks4Communities()
         {
             foreach (var link in Links)
             {
@@ -169,11 +178,6 @@ namespace VidiGraph
                 {
                     Communities[node.communityIdx].communityNodes.Add(node);
                 }
-            }
-
-            foreach (var entry in Communities)
-            {
-                entry.Value.ComputeGeometricProperty();
             }
         }
 
@@ -259,11 +263,38 @@ namespace VidiGraph
             var targetAncestors = targetNode.ancIdxOrderList;
 
             var commonAncestors = sourceAncestors.Intersect(targetAncestors);
+            var commonAncIdx = commonAncestors.FirstOrDefault();
 
-            var ancNode = Nodes[commonAncestors.FirstOrDefault()];
+            var commonAncNode = Nodes[commonAncIdx];
 
+            // add source node
             link.pathInTree.Add(sourceNode);
-            link.pathInTree.Add(ancNode);
+
+            // add source node ancestors up to (not including) common ancestor
+            for (int i = 0; i < sourceAncestors.Count; i++)
+            {
+                if (sourceAncestors[i] == commonAncIdx) break;
+                link.pathInTree.Add(Nodes[sourceAncestors[i]]);
+            }
+
+            // add common ancestor
+            link.pathInTree.Add(commonAncNode);
+
+            // add target node ancestors from (not including) common ancestor
+            for (int i = targetAncestors.Count - 1, found = 0; i >= 0; i--)
+            {
+                if (targetAncestors[i] == commonAncIdx)
+                {
+                    found = 1;
+                    continue;
+                }
+                if (found == 1)
+                {
+                    link.pathInTree.Add(Nodes[targetAncestors[i]]);
+                }
+            }
+
+            // add target node
             link.pathInTree.Add(targetNode);
         }
 

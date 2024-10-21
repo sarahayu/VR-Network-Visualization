@@ -35,14 +35,16 @@ namespace VidiGraph
             // pressed
             if (gripVal == 1 && gripVal != lastGripValue)
             {
-                if (network.CurLayout == "spherical")
-                {
-                    network.ChangeToLayout("hairball");
-                }
-                else if (network.CurLayout == "hairball")
-                {
-                    network.ChangeToLayout("spherical");
-                }
+                // if (network.CurLayout == "spherical")
+                // {
+                //     network.ChangeToLayout("hairball");
+                // }
+                // else if (network.CurLayout == "hairball")
+                // {
+                //     network.ChangeToLayout("spherical");
+                // }
+
+                network.ToggleCommunityFocus(1);
             }
 
             lastGripValue = gripVal;
