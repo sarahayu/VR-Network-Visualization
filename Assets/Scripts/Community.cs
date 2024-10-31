@@ -29,9 +29,9 @@ namespace VidiGraph
         {
             if (communityNodes.Count != 0)
             {
-                CommunityUtils.ComputeMassProperties(communityNodes, out mass, out massCenter);
+                CommunityMathUtils.ComputeMassProperties(communityNodes, out mass, out massCenter);
 
-                size = CommunityUtils.ComputeSize(communityNodes, massCenter);
+                size = CommunityMathUtils.ComputeSize(communityNodes, massCenter);
             }
         }
     }

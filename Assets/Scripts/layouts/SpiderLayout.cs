@@ -53,6 +53,7 @@ namespace VidiGraph
                 }
             }
 
+            // change all links to normal if no communities selected
             if (_focusCommunities.Count == 0)
             {
                 foreach (var link in _network.Links)
@@ -60,6 +61,7 @@ namespace VidiGraph
                     link.state.SetLinkState(LinkState.Normal);
                 }
             }
+            // otherwise apply different link states depending on relation to selected communities
             else
             {
                 foreach (var link in _network.Links)
@@ -150,6 +152,7 @@ namespace VidiGraph
                 }
             }
 
+            // change all links to normal if no communities selected
             if (focusCommunities.Count == 0)
             {
                 foreach (var link in networkData.Links)
@@ -157,6 +160,7 @@ namespace VidiGraph
                     link.state.SetLinkState(LinkState.Normal);
                 }
             }
+            // otherwise apply different link states depending on relation to selected communities
             else
             {
                 foreach (var link in networkData.Links)

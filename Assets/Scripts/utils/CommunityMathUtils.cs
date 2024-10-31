@@ -6,7 +6,7 @@ using UnityEngine;
 namespace VidiGraph
 {
 
-    public static class CommunityUtils
+    public static class CommunityMathUtils
     {
         public static void ComputeMassProperties(List<Node> nodes, out double mass, out Vector3 massCenter)
         {

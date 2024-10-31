@@ -22,6 +22,11 @@ namespace VidiGraph
             {
                 _network.Nodes[node.idx].Position3D = node._position3D;
             }
+
+            foreach (var link in _network.Links)
+            {
+                link.state.SetLinkState(LinkState.Normal);
+            }
         }
 
         public override LayoutInterpolator GetInterpolator()
@@ -58,6 +63,12 @@ namespace VidiGraph
                 _startPositions.Add(node.Position3D);
                 // TODO calculate at runtime
                 _endPositions.Add(sphericalNodes[idToIdx[node.id]]._position3D);
+            }
+
+
+            foreach (var link in networkData.Links)
+            {
+                link.state.SetLinkState(LinkState.Normal);
             }
         }
 

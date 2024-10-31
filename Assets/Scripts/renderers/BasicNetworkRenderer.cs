@@ -63,8 +63,8 @@ namespace VidiGraph
                 if (DrawVirtualNodes || !node.virtualNode)
                 {
                     var nodeObj = node.virtualNode
-                        ? NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node, Color.black)
-                        : NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node);
+                        ? NodeLinkRenderUtils.MakeNode(NodePrefab, NetworkTransform, node, Color.black)
+                        : NodeLinkRenderUtils.MakeNode(NodePrefab, NetworkTransform, node);
 
                     _nodeGameObjs[node.id] = nodeObj;
                 }
@@ -78,7 +78,7 @@ namespace VidiGraph
             {
                 foreach (var link in _networkData.TreeLinks)
                 {
-                    var linkObj = NodeLinkRenderer.MakeStraightLink(StraightLinkPrefab, NetworkTransform, link, LinkWidth);
+                    var linkObj = NodeLinkRenderUtils.MakeStraightLink(StraightLinkPrefab, NetworkTransform, link, LinkWidth);
                     _linkGameObjs[link.linkIdx] = linkObj;
                 }
             }
@@ -86,7 +86,7 @@ namespace VidiGraph
 
             foreach (var link in _networkData.Links)
             {
-                var linkObj = NodeLinkRenderer.MakeStraightLink(StraightLinkPrefab, NetworkTransform, link, LinkWidth);
+                var linkObj = NodeLinkRenderUtils.MakeStraightLink(StraightLinkPrefab, NetworkTransform, link, LinkWidth);
                 _linkGameObjs[link.linkIdx] = linkObj;
             }
         }
@@ -109,14 +109,14 @@ namespace VidiGraph
             {
                 foreach (var link in _networkData.TreeLinks)
                 {
-                    NodeLinkRenderer.UpdateStraightLink(_linkGameObjs[link.linkIdx], link, LinkWidth);
+                    NodeLinkRenderUtils.UpdateStraightLink(_linkGameObjs[link.linkIdx], link, LinkWidth);
                 }
             }
             // ...whereas this is concerned with the visible links between nodes in the graph
 
             foreach (var link in _networkData.Links)
             {
-                NodeLinkRenderer.UpdateStraightLink(_linkGameObjs[link.linkIdx], link, LinkWidth);
+                NodeLinkRenderUtils.UpdateStraightLink(_linkGameObjs[link.linkIdx], link, LinkWidth);
             }
         }
     }

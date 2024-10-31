@@ -150,7 +150,9 @@ namespace VidiGraph
                 _renderer.UpdateRenderElements();
             });
 
+            // update render elements one more time to update input elements after recomputing geometric info
             _dataStruct.RecomputeGeometricProps();
+            _renderer.UpdateRenderElements();
 
             _curAnim = null;
         }

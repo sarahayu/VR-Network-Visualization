@@ -1,12 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.PlayerLoop;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 namespace VidiGraph
 {
     public class BundledNetworkRenderer : NetworkRenderer
     {
         public GameObject NodePrefab;
+        public GameObject CommunityPrefab;
         public GameObject StraightLinkPrefab;
 
         [Range(0.0f, 0.1f)]
@@ -33,6 +36,7 @@ namespace VidiGraph
 
         Dictionary<int, GameObject> _nodeGameObjs = new Dictionary<int, GameObject>();
         Dictionary<int, GameObject> _linkGameObjs = new Dictionary<int, GameObject>();
+        Dictionary<int, GameObject> _communityGameObjs = new Dictionary<int, GameObject>();
         Dictionary<int, List<Vector3>> _controlPointsMap = new Dictionary<int, List<Vector3>>();
         Material _batchSplineMaterial;
 
@@ -52,6 +56,7 @@ namespace VidiGraph
 
             _nodeGameObjs.Clear();
             _linkGameObjs.Clear();
+            _communityGameObjs.Clear();
         }
 
         public override void Initialize()
@@ -63,6 +68,7 @@ namespace VidiGraph
             _networkData = GetComponentInParent<NetworkDataStructure>();
 
             CreateNodes();
+            CreateCommunities();
             CreateLinks();
 
             CreateGPULinks();
@@ -71,10 +77,10 @@ namespace VidiGraph
         public override void UpdateRenderElements()
         {
             UpdateNodes();
+            UpdateCommunities();
             UpdateLinks();
 
-            ComputeControlPoints();
-            _shaderWrapper.UpdateBuffers(_networkData, _controlPointsMap);
+            UpdateGPULinks();
         }
 
         public override void Draw()
@@ -105,11 +111,23 @@ namespace VidiGraph
                 if (DrawVirtualNodes || !node.virtualNode)
                 {
                     var nodeObj = node.virtualNode
-                        ? NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node, Color.black)
-                        : NodeLinkRenderer.MakeNode(NodePrefab, NetworkTransform, node);
+                        ? NodeLinkRenderUtils.MakeNode(NodePrefab, NetworkTransform, node, Color.black)
+                        : NodeLinkRenderUtils.MakeNode(NodePrefab, NetworkTransform, node);
 
                     _nodeGameObjs[node.id] = nodeObj;
                 }
+            }
+        }
+
+        void CreateCommunities()
+        {
+            foreach (var idAndCommunity in _networkData.Communities)
+            {
+                var commObj = CommunityRenderUtils.MakeCommunity(CommunityPrefab, NetworkTransform, idAndCommunity.Value);
+
+                _communityGameObjs[idAndCommunity.Key] = commObj;
+
+                AddInteractionListeners(commObj, idAndCommunity.Value);
             }
         }
 
@@ -119,7 +137,7 @@ namespace VidiGraph
             {
                 foreach (var link in _networkData.TreeLinks)
                 {
-                    var linkObj = NodeLinkRenderer.MakeStraightLink(StraightLinkPrefab, NetworkTransform, link, LinkWidth);
+                    var linkObj = NodeLinkRenderUtils.MakeStraightLink(StraightLinkPrefab, NetworkTransform, link, LinkWidth);
                     _linkGameObjs[link.linkIdx] = linkObj;
                 }
             }
@@ -175,15 +193,44 @@ namespace VidiGraph
             }
         }
 
+        void UpdateCommunities()
+        {
+            foreach (var idAndCommunity in _networkData.Communities)
+            {
+                CommunityRenderUtils.UpdateCommunity(_communityGameObjs[idAndCommunity.Key], idAndCommunity.Value);
+            }
+        }
+
         void UpdateLinks()
         {
             if (DrawTreeStructure)
             {
                 foreach (var link in _networkData.TreeLinks)
                 {
-                    NodeLinkRenderer.UpdateStraightLink(_linkGameObjs[link.linkIdx], link, LinkWidth);
+                    NodeLinkRenderUtils.UpdateStraightLink(_linkGameObjs[link.linkIdx], link, LinkWidth);
                 }
             }
+        }
+
+        void UpdateGPULinks()
+        {
+            ComputeControlPoints();
+            _shaderWrapper.UpdateBuffers(_networkData, _controlPointsMap);
+        }
+
+        void AddInteractionListeners(GameObject gameObject, Community community)
+        {
+            XRSimpleInteractable xrInteractable = gameObject.GetComponent<XRSimpleInteractable>();
+
+            xrInteractable.hoverEntered.AddListener(evt =>
+            {
+                CallCommunityHoverEnter(community, evt);
+            });
+
+            xrInteractable.hoverExited.AddListener(evt =>
+            {
+                CallCommunityHoverExit(community, evt);
+            });
         }
 
     }
