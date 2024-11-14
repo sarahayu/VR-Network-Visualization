@@ -7,65 +7,68 @@ namespace VidiGraph
     public class HairballLayout : NetworkLayout
     {
         NetworkDataStructure _network;
+        NetworkContext3D _networkProperties;
 
-        public override void Initialize()
+        // TODO remove this when we are able to calc at runtime
+        NetworkFilesLoader _fileLoader;
+
+        public override void Initialize(NetworkContext networkContext)
         {
-            _network = GetComponentInParent<NetworkDataStructure>();
+            _networkProperties = (NetworkContext3D)networkContext;
+
+            var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
+            _network = manager.Data;
+            _fileLoader = manager.FileLoader;
         }
 
         public override void ApplyLayout()
         {
             // TODO calculate at runtime
-            var fileLoader = GetComponentInParent<NetworkFilesLoader>();
-
-            foreach (var node in fileLoader.HairballLayout.nodes)
+            foreach (var node in _fileLoader.HairballLayout.nodes)
             {
-                _network.Nodes[node.idx].Position3D = node._position3D;
+                _networkProperties.Nodes[node.idx].Position = node._position3D;
             }
         }
 
         public override LayoutInterpolator GetInterpolator()
         {
-            var fileLoader = GetComponentInParent<NetworkFilesLoader>();
-
-            return new HairballInterpolator(_network, fileLoader);
+            return new HairballInterpolator(_network, _networkProperties, _fileLoader);
         }
     }
 
     public class HairballInterpolator : LayoutInterpolator
     {
-        List<Node> _nodes;
-        List<Vector3> _startPositions;
-        List<Vector3> _endPositions;
+        NetworkContext3D _networkProperties;
+        Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
+        Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
-        public HairballInterpolator(NetworkDataStructure networkData, NetworkFilesLoader fileLoader)
+        public HairballInterpolator(NetworkDataStructure networkData, NetworkContext3D networkProperties, NetworkFilesLoader fileLoader)
         {
+            _networkProperties = networkProperties;
             // get actual array instead of the node collection so we can use list indices rather than 
             // their ids specified in data
-            _nodes = networkData.Nodes.NodeArray;
-            var nodeCount = _nodes.Count;
-
-            _startPositions = new List<Vector3>(nodeCount);
-            _endPositions = new List<Vector3>(nodeCount);
+            var nodes = networkData.Nodes.NodeArray;
+            var nodeCount = nodes.Count;
 
             var hairballNodes = fileLoader.HairballLayout.nodes;
             var idToIdx = fileLoader.HairballLayout.idToIdx;
 
             for (int i = 0; i < nodeCount; i++)
             {
-                var node = _nodes[i];
+                var node = nodes[i];
 
-                _startPositions.Add(node.Position3D);
+                _startPositions[node.id] = networkProperties.Nodes[node.id].Position;
                 // TODO calculate at runtime
-                _endPositions.Add(hairballNodes[idToIdx[node.id]]._position3D);
+                _endPositions[node.id] = hairballNodes[idToIdx[node.id]]._position3D;
             }
         }
 
         public override void Interpolate(float t)
         {
-            for (int i = 0; i < _nodes.Count; i++)
+            foreach (var nodeID in _startPositions.Keys)
             {
-                _nodes[i].Position3D = Vector3.Lerp(_startPositions[i], _endPositions[i], Mathf.SmoothStep(0f, 1f, t));
+                _networkProperties.Nodes[nodeID].Position
+                    = Vector3.Lerp(_startPositions[nodeID], _endPositions[nodeID], Mathf.SmoothStep(0f, 1f, t));
             }
         }
     }

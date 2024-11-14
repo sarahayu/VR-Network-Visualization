@@ -33,7 +33,7 @@ namespace VidiGraph
             _splineMaterial = material;
         }
 
-        public void PrepareBuffers(NetworkDataStructure networkData, Dictionary<int, List<Vector3>> controlPoints)
+        public void PrepareBuffers(NetworkDataStructure networkData, NetworkContext3D networkProperties, Dictionary<int, List<Vector3>> controlPoints)
         {
             // Initialize Compute Shader data
             _splines = new List<SplineData>();
@@ -58,7 +58,7 @@ namespace VidiGraph
 
                 Vector3 startPosition = cp[0];
                 Vector3 endPosition = cp[cp.Count - 1];
-                uint linkState = (uint)link.state.CurState;
+                uint linkState = (uint)networkProperties.Links[link.linkIdx].State;
                 SplineData spline = new SplineData(splineIdx++, (uint)NumSegments, splineSegmentCount, (uint)(NumSegments * BSplineSamplesPerSegment),
                     splineSampleCount, startPosition, endPosition, sourceColor, targetColor, linkState);
                 _splines.Add(spline);
@@ -121,7 +121,7 @@ namespace VidiGraph
             _splineMaterial.SetBuffer("OutSamplePointData", _outSampleControlPointData);
         }
 
-        public void UpdateBuffers(NetworkDataStructure networkData, Dictionary<int, List<Vector3>> controlPoints)
+        public void UpdateBuffers(NetworkDataStructure networkData, NetworkContext3D networkProperties, Dictionary<int, List<Vector3>> controlPoints)
         {
             // Initialize Compute Shader data
             _splineControlPoints = new List<SplineControlPointData>();
@@ -144,7 +144,7 @@ namespace VidiGraph
                 */
                 Vector3 startPosition = cp[0];
                 Vector3 endPosition = cp[ControlPointCount - 1];
-                uint linkState = (uint)link.state.CurState;
+                uint linkState = (uint)networkProperties.Links[link.linkIdx].State;
 
                 // Update spline information, we can preserve colors since their lookup is expensive
                 SplineData spline = _splines[splineIdx];

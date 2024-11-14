@@ -8,24 +8,30 @@ namespace VidiGraph
     public class SpiderLayout : NetworkLayout
     {
         NetworkDataStructure _network;
+        NetworkContext3D _networkProperties;
+
+        // TODO remove this when we are able to calc at runtime
+        NetworkFilesLoader _fileLoader;
         // use hashset to prevent duplicates
         HashSet<int> _focusCommunities = new HashSet<int>();
 
-        public override void Initialize()
+        public override void Initialize(NetworkContext networkContext)
         {
-            _network = GetComponentInParent<NetworkDataStructure>();
+            _networkProperties = (NetworkContext3D)networkContext;
+
+            var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
+            _network = manager.Data;
+            _fileLoader = manager.FileLoader;
         }
 
         public override void ApplyLayout()
         {
             // TODO calculate at runtime
-            var fileLoader = GetComponentInParent<NetworkFilesLoader>();
+            var spiderNodes = _fileLoader.SpiderData.nodes;
+            var spiderIdToIdx = _fileLoader.SpiderData.idToIdx;
 
-            var spiderNodes = fileLoader.SpiderData.nodes;
-            var spiderIdToIdx = fileLoader.SpiderData.idToIdx;
-
-            var sphericalNodes = fileLoader.SphericalLayout.nodes;
-            var sphericalIdToIdx = fileLoader.SphericalLayout.idToIdx;
+            var sphericalNodes = _fileLoader.SphericalLayout.nodes;
+            var sphericalIdToIdx = _fileLoader.SphericalLayout.idToIdx;
 
             foreach (var (communityIdx, community) in _network.Communities)
             {
@@ -37,7 +43,7 @@ namespace VidiGraph
                     foreach (var node in community.communityNodes)
                     {
                         var sphericalPos = sphericalNodes[sphericalIdToIdx[node.id]]._position3D;
-                        _network.Nodes[node.id].Position3D = sphericalPos;
+                        _networkProperties.Nodes[node.id].Position = sphericalPos;
                     }
                 }
                 // move to spider position
@@ -48,7 +54,7 @@ namespace VidiGraph
                     foreach (var node in community.communityNodes)
                     {
                         var spiderPos = spiderNodes[spiderIdToIdx[node.id]].spiderPos;
-                        _network.Nodes[node.id].Position3D = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
+                        _networkProperties.Nodes[node.id].Position = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
                     }
                 }
             }
@@ -56,9 +62,9 @@ namespace VidiGraph
             // change all links to normal if no communities selected
             if (_focusCommunities.Count == 0)
             {
-                foreach (var link in _network.Links)
+                foreach (var link in _networkProperties.Links.Values)
                 {
-                    link.state.SetLinkState(LinkState.Normal);
+                    link.State = NetworkContext3D.Link.LinkState.Normal;
                 }
             }
             // otherwise apply different link states depending on relation to selected communities
@@ -70,15 +76,15 @@ namespace VidiGraph
                     var b = _network.Communities[link.targetNode.communityIdx];
                     if (a.focus && b.focus)
                     {
-                        link.state.SetLinkState(LinkState.Focus);
+                        _networkProperties.Links[link.linkIdx].State = NetworkContext3D.Link.LinkState.Normal;
                     }
                     else if (a.focus || b.focus)
                     {
-                        link.state.SetLinkState(LinkState.Focus2Context);
+                        _networkProperties.Links[link.linkIdx].State = NetworkContext3D.Link.LinkState.Focus2Context;
                     }
                     else
                     {
-                        link.state.SetLinkState(LinkState.Context);
+                        _networkProperties.Links[link.linkIdx].State = NetworkContext3D.Link.LinkState.Context;
                     }
                 }
             }
@@ -86,9 +92,7 @@ namespace VidiGraph
 
         public override LayoutInterpolator GetInterpolator()
         {
-            var fileLoader = GetComponentInParent<NetworkFilesLoader>();
-
-            return new SpiderInterpolator(_network, fileLoader, _focusCommunities);
+            return new SpiderInterpolator(_network, _networkProperties, _fileLoader, _focusCommunities);
         }
 
         public void SetFocusCommunity(int focusCommunity, bool isFocused)
@@ -106,16 +110,14 @@ namespace VidiGraph
 
     public class SpiderInterpolator : LayoutInterpolator
     {
-        List<Node> _nodes;
-        List<Vector3> _startPositions;
-        List<Vector3> _endPositions;
+        NetworkContext3D _networkProperties;
+        Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
+        Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
-        public SpiderInterpolator(NetworkDataStructure networkData, NetworkFilesLoader fileLoader, HashSet<int> focusCommunities)
+        public SpiderInterpolator(NetworkDataStructure networkData, NetworkContext3D networkProperties,
+            NetworkFilesLoader fileLoader, HashSet<int> focusCommunities)
         {
-            _nodes = new List<Node>();
-
-            _startPositions = new List<Vector3>();
-            _endPositions = new List<Vector3>();
+            _networkProperties = networkProperties;
 
             var spiderNodes = fileLoader.SpiderData.nodes;
             var spiderIdToIdx = fileLoader.SpiderData.idToIdx;
@@ -132,9 +134,9 @@ namespace VidiGraph
 
                     foreach (var node in community.communityNodes)
                     {
-                        _nodes.Add(node);
-                        _startPositions.Add(networkData.Nodes[node.id].Position3D);
-                        _endPositions.Add(sphericalNodes[sphericalIdToIdx[node.id]]._position3D);
+                        _startPositions[node.id] = networkProperties.Nodes[node.id].Position;
+                        // TODO calculate at runtime
+                        _endPositions[node.id] = sphericalNodes[sphericalIdToIdx[node.id]]._position3D;
                     }
                 }
                 // move to spider position
@@ -144,10 +146,10 @@ namespace VidiGraph
 
                     foreach (var node in community.communityNodes)
                     {
-                        _nodes.Add(node);
-                        _startPositions.Add(networkData.Nodes[node.id].Position3D);
+                        _startPositions[node.id] = networkProperties.Nodes[node.id].Position;
+                        // TODO calculate at runtime
                         var spiderPos = spiderNodes[spiderIdToIdx[node.id]].spiderPos;
-                        _endPositions.Add(new Vector3(spiderPos.x, spiderPos.y, spiderPos.z));
+                        _endPositions[node.id] = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
                     }
                 }
             }
@@ -155,9 +157,9 @@ namespace VidiGraph
             // change all links to normal if no communities selected
             if (focusCommunities.Count == 0)
             {
-                foreach (var link in networkData.Links)
+                foreach (var link in _networkProperties.Links.Values)
                 {
-                    link.state.SetLinkState(LinkState.Normal);
+                    link.State = NetworkContext3D.Link.LinkState.Normal;
                 }
             }
             // otherwise apply different link states depending on relation to selected communities
@@ -169,15 +171,15 @@ namespace VidiGraph
                     var b = networkData.Communities[link.targetNode.communityIdx];
                     if (a.focus && b.focus)
                     {
-                        link.state.SetLinkState(LinkState.Focus);
+                        _networkProperties.Links[link.linkIdx].State = NetworkContext3D.Link.LinkState.Normal;
                     }
                     else if (a.focus || b.focus)
                     {
-                        link.state.SetLinkState(LinkState.Focus2Context);
+                        _networkProperties.Links[link.linkIdx].State = NetworkContext3D.Link.LinkState.Focus2Context;
                     }
                     else
                     {
-                        link.state.SetLinkState(LinkState.Context);
+                        _networkProperties.Links[link.linkIdx].State = NetworkContext3D.Link.LinkState.Context;
                     }
                 }
             }
@@ -185,9 +187,10 @@ namespace VidiGraph
 
         public override void Interpolate(float t)
         {
-            for (int i = 0; i < _nodes.Count; i++)
+            foreach (var nodeID in _startPositions.Keys)
             {
-                _nodes[i].Position3D = Vector3.Lerp(_startPositions[i], _endPositions[i], Mathf.SmoothStep(0f, 1f, t));
+                _networkProperties.Nodes[nodeID].Position
+                    = Vector3.Lerp(_startPositions[nodeID], _endPositions[nodeID], Mathf.SmoothStep(0f, 1f, t));
             }
         }
     }

@@ -1,6 +1,6 @@
 /*
 *
-* NetworkDataStructure is our central point for accessing any additional properties computed that was not found in data files
+* NetworkDataStructure is our central point for accessing any additional global properties computed that was not found in data files
 * (i.e. in-game coordinates, current animated coordinates)
 */
 
@@ -69,7 +69,7 @@ namespace VidiGraph
             // 2. Build Index
             for (var i = 0; i < fileNodes.Length; i++)
             {
-                var node = new Node(fileNodes[i]);
+                var node = PreprocFileUtils.NodeFromPreprocNode(fileNodes[i]);
 
                 // Initialize the node-link matrix
                 NodeLinkMatrix.Add(node.id, new List<Link>());
@@ -105,7 +105,7 @@ namespace VidiGraph
             // 3. find spline control points
             for (var i = 0; i < fileLinks.Length; i++)
             {
-                var link = new Link(fileLinks[i]);
+                var link = PreprocFileUtils.LinkFromPreprocLink(fileLinks[i]);
 
                 link.sourceNode = Nodes[link.sourceIdx];
                 link.targetNode = Nodes[link.targetIdx];
@@ -127,14 +127,6 @@ namespace VidiGraph
             BuildTreeLinks(RootIdx);
             TagCommunities();
             CommunitiesInit();
-        }
-
-        public void RecomputeGeometricProps()
-        {
-            foreach (var entry in Communities)
-            {
-                entry.Value.ComputeGeometricProperty();
-            }
         }
 
         void CommunitiesInit()

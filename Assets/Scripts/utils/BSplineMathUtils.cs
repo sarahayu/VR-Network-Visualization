@@ -6,17 +6,19 @@ namespace VidiGraph
 {
     public static class BSplineMathUtils
     {
-        public static Vector3[] ControlPoints(Link link, NetworkDataStructure networkData)
+        public static Vector3[] ControlPoints(Link link, NetworkDataStructure networkData, NetworkContext3D networkProperties)
         {
             //TODO There has to some better way to do this, and also to provide a constant number of control points
 
             var sourceNode = link.sourceNode;
             var targetNode = link.targetNode;
+            var sourceNodeProps = networkProperties.Nodes[link.sourceIdx];
+            var targetNodeProps = networkProperties.Nodes[link.targetIdx];
 
-            var clusterS = networkData.Communities[sourceNode.communityIdx];
-            var clusterT = networkData.Communities[targetNode.communityIdx];
-            var sCenter = clusterS.massCenter;
-            var tCenter = clusterT.massCenter;
+            var sCenter = networkProperties.Communities[sourceNode.communityIdx].MassCenter;
+            var tCenter = networkProperties.Communities[targetNode.communityIdx].MassCenter;
+            var sFocus = networkData.Communities[sourceNode.communityIdx].focus;
+            var tFocus = networkData.Communities[targetNode.communityIdx].focus;
 
             if (networkData.Is2D)
             {
@@ -24,22 +26,22 @@ namespace VidiGraph
                 tCenter.z = 0.25f;
             }
             // Between focus and context
-            if (clusterS.focus && !clusterT.focus)
+            if (sFocus && !tFocus)
             {
                 return new[] {
-                    sourceNode.Position3D,
+                    sourceNodeProps.Position,
                     (sCenter + tCenter) / 2,
                     tCenter,
-                    targetNode.Position3D
+                    targetNodeProps.Position
                 };
             }
-            if (clusterT.focus && !clusterS.focus)
+            if (tFocus && !sFocus)
             {
                 return new[] {
-                    sourceNode.Position3D,
+                    sourceNodeProps.Position,
                     sCenter,
                     (sCenter + tCenter) / 2,
-                    targetNode.Position3D
+                    targetNodeProps.Position
                 };
             }
 
@@ -47,7 +49,7 @@ namespace VidiGraph
 
             for (int i = 0; i < link.pathInTree.Count; i++)
             {
-                result[i] = link.pathInTree[i].Position3D;
+                result[i] = networkProperties.Nodes[link.pathInTree[i].id].Position;
             }
 
             return result;

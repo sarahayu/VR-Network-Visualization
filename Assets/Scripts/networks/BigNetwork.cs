@@ -1,21 +1,16 @@
-/*
-*
-* This should be central component for Network object
-*
-*/
-
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace VidiGraph
 {
-    public class Network : MonoBehaviour
+    public class BigNetwork : Network
     {
-        NetworkFilesLoader _fileLoader;
-        NetworkDataStructure _dataStruct;
-        NetworkInput _input;
-        NetworkRenderer _renderer;
+        NetworkManager _manager;
+
+        NetworkInput _bigNetworkInput;
+        NetworkRenderer _bigNetworkRenderer;
+        NetworkContext3D _networkContext = new NetworkContext3D();
 
         Dictionary<string, NetworkLayout> _layouts = new Dictionary<string, NetworkLayout>();
         // keep a reference to spiderlayout specifically to focus on individual communities
@@ -32,7 +27,6 @@ namespace VidiGraph
 
         void Start()
         {
-            Initialize();
         }
 
         void Update()
@@ -40,43 +34,57 @@ namespace VidiGraph
             Draw();
         }
 
-        public void Initialize()
+        public override void Initialize()
         {
-            _fileLoader = GetComponent<NetworkFilesLoader>();
-            _dataStruct = GetComponent<NetworkDataStructure>();
-            _input = GetComponent<NetworkInput>();
-            _renderer = GetComponentInChildren<NetworkRenderer>();
+            _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
+            _networkContext.Update(_manager.Data);
 
-            _fileLoader.LoadFiles();
-            _dataStruct.InitNetwork();
-            _input.Initialize();
-            _renderer.Initialize();
+            _bigNetworkInput = GetComponent<NetworkInput>();
+            _bigNetworkRenderer = GetComponentInChildren<NetworkRenderer>();
+
+            _bigNetworkInput.Initialize();
+            _bigNetworkRenderer.Initialize(_networkContext);
 
             InitializeLayouts();
             ChangeToLayout("spherical", false);
         }
 
-        public void Draw()
+        public override void UpdateLayouts()
         {
-            _renderer.Draw();
+            // TODO implement
+        }
+
+        public override void UpdateRenderElements()
+        {
+            // TODO implement
+        }
+
+        public override void DrawPreview()
+        {
+            Draw();
+        }
+
+        void Draw()
+        {
+            _bigNetworkRenderer.Draw();
         }
 
         void InitializeLayouts()
         {
             _layouts["hairball"] = GetComponentInChildren<HairballLayout>();
-            _layouts["hairball"].Initialize();
+            _layouts["hairball"].Initialize(_networkContext);
 
             _layouts["spherical"] = GetComponentInChildren<SphericalLayout>();
-            _layouts["spherical"].Initialize();
+            _layouts["spherical"].Initialize(_networkContext);
 
             _spiderLayout = GetComponentInChildren<SpiderLayout>();
             _layouts["spider"] = _spiderLayout;
-            _layouts["spider"].Initialize();
+            _layouts["spider"].Initialize(_networkContext);
         }
 
         public void ToggleCommunityFocus(int community, bool animated = true)
         {
-            bool isFocused = _dataStruct.Communities[community].focus;
+            bool isFocused = _manager.Data.Communities[community].focus;
 
             _spiderLayout.SetFocusCommunity(community, !isFocused);
 
@@ -119,8 +127,8 @@ namespace VidiGraph
         void ChangeToLayoutUnanimated(string layout)
         {
             _layouts[layout].ApplyLayout();
-            _dataStruct.RecomputeGeometricProps();
-            _renderer.UpdateRenderElements();
+            _networkContext.RecomputeGeometricProps(_manager.Data);
+            _bigNetworkRenderer.UpdateRenderElements();
         }
 
         void ToggleCommunityFocusAnimated()
@@ -136,7 +144,7 @@ namespace VidiGraph
         void ToggleCommunityFocusUnanimated()
         {
             _layouts["spider"].ApplyLayout();
-            _renderer.UpdateRenderElements();
+            _bigNetworkRenderer.UpdateRenderElements();
         }
 
         IEnumerator CRAnimateLayout(string layout)
@@ -147,12 +155,12 @@ namespace VidiGraph
             yield return AnimationUtils.Lerp(dur, t =>
             {
                 interpolator.Interpolate(t);
-                _renderer.UpdateRenderElements();
+                _bigNetworkRenderer.UpdateRenderElements();
             });
 
             // update render elements one more time to update input elements after recomputing geometric info
-            _dataStruct.RecomputeGeometricProps();
-            _renderer.UpdateRenderElements();
+            _networkContext.RecomputeGeometricProps(_manager.Data);
+            _bigNetworkRenderer.UpdateRenderElements();
 
             _curAnim = null;
         }

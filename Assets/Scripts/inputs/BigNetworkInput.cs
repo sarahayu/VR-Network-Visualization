@@ -7,7 +7,7 @@ using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 namespace VidiGraph
 {
-    public class NetworkInput : MonoBehaviour
+    public class BigNetworkInput : NetworkInput
     {
         // TODO there's gotta be a better way to do this
         public XRInputButtonReader LeftGripPress = new XRInputButtonReader("LeftGripPress");
@@ -15,13 +15,13 @@ namespace VidiGraph
         public XRInputButtonReader RightGripPress = new XRInputButtonReader("RightGripPress");
         public XRInputButtonReader RightTriggerPress = new XRInputButtonReader("RightTriggerPress");
 
-        Network _network;
+        NetworkManager _manager;
 
         Community _hoveredCommunity = null;
 
-        public void Initialize()
+        public override void Initialize()
         {
-            _network = GetComponent<Network>();
+            _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
 
             var renderer = GetComponentInChildren<NetworkRenderer>();
 
@@ -47,19 +47,19 @@ namespace VidiGraph
             {
                 if (_hoveredCommunity != null)
                 {
-                    _network.ToggleCommunityFocus(_hoveredCommunity.communityIdx);
+                    _manager.ToggleCommunityFocus(_hoveredCommunity.communityIdx);
                 }
             }
 
             if (LeftGripPress.ReadWasPerformedThisFrame() && LeftTriggerPress.ReadWasPerformedThisFrame())
             {
-                if (_network.CurLayout == "spherical")
+                if (_manager.CurBigLayout == "spherical")
                 {
-                    _network.ChangeToLayout("hairball");
+                    _manager.ChangeToLayout("hairball");
                 }
-                else if (_network.CurLayout == "hairball")
+                else if (_manager.CurBigLayout == "hairball")
                 {
-                    _network.ChangeToLayout("spherical");
+                    _manager.ChangeToLayout("spherical");
                 }
             }
         }

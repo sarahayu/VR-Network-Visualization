@@ -5,26 +5,20 @@ using UnityEditor;
 
 namespace VidiGraph
 {
-    [CustomEditor(typeof(Network))]
+    [CustomEditor(typeof(NetworkManager))]
 
     public class NetworkFileLoaderEditor : Editor
     {
         public override void OnInspectorGUI()
         {
-            Network network = (Network)target;
+            NetworkManager network = (NetworkManager)target;
 
             DrawDefaultInspector();
 
-            // if (DrawDefaultInspector ()) {
-            // 	if (mapGen.autoUpdate) {
-            // 		mapGen.DrawMapInEditor ();
-            // 	}
-            // }
-
-            if (GUILayout.Button("Reload"))
+            if (GUILayout.Button("Reload Preview"))
             {
                 network.Initialize();
-                network.Draw();
+                network.DrawPreview();
             }
         }
     }

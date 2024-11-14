@@ -17,22 +17,7 @@ namespace VidiGraph
         // target : link number
         public Dictionary<int, int> aggregateLinks = new Dictionary<int, int>();
 
-        public double mass = 0;
-        public double size = 0;
-        public Vector3 massCenter = Vector3.zero;
-
         public float depth = 1;
         public bool focus = false;
-        public bool onMove = false;
-
-        public void ComputeGeometricProperty()
-        {
-            if (communityNodes.Count != 0)
-            {
-                CommunityMathUtils.ComputeMassProperties(communityNodes, out mass, out massCenter);
-
-                size = CommunityMathUtils.ComputeSize(communityNodes, massCenter);
-            }
-        }
     }
 }

@@ -7,76 +7,78 @@ namespace VidiGraph
     public class SphericalLayout : NetworkLayout
     {
         NetworkDataStructure _network;
+        NetworkContext3D _networkProperties;
 
-        public override void Initialize()
+        // TODO remove this when we are able to calc at runtime
+        NetworkFilesLoader _fileLoader;
+
+        public override void Initialize(NetworkContext networkContext)
         {
-            _network = GetComponentInParent<NetworkDataStructure>();
+            _networkProperties = (NetworkContext3D)networkContext;
+
+            var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
+            _network = manager.Data;
+            _fileLoader = manager.FileLoader;
         }
 
         public override void ApplyLayout()
         {
             // TODO calculate at runtime
-            var fileLoader = GetComponentInParent<NetworkFilesLoader>();
-
-            foreach (var node in fileLoader.SphericalLayout.nodes)
+            foreach (var node in _fileLoader.SphericalLayout.nodes)
             {
-                _network.Nodes[node.idx].Position3D = node._position3D;
+                _networkProperties.Nodes[node.idx].Position = node._position3D;
             }
 
-            foreach (var link in _network.Links)
+            foreach (var link in _networkProperties.Links.Values)
             {
-                link.state.SetLinkState(LinkState.Normal);
+                link.State = NetworkContext3D.Link.LinkState.Normal;
             }
         }
 
         public override LayoutInterpolator GetInterpolator()
         {
-            var fileLoader = GetComponentInParent<NetworkFilesLoader>();
-
-            return new SphericalInterpolator(_network, fileLoader);
+            return new SphericalInterpolator(_network, _networkProperties, _fileLoader);
         }
     }
 
     public class SphericalInterpolator : LayoutInterpolator
     {
-        List<Node> _nodes;
-        List<Vector3> _startPositions;
-        List<Vector3> _endPositions;
+        NetworkContext3D _networkProperties;
+        Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
+        Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
-        public SphericalInterpolator(NetworkDataStructure networkData, NetworkFilesLoader fileLoader)
+        public SphericalInterpolator(NetworkDataStructure networkData, NetworkContext3D networkProperties, NetworkFilesLoader fileLoader)
         {
+            _networkProperties = networkProperties;
             // get actual array instead of the node collection so we can use list indices rather than 
             // their ids specified in data
-            _nodes = networkData.Nodes.NodeArray;
-            var nodeCount = _nodes.Count;
-
-            _startPositions = new List<Vector3>(nodeCount);
-            _endPositions = new List<Vector3>(nodeCount);
+            var nodes = networkData.Nodes.NodeArray;
+            var nodeCount = nodes.Count;
 
             var sphericalNodes = fileLoader.SphericalLayout.nodes;
             var idToIdx = fileLoader.SphericalLayout.idToIdx;
 
             for (int i = 0; i < nodeCount; i++)
             {
-                var node = _nodes[i];
+                var node = nodes[i];
 
-                _startPositions.Add(node.Position3D);
+                _startPositions[node.id] = networkProperties.Nodes[node.id].Position;
                 // TODO calculate at runtime
-                _endPositions.Add(sphericalNodes[idToIdx[node.id]]._position3D);
+                _endPositions[node.id] = sphericalNodes[idToIdx[node.id]]._position3D;
             }
 
-
-            foreach (var link in networkData.Links)
+            foreach (var link in _networkProperties.Links.Values)
             {
-                link.state.SetLinkState(LinkState.Normal);
+                link.State = NetworkContext3D.Link.LinkState.Normal;
             }
         }
 
         public override void Interpolate(float t)
         {
-            for (int i = 0; i < _nodes.Count; i++)
+            foreach (var nodeID in _startPositions.Keys)
             {
-                _nodes[i].Position3D = Vector3.Lerp(_startPositions[i], _endPositions[i], Mathf.SmoothStep(0f, 1f, t));
+                _networkProperties.Nodes[nodeID].Position
+                    = Vector3.Lerp(_startPositions[nodeID], _endPositions[nodeID], Mathf.SmoothStep(0f, 1f, t));
             }
         }
     }
