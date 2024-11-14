@@ -28,7 +28,7 @@ namespace VidiGraph
 
         public void Add(Node node)
         {
-            IdToIndex.Add(node.id, NodeArray.Count);
+            IdToIndex.Add(node.ID, NodeArray.Count);
 
             NodeArray.Add(node);
         }

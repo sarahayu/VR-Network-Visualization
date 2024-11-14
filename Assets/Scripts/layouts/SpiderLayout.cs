@@ -36,25 +36,25 @@ namespace VidiGraph
             foreach (var (communityIdx, community) in _network.Communities)
             {
                 // reset to original position
-                if (community.focus && !_focusCommunities.Contains(communityIdx))
+                if (community.Focus && !_focusCommunities.Contains(communityIdx))
                 {
-                    community.focus = false;
+                    community.Focus = false;
 
-                    foreach (var node in community.communityNodes)
+                    foreach (var node in community.Nodes)
                     {
-                        var sphericalPos = sphericalNodes[sphericalIdToIdx[node.id]]._position3D;
-                        _networkProperties.Nodes[node.id].Position = sphericalPos;
+                        var sphericalPos = sphericalNodes[sphericalIdToIdx[node.ID]]._position3D;
+                        _networkProperties.Nodes[node.ID].Position = sphericalPos;
                     }
                 }
                 // move to spider position
-                else if (!community.focus && _focusCommunities.Contains(communityIdx))
+                else if (!community.Focus && _focusCommunities.Contains(communityIdx))
                 {
-                    community.focus = true;
+                    community.Focus = true;
 
-                    foreach (var node in community.communityNodes)
+                    foreach (var node in community.Nodes)
                     {
-                        var spiderPos = spiderNodes[spiderIdToIdx[node.id]].spiderPos;
-                        _networkProperties.Nodes[node.id].Position = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
+                        var spiderPos = spiderNodes[spiderIdToIdx[node.ID]].spiderPos;
+                        _networkProperties.Nodes[node.ID].Position = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
                     }
                 }
             }
@@ -72,19 +72,19 @@ namespace VidiGraph
             {
                 foreach (var link in _network.Links)
                 {
-                    var a = _network.Communities[link.sourceNode.communityIdx];
-                    var b = _network.Communities[link.targetNode.communityIdx];
-                    if (a.focus && b.focus)
+                    var a = _network.Communities[link.SourceNode.CommunityID];
+                    var b = _network.Communities[link.TargetNode.CommunityID];
+                    if (a.Focus && b.Focus)
                     {
-                        _networkProperties.Links[link.linkIdx].State = NetworkContext3D.Link.LinkState.Normal;
+                        _networkProperties.Links[link.ID].State = NetworkContext3D.Link.LinkState.Normal;
                     }
-                    else if (a.focus || b.focus)
+                    else if (a.Focus || b.Focus)
                     {
-                        _networkProperties.Links[link.linkIdx].State = NetworkContext3D.Link.LinkState.Focus2Context;
+                        _networkProperties.Links[link.ID].State = NetworkContext3D.Link.LinkState.Focus2Context;
                     }
                     else
                     {
-                        _networkProperties.Links[link.linkIdx].State = NetworkContext3D.Link.LinkState.Context;
+                        _networkProperties.Links[link.ID].State = NetworkContext3D.Link.LinkState.Context;
                     }
                 }
             }
@@ -128,28 +128,28 @@ namespace VidiGraph
             foreach (var (communityIdx, community) in networkData.Communities)
             {
                 // reset to original position
-                if (community.focus && !focusCommunities.Contains(communityIdx))
+                if (community.Focus && !focusCommunities.Contains(communityIdx))
                 {
-                    community.focus = false;
+                    community.Focus = false;
 
-                    foreach (var node in community.communityNodes)
+                    foreach (var node in community.Nodes)
                     {
-                        _startPositions[node.id] = networkProperties.Nodes[node.id].Position;
+                        _startPositions[node.ID] = networkProperties.Nodes[node.ID].Position;
                         // TODO calculate at runtime
-                        _endPositions[node.id] = sphericalNodes[sphericalIdToIdx[node.id]]._position3D;
+                        _endPositions[node.ID] = sphericalNodes[sphericalIdToIdx[node.ID]]._position3D;
                     }
                 }
                 // move to spider position
-                else if (!community.focus && focusCommunities.Contains(communityIdx))
+                else if (!community.Focus && focusCommunities.Contains(communityIdx))
                 {
-                    community.focus = true;
+                    community.Focus = true;
 
-                    foreach (var node in community.communityNodes)
+                    foreach (var node in community.Nodes)
                     {
-                        _startPositions[node.id] = networkProperties.Nodes[node.id].Position;
+                        _startPositions[node.ID] = networkProperties.Nodes[node.ID].Position;
                         // TODO calculate at runtime
-                        var spiderPos = spiderNodes[spiderIdToIdx[node.id]].spiderPos;
-                        _endPositions[node.id] = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
+                        var spiderPos = spiderNodes[spiderIdToIdx[node.ID]].spiderPos;
+                        _endPositions[node.ID] = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
                     }
                 }
             }
@@ -167,19 +167,19 @@ namespace VidiGraph
             {
                 foreach (var link in networkData.Links)
                 {
-                    var a = networkData.Communities[link.sourceNode.communityIdx];
-                    var b = networkData.Communities[link.targetNode.communityIdx];
-                    if (a.focus && b.focus)
+                    var a = networkData.Communities[link.SourceNode.CommunityID];
+                    var b = networkData.Communities[link.TargetNode.CommunityID];
+                    if (a.Focus && b.Focus)
                     {
-                        _networkProperties.Links[link.linkIdx].State = NetworkContext3D.Link.LinkState.Normal;
+                        _networkProperties.Links[link.ID].State = NetworkContext3D.Link.LinkState.Normal;
                     }
-                    else if (a.focus || b.focus)
+                    else if (a.Focus || b.Focus)
                     {
-                        _networkProperties.Links[link.linkIdx].State = NetworkContext3D.Link.LinkState.Focus2Context;
+                        _networkProperties.Links[link.ID].State = NetworkContext3D.Link.LinkState.Focus2Context;
                     }
                     else
                     {
-                        _networkProperties.Links[link.linkIdx].State = NetworkContext3D.Link.LinkState.Context;
+                        _networkProperties.Links[link.ID].State = NetworkContext3D.Link.LinkState.Context;
                     }
                 }
             }

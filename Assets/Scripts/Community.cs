@@ -7,17 +7,17 @@ namespace VidiGraph
 {
     public class Community
     {
-        public int communityIdx;
-        public int root;
-        public List<Node> communityNodes = new List<Node>();
-        public List<Link> innerLinks = new List<Link>();
-        public List<Link> outerLinks = new List<Link>();
+        public int ID;
+        public int RootNodeID;
+        public List<Node> Nodes = new List<Node>();
+        public List<Link> InnerLinks = new List<Link>();
+        public List<Link> OuterLinks = new List<Link>();
 
         // Aggregate the outer links
         // target : link number
-        public Dictionary<int, int> aggregateLinks = new Dictionary<int, int>();
+        public Dictionary<int, int> AggregateLinks = new Dictionary<int, int>();
 
-        public float depth = 1;
-        public bool focus = false;
+        public float Depth = 1;
+        public bool Focus = false;
     }
 }

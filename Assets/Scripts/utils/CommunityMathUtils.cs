@@ -16,8 +16,8 @@ namespace VidiGraph
 
             foreach (var node in nodes)
             {
-                mass += node.degree + 0.01;
-                massCenter += nodeContexts[node.id].Position;
+                mass += node.Degree + 0.01;
+                massCenter += nodeContexts[node.ID].Position;
             }
 
             massCenter /= nodes.Count;
@@ -29,7 +29,7 @@ namespace VidiGraph
 
             foreach (var node in nodes)
             {
-                var dist = Vector3.Distance(massCenter, nodeContexts[node.id].Position);
+                var dist = Vector3.Distance(massCenter, nodeContexts[node.ID].Position);
                 size = Math.Max(dist, size);
             }
 

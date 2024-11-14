@@ -84,7 +84,7 @@ namespace VidiGraph
 
         public void ToggleCommunityFocus(int community, bool animated = true)
         {
-            bool isFocused = _manager.Data.Communities[community].focus;
+            bool isFocused = _manager.Data.Communities[community].Focus;
 
             _spiderLayout.SetFocusCommunity(community, !isFocused);
 

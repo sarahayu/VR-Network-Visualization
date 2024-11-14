@@ -57,9 +57,9 @@ namespace VidiGraph
             {
                 var node = nodes[i];
 
-                _startPositions[node.id] = networkProperties.Nodes[node.id].Position;
+                _startPositions[node.ID] = networkProperties.Nodes[node.ID].Position;
                 // TODO calculate at runtime
-                _endPositions[node.id] = hairballNodes[idToIdx[node.id]]._position3D;
+                _endPositions[node.ID] = hairballNodes[idToIdx[node.ID]]._position3D;
             }
         }
 

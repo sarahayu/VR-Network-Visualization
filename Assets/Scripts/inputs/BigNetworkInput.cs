@@ -47,7 +47,7 @@ namespace VidiGraph
             {
                 if (_hoveredCommunity != null)
                 {
-                    _manager.ToggleCommunityFocus(_hoveredCommunity.communityIdx);
+                    _manager.ToggleCommunityFocus(_hoveredCommunity.ID);
                 }
             }
 

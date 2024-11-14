@@ -18,7 +18,7 @@ namespace VidiGraph
         [HideInInspector]
         public bool IsCoded = false;
         [HideInInspector]
-        public int RootIdx;
+        public int RootNodeID;
         [HideInInspector]
         public NodeCollection Nodes = new NodeCollection();
         [HideInInspector]
@@ -32,9 +32,9 @@ namespace VidiGraph
         [HideInInspector]
         public int NumVirtualNode;
         [HideInInspector]
-        public List<int> RealNodeIdx = new List<int>();
+        public List<int> RealNodeIDs = new List<int>();
         [HideInInspector]
-        public List<int> VirtualNodeIdx = new List<int>();
+        public List<int> VirtualNodeIDs = new List<int>();
 
         public IDictionary<int, List<Link>> NodeLinkMatrix
              = new Dictionary<int, List<Link>>();
@@ -46,8 +46,8 @@ namespace VidiGraph
             Nodes.Clear();
             Links.Clear();
             TreeLinks.Clear();
-            RealNodeIdx.Clear();
-            VirtualNodeIdx.Clear();
+            RealNodeIDs.Clear();
+            VirtualNodeIDs.Clear();
             NodeLinkMatrix.Clear();
             Communities.Clear();
         }
@@ -63,7 +63,7 @@ namespace VidiGraph
             Is2D = fileLoader.Is2D;
 
             IsCoded = fileLoader.GraphData.coded;
-            RootIdx = fileLoader.GraphData.rootIdx;
+            RootNodeID = fileLoader.GraphData.rootIdx;
 
             // 1. Calculate the number of real Node and virtual node
             // 2. Build Index
@@ -72,11 +72,11 @@ namespace VidiGraph
                 var node = PreprocFileUtils.NodeFromPreprocNode(fileNodes[i]);
 
                 // Initialize the node-link matrix
-                NodeLinkMatrix.Add(node.id, new List<Link>());
+                NodeLinkMatrix.Add(node.ID, new List<Link>());
 
                 // Group the nodes by virtual or not
-                if (node.virtualNode) VirtualNodeIdx.Add(node.id);
-                else RealNodeIdx.Add(node.id);
+                if (node.IsVirtualNode) VirtualNodeIDs.Add(node.ID);
+                else RealNodeIDs.Add(node.ID);
 
                 Nodes.Add(node);
             }
@@ -85,18 +85,18 @@ namespace VidiGraph
             // TODO turn into function
             foreach (var node in Nodes)
             {
-                if (node.id == RootIdx)
+                if (node.ID == RootNodeID)
                 {
                     continue;
                 }
 
-                var ancNode = node.ancIdx;
-                node.ancIdxOrderList.Add(ancNode);
+                var ancNode = node.AncID;
+                node.AncIDsOrderList.Add(ancNode);
 
-                while (ancNode != RootIdx)
+                while (ancNode != RootNodeID)
                 {
-                    ancNode = Nodes[ancNode].ancIdx;
-                    node.ancIdxOrderList.Add(ancNode);
+                    ancNode = Nodes[ancNode].AncID;
+                    node.AncIDsOrderList.Add(ancNode);
                 }
             }
 
@@ -107,24 +107,24 @@ namespace VidiGraph
             {
                 var link = PreprocFileUtils.LinkFromPreprocLink(fileLinks[i]);
 
-                link.sourceNode = Nodes[link.sourceIdx];
-                link.targetNode = Nodes[link.targetIdx];
+                link.SourceNode = Nodes[link.SourceNodeID];
+                link.TargetNode = Nodes[link.TargetNodeID];
 
                 // Build Node-Link Matrix
-                NodeLinkMatrix[link.sourceIdx].Add(link);
-                NodeLinkMatrix[link.targetIdx].Add(link);
-                link.linkIdx = i;
+                NodeLinkMatrix[link.SourceNodeID].Add(link);
+                NodeLinkMatrix[link.TargetNodeID].Add(link);
+                link.ID = i;
 
                 // calculate the degree
-                Nodes[link.sourceIdx].degree += 0.01;
-                Nodes[link.targetIdx].degree += 0.01;
+                Nodes[link.SourceNodeID].Degree += 0.01;
+                Nodes[link.TargetNodeID].Degree += 0.01;
 
                 Links.Add(link);
 
                 InitPathInTree(link);
             }
 
-            BuildTreeLinks(RootIdx);
+            BuildTreeLinks(RootNodeID);
             TagCommunities();
             CommunitiesInit();
         }
@@ -133,25 +133,23 @@ namespace VidiGraph
         {
             FindLinks4Communities();
             FindNodesInCommunities();
-
-            // buildmatrix (sy: why was this a to do?)
         }
         void FindLinks4Communities()
         {
             foreach (var link in Links)
             {
-                var sourceCommunity = Nodes[link.sourceIdx].communityIdx;
-                var targetCommunity = Nodes[link.targetIdx].communityIdx;
+                var sourceCommunity = Nodes[link.SourceNodeID].CommunityID;
+                var targetCommunity = Nodes[link.TargetNodeID].CommunityID;
 
                 // for the link inside a community
                 if (sourceCommunity == targetCommunity)
                 {
-                    Communities[sourceCommunity].innerLinks.Add(link);
+                    Communities[sourceCommunity].InnerLinks.Add(link);
                 }
                 else
                 {
-                    Communities[sourceCommunity].outerLinks.Add(link);
-                    Communities[targetCommunity].outerLinks.Add(link);
+                    Communities[sourceCommunity].OuterLinks.Add(link);
+                    Communities[targetCommunity].OuterLinks.Add(link);
                 }
             }
 
@@ -166,9 +164,9 @@ namespace VidiGraph
         {
             foreach (var node in Nodes)
             {
-                if (!node.virtualNode)
+                if (!node.IsVirtualNode)
                 {
-                    Communities[node.communityIdx].communityNodes.Add(node);
+                    Communities[node.CommunityID].Nodes.Add(node);
                 }
             }
         }
@@ -178,19 +176,19 @@ namespace VidiGraph
          */
         void CombineLinks(Community community)
         {
-            foreach (var link in community.outerLinks)
+            foreach (var link in community.OuterLinks)
             {
-                var sourceCommunity = Nodes[link.sourceIdx].communityIdx;
-                var targetCommunity = Nodes[link.targetIdx].communityIdx;
+                var sourceCommunity = Nodes[link.SourceNodeID].CommunityID;
+                var targetCommunity = Nodes[link.TargetNodeID].CommunityID;
 
-                var otherCommunity = community.communityIdx == sourceCommunity ? targetCommunity : sourceCommunity;
+                var otherCommunity = community.ID == sourceCommunity ? targetCommunity : sourceCommunity;
 
-                if (!community.aggregateLinks.ContainsKey(otherCommunity))
+                if (!community.AggregateLinks.ContainsKey(otherCommunity))
                 {
-                    community.aggregateLinks.Add(otherCommunity, 0);
+                    community.AggregateLinks.Add(otherCommunity, 0);
                 }
 
-                community.aggregateLinks[otherCommunity]++;
+                community.AggregateLinks[otherCommunity]++;
             }
         }
 
@@ -199,22 +197,22 @@ namespace VidiGraph
         {
             // TODO change from DFS to BFS for simplicity
             var nodeStack = new Stack<int>();
-            nodeStack.Push(RootIdx);
+            nodeStack.Push(RootNodeID);
 
-            int clusterIdx = 0;
+            int communityID = 0;
             while (nodeStack.Count != 0)
             {
                 var curNode = Nodes[nodeStack.Pop()];
 
                 if (HasLeaves(curNode))
                 {
-                    TagCommunity(curNode, clusterIdx++);
+                    TagCommunity(curNode, communityID++);
                 }
                 else
                 {
-                    foreach (var childIdx in curNode.childIdx)
+                    foreach (var childID in curNode.ChildIDs)
                     {
-                        nodeStack.Push(childIdx);
+                        nodeStack.Push(childID);
                     }
                 }
 
@@ -224,35 +222,35 @@ namespace VidiGraph
 
         bool HasLeaves(Node node)
         {
-            return node.childIdx.Count() != 0 && !Nodes[node.childIdx[0]].virtualNode;
+            return node.ChildIDs.Count() != 0 && !Nodes[node.ChildIDs[0]].IsVirtualNode;
         }
 
         void TagCommunity(Node node, int clusterIdx)
         {
-            Debug.Assert(node.virtualNode);
+            Debug.Assert(node.IsVirtualNode);
 
             var community = new Community
             {
-                root = node.id,
-                communityIdx = clusterIdx
+                RootNodeID = node.ID,
+                ID = clusterIdx
             };
 
             Communities.Add(clusterIdx, community);
 
-            foreach (var childIdx in node.childIdx)
+            foreach (var childIdx in node.ChildIDs)
             {
-                Nodes[childIdx].communityIdx = clusterIdx;
+                Nodes[childIdx].CommunityID = clusterIdx;
             }
         }
 
         // For every link, we find the shortest path in the hierarchy
         void InitPathInTree(Link link)
         {
-            var sourceNode = Nodes[link.sourceIdx];
-            var targetNode = Nodes[link.targetIdx];
+            var sourceNode = link.SourceNode;
+            var targetNode = link.TargetNode;
 
-            var sourceAncestors = sourceNode.ancIdxOrderList;
-            var targetAncestors = targetNode.ancIdxOrderList;
+            var sourceAncestors = sourceNode.AncIDsOrderList;
+            var targetAncestors = targetNode.AncIDsOrderList;
 
             var commonAncestors = sourceAncestors.Intersect(targetAncestors);
             var commonAncIdx = commonAncestors.FirstOrDefault();
@@ -260,17 +258,17 @@ namespace VidiGraph
             var commonAncNode = Nodes[commonAncIdx];
 
             // add source node
-            link.pathInTree.Add(sourceNode);
+            link.PathInTree.Add(sourceNode);
 
             // add source node ancestors up to (not including) common ancestor
             for (int i = 0; i < sourceAncestors.Count; i++)
             {
                 if (sourceAncestors[i] == commonAncIdx) break;
-                link.pathInTree.Add(Nodes[sourceAncestors[i]]);
+                link.PathInTree.Add(Nodes[sourceAncestors[i]]);
             }
 
             // add common ancestor
-            link.pathInTree.Add(commonAncNode);
+            link.PathInTree.Add(commonAncNode);
 
             // add target node ancestors from (not including) common ancestor
             for (int i = targetAncestors.Count - 1, found = 0; i >= 0; i--)
@@ -282,26 +280,26 @@ namespace VidiGraph
                 }
                 if (found == 1)
                 {
-                    link.pathInTree.Add(Nodes[targetAncestors[i]]);
+                    link.PathInTree.Add(Nodes[targetAncestors[i]]);
                 }
             }
 
             // add target node
-            link.pathInTree.Add(targetNode);
+            link.PathInTree.Add(targetNode);
         }
 
-        private void BuildTreeLinks(int nodeIdx)
+        private void BuildTreeLinks(int nodeID)
         {
-            if (!Nodes[nodeIdx].virtualNode) return;
+            if (!Nodes[nodeID].IsVirtualNode) return;
 
-            foreach (var childIdx in Nodes[nodeIdx].childIdx)
+            foreach (var childID in Nodes[nodeID].ChildIDs)
             {
                 // just make link idx the negative count to ensure it's unique from real links
-                int treeLinkIdx = -TreeLinks.Count;
+                int treeLinkID = -TreeLinks.Count;
 
-                TreeLinks.Add(new Link(Nodes[nodeIdx], Nodes[childIdx], treeLinkIdx));
+                TreeLinks.Add(new Link(Nodes[nodeID], Nodes[childID], treeLinkID));
 
-                BuildTreeLinks(childIdx);
+                BuildTreeLinks(childID);
             }
         }
     }

@@ -50,17 +50,17 @@ namespace VidiGraph
 
             foreach (var node in networkData.Nodes)
             {
-                Nodes[node.id] = new Node();
+                Nodes[node.ID] = new Node();
             }
 
             foreach (var link in networkData.Links)
             {
-                Links[link.linkIdx] = new Link() { State = Link.LinkState.Normal };
+                Links[link.ID] = new Link() { State = Link.LinkState.Normal };
             }
 
             foreach (var community in networkData.Communities.Values)
             {
-                Communities[community.communityIdx] = new Community();
+                Communities[community.ID] = new Community();
             }
         }
 
@@ -68,12 +68,12 @@ namespace VidiGraph
         {
             foreach (var community in networkData.Communities.Values)
             {
-                var contextCommunity = Communities[community.communityIdx];
+                var contextCommunity = Communities[community.ID];
 
-                CommunityMathUtils.ComputeMassProperties(community.communityNodes, Nodes,
+                CommunityMathUtils.ComputeMassProperties(community.Nodes, Nodes,
                     out contextCommunity.Mass, out contextCommunity.MassCenter);
 
-                contextCommunity.Size = CommunityMathUtils.ComputeSize(community.communityNodes, Nodes,
+                contextCommunity.Size = CommunityMathUtils.ComputeSize(community.Nodes, Nodes,
                     contextCommunity.MassCenter);
             }
         }

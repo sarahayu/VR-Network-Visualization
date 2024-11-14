@@ -11,7 +11,7 @@ namespace VidiGraph
     {
         public static GameObject MakeNode(GameObject prefab, Transform transform, Node node, NetworkContext3D.Node nodeProps)
         {
-            return MakeNode(prefab, transform, node, nodeProps, node.colorParsed);
+            return MakeNode(prefab, transform, node, nodeProps, node.ColorParsed);
         }
         public static GameObject MakeNode(GameObject prefab, Transform transform, Node node, NetworkContext3D.Node nodeProps, Color color)
         {

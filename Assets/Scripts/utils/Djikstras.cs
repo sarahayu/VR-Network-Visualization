@@ -16,10 +16,10 @@ namespace VidiGraph
         public void BuildInvertedIdx(NetworkDataStructure _network, int _communityIdx)
         {
             var idx = 0;
-            foreach (var node in _network.Communities[_communityIdx].communityNodes)
+            foreach (var node in _network.Communities[_communityIdx].Nodes)
             {
-                N2CIdxMap.Add(node.id, idx);
-                C2NIdxMap.Add(idx, node.id);
+                N2CIdxMap.Add(node.ID, idx);
+                C2NIdxMap.Add(idx, node.ID);
                 idx++;
             }
         }
@@ -68,13 +68,13 @@ namespace VidiGraph
 
         public int[,] ShortestPathMatrix(Community community)
         {
-            var nodesNumber = community.communityNodes.Count;
+            var nodesNumber = community.Nodes.Count;
             var matrix = new int[nodesNumber, nodesNumber];
 
-            foreach (var link in community.innerLinks)
+            foreach (var link in community.InnerLinks)
             {
-                matrix[N2CIdxMap[link.sourceIdx], N2CIdxMap[link.targetIdx]] = 1;
-                matrix[N2CIdxMap[link.targetIdx], N2CIdxMap[link.sourceIdx]] = 1;
+                matrix[N2CIdxMap[link.SourceNodeID], N2CIdxMap[link.TargetNodeID]] = 1;
+                matrix[N2CIdxMap[link.TargetNodeID], N2CIdxMap[link.SourceNodeID]] = 1;
             }
 
             return FindShortestPathFromMatrix(matrix, nodesNumber);
@@ -86,8 +86,8 @@ namespace VidiGraph
 
             foreach (var link in network.Links)
             {
-                matrix[link.sourceIdx, link.targetIdx] = 1;
-                matrix[link.targetIdx, link.sourceIdx] = 1;
+                matrix[link.SourceNodeID, link.TargetNodeID] = 1;
+                matrix[link.TargetNodeID, link.SourceNodeID] = 1;
             }
 
             return FindShortestPathFromMatrix(matrix, nodesNumber);
@@ -101,10 +101,10 @@ namespace VidiGraph
             foreach (var entry1 in network.Communities)
             {
                 var communiity = entry1.Value;
-                foreach (var entry in communiity.aggregateLinks)
+                foreach (var entry in communiity.AggregateLinks)
                 {
-                    matrix[communiity.communityIdx, entry.Key] += entry.Value;
-                    matrix[entry.Key, communiity.communityIdx] += entry.Value;
+                    matrix[communiity.ID, entry.Key] += entry.Value;
+                    matrix[entry.Key, communiity.ID] += entry.Value;
                 }
             }
 

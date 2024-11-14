@@ -51,14 +51,14 @@ namespace VidiGraph
                  * Add Compute Shader data
                  */
 
-                var cp = controlPoints[link.linkIdx];
+                var cp = controlPoints[link.ID];
                 int NumSegments = cp.Count + BSplineDegree - 2; //NumControlPoints + Degree - 2 (First/Last Point)
-                Color sourceColor = link.sourceNode.colorParsed;
-                Color targetColor = link.targetNode.colorParsed;
+                Color sourceColor = link.SourceNode.ColorParsed;
+                Color targetColor = link.TargetNode.ColorParsed;
 
                 Vector3 startPosition = cp[0];
                 Vector3 endPosition = cp[cp.Count - 1];
-                uint linkState = (uint)networkProperties.Links[link.linkIdx].State;
+                uint linkState = (uint)networkProperties.Links[link.ID].State;
                 SplineData spline = new SplineData(splineIdx++, (uint)NumSegments, splineSegmentCount, (uint)(NumSegments * BSplineSamplesPerSegment),
                     splineSampleCount, startPosition, endPosition, sourceColor, targetColor, linkState);
                 _splines.Add(spline);
@@ -134,7 +134,7 @@ namespace VidiGraph
 
             foreach (var link in networkData.Links)
             {
-                var cp = controlPoints[link.linkIdx];
+                var cp = controlPoints[link.ID];
                 int ControlPointCount = cp.Count;
                 int NumSegments = ControlPointCount + BSplineDegree - 2; //NumControlPoints + Degree - 2 (First/Last Point)
 
@@ -144,7 +144,7 @@ namespace VidiGraph
                 */
                 Vector3 startPosition = cp[0];
                 Vector3 endPosition = cp[ControlPointCount - 1];
-                uint linkState = (uint)networkProperties.Links[link.linkIdx].State;
+                uint linkState = (uint)networkProperties.Links[link.ID].State;
 
                 // Update spline information, we can preserve colors since their lookup is expensive
                 SplineData spline = _splines[splineIdx];

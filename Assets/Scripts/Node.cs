@@ -7,19 +7,18 @@ namespace VidiGraph
 {
     public class Node
     {
-        public int id;
-        public string label;
-        public bool virtualNode;
-        public int communityIdx;
-        public string color;
-        public Color colorParsed;
-        public double degree = 0;
-        public int height;
-        public int ancIdx;
-        public int[] childIdx;
+        public int ID;
+        public string Label;
+        public bool IsVirtualNode;
+        public int CommunityID;
+        public string Color;
+        public Color ColorParsed;
+        public double Degree = 0;
+        public int Height;
+        public int AncID;
+        public int[] ChildIDs;
 
-        public Vector3 precompPos3D;
-        public IList<int> ancIdxOrderList = new List<int>();
-        public bool isSpider = false;
+        public Vector3 PrecompPos3D;
+        public IList<int> AncIDsOrderList = new List<int>();
     }
 }

@@ -62,14 +62,14 @@ namespace VidiGraph
         {
             foreach (var node in _networkData.Nodes)
             {
-                if (DrawVirtualNodes || !node.virtualNode)
+                if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
-                    var nodeProps = _networkProperties.Nodes[node.id];
-                    var nodeObj = node.virtualNode
+                    var nodeProps = _networkProperties.Nodes[node.ID];
+                    var nodeObj = node.IsVirtualNode
                         ? NodeLinkRenderUtils.MakeNode(NodePrefab, NetworkTransform, node, nodeProps, Color.black)
                         : NodeLinkRenderUtils.MakeNode(NodePrefab, NetworkTransform, node, nodeProps);
 
-                    _nodeGameObjs[node.id] = nodeObj;
+                    _nodeGameObjs[node.ID] = nodeObj;
                 }
             }
         }
@@ -81,22 +81,22 @@ namespace VidiGraph
             {
                 foreach (var link in _networkData.TreeLinks)
                 {
-                    Vector3 startPos = _networkProperties.Nodes[link.sourceIdx].Position,
-                        endPos = _networkProperties.Nodes[link.targetIdx].Position;
+                    Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
+                        endPos = _networkProperties.Nodes[link.TargetNodeID].Position;
                     var linkObj = NodeLinkRenderUtils.MakeStraightLink(StraightLinkPrefab, NetworkTransform,
                         link, startPos, endPos, LinkWidth);
-                    _linkGameObjs[link.linkIdx] = linkObj;
+                    _linkGameObjs[link.ID] = linkObj;
                 }
             }
             // ...whereas this is concerned with the visible links between nodes in the graph
 
             foreach (var link in _networkData.Links)
             {
-                Vector3 startPos = _networkProperties.Nodes[link.sourceIdx].Position,
-                    endPos = _networkProperties.Nodes[link.targetIdx].Position;
+                Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
+                    endPos = _networkProperties.Nodes[link.TargetNodeID].Position;
                 var linkObj = NodeLinkRenderUtils.MakeStraightLink(StraightLinkPrefab, NetworkTransform,
                     link, startPos, endPos, LinkWidth);
-                _linkGameObjs[link.linkIdx] = linkObj;
+                _linkGameObjs[link.ID] = linkObj;
             }
         }
 
@@ -104,9 +104,9 @@ namespace VidiGraph
         {
             foreach (var node in _networkData.Nodes)
             {
-                if (DrawVirtualNodes || !node.virtualNode)
+                if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
-                    _nodeGameObjs[node.id].transform.localPosition = _networkProperties.Nodes[node.id].Position;
+                    _nodeGameObjs[node.ID].transform.localPosition = _networkProperties.Nodes[node.ID].Position;
                 }
             }
         }
@@ -118,9 +118,9 @@ namespace VidiGraph
             {
                 foreach (var link in _networkData.TreeLinks)
                 {
-                    Vector3 startPos = _networkProperties.Nodes[link.sourceIdx].Position,
-                        endPos = _networkProperties.Nodes[link.targetIdx].Position;
-                    NodeLinkRenderUtils.UpdateStraightLink(_linkGameObjs[link.linkIdx],
+                    Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
+                        endPos = _networkProperties.Nodes[link.TargetNodeID].Position;
+                    NodeLinkRenderUtils.UpdateStraightLink(_linkGameObjs[link.ID],
                         link, startPos, endPos, LinkWidth);
                 }
             }
@@ -128,9 +128,9 @@ namespace VidiGraph
 
             foreach (var link in _networkData.Links)
             {
-                Vector3 startPos = _networkProperties.Nodes[link.sourceIdx].Position,
-                    endPos = _networkProperties.Nodes[link.targetIdx].Position;
-                NodeLinkRenderUtils.UpdateStraightLink(_linkGameObjs[link.linkIdx],
+                Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
+                    endPos = _networkProperties.Nodes[link.TargetNodeID].Position;
+                NodeLinkRenderUtils.UpdateStraightLink(_linkGameObjs[link.ID],
                     link, startPos, endPos, LinkWidth);
             }
         }

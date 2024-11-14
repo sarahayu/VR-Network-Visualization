@@ -62,9 +62,9 @@ namespace VidiGraph
             {
                 var node = nodes[i];
 
-                _startPositions[node.id] = networkProperties.Nodes[node.id].Position;
+                _startPositions[node.ID] = networkProperties.Nodes[node.ID].Position;
                 // TODO calculate at runtime
-                _endPositions[node.id] = sphericalNodes[idToIdx[node.id]]._position3D;
+                _endPositions[node.ID] = sphericalNodes[idToIdx[node.ID]]._position3D;
             }
 
             foreach (var link in _networkProperties.Links.Values)

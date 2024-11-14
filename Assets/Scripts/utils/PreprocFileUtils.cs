@@ -10,22 +10,22 @@ namespace VidiGraph
         {
             Node node = new Node();
 
-            node.communityIdx = fileNode.communityIdx;
-            node.label = fileNode.label;
+            node.CommunityID = fileNode.communityIdx;
+            node.Label = fileNode.label;
 
             // idx gets remapped to node id, because we do not assume it's the same as the order stated in datafile. why? idk the original code didn't either.
-            node.id = fileNode.idx;
-            node.color = fileNode.color;
+            node.ID = fileNode.idx;
+            node.Color = fileNode.color;
 
-            if (node.color != null)
-                node.colorParsed = ColorUtils.StringToColor(node.color.ToUpper());
+            if (node.Color != null)
+                node.ColorParsed = ColorUtils.StringToColor(node.Color.ToUpper());
 
-            node.virtualNode = fileNode.virtualNode;
-            node.degree = fileNode.degree;
-            node.height = fileNode.height;
-            node.ancIdx = fileNode.ancIdx;
-            node.childIdx = fileNode.childIdx;
-            node.precompPos3D = fileNode._position3D;
+            node.IsVirtualNode = fileNode.virtualNode;
+            node.Degree = fileNode.degree;
+            node.Height = fileNode.height;
+            node.AncID = fileNode.ancIdx;
+            node.ChildIDs = fileNode.childIdx;
+            node.PrecompPos3D = fileNode._position3D;
 
             return node;
         }
@@ -34,10 +34,10 @@ namespace VidiGraph
         {
             Link link = new Link();
 
-            link.spline = fileLink.spline;
-            link.linkIdx = fileLink.linkIdx;
-            link.sourceIdx = fileLink.sourceIdx;
-            link.targetIdx = fileLink.targetIdx;
+            link.IsSpline = fileLink.spline;
+            link.ID = fileLink.linkIdx;
+            link.SourceNodeID = fileLink.sourceIdx;
+            link.TargetNodeID = fileLink.targetIdx;
 
             return link;
         }
