@@ -15,11 +15,10 @@ namespace VidiGraph
         Dictionary<string, NetworkLayout> _layouts = new Dictionary<string, NetworkLayout>();
         // keep a reference to spiderlayout specifically to focus on individual communities
         SpiderLayout _spiderLayout;
-
-        string _curLayout;
+        bool _isSphericalLayout;
         Coroutine _curAnim = null;
 
-        public string CurLayout { get { return _curLayout; } }
+        public bool IsSphericalLayout { get { return _isSphericalLayout; } }
 
         void Awake()
         {
@@ -46,7 +45,9 @@ namespace VidiGraph
             _bigNetworkRenderer.Initialize(_networkContext);
 
             InitializeLayouts();
-            ChangeToLayout("spherical", false);
+
+            _isSphericalLayout = true;
+            UpdateWithLayoutUnanimated("spherical");
         }
 
         public override void UpdateLayouts()
@@ -87,8 +88,7 @@ namespace VidiGraph
             bool isFocused = _manager.Data.Communities[community].Focus;
 
             _spiderLayout.SetFocusCommunity(community, !isFocused);
-
-            _curLayout = "spider";
+            _manager.Data.Communities[community].Focus = !isFocused;
 
             if (animated)
             {
@@ -100,21 +100,35 @@ namespace VidiGraph
             }
         }
 
-        public void ChangeToLayout(string layout, bool animated = true)
+        public void ToggleSphericalAndHairball(bool animated = true)
         {
-            _curLayout = layout;
+            if (_isSphericalLayout)
+            {
+                foreach (var communityIdx in _manager.Data.Communities.Keys)
+                {
+                    _spiderLayout.SetFocusCommunity(communityIdx, false);
+                    _manager.Data.Communities[communityIdx].Focus = false;
+                }
+
+                UpdateWithLayoutUnanimated("spider");
+                _bigNetworkRenderer.UpdateRenderElements();
+            }
+
+            _isSphericalLayout = !_isSphericalLayout;
+
+            string layout = _isSphericalLayout ? "spherical" : "hairball";
 
             if (animated)
             {
-                ChangeToLayoutAnimated(layout);
+                UpdateWithLayoutAnimated(layout);
             }
             else
             {
-                ChangeToLayoutUnanimated(layout);
+                UpdateWithLayoutUnanimated(layout);
             }
         }
 
-        void ChangeToLayoutAnimated(string layout)
+        void UpdateWithLayoutAnimated(string layout)
         {
             if (_curAnim != null)
             {
@@ -124,7 +138,7 @@ namespace VidiGraph
             _curAnim = StartCoroutine(CRAnimateLayout(layout));
         }
 
-        void ChangeToLayoutUnanimated(string layout)
+        void UpdateWithLayoutUnanimated(string layout)
         {
             _layouts[layout].ApplyLayout();
             _networkContext.RecomputeGeometricProps(_manager.Data);

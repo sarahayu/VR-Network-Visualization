@@ -22,7 +22,6 @@ namespace VidiGraph
 
         public NetworkFilesLoader FileLoader { get { return _fileLoader; } }
         public NetworkDataStructure Data { get { return _data; } }
-        public string CurBigLayout { get { return _bigNetwork.CurLayout; } }
 
         void Awake()
         {
@@ -60,9 +59,9 @@ namespace VidiGraph
             _bigNetwork.ToggleCommunityFocus(community, animated);
         }
 
-        public void ChangeToLayout(string layout, bool animated = true)
+        public void ToggleBigNetworkSphericalAndHairball(bool animated = true)
         {
-            _bigNetwork.ChangeToLayout(layout, animated);
+            _bigNetwork.ToggleSphericalAndHairball(animated);
         }
     }
 }

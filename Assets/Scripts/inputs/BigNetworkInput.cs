@@ -53,14 +53,7 @@ namespace VidiGraph
 
             if (LeftGripPress.ReadWasPerformedThisFrame() && LeftTriggerPress.ReadWasPerformedThisFrame())
             {
-                if (_manager.CurBigLayout == "spherical")
-                {
-                    _manager.ChangeToLayout("hairball");
-                }
-                else if (_manager.CurBigLayout == "hairball")
-                {
-                    _manager.ChangeToLayout("spherical");
-                }
+                _manager.ToggleBigNetworkSphericalAndHairball();
             }
         }
 
