@@ -7,8 +7,10 @@ namespace VidiGraph
 {
     public class SpiderLayout : NetworkLayout
     {
+        public Transform SpiderPosition;
+
         NetworkDataStructure _network;
-        NetworkContext3D _networkProperties;
+        NetworkContext3D _networkContext;
 
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
@@ -18,10 +20,10 @@ namespace VidiGraph
 
         public override void Initialize(NetworkContext networkContext)
         {
-            _networkProperties = (NetworkContext3D)networkContext;
+            _networkContext = (NetworkContext3D)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _network = manager.Data;
+            _network = manager.NetworkData;
             _fileLoader = manager.FileLoader;
         }
 
@@ -44,7 +46,7 @@ namespace VidiGraph
                     foreach (var node in community.Nodes)
                     {
                         var spiderPos = spiderNodes[spiderIdToIdx[node.ID]].spiderPos;
-                        _networkProperties.Nodes[node.ID].Position = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
+                        _networkContext.Nodes[node.ID].Position = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
                     }
 
                     _focusCommunities.Add(communityIdx);
@@ -55,7 +57,7 @@ namespace VidiGraph
                     foreach (var node in community.Nodes)
                     {
                         var sphericalPos = sphericalNodes[sphericalIdToIdx[node.ID]]._position3D;
-                        _networkProperties.Nodes[node.ID].Position = sphericalPos;
+                        _networkContext.Nodes[node.ID].Position = sphericalPos;
                     }
 
                     _focusCommunities.Remove(communityIdx);
@@ -67,7 +69,7 @@ namespace VidiGraph
             // change all links to normal if no communities selected
             if (_focusCommunities.Count == 0)
             {
-                foreach (var link in _networkProperties.Links.Values)
+                foreach (var link in _networkContext.Links.Values)
                 {
                     link.State = NetworkContext3D.Link.LinkState.Normal;
                 }
@@ -81,23 +83,26 @@ namespace VidiGraph
                     var b = _network.Communities[link.TargetNode.CommunityID];
                     if (a.Focus && b.Focus)
                     {
-                        _networkProperties.Links[link.ID].State = NetworkContext3D.Link.LinkState.Normal;
+                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Normal;
                     }
                     else if (a.Focus || b.Focus)
                     {
-                        _networkProperties.Links[link.ID].State = NetworkContext3D.Link.LinkState.Focus2Context;
+                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Focus2Context;
                     }
                     else
                     {
-                        _networkProperties.Links[link.ID].State = NetworkContext3D.Link.LinkState.Context;
+                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Context;
                     }
                 }
             }
+
+            _networkContext.CurrentTransform.position = SpiderPosition.position;
+            _networkContext.CurrentTransform.localScale = SpiderPosition.localScale;
         }
 
         public override LayoutInterpolator GetInterpolator()
         {
-            return new SpiderInterpolator(_network, _networkProperties, _fileLoader, _focusCommunities, _focusCommunitiesToUpdate);
+            return new SpiderInterpolator(SpiderPosition, _network, _networkContext, _fileLoader, _focusCommunities, _focusCommunitiesToUpdate);
         }
 
         public void SetFocusCommunity(int focusCommunity, bool isFocused)
@@ -111,14 +116,17 @@ namespace VidiGraph
 
     public class SpiderInterpolator : LayoutInterpolator
     {
-        NetworkContext3D _networkProperties;
+        NetworkContext3D _networkContext;
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
-        public SpiderInterpolator(NetworkDataStructure networkData, NetworkContext3D networkProperties,
+        TransformInfo _startingContextTransform;
+        Transform _endingContextTransform;
+
+        public SpiderInterpolator(Transform endingContextTransform, NetworkDataStructure networkData, NetworkContext3D networkContext,
             NetworkFilesLoader fileLoader, HashSet<int> focusCommunities, Dictionary<int, bool> focusCommunitiesToUpdate)
         {
-            _networkProperties = networkProperties;
+            _networkContext = networkContext;
 
             var spiderNodes = fileLoader.SpiderData.nodes;
             var spiderIdToIdx = fileLoader.SpiderData.idToIdx;
@@ -135,7 +143,7 @@ namespace VidiGraph
                 {
                     foreach (var node in community.Nodes)
                     {
-                        _startPositions[node.ID] = networkProperties.Nodes[node.ID].Position;
+                        _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
                         // TODO calculate at runtime
                         var spiderPos = spiderNodes[spiderIdToIdx[node.ID]].spiderPos;
                         _endPositions[node.ID] = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
@@ -148,7 +156,7 @@ namespace VidiGraph
                 {
                     foreach (var node in community.Nodes)
                     {
-                        _startPositions[node.ID] = networkProperties.Nodes[node.ID].Position;
+                        _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
                         // TODO calculate at runtime
                         _endPositions[node.ID] = sphericalNodes[sphericalIdToIdx[node.ID]]._position3D;
                     }
@@ -162,7 +170,7 @@ namespace VidiGraph
             // change all links to normal if no communities selected
             if (focusCommunities.Count == 0)
             {
-                foreach (var link in _networkProperties.Links.Values)
+                foreach (var link in _networkContext.Links.Values)
                 {
                     link.State = NetworkContext3D.Link.LinkState.Normal;
                 }
@@ -176,27 +184,32 @@ namespace VidiGraph
                     var b = networkData.Communities[link.TargetNode.CommunityID];
                     if (a.Focus && b.Focus)
                     {
-                        _networkProperties.Links[link.ID].State = NetworkContext3D.Link.LinkState.Normal;
+                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Focus;
                     }
                     else if (a.Focus || b.Focus)
                     {
-                        _networkProperties.Links[link.ID].State = NetworkContext3D.Link.LinkState.Focus2Context;
+                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Focus2Context;
                     }
                     else
                     {
-                        _networkProperties.Links[link.ID].State = NetworkContext3D.Link.LinkState.Context;
+                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Context;
                     }
                 }
             }
+
+            _startingContextTransform = new TransformInfo(networkContext.CurrentTransform);
+            _endingContextTransform = endingContextTransform;
         }
 
         public override void Interpolate(float t)
         {
             foreach (var nodeID in _startPositions.Keys)
             {
-                _networkProperties.Nodes[nodeID].Position
+                _networkContext.Nodes[nodeID].Position
                     = Vector3.Lerp(_startPositions[nodeID], _endPositions[nodeID], Mathf.SmoothStep(0f, 1f, t));
             }
+
+            GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);
         }
     }
 

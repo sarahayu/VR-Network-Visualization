@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -8,26 +9,32 @@ namespace VidiGraph
 {
     public class BundledNetworkRenderer : NetworkRenderer
     {
+        [Serializable]
+        public class BundledNetworkSettings
+        {
+            [Range(0.0f, 0.1f)]
+            public float LinkWidth = 0.005f;
+            [Range(0.0f, 1.0f)]
+            public float EdgeBundlingStrength = 0.8f;
+
+            public Color NodeHighlightColor;
+            public Color LinkHighlightColor;
+            public Color LinkFocusColor;
+            [Range(0.0f, 0.1f)]
+            public float LinkMinimumAlpha = 0.01f;
+            [Range(0.0f, 1.0f)]
+            public float LinkNormalAlphaFactor = 1f;
+            [Range(0.0f, 1.0f)]
+            public float LinkContextAlphaFactor = 0.5f;
+            [Range(0.0f, 1.0f)]
+            public float LinkContext2FocusAlphaFactor = 0.8f;
+
+        }
         public GameObject NodePrefab;
         public GameObject CommunityPrefab;
         public GameObject StraightLinkPrefab;
 
-        [Range(0.0f, 0.1f)]
-        public float LinkWidth = 0.005f;
-        [Range(0.0f, 1.0f)]
-        public float EdgeBundlingStrength = 0.8f;
-
-        public Color NodeHighlightColor;
-        public Color LinkHighlightColor;
-        public Color LinkFocusColor;
-        [Range(0.0f, 0.1f)]
-        public float LinkMinimumAlpha = 0.01f;
-        [Range(0.0f, 1.0f)]
-        public float LinkNormalAlphaFactor = 1f;
-        [Range(0.0f, 1.0f)]
-        public float LinkContextAlphaFactor = 0.5f;
-        [Range(0.0f, 1.0f)]
-        public float LinkContext2FocusAlphaFactor = 0.8f;
+        public BundledNetworkSettings Settings;
 
         public bool DrawVirtualNodes = true;
         public bool DrawTreeStructure = false;
@@ -93,17 +100,9 @@ namespace VidiGraph
         void InitializeShaders()
         {
             _batchSplineMaterial = new Material(Shader.Find("Custom/Batch BSpline Unlit"));
-            _batchSplineMaterial.SetFloat("_LineWidth", LinkWidth);
+            _batchSplineMaterial.SetFloat("_LineWidth", Settings.LinkWidth);
 
-            // Configure the spline compute shader
-            SplineComputeShader.SetVector("COLOR_HIGHLIGHT", LinkHighlightColor);
-            SplineComputeShader.SetVector("COLOR_FOCUS", LinkFocusColor);
-            SplineComputeShader.SetFloat("COLOR_MINIMUM_ALPHA", LinkMinimumAlpha);
-            SplineComputeShader.SetFloat("COLOR_NORMAL_ALPHA_FACTOR", LinkNormalAlphaFactor);
-            SplineComputeShader.SetFloat("COLOR_CONTEXT_ALPHA_FACTOR", LinkContextAlphaFactor);
-            SplineComputeShader.SetFloat("COLOR_FOCUS2CONTEXT_ALPHA_FACTOR", LinkContext2FocusAlphaFactor);
-
-            _shaderWrapper.Initialize(SplineComputeShader, _batchSplineMaterial);
+            _shaderWrapper.Initialize(SplineComputeShader, _batchSplineMaterial, Settings);
         }
 
         void CreateNodes()
@@ -145,7 +144,7 @@ namespace VidiGraph
                     Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
                         endPos = _networkProperties.Nodes[link.TargetNodeID].Position;
                     var linkObj = NodeLinkRenderUtils.MakeStraightLink(StraightLinkPrefab, NetworkTransform,
-                        link, startPos, endPos, LinkWidth);
+                        link, startPos, endPos, Settings.LinkWidth);
                     _linkGameObjs[link.ID] = linkObj;
                 }
             }
@@ -161,7 +160,7 @@ namespace VidiGraph
         {
             foreach (var link in _networkData.Links)
             {
-                float beta = EdgeBundlingStrength;
+                float beta = Settings.EdgeBundlingStrength;
 
                 Vector3[] cp = BSplineMathUtils.ControlPoints(link, _networkData, _networkProperties);
                 int length = cp.Length;
@@ -219,7 +218,7 @@ namespace VidiGraph
                     Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
                         endPos = _networkProperties.Nodes[link.TargetNodeID].Position;
                     NodeLinkRenderUtils.UpdateStraightLink(_linkGameObjs[link.ID],
-                        link, startPos, endPos, LinkWidth);
+                        link, startPos, endPos, Settings.LinkWidth);
                 }
             }
         }

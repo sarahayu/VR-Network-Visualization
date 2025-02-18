@@ -27,13 +27,24 @@ namespace VidiGraph
         ComputeShader _batchComputeShader;
         Material _splineMaterial;
 
-        public void Initialize(ComputeShader computeShader, Material material)
+        BundledNetworkRenderer.BundledNetworkSettings _settings;
+
+        public void Initialize(ComputeShader computeShader, Material material, BundledNetworkRenderer.BundledNetworkSettings settings)
         {
             _batchComputeShader = computeShader;
             _splineMaterial = material;
+            _settings = settings;
+
+            // Configure the spline compute shader
+            computeShader.SetVector("COLOR_HIGHLIGHT", _settings.LinkHighlightColor);
+            computeShader.SetVector("COLOR_FOCUS", _settings.LinkFocusColor);
+            computeShader.SetFloat("COLOR_MINIMUM_ALPHA", _settings.LinkMinimumAlpha);
+            computeShader.SetFloat("COLOR_NORMAL_ALPHA_FACTOR", _settings.LinkNormalAlphaFactor);
+            computeShader.SetFloat("COLOR_CONTEXT_ALPHA_FACTOR", _settings.LinkContextAlphaFactor);
+            computeShader.SetFloat("COLOR_FOCUS2CONTEXT_ALPHA_FACTOR", _settings.LinkContext2FocusAlphaFactor);
         }
 
-        public void PrepareBuffers(NetworkDataStructure networkData, NetworkContext3D networkProperties, Dictionary<int, List<Vector3>> controlPoints)
+        public void PrepareBuffers(NetworkDataStructure networkData, NetworkContext3D networkContext, Dictionary<int, List<Vector3>> controlPoints)
         {
             // Initialize Compute Shader data
             _splines = new List<SplineData>();
@@ -58,7 +69,7 @@ namespace VidiGraph
 
                 Vector3 startPosition = cp[0];
                 Vector3 endPosition = cp[cp.Count - 1];
-                uint linkState = (uint)networkProperties.Links[link.ID].State;
+                uint linkState = (uint)networkContext.Links[link.ID].State;
                 SplineData spline = new SplineData(splineIdx++, (uint)NumSegments, splineSegmentCount, (uint)(NumSegments * BSplineSamplesPerSegment),
                     splineSampleCount, startPosition, endPosition, sourceColor, targetColor, linkState);
                 _splines.Add(spline);
@@ -115,6 +126,8 @@ namespace VidiGraph
             _batchComputeShader.SetBuffer(kernel, "InSplineControlPointData", _inSplineControlPointData);
             _batchComputeShader.SetBuffer(kernel, "InSplineSegmentData", _inSplineSegmentData);
             _batchComputeShader.SetBuffer(kernel, "OutSamplePointData", _outSampleControlPointData);
+
+            _splineMaterial.SetFloat("_LineWidth", _settings.LinkWidth * networkContext.CurrentTransform.localScale.y);
 
 
             // Bind the buffers to the LineRenderer Material
@@ -225,6 +238,8 @@ namespace VidiGraph
             _inSplineData.SetData(_splines);
             _inSplineControlPointData.SetData(_splineControlPoints);
             _inSplineSegmentData.SetData(_splineSegments);
+
+            _splineMaterial.SetFloat("_LineWidth", _settings.LinkWidth * networkProperties.CurrentTransform.localScale.y);
         }
 
         public void Draw()

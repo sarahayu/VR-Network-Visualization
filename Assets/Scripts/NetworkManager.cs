@@ -18,10 +18,10 @@ namespace VidiGraph
         SmallNetwork _smallNetwork;
 
         NetworkFilesLoader _fileLoader;
-        NetworkDataStructure _data;
+        NetworkDataStructure _networkData;
 
         public NetworkFilesLoader FileLoader { get { return _fileLoader; } }
-        public NetworkDataStructure Data { get { return _data; } }
+        public NetworkDataStructure NetworkData { get { return _networkData; } }
 
         void Awake()
         {
@@ -39,10 +39,10 @@ namespace VidiGraph
         public void Initialize()
         {
             _fileLoader = GetComponent<NetworkFilesLoader>();
-            _data = GetComponent<NetworkDataStructure>();
+            _networkData = GetComponent<NetworkDataStructure>();
 
             _fileLoader.LoadFiles();
-            _data.InitNetwork();
+            _networkData.InitNetwork();
 
             _bigNetwork.Initialize();
             _smallNetwork.Initialize();

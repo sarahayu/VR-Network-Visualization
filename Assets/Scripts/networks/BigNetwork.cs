@@ -20,6 +20,8 @@ namespace VidiGraph
 
         public bool IsSphericalLayout { get { return _isSphericalLayout; } }
 
+        public Transform NetworkTransform;
+
         void Awake()
         {
         }
@@ -36,7 +38,8 @@ namespace VidiGraph
         public override void Initialize()
         {
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _networkContext.Update(_manager.Data);
+            _networkContext.Update(_manager.NetworkData);
+            _networkContext.CurrentTransform = NetworkTransform;
 
             _bigNetworkInput = GetComponent<NetworkInput>();
             _bigNetworkRenderer = GetComponentInChildren<NetworkRenderer>();
@@ -85,10 +88,10 @@ namespace VidiGraph
 
         public void ToggleCommunityFocus(int community, bool animated = true)
         {
-            bool isFocused = _manager.Data.Communities[community].Focus;
+            bool isFocused = _manager.NetworkData.Communities[community].Focus;
 
             _spiderLayout.SetFocusCommunity(community, !isFocused);
-            _manager.Data.Communities[community].Focus = !isFocused;
+            _manager.NetworkData.Communities[community].Focus = !isFocused;
 
             if (animated)
             {
@@ -104,10 +107,10 @@ namespace VidiGraph
         {
             if (_isSphericalLayout)
             {
-                foreach (var communityIdx in _manager.Data.Communities.Keys)
+                foreach (var communityIdx in _manager.NetworkData.Communities.Keys)
                 {
                     _spiderLayout.SetFocusCommunity(communityIdx, false);
-                    _manager.Data.Communities[communityIdx].Focus = false;
+                    _manager.NetworkData.Communities[communityIdx].Focus = false;
                 }
 
                 UpdateWithLayoutUnanimated("spider");
@@ -141,7 +144,7 @@ namespace VidiGraph
         void UpdateWithLayoutUnanimated(string layout)
         {
             _layouts[layout].ApplyLayout();
-            _networkContext.RecomputeGeometricProps(_manager.Data);
+            _networkContext.RecomputeGeometricProps(_manager.NetworkData);
             _bigNetworkRenderer.UpdateRenderElements();
         }
 
@@ -173,7 +176,7 @@ namespace VidiGraph
             });
 
             // update render elements one more time to update input elements after recomputing geometric info
-            _networkContext.RecomputeGeometricProps(_manager.Data);
+            _networkContext.RecomputeGeometricProps(_manager.NetworkData);
             _bigNetworkRenderer.UpdateRenderElements();
 
             _curAnim = null;

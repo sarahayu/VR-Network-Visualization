@@ -37,6 +37,9 @@ namespace VidiGraph
         public Dictionary<int, Link> Links = new Dictionary<int, Link>();
         public Dictionary<int, Community> Communities = new Dictionary<int, Community>();
 
+        [HideInInspector]
+        public Transform CurrentTransform;
+
         public NetworkContext3D()
         {
             // expose constructor
