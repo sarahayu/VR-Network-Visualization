@@ -9,26 +9,26 @@ namespace VidiGraph
 
     public static class NodeLinkRenderUtils
     {
-        public static GameObject MakeNode(GameObject prefab, Transform transform, Node node, NetworkContext3D.Node nodeProps)
+        public static GameObject MakeNode(GameObject prefab, Transform parent, Node node, NetworkContext3D.Node nodeProps)
         {
-            return MakeNode(prefab, transform, node, nodeProps, node.ColorParsed);
+            return MakeNode(prefab, parent, node, nodeProps, node.ColorParsed);
         }
-        public static GameObject MakeNode(GameObject prefab, Transform transform, Node node, NetworkContext3D.Node nodeProps, Color color)
+        public static GameObject MakeNode(GameObject prefab, Transform parent, Node node, NetworkContext3D.Node nodeProps, Color color)
         {
-            GameObject nodeObj = UnityEngine.Object.Instantiate(prefab, transform);
+            GameObject nodeObj = UnityEngine.Object.Instantiate(prefab, parent);
             nodeObj.transform.localPosition = nodeProps.Position;
 
             MaterialPropertyBlock props = new MaterialPropertyBlock();
             props.SetColor("_Color", color);
-            nodeObj.GetComponent<Renderer>().SetPropertyBlock(props);
+            nodeObj.GetComponentInChildren<Renderer>().SetPropertyBlock(props);
 
             return nodeObj;
         }
 
-        public static GameObject MakeStraightLink(GameObject prefab, Transform transform,
+        public static GameObject MakeStraightLink(GameObject prefab, Transform parent,
             Link link, Vector3 startPos, Vector3 endPos, float linkWidth)
         {
-            GameObject linkObj = UnityEngine.Object.Instantiate(prefab, transform);
+            GameObject linkObj = UnityEngine.Object.Instantiate(prefab, parent);
 
             return UpdateStraightLink(linkObj, link, startPos, endPos, linkWidth);
         }
@@ -43,9 +43,9 @@ namespace VidiGraph
             return linkObj;
         }
 
-        public static GameObject MakeBSplineLink(GameObject prefab, Transform transform, Link link)
+        public static GameObject MakeBSplineLink(GameObject prefab, Transform parent, Link link)
         {
-            GameObject linkObj = UnityEngine.Object.Instantiate(prefab, transform);
+            GameObject linkObj = UnityEngine.Object.Instantiate(prefab, parent);
             // currently do nothing
             return linkObj;
         }

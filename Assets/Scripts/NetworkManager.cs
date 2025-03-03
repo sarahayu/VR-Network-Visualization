@@ -63,5 +63,15 @@ namespace VidiGraph
         {
             _bigNetwork.ToggleSphericalAndHairball(animated);
         }
+
+        public void HoverNode(int nodeID)
+        {
+            _bigNetwork.HoverNode(nodeID);
+        }
+
+        public void UnhoverNode(int nodeID)
+        {
+            _bigNetwork.UnhoverNode(nodeID);
+        }
     }
 }

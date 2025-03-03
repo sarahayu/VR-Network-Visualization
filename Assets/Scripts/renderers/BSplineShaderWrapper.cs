@@ -127,7 +127,7 @@ namespace VidiGraph
             _batchComputeShader.SetBuffer(kernel, "InSplineSegmentData", _inSplineSegmentData);
             _batchComputeShader.SetBuffer(kernel, "OutSamplePointData", _outSampleControlPointData);
 
-            _splineMaterial.SetFloat("_LineWidth", _settings.LinkWidth * networkContext.CurrentTransform.localScale.y);
+            _splineMaterial.SetFloat("_LineWidth", _settings.LinkWidth * networkContext.CurrentTransform.scale.y);
 
 
             // Bind the buffers to the LineRenderer Material
@@ -239,7 +239,7 @@ namespace VidiGraph
             _inSplineControlPointData.SetData(_splineControlPoints);
             _inSplineSegmentData.SetData(_splineSegments);
 
-            _splineMaterial.SetFloat("_LineWidth", _settings.LinkWidth * networkProperties.CurrentTransform.localScale.y);
+            _splineMaterial.SetFloat("_LineWidth", _settings.LinkWidth * networkProperties.CurrentTransform.scale.y);
         }
 
         public void Draw()

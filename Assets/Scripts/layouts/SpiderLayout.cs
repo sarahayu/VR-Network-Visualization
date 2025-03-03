@@ -17,6 +17,7 @@ namespace VidiGraph
         // use hashset to prevent duplicates
         HashSet<int> _focusCommunities = new HashSet<int>();
         Dictionary<int, bool> _focusCommunitiesToUpdate = new Dictionary<int, bool>();
+        TransformInfo _spiderTransform;
 
         public override void Initialize(NetworkContext networkContext)
         {
@@ -25,6 +26,7 @@ namespace VidiGraph
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _network = manager.NetworkData;
             _fileLoader = manager.FileLoader;
+            _spiderTransform = new TransformInfo(SpiderPosition);
         }
 
         public override void ApplyLayout()
@@ -96,13 +98,12 @@ namespace VidiGraph
                 }
             }
 
-            _networkContext.CurrentTransform.position = SpiderPosition.position;
-            _networkContext.CurrentTransform.localScale = SpiderPosition.localScale;
+            _networkContext.CurrentTransform.SetFromTransform(_spiderTransform);
         }
 
         public override LayoutInterpolator GetInterpolator()
         {
-            return new SpiderInterpolator(SpiderPosition, _network, _networkContext, _fileLoader, _focusCommunities, _focusCommunitiesToUpdate);
+            return new SpiderInterpolator(_spiderTransform, _network, _networkContext, _fileLoader, _focusCommunities, _focusCommunitiesToUpdate);
         }
 
         public void SetFocusCommunity(int focusCommunity, bool isFocused)
@@ -121,9 +122,9 @@ namespace VidiGraph
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
         TransformInfo _startingContextTransform;
-        Transform _endingContextTransform;
+        TransformInfo _endingContextTransform;
 
-        public SpiderInterpolator(Transform endingContextTransform, NetworkDataStructure networkData, NetworkContext3D networkContext,
+        public SpiderInterpolator(TransformInfo endingContextTransform, NetworkDataStructure networkData, NetworkContext3D networkContext,
             NetworkFilesLoader fileLoader, HashSet<int> focusCommunities, Dictionary<int, bool> focusCommunitiesToUpdate)
         {
             _networkContext = networkContext;
@@ -197,7 +198,7 @@ namespace VidiGraph
                 }
             }
 
-            _startingContextTransform = new TransformInfo(networkContext.CurrentTransform);
+            _startingContextTransform = networkContext.CurrentTransform.Copy();
             _endingContextTransform = endingContextTransform;
         }
 

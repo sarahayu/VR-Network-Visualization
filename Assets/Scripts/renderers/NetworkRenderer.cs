@@ -26,6 +26,20 @@ namespace VidiGraph
         {
             OnCommunityHoverExit(community, evt);
         }
+
+        public delegate void NodeHoverEnterEvent(Node node, HoverEnterEventArgs evt);
+        public event NodeHoverEnterEvent OnNodeHoverEnter;
+        protected void CallNodeHoverEnter(Node node, HoverEnterEventArgs evt)
+        {
+            OnNodeHoverEnter(node, evt);
+        }
+
+        public delegate void NodeHoverExitEvent(Node node, HoverExitEventArgs evt);
+        public event NodeHoverExitEvent OnNodeHoverExit;
+        protected void CallNodeHoverExit(Node node, HoverExitEventArgs evt)
+        {
+            OnNodeHoverExit(node, evt);
+        }
     }
 
 }

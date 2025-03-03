@@ -10,9 +10,13 @@ namespace VidiGraph
 
         NetworkDataStructure _network;
         NetworkContext3D _networkContext;
+        TransformInfo _sphericalTransform;
 
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
+
+        int _curFocusNode = -1;
+        int _lastFocusNode = -1;
 
         public override void Initialize(NetworkContext networkContext)
         {
@@ -21,6 +25,7 @@ namespace VidiGraph
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _network = manager.NetworkData;
             _fileLoader = manager.FileLoader;
+            _sphericalTransform = new TransformInfo(SphericalPosition);
         }
 
         public override void ApplyLayout()
@@ -36,13 +41,67 @@ namespace VidiGraph
                 link.State = NetworkContext3D.Link.LinkState.Normal;
             }
 
-            _networkContext.CurrentTransform.position = SphericalPosition.position;
-            _networkContext.CurrentTransform.localScale = SphericalPosition.localScale;
+            _networkContext.CurrentTransform.SetFromTransform(_sphericalTransform);
         }
 
         public override LayoutInterpolator GetInterpolator()
         {
-            return new SphericalInterpolator(SphericalPosition, _network, _networkContext, _fileLoader);
+            return new SphericalInterpolator(_sphericalTransform, _network, _networkContext, _fileLoader);
+        }
+
+        public void ClearHoverNode()
+        {
+            SetHoverNode(-1);
+        }
+
+        public void SetHoverNode(int focusNode)
+        {
+            _lastFocusNode = _curFocusNode;
+            _curFocusNode = focusNode;
+
+            // highlight node
+            if (_lastFocusNode != -1)
+            {
+
+                int communityIdx = _network.Nodes[_lastFocusNode].CommunityID;
+
+                foreach (Link link in _network.Communities[communityIdx].InnerLinks)
+                {
+                    if (link.SourceNodeID == _lastFocusNode || link.TargetNodeID == _lastFocusNode)
+                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Normal;
+                }
+                foreach (Link link in _network.Communities[communityIdx].OuterLinks)
+                {
+                    if (link.SourceNodeID == _lastFocusNode || link.TargetNodeID == _lastFocusNode)
+                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Normal;
+                }
+            }
+
+            if (_curFocusNode != -1)
+            {
+
+                // Find all related links and highlight them
+                int communityIdx = _network.Nodes[_curFocusNode].CommunityID;
+
+                foreach (Link link in _network.Communities[communityIdx].InnerLinks)
+                {
+                    if (link.SourceNodeID == _curFocusNode || link.TargetNodeID == _curFocusNode)
+                    {
+                        if (_network.Communities[communityIdx].Focus)
+                            _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.HighLightFocus;
+                        else
+                            _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.HighLight;
+                    }
+                }
+
+                foreach (Link link in _network.Communities[communityIdx].OuterLinks)
+                {
+                    if (link.SourceNodeID == _curFocusNode || link.TargetNodeID == _curFocusNode)
+                    {
+                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.HighLight;
+                    }
+                }
+            }
         }
     }
 
@@ -53,9 +112,9 @@ namespace VidiGraph
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
         TransformInfo _startingContextTransform;
-        Transform _endingContextTransform;
+        TransformInfo _endingContextTransform;
 
-        public SphericalInterpolator(Transform endingContextTransform, NetworkDataStructure networkData, NetworkContext3D networkContext, NetworkFilesLoader fileLoader)
+        public SphericalInterpolator(TransformInfo endingContextTransform, NetworkDataStructure networkData, NetworkContext3D networkContext, NetworkFilesLoader fileLoader)
         {
             _networkContext = networkContext;
             // get actual array instead of the node collection so we can use list indices rather than 
@@ -80,7 +139,7 @@ namespace VidiGraph
                 link.State = NetworkContext3D.Link.LinkState.Normal;
             }
 
-            _startingContextTransform = new TransformInfo(networkContext.CurrentTransform);
+            _startingContextTransform = networkContext.CurrentTransform.Copy();
             _endingContextTransform = endingContextTransform;
         }
 

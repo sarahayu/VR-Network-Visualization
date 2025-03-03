@@ -38,7 +38,6 @@ namespace VidiGraph
 
         public bool DrawVirtualNodes = true;
         public bool DrawTreeStructure = false;
-        public Transform NetworkTransform;
         public ComputeShader SplineComputeShader;
 
         Dictionary<int, GameObject> _nodeGameObjs = new Dictionary<int, GameObject>();
@@ -49,17 +48,17 @@ namespace VidiGraph
 
         BSplineShaderWrapper _shaderWrapper = new BSplineShaderWrapper();
         NetworkDataStructure _networkData;
-        NetworkContext3D _networkProperties;
+        NetworkContext3D _networkContext;
 
         void Reset()
         {
             if (Application.isEditor)
             {
-                GameObjectUtils.ChildrenDestroyImmediate(NetworkTransform);
+                GameObjectUtils.ChildrenDestroyImmediate(transform);
             }
             else
             {
-                GameObjectUtils.ChildrenDestroy(NetworkTransform);
+                GameObjectUtils.ChildrenDestroy(transform);
             }
 
             _nodeGameObjs.Clear();
@@ -74,7 +73,9 @@ namespace VidiGraph
             InitializeShaders();
 
             _networkData = GameObject.Find("/Network Manager").GetComponent<NetworkDataStructure>();
-            _networkProperties = (NetworkContext3D)networkContext;
+            _networkContext = (NetworkContext3D)networkContext;
+
+            UpdateNetworkTransform();
 
             CreateNodes();
             CreateCommunities();
@@ -85,6 +86,8 @@ namespace VidiGraph
 
         public override void UpdateRenderElements()
         {
+            UpdateNetworkTransform();
+
             UpdateNodes();
             UpdateCommunities();
             UpdateLinks();
@@ -105,18 +108,25 @@ namespace VidiGraph
             _shaderWrapper.Initialize(SplineComputeShader, _batchSplineMaterial, Settings);
         }
 
+        void UpdateNetworkTransform()
+        {
+            _networkContext.CurrentTransform.AssignToTransform(transform);
+        }
+
         void CreateNodes()
         {
             foreach (var node in _networkData.Nodes)
             {
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
-                    var nodeProps = _networkProperties.Nodes[node.ID];
+                    var nodeProps = _networkContext.Nodes[node.ID];
                     var nodeObj = node.IsVirtualNode
-                        ? NodeLinkRenderUtils.MakeNode(NodePrefab, NetworkTransform, node, nodeProps, Color.black)
-                        : NodeLinkRenderUtils.MakeNode(NodePrefab, NetworkTransform, node, nodeProps);
+                        ? NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps, Color.black)
+                        : NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps);
 
                     _nodeGameObjs[node.ID] = nodeObj;
+
+                    AddNodeInteraction(nodeObj, node);
                 }
             }
         }
@@ -125,13 +135,13 @@ namespace VidiGraph
         {
             foreach (var (communityID, community) in _networkData.Communities)
             {
-                var communityProps = _networkProperties.Communities[communityID];
-                var commObj = CommunityRenderUtils.MakeCommunity(CommunityPrefab, NetworkTransform,
+                var communityProps = _networkContext.Communities[communityID];
+                var commObj = CommunityRenderUtils.MakeCommunity(CommunityPrefab, transform,
                     communityProps);
 
                 _communityGameObjs[communityID] = commObj;
 
-                AddInteractionListeners(commObj, community);
+                AddCommunityInteraction(commObj, community);
             }
         }
 
@@ -141,9 +151,9 @@ namespace VidiGraph
             {
                 foreach (var link in _networkData.TreeLinks)
                 {
-                    Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
-                        endPos = _networkProperties.Nodes[link.TargetNodeID].Position;
-                    var linkObj = NodeLinkRenderUtils.MakeStraightLink(StraightLinkPrefab, NetworkTransform,
+                    Vector3 startPos = _networkContext.Nodes[link.SourceNodeID].Position,
+                        endPos = _networkContext.Nodes[link.TargetNodeID].Position;
+                    var linkObj = NodeLinkRenderUtils.MakeStraightLink(StraightLinkPrefab, transform,
                         link, startPos, endPos, Settings.LinkWidth);
                     _linkGameObjs[link.ID] = linkObj;
                 }
@@ -153,7 +163,7 @@ namespace VidiGraph
         void CreateGPULinks()
         {
             ComputeControlPoints();
-            _shaderWrapper.PrepareBuffers(_networkData, _networkProperties, _controlPointsMap);
+            _shaderWrapper.PrepareBuffers(_networkData, _networkContext, _controlPointsMap);
         }
 
         void ComputeControlPoints()
@@ -162,7 +172,7 @@ namespace VidiGraph
             {
                 float beta = Settings.EdgeBundlingStrength;
 
-                Vector3[] cp = BSplineMathUtils.ControlPoints(link, _networkData, _networkProperties);
+                Vector3[] cp = BSplineMathUtils.ControlPoints(link, _networkData, _networkContext);
                 int length = cp.Length;
 
                 Vector3 source = cp[0];
@@ -171,7 +181,7 @@ namespace VidiGraph
 
                 Vector3[] cpDistributed = new Vector3[length + 2];
 
-                cpDistributed[0] = NetworkTransform.TransformPoint(source);
+                cpDistributed[0] = _networkContext.CurrentTransform.TransformPoint(source);
 
                 for (int i = 0; i < length; i++)
                 {
@@ -181,9 +191,9 @@ namespace VidiGraph
                     cpDistributed[i + 1].y = beta * point.y + (1 - beta) * (source.y + (i + 1) * dVector3.y / length);
                     cpDistributed[i + 1].z = beta * point.z + (1 - beta) * (source.z + (i + 1) * dVector3.z / length);
 
-                    cpDistributed[i + 1] = NetworkTransform.TransformPoint(cpDistributed[i + 1]);
+                    cpDistributed[i + 1] = _networkContext.CurrentTransform.TransformPoint(cpDistributed[i + 1]);
                 }
-                cpDistributed[length + 1] = NetworkTransform.TransformPoint(target);
+                cpDistributed[length + 1] = _networkContext.CurrentTransform.TransformPoint(target);
 
                 _controlPointsMap[link.ID] = new List<Vector3>(cpDistributed);
             }
@@ -195,7 +205,8 @@ namespace VidiGraph
             {
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
-                    _nodeGameObjs[node.ID].transform.localPosition = _networkProperties.Nodes[node.ID].Position;
+                    _nodeGameObjs[node.ID].transform.localPosition = _networkContext.Nodes[node.ID].Position;
+
                 }
             }
         }
@@ -204,7 +215,7 @@ namespace VidiGraph
         {
             foreach (var communityID in _networkData.Communities.Keys)
             {
-                var communityProps = _networkProperties.Communities[communityID];
+                var communityProps = _networkContext.Communities[communityID];
                 CommunityRenderUtils.UpdateCommunity(_communityGameObjs[communityID], communityProps);
             }
         }
@@ -215,8 +226,8 @@ namespace VidiGraph
             {
                 foreach (var link in _networkData.TreeLinks)
                 {
-                    Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
-                        endPos = _networkProperties.Nodes[link.TargetNodeID].Position;
+                    Vector3 startPos = _networkContext.Nodes[link.SourceNodeID].Position,
+                        endPos = _networkContext.Nodes[link.TargetNodeID].Position;
                     NodeLinkRenderUtils.UpdateStraightLink(_linkGameObjs[link.ID],
                         link, startPos, endPos, Settings.LinkWidth);
                 }
@@ -226,10 +237,10 @@ namespace VidiGraph
         void UpdateGPULinks()
         {
             ComputeControlPoints();
-            _shaderWrapper.UpdateBuffers(_networkData, _networkProperties, _controlPointsMap);
+            _shaderWrapper.UpdateBuffers(_networkData, _networkContext, _controlPointsMap);
         }
 
-        void AddInteractionListeners(GameObject gameObject, Community community)
+        void AddCommunityInteraction(GameObject gameObject, Community community)
         {
             XRSimpleInteractable xrInteractable = gameObject.GetComponent<XRSimpleInteractable>();
 
@@ -241,6 +252,21 @@ namespace VidiGraph
             xrInteractable.hoverExited.AddListener(evt =>
             {
                 CallCommunityHoverExit(community, evt);
+            });
+        }
+
+        void AddNodeInteraction(GameObject gameObject, Node node)
+        {
+            XRSimpleInteractable xrInteractable = gameObject.GetComponentInChildren<XRSimpleInteractable>();
+
+            xrInteractable.hoverEntered.AddListener(evt =>
+            {
+                CallNodeHoverEnter(node, evt);
+            });
+
+            xrInteractable.hoverExited.AddListener(evt =>
+            {
+                CallNodeHoverExit(node, evt);
             });
         }
 

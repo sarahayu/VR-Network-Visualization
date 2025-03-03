@@ -15,12 +15,12 @@ namespace VidiGraph
         Dictionary<string, NetworkLayout> _layouts = new Dictionary<string, NetworkLayout>();
         // keep a reference to spiderlayout specifically to focus on individual communities
         SpiderLayout _spiderLayout;
+        // keep a reference to sphericallayout to focus on individual nodes
+        SphericalLayout _sphericalLayout;
         bool _isSphericalLayout;
         Coroutine _curAnim = null;
 
         public bool IsSphericalLayout { get { return _isSphericalLayout; } }
-
-        public Transform NetworkTransform;
 
         void Awake()
         {
@@ -39,7 +39,6 @@ namespace VidiGraph
         {
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkContext.Update(_manager.NetworkData);
-            _networkContext.CurrentTransform = NetworkTransform;
 
             _bigNetworkInput = GetComponent<NetworkInput>();
             _bigNetworkRenderer = GetComponentInChildren<NetworkRenderer>();
@@ -78,7 +77,8 @@ namespace VidiGraph
             _layouts["hairball"] = GetComponentInChildren<HairballLayout>();
             _layouts["hairball"].Initialize(_networkContext);
 
-            _layouts["spherical"] = GetComponentInChildren<SphericalLayout>();
+            _sphericalLayout = GetComponentInChildren<SphericalLayout>();
+            _layouts["spherical"] = _sphericalLayout;
             _layouts["spherical"].Initialize(_networkContext);
 
             _spiderLayout = GetComponentInChildren<SpiderLayout>();
@@ -129,6 +129,18 @@ namespace VidiGraph
             {
                 UpdateWithLayoutUnanimated(layout);
             }
+        }
+
+        public void HoverNode(int nodeID)
+        {
+            _sphericalLayout.SetHoverNode(nodeID);
+            _bigNetworkRenderer.UpdateRenderElements();
+        }
+
+        public void UnhoverNode(int nodeID)
+        {
+            _sphericalLayout.ClearHoverNode();
+            _bigNetworkRenderer.UpdateRenderElements();
         }
 
         void UpdateWithLayoutAnimated(string layout)

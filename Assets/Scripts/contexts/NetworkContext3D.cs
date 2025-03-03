@@ -38,7 +38,7 @@ namespace VidiGraph
         public Dictionary<int, Community> Communities = new Dictionary<int, Community>();
 
         [HideInInspector]
-        public Transform CurrentTransform;
+        public TransformInfo CurrentTransform = new TransformInfo();
 
         public NetworkContext3D()
         {

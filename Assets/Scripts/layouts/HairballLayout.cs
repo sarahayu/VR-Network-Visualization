@@ -10,6 +10,7 @@ namespace VidiGraph
         public Transform HairballPosition;
         NetworkDataStructure _network;
         NetworkContext3D _networkContext;
+        TransformInfo _hairballTransform;
 
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
@@ -21,6 +22,7 @@ namespace VidiGraph
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _network = manager.NetworkData;
             _fileLoader = manager.FileLoader;
+            _hairballTransform = new TransformInfo(HairballPosition);
         }
 
         public override void ApplyLayout()
@@ -31,13 +33,12 @@ namespace VidiGraph
                 _networkContext.Nodes[node.idx].Position = node._position3D;
             }
 
-            _networkContext.CurrentTransform.position = HairballPosition.position;
-            _networkContext.CurrentTransform.localScale = HairballPosition.localScale;
+            _networkContext.CurrentTransform.SetFromTransform(_hairballTransform);
         }
 
         public override LayoutInterpolator GetInterpolator()
         {
-            return new HairballInterpolator(HairballPosition, _network, _networkContext, _fileLoader);
+            return new HairballInterpolator(_hairballTransform, _network, _networkContext, _fileLoader);
         }
     }
 
@@ -48,9 +49,9 @@ namespace VidiGraph
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
         TransformInfo _startingContextTransform;
-        Transform _endingContextTransform;
+        TransformInfo _endingContextTransform;
 
-        public HairballInterpolator(Transform endingContextTransform, NetworkDataStructure networkData, NetworkContext3D networkContext, NetworkFilesLoader fileLoader)
+        public HairballInterpolator(TransformInfo endingContextTransform, NetworkDataStructure networkData, NetworkContext3D networkContext, NetworkFilesLoader fileLoader)
         {
             _networkContext = networkContext;
             // get actual array instead of the node collection so we can use list indices rather than 
@@ -71,10 +72,8 @@ namespace VidiGraph
             }
 
 
-            _startingContextTransform = new TransformInfo(networkContext.CurrentTransform);
+            _startingContextTransform = networkContext.CurrentTransform.Copy();
             _endingContextTransform = endingContextTransform;
-            Console.Write(_startingContextTransform.Position);
-            Console.Write(_startingContextTransform.Scale);
         }
 
         public override void Interpolate(float t)

@@ -27,6 +27,9 @@ namespace VidiGraph
 
             renderer.OnCommunityHoverEnter += OnCommunityHoverEnter;
             renderer.OnCommunityHoverExit += OnCommunityHoverExit;
+
+            renderer.OnNodeHoverEnter += OnNodeHoverEnter;
+            renderer.OnNodeHoverExit += OnNodeHoverExit;
         }
 
         void OnEnable()
@@ -70,6 +73,22 @@ namespace VidiGraph
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 _hoveredCommunity = null;
+            }
+        }
+
+        void OnNodeHoverEnter(Node node, HoverEnterEventArgs evt)
+        {
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                _manager.HoverNode(node.ID);
+            }
+        }
+
+        void OnNodeHoverExit(Node node, HoverExitEventArgs evt)
+        {
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                _manager.UnhoverNode(node.ID);
             }
         }
     }
