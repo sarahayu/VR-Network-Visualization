@@ -18,6 +18,7 @@ namespace VidiGraph
         NetworkManager _manager;
 
         Community _hoveredCommunity = null;
+        Node _hoveredNode = null;
 
         public override void Initialize()
         {
@@ -81,6 +82,7 @@ namespace VidiGraph
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 _manager.HoverNode(node.ID);
+                _hoveredNode = node;
             }
         }
 
@@ -89,6 +91,7 @@ namespace VidiGraph
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 _manager.UnhoverNode(node.ID);
+                _hoveredNode = null;
             }
         }
     }

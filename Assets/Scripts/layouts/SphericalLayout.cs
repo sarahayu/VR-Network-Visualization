@@ -15,9 +15,6 @@ namespace VidiGraph
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
 
-        int _curFocusNode = -1;
-        int _lastFocusNode = -1;
-
         public override void Initialize(NetworkContext networkContext)
         {
             _networkContext = (NetworkContext3D)networkContext;
@@ -49,57 +46,44 @@ namespace VidiGraph
             return new SphericalInterpolator(_sphericalTransform, _network, _networkContext, _fileLoader);
         }
 
-        public void ClearHoverNode()
+        public void UnhoverNode(int node)
         {
-            SetHoverNode(-1);
+            // Find all related links and reset them
+            int communityIdx = _network.Nodes[node].CommunityID;
+
+            foreach (Link link in _network.Communities[communityIdx].InnerLinks)
+            {
+                if (link.SourceNodeID == node || link.TargetNodeID == node)
+                    _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Normal;
+            }
+            foreach (Link link in _network.Communities[communityIdx].OuterLinks)
+            {
+                if (link.SourceNodeID == node || link.TargetNodeID == node)
+                    _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Normal;
+            }
         }
 
-        public void SetHoverNode(int focusNode)
+        public void HoverNode(int node)
         {
-            _lastFocusNode = _curFocusNode;
-            _curFocusNode = focusNode;
+            // Find all related links and highlight them
+            int communityIdx = _network.Nodes[node].CommunityID;
 
-            // highlight node
-            if (_lastFocusNode != -1)
+            foreach (Link link in _network.Communities[communityIdx].InnerLinks)
             {
-
-                int communityIdx = _network.Nodes[_lastFocusNode].CommunityID;
-
-                foreach (Link link in _network.Communities[communityIdx].InnerLinks)
+                if (link.SourceNodeID == node || link.TargetNodeID == node)
                 {
-                    if (link.SourceNodeID == _lastFocusNode || link.TargetNodeID == _lastFocusNode)
-                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Normal;
-                }
-                foreach (Link link in _network.Communities[communityIdx].OuterLinks)
-                {
-                    if (link.SourceNodeID == _lastFocusNode || link.TargetNodeID == _lastFocusNode)
-                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Normal;
+                    if (_network.Communities[communityIdx].Focus)
+                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.HighLightFocus;
+                    else
+                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.HighLight;
                 }
             }
 
-            if (_curFocusNode != -1)
+            foreach (Link link in _network.Communities[communityIdx].OuterLinks)
             {
-
-                // Find all related links and highlight them
-                int communityIdx = _network.Nodes[_curFocusNode].CommunityID;
-
-                foreach (Link link in _network.Communities[communityIdx].InnerLinks)
+                if (link.SourceNodeID == node || link.TargetNodeID == node)
                 {
-                    if (link.SourceNodeID == _curFocusNode || link.TargetNodeID == _curFocusNode)
-                    {
-                        if (_network.Communities[communityIdx].Focus)
-                            _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.HighLightFocus;
-                        else
-                            _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.HighLight;
-                    }
-                }
-
-                foreach (Link link in _network.Communities[communityIdx].OuterLinks)
-                {
-                    if (link.SourceNodeID == _curFocusNode || link.TargetNodeID == _curFocusNode)
-                    {
-                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.HighLight;
-                    }
+                    _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.HighLight;
                 }
             }
         }

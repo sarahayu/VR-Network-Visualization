@@ -133,13 +133,13 @@ namespace VidiGraph
 
         public void HoverNode(int nodeID)
         {
-            _sphericalLayout.SetHoverNode(nodeID);
+            _sphericalLayout.HoverNode(nodeID);
             _bigNetworkRenderer.UpdateRenderElements();
         }
 
         public void UnhoverNode(int nodeID)
         {
-            _sphericalLayout.ClearHoverNode();
+            _sphericalLayout.UnhoverNode(nodeID);
             _bigNetworkRenderer.UpdateRenderElements();
         }
 
