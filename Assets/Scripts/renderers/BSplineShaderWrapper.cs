@@ -36,15 +36,15 @@ namespace VidiGraph
             _settings = settings;
 
             // Configure the spline compute shader
-            computeShader.SetVector("COLOR_HIGHLIGHT", _settings.LinkHighlightColor);
-            computeShader.SetVector("COLOR_FOCUS", _settings.LinkFocusColor);
-            computeShader.SetFloat("COLOR_MINIMUM_ALPHA", _settings.LinkMinimumAlpha);
-            computeShader.SetFloat("COLOR_NORMAL_ALPHA_FACTOR", _settings.LinkNormalAlphaFactor);
-            computeShader.SetFloat("COLOR_CONTEXT_ALPHA_FACTOR", _settings.LinkContextAlphaFactor);
-            computeShader.SetFloat("COLOR_FOCUS2CONTEXT_ALPHA_FACTOR", _settings.LinkContext2FocusAlphaFactor);
+            _batchComputeShader.SetVector("COLOR_HIGHLIGHT", _settings.LinkHighlightColor);
+            _batchComputeShader.SetVector("COLOR_FOCUS", _settings.LinkFocusColor);
+            _batchComputeShader.SetFloat("COLOR_MINIMUM_ALPHA", _settings.LinkMinimumAlpha);
+            _batchComputeShader.SetFloat("COLOR_NORMAL_ALPHA_FACTOR", _settings.LinkNormalAlphaFactor);
+            _batchComputeShader.SetFloat("COLOR_CONTEXT_ALPHA_FACTOR", _settings.LinkContextAlphaFactor);
+            _batchComputeShader.SetFloat("COLOR_FOCUS2CONTEXT_ALPHA_FACTOR", _settings.LinkContext2FocusAlphaFactor);
         }
 
-        public void PrepareBuffers(NetworkDataStructure networkData, NetworkContext3D networkContext, Dictionary<int, List<Vector3>> controlPoints)
+        public void PrepareBuffers(NetworkGlobal networkGlobal, NetworkContext3D networkContext, Dictionary<int, List<Vector3>> controlPoints)
         {
             // Initialize Compute Shader data
             _splines = new List<SplineData>();
@@ -56,7 +56,7 @@ namespace VidiGraph
             uint splineSampleCount = 0;
 
             uint splineIdx = 0;
-            foreach (var link in networkData.Links)
+            foreach (var link in networkGlobal.Links)
             {
                 /*
                  * Add Compute Shader data
@@ -69,9 +69,11 @@ namespace VidiGraph
 
                 Vector3 startPosition = cp[0];
                 Vector3 endPosition = cp[cp.Count - 1];
-                uint linkState = (uint)networkContext.Links[link.ID].State;
+
+                uint linkType = (uint)LinkType.BundledLink;
+
                 SplineData spline = new SplineData(splineIdx++, (uint)NumSegments, splineSegmentCount, (uint)(NumSegments * BSplineSamplesPerSegment),
-                    splineSampleCount, startPosition, endPosition, sourceColor, targetColor, linkState);
+                    splineSampleCount, startPosition, endPosition, sourceColor, targetColor, linkType);
                 _splines.Add(spline);
 
                 // Add all segments of this spline
@@ -134,7 +136,7 @@ namespace VidiGraph
             _splineMaterial.SetBuffer("OutSamplePointData", _outSampleControlPointData);
         }
 
-        public void UpdateBuffers(NetworkDataStructure networkData, NetworkContext3D networkProperties, Dictionary<int, List<Vector3>> controlPoints)
+        public void UpdateBuffers(NetworkGlobal networkGlobal, NetworkContext3D networkContext, Dictionary<int, List<Vector3>> controlPoints)
         {
             // Initialize Compute Shader data
             _splineControlPoints = new List<SplineControlPointData>();
@@ -145,26 +147,70 @@ namespace VidiGraph
 
             int splineIdx = 0;
 
-            foreach (var link in networkData.Links)
+            bool anyCommunitiesFocused = networkGlobal.HighlightedCommunities().Count > 0;
+
+            foreach (var link in networkGlobal.Links)
             {
                 var cp = controlPoints[link.ID];
                 int ControlPointCount = cp.Count;
-                int NumSegments = ControlPointCount + BSplineDegree - 2; //NumControlPoints + Degree - 2 (First/Last Point)
 
 
                 /*
                 * Add Compute Shader data
                 */
-                Vector3 startPosition = cp[0];
-                Vector3 endPosition = cp[ControlPointCount - 1];
-                uint linkState = (uint)networkProperties.Links[link.ID].State;
-
-                // Update spline information, we can preserve colors since their lookup is expensive
                 SplineData spline = _splines[splineIdx];
+                spline.StartPosition = cp[0];
+                spline.EndPosition = cp[ControlPointCount - 1];
+                spline.StartColorRGBA = link.SourceNode.ColorParsed;
+                spline.EndColorRGBA = link.TargetNode.ColorParsed;
+
+                uint linkType = (uint)LinkType.StraightLink;
+
+                if (!anyCommunitiesFocused)
+                {
+                    linkType = (uint)LinkType.BundledLink;
+
+                    spline.StartColorRGBA.a = _settings.LinkNormalAlphaFactor;
+                    spline.EndColorRGBA.a = _settings.LinkNormalAlphaFactor;
+                }
+                else
+                {
+                    var a = networkGlobal.Communities[link.SourceNode.CommunityID];
+                    var b = networkGlobal.Communities[link.TargetNode.CommunityID];
+
+                    if (a.Focus && b.Focus)
+                    {
+                        linkType = (uint)LinkType.StraightLink;
+
+                        spline.StartColorRGBA = _settings.LinkFocusColor;
+                        spline.EndColorRGBA = _settings.LinkFocusColor;
+                    }
+                    else if (a.Focus || b.Focus)
+                    {
+                        linkType = (uint)LinkType.BundledLink;
+                        spline.StartColorRGBA.a = _settings.LinkContext2FocusAlphaFactor;
+                        spline.EndColorRGBA.a = _settings.LinkContext2FocusAlphaFactor;
+                    }
+                    else
+                    {
+                        linkType = (uint)LinkType.BundledLink;
+
+                        spline.StartColorRGBA.a = _settings.LinkContextAlphaFactor;
+                        spline.EndColorRGBA.a = _settings.LinkContextAlphaFactor;
+                    }
+                }
+
+                if (link.SourceNode == networkGlobal.HoveredNode || link.TargetNode == networkGlobal.HoveredNode)
+                {
+
+                    spline.StartColorRGBA = _settings.LinkHighlightColor;
+                    spline.EndColorRGBA = _settings.LinkHighlightColor;
+                }
+
+                int NumSegments = ControlPointCount + BSplineDegree - 2; //NumControlPoints + Degree - 2 (First/Last Point)
                 int OldNumSegments = (int)spline.NumSegments;
-                spline.StartPosition = startPosition;
-                spline.EndPosition = endPosition;
-                spline.LinkState = linkState;
+
+                spline.LinkType = linkType;
                 spline.NumSegments = (uint)NumSegments;
                 spline.BeginSplineSegmentIdx = splineSegmentCount;
                 spline.NumSamples = (uint)(NumSegments * BSplineSamplesPerSegment);
@@ -239,7 +285,7 @@ namespace VidiGraph
             _inSplineControlPointData.SetData(_splineControlPoints);
             _inSplineSegmentData.SetData(_splineSegments);
 
-            _splineMaterial.SetFloat("_LineWidth", _settings.LinkWidth * networkProperties.CurrentTransform.scale.y);
+            _splineMaterial.SetFloat("_LineWidth", _settings.LinkWidth * networkContext.CurrentTransform.scale.y);
         }
 
         public void Draw()

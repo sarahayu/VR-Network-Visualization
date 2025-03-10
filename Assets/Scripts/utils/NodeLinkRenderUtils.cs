@@ -18,9 +18,13 @@ namespace VidiGraph
             GameObject nodeObj = UnityEngine.Object.Instantiate(prefab, parent);
             nodeObj.transform.localPosition = nodeProps.Position;
 
+            var renderer = nodeObj.GetComponentInChildren<Renderer>();
             MaterialPropertyBlock props = new MaterialPropertyBlock();
+
+            renderer.GetPropertyBlock(props);
             props.SetColor("_Color", color);
-            nodeObj.GetComponentInChildren<Renderer>().SetPropertyBlock(props);
+
+            renderer.SetPropertyBlock(props);
 
             return nodeObj;
         }

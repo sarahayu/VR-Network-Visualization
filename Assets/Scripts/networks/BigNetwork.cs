@@ -13,10 +13,16 @@ namespace VidiGraph
         NetworkContext3D _networkContext = new NetworkContext3D();
 
         Dictionary<string, NetworkLayout> _layouts = new Dictionary<string, NetworkLayout>();
+
         // keep a reference to spiderlayout specifically to focus on individual communities
         SpiderLayout _spiderLayout;
+
         // keep a reference to sphericallayout to focus on individual nodes
         SphericalLayout _sphericalLayout;
+
+        // keep a reference to floorLayout specifically to focus on individual communities
+        FloorLayout _floorLayout;
+
         bool _isSphericalLayout;
         Coroutine _curAnim = null;
 
@@ -38,7 +44,7 @@ namespace VidiGraph
         public override void Initialize()
         {
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _networkContext.Update(_manager.NetworkData);
+            _networkContext.Update(_manager.NetworkGlobal);
 
             _bigNetworkInput = GetComponent<NetworkInput>();
             _bigNetworkRenderer = GetComponentInChildren<NetworkRenderer>();
@@ -52,14 +58,9 @@ namespace VidiGraph
             UpdateWithLayoutUnanimated("spherical");
         }
 
-        public override void UpdateLayouts()
-        {
-            // TODO implement
-        }
-
         public override void UpdateRenderElements()
         {
-            // TODO implement
+            _bigNetworkRenderer.UpdateRenderElements();
         }
 
         public override void DrawPreview()
@@ -84,22 +85,49 @@ namespace VidiGraph
             _spiderLayout = GetComponentInChildren<SpiderLayout>();
             _layouts["spider"] = _spiderLayout;
             _layouts["spider"].Initialize(_networkContext);
+
+            _floorLayout = GetComponentInChildren<FloorLayout>();
+            _layouts["floor"] = _floorLayout;
+            _layouts["floor"].Initialize(_networkContext);
         }
 
-        public void ToggleCommunityFocus(int community, bool animated = true)
+        public void CycleCommunityFocus(int community, bool animated = true)
         {
-            bool isFocused = _manager.NetworkData.Communities[community].Focus;
-
-            _spiderLayout.SetFocusCommunity(community, !isFocused);
-            _manager.NetworkData.Communities[community].Focus = !isFocused;
+            var nextState = CycleCommunityState(community);
 
             if (animated)
             {
-                ToggleCommunityFocusAnimated();
+                switch (nextState)
+                {
+                    case NetworkContext3D.Community.CommunityState.None:
+                        UpdateWithLayoutAnimated("floor");
+                        break;
+                    case NetworkContext3D.Community.CommunityState.Spider:
+                        UpdateWithLayoutAnimated("spider");
+                        break;
+                    case NetworkContext3D.Community.CommunityState.Floor:
+                        UpdateWithLayoutAnimated("floor");
+                        break;
+                    default:
+                        break;
+                }
             }
             else
             {
-                ToggleCommunityFocusUnanimated();
+                switch (nextState)
+                {
+                    case NetworkContext3D.Community.CommunityState.None:
+                        UpdateWithLayoutUnanimated("floor");
+                        break;
+                    case NetworkContext3D.Community.CommunityState.Spider:
+                        UpdateWithLayoutUnanimated("spider");
+                        break;
+                    case NetworkContext3D.Community.CommunityState.Floor:
+                        UpdateWithLayoutUnanimated("floor");
+                        break;
+                    default:
+                        break;
+                }
             }
         }
 
@@ -107,10 +135,9 @@ namespace VidiGraph
         {
             if (_isSphericalLayout)
             {
-                foreach (var communityIdx in _manager.NetworkData.Communities.Keys)
+                foreach (var communityIdx in _manager.NetworkGlobal.Communities.Keys)
                 {
-                    _spiderLayout.SetFocusCommunity(communityIdx, false);
-                    _manager.NetworkData.Communities[communityIdx].Focus = false;
+                    ClearCommunityState(communityIdx);
                 }
 
                 UpdateWithLayoutUnanimated("spider");
@@ -131,18 +158,6 @@ namespace VidiGraph
             }
         }
 
-        public void HoverNode(int nodeID)
-        {
-            _sphericalLayout.HoverNode(nodeID);
-            _bigNetworkRenderer.UpdateRenderElements();
-        }
-
-        public void UnhoverNode(int nodeID)
-        {
-            _sphericalLayout.UnhoverNode(nodeID);
-            _bigNetworkRenderer.UpdateRenderElements();
-        }
-
         void UpdateWithLayoutAnimated(string layout)
         {
             if (_curAnim != null)
@@ -156,24 +171,46 @@ namespace VidiGraph
         void UpdateWithLayoutUnanimated(string layout)
         {
             _layouts[layout].ApplyLayout();
-            _networkContext.RecomputeGeometricProps(_manager.NetworkData);
+            _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
             _bigNetworkRenderer.UpdateRenderElements();
         }
 
-        void ToggleCommunityFocusAnimated()
+        NetworkContext3D.Community.CommunityState GetNextCommunityState(int community)
         {
-            if (_curAnim != null)
+            var curState = _networkContext.Communities[community].State;
+            return (NetworkContext3D.Community.CommunityState)((uint)(curState + 1) % (uint)NetworkContext3D.Community.CommunityState.NumStates);
+        }
+
+        void ClearCommunityState(int community)
+        {
+            _spiderLayout.SetFocusCommunityNoRelayout(community, false);
+            _floorLayout.SetFocusCommunityNoRelayout(community, false);
+            _manager.NetworkGlobal.Communities[community].Focus = false;
+            _networkContext.Communities[community].State = NetworkContext3D.Community.CommunityState.None;
+        }
+
+        NetworkContext3D.Community.CommunityState CycleCommunityState(int community)
+        {
+            var nextState = GetNextCommunityState(community);
+
+            if (nextState == NetworkContext3D.Community.CommunityState.Spider)
             {
-                StopCoroutine(_curAnim);
+                _spiderLayout.SetFocusCommunity(community, true);
+            }
+            else if (nextState == NetworkContext3D.Community.CommunityState.Floor)
+            {
+                _spiderLayout.SetFocusCommunityNoRelayout(community, false);
+                _floorLayout.SetFocusCommunity(community, true);
+            }
+            else
+            {
+                _floorLayout.SetFocusCommunity(community, false);
             }
 
-            _curAnim = StartCoroutine(CRAnimateLayout("spider"));
-        }
+            _manager.NetworkGlobal.Communities[community].Focus = nextState == NetworkContext3D.Community.CommunityState.Floor || nextState == NetworkContext3D.Community.CommunityState.Spider;
+            _networkContext.Communities[community].State = nextState;
 
-        void ToggleCommunityFocusUnanimated()
-        {
-            _layouts["spider"].ApplyLayout();
-            _bigNetworkRenderer.UpdateRenderElements();
+            return nextState;
         }
 
         IEnumerator CRAnimateLayout(string layout)
@@ -188,7 +225,7 @@ namespace VidiGraph
             });
 
             // update render elements one more time to update input elements after recomputing geometric info
-            _networkContext.RecomputeGeometricProps(_manager.NetworkData);
+            _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
             _bigNetworkRenderer.UpdateRenderElements();
 
             _curAnim = null;

@@ -8,29 +8,28 @@ namespace VidiGraph
     {
         public class Node
         {
-            public Vector3 Position;
+            public Vector3 Position = Vector3.zero;
         }
 
         public class Link
         {
-            public enum LinkState
-            {
-                HighLight,
-                Context,
-                Focus2Context,
-                Focus,
-                Normal,
-                HighLightFocus,
-            }
-
-            public LinkState State;
         }
 
         public class Community
         {
+            public enum CommunityState
+            {
+                None,
+                Spider,
+                Floor,
+                NumStates,
+            }
+
             public double Mass;
             public Vector3 MassCenter;
             public double Size;
+
+            public CommunityState State = CommunityState.None;
         }
 
         public Dictionary<int, Node> Nodes = new Dictionary<int, Node>();
@@ -45,7 +44,7 @@ namespace VidiGraph
             // expose constructor
         }
 
-        public void Update(NetworkDataStructure networkData)
+        public void Update(NetworkGlobal networkData)
         {
             Nodes.Clear();
             Links.Clear();
@@ -58,7 +57,7 @@ namespace VidiGraph
 
             foreach (var link in networkData.Links)
             {
-                Links[link.ID] = new Link() { State = Link.LinkState.Normal };
+                Links[link.ID] = new Link();
             }
 
             foreach (var community in networkData.Communities.Values)
@@ -67,7 +66,7 @@ namespace VidiGraph
             }
         }
 
-        public void RecomputeGeometricProps(NetworkDataStructure networkData)
+        public void RecomputeGeometricProps(NetworkGlobal networkData)
         {
             foreach (var community in networkData.Communities.Values)
             {

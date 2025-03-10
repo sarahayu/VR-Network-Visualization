@@ -27,7 +27,7 @@ namespace VidiGraph
         public override void Initialize()
         {
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _networkContext.Update(_manager.NetworkData);
+            _networkContext.Update(_manager.NetworkGlobal);
 
             _renderer = GetComponentInChildren<NetworkRenderer>();
             _renderer.Initialize(_networkContext);
@@ -35,12 +35,8 @@ namespace VidiGraph
             InitializeLayouts();
 
             _layout.ApplyLayout();
-            _networkContext.RecomputeGeometricProps(_manager.NetworkData);
+            _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
             _renderer.UpdateRenderElements();
-        }
-        public override void UpdateLayouts()
-        {
-            // TODO implement
         }
 
         public override void UpdateRenderElements()

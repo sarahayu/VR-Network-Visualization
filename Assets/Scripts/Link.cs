@@ -28,7 +28,7 @@ namespace VidiGraph
             TargetNode = target;
             SourceNodeID = source.ID;
             TargetNodeID = target.ID;
-            this.ID = id;
+            ID = id;
         }
     }
 }

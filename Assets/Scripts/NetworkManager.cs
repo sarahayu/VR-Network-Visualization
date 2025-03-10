@@ -18,10 +18,10 @@ namespace VidiGraph
         SmallNetwork _smallNetwork;
 
         NetworkFilesLoader _fileLoader;
-        NetworkDataStructure _networkData;
+        NetworkGlobal _networkGlobal;
 
         public NetworkFilesLoader FileLoader { get { return _fileLoader; } }
-        public NetworkDataStructure NetworkData { get { return _networkData; } }
+        public NetworkGlobal NetworkGlobal { get { return _networkGlobal; } }
 
         void Awake()
         {
@@ -39,10 +39,10 @@ namespace VidiGraph
         public void Initialize()
         {
             _fileLoader = GetComponent<NetworkFilesLoader>();
-            _networkData = GetComponent<NetworkDataStructure>();
+            _networkGlobal = GetComponent<NetworkGlobal>();
 
             _fileLoader.LoadFiles();
-            _networkData.InitNetwork();
+            _networkGlobal.InitNetwork();
 
             _bigNetwork.Initialize();
             _smallNetwork.Initialize();
@@ -54,9 +54,9 @@ namespace VidiGraph
             _smallNetwork.DrawPreview();
         }
 
-        public void ToggleCommunityFocus(int community, bool animated = true)
+        public void CycleCommunityFocus(int community, bool animated = true)
         {
-            _bigNetwork.ToggleCommunityFocus(community, animated);
+            _bigNetwork.CycleCommunityFocus(community, animated);
         }
 
         public void ToggleBigNetworkSphericalAndHairball(bool animated = true)
@@ -66,12 +66,26 @@ namespace VidiGraph
 
         public void HoverNode(int nodeID)
         {
-            _bigNetwork.HoverNode(nodeID);
+            _networkGlobal.HoveredNode = _networkGlobal.Nodes[nodeID];
+            _bigNetwork.UpdateRenderElements();
         }
 
         public void UnhoverNode(int nodeID)
         {
-            _bigNetwork.UnhoverNode(nodeID);
+            _networkGlobal.HoveredNode = null;
+            _bigNetwork.UpdateRenderElements();
+        }
+
+        public void HoverCommunity(int communityID)
+        {
+            _networkGlobal.HoveredCommunity = _networkGlobal.Communities[communityID];
+            _bigNetwork.UpdateRenderElements();
+        }
+
+        public void UnhoverCommunity(int communityID)
+        {
+            _networkGlobal.HoveredCommunity = null;
+            _bigNetwork.UpdateRenderElements();
         }
     }
 }

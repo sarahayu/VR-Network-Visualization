@@ -18,7 +18,6 @@ namespace VidiGraph
         public int rootIdx;
         public NodeFileData[] nodes;
         public LinkFileData[] links;
-        public bool is2D;
 
         // use for reverse search into nodes array, this data is not found in the file but will be initialized later
         public Dictionary<int, int> idToIdx;
@@ -36,8 +35,6 @@ namespace VidiGraph
         public int height;
         public int ancIdx;
         public int[] childIdx;
-        public float[] pos2D;
-        public float[] pos3D;
         public Vector3 _position3D;
     }
 

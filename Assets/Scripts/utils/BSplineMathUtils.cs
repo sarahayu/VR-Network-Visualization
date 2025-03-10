@@ -6,7 +6,7 @@ namespace VidiGraph
 {
     public static class BSplineMathUtils
     {
-        public static Vector3[] ControlPoints(Link link, NetworkDataStructure networkData, NetworkContext3D networkProperties)
+        public static Vector3[] ControlPoints(Link link, NetworkGlobal networkData, NetworkContext3D networkProperties)
         {
             //TODO There has to some better way to do this, and also to provide a constant number of control points
 
@@ -20,11 +20,6 @@ namespace VidiGraph
             var sFocus = networkData.Communities[sourceNode.CommunityID].Focus;
             var tFocus = networkData.Communities[targetNode.CommunityID].Focus;
 
-            if (networkData.Is2D)
-            {
-                sCenter.z = 0.25f;
-                tCenter.z = 0.25f;
-            }
             // Between focus and context
             if (sFocus && !tFocus)
             {

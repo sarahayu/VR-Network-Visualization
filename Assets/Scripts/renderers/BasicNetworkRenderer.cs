@@ -17,7 +17,7 @@ namespace VidiGraph
 
         Dictionary<int, GameObject> _nodeGameObjs = new Dictionary<int, GameObject>();
         Dictionary<int, GameObject> _linkGameObjs = new Dictionary<int, GameObject>();
-        NetworkDataStructure _networkData;
+        NetworkGlobal _networkData;
         NetworkContext3D _networkProperties;
 
         void Reset()
@@ -39,7 +39,7 @@ namespace VidiGraph
         {
             Reset();
 
-            _networkData = GameObject.Find("/Network Manager").GetComponent<NetworkDataStructure>();
+            _networkData = GameObject.Find("/Network Manager").GetComponent<NetworkGlobal>();
             _networkProperties = (NetworkContext3D)networkContext;
 
             CreateNodes();

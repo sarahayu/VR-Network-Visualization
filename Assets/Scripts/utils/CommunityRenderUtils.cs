@@ -20,7 +20,6 @@ namespace VidiGraph
         {
             commObj.transform.localPosition = community.MassCenter;
             commObj.transform.localScale = Vector3.one * (float)community.Size;
-
             return commObj;
         }
     }

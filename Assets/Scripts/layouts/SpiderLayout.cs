@@ -9,7 +9,7 @@ namespace VidiGraph
     {
         public Transform SpiderPosition;
 
-        NetworkDataStructure _network;
+        NetworkGlobal _network;
         NetworkContext3D _networkContext;
 
         // TODO remove this when we are able to calc at runtime
@@ -24,7 +24,7 @@ namespace VidiGraph
             _networkContext = (NetworkContext3D)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _network = manager.NetworkData;
+            _network = manager.NetworkGlobal;
             _fileLoader = manager.FileLoader;
             _spiderTransform = new TransformInfo(SpiderPosition);
         }
@@ -68,36 +68,6 @@ namespace VidiGraph
                 _focusCommunitiesToUpdate.Remove(communityIdx);
             }
 
-            // change all links to normal if no communities selected
-            if (_focusCommunities.Count == 0)
-            {
-                foreach (var link in _networkContext.Links.Values)
-                {
-                    link.State = NetworkContext3D.Link.LinkState.Normal;
-                }
-            }
-            // otherwise apply different link states depending on relation to selected communities
-            else
-            {
-                foreach (var link in _network.Links)
-                {
-                    var a = _network.Communities[link.SourceNode.CommunityID];
-                    var b = _network.Communities[link.TargetNode.CommunityID];
-                    if (a.Focus && b.Focus)
-                    {
-                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Normal;
-                    }
-                    else if (a.Focus || b.Focus)
-                    {
-                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Focus2Context;
-                    }
-                    else
-                    {
-                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Context;
-                    }
-                }
-            }
-
             _networkContext.CurrentTransform.SetFromTransform(_spiderTransform);
         }
 
@@ -106,11 +76,36 @@ namespace VidiGraph
             return new SpiderInterpolator(_spiderTransform, _network, _networkContext, _fileLoader, _focusCommunities, _focusCommunitiesToUpdate);
         }
 
+        public void UnfocusAllCommunities()
+        {
+            foreach (var c in _focusCommunities)
+            {
+                _focusCommunitiesToUpdate[c] = false;
+            }
+        }
+
         public void SetFocusCommunity(int focusCommunity, bool isFocused)
         {
             if (isFocused != _focusCommunities.Contains(focusCommunity))
             {
                 _focusCommunitiesToUpdate[focusCommunity] = isFocused;
+            }
+        }
+
+        public void SetFocusCommunityNoRelayout(int focusCommunity, bool isFocused)
+        {
+            if (isFocused)
+            {
+                _focusCommunities.Add(focusCommunity);
+            }
+            else
+            {
+                _focusCommunities.Remove(focusCommunity);
+            }
+
+            if (_focusCommunitiesToUpdate.ContainsKey(focusCommunity))
+            {
+                _focusCommunitiesToUpdate.Remove(focusCommunity);
             }
         }
     }
@@ -124,7 +119,7 @@ namespace VidiGraph
         TransformInfo _startingContextTransform;
         TransformInfo _endingContextTransform;
 
-        public SpiderInterpolator(TransformInfo endingContextTransform, NetworkDataStructure networkData, NetworkContext3D networkContext,
+        public SpiderInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkData, NetworkContext3D networkContext,
             NetworkFilesLoader fileLoader, HashSet<int> focusCommunities, Dictionary<int, bool> focusCommunitiesToUpdate)
         {
             _networkContext = networkContext;
@@ -166,36 +161,6 @@ namespace VidiGraph
                 }
 
                 focusCommunitiesToUpdate.Remove(communityIdx);
-            }
-
-            // change all links to normal if no communities selected
-            if (focusCommunities.Count == 0)
-            {
-                foreach (var link in _networkContext.Links.Values)
-                {
-                    link.State = NetworkContext3D.Link.LinkState.Normal;
-                }
-            }
-            // otherwise apply different link states depending on relation to selected communities
-            else
-            {
-                foreach (var link in networkData.Links)
-                {
-                    var a = networkData.Communities[link.SourceNode.CommunityID];
-                    var b = networkData.Communities[link.TargetNode.CommunityID];
-                    if (a.Focus && b.Focus)
-                    {
-                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Focus;
-                    }
-                    else if (a.Focus || b.Focus)
-                    {
-                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Focus2Context;
-                    }
-                    else
-                    {
-                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Context;
-                    }
-                }
             }
 
             _startingContextTransform = networkContext.CurrentTransform.Copy();

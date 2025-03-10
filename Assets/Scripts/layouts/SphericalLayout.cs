@@ -8,7 +8,7 @@ namespace VidiGraph
     {
         public Transform SphericalPosition;
 
-        NetworkDataStructure _network;
+        NetworkGlobal _networkGlobal;
         NetworkContext3D _networkContext;
         TransformInfo _sphericalTransform;
 
@@ -20,7 +20,7 @@ namespace VidiGraph
             _networkContext = (NetworkContext3D)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _network = manager.NetworkData;
+            _networkGlobal = manager.NetworkGlobal;
             _fileLoader = manager.FileLoader;
             _sphericalTransform = new TransformInfo(SphericalPosition);
         }
@@ -33,59 +33,12 @@ namespace VidiGraph
                 _networkContext.Nodes[node.idx].Position = node._position3D;
             }
 
-            foreach (var link in _networkContext.Links.Values)
-            {
-                link.State = NetworkContext3D.Link.LinkState.Normal;
-            }
-
             _networkContext.CurrentTransform.SetFromTransform(_sphericalTransform);
         }
 
         public override LayoutInterpolator GetInterpolator()
         {
-            return new SphericalInterpolator(_sphericalTransform, _network, _networkContext, _fileLoader);
-        }
-
-        public void UnhoverNode(int node)
-        {
-            // Find all related links and reset them
-            int communityIdx = _network.Nodes[node].CommunityID;
-
-            foreach (Link link in _network.Communities[communityIdx].InnerLinks)
-            {
-                if (link.SourceNodeID == node || link.TargetNodeID == node)
-                    _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Normal;
-            }
-            foreach (Link link in _network.Communities[communityIdx].OuterLinks)
-            {
-                if (link.SourceNodeID == node || link.TargetNodeID == node)
-                    _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.Normal;
-            }
-        }
-
-        public void HoverNode(int node)
-        {
-            // Find all related links and highlight them
-            int communityIdx = _network.Nodes[node].CommunityID;
-
-            foreach (Link link in _network.Communities[communityIdx].InnerLinks)
-            {
-                if (link.SourceNodeID == node || link.TargetNodeID == node)
-                {
-                    if (_network.Communities[communityIdx].Focus)
-                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.HighLightFocus;
-                    else
-                        _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.HighLight;
-                }
-            }
-
-            foreach (Link link in _network.Communities[communityIdx].OuterLinks)
-            {
-                if (link.SourceNodeID == node || link.TargetNodeID == node)
-                {
-                    _networkContext.Links[link.ID].State = NetworkContext3D.Link.LinkState.HighLight;
-                }
-            }
+            return new SphericalInterpolator(_sphericalTransform, _networkGlobal, _networkContext, _fileLoader);
         }
     }
 
@@ -98,7 +51,7 @@ namespace VidiGraph
         TransformInfo _startingContextTransform;
         TransformInfo _endingContextTransform;
 
-        public SphericalInterpolator(TransformInfo endingContextTransform, NetworkDataStructure networkData, NetworkContext3D networkContext, NetworkFilesLoader fileLoader)
+        public SphericalInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkData, NetworkContext3D networkContext, NetworkFilesLoader fileLoader)
         {
             _networkContext = networkContext;
             // get actual array instead of the node collection so we can use list indices rather than 
@@ -116,11 +69,6 @@ namespace VidiGraph
                 _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
                 // TODO calculate at runtime
                 _endPositions[node.ID] = sphericalNodes[idToIdx[node.ID]]._position3D;
-            }
-
-            foreach (var link in _networkContext.Links.Values)
-            {
-                link.State = NetworkContext3D.Link.LinkState.Normal;
             }
 
             _startingContextTransform = networkContext.CurrentTransform.Copy();

@@ -51,7 +51,7 @@ namespace VidiGraph
             {
                 if (_hoveredCommunity != null)
                 {
-                    _manager.ToggleCommunityFocus(_hoveredCommunity.ID);
+                    _manager.CycleCommunityFocus(_hoveredCommunity.ID);
                 }
             }
 
@@ -65,6 +65,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
+                _manager.HoverCommunity(community.ID);
                 _hoveredCommunity = community;
             }
         }
@@ -73,6 +74,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
+                _manager.UnhoverCommunity(community.ID);
                 _hoveredCommunity = null;
             }
         }

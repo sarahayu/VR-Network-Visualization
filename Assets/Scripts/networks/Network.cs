@@ -13,7 +13,6 @@ namespace VidiGraph
     public abstract class Network : MonoBehaviour
     {
         public abstract void Initialize();
-        public abstract void UpdateLayouts();
         public abstract void UpdateRenderElements();
         public abstract void DrawPreview();
     }

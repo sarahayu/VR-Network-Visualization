@@ -20,6 +20,7 @@ namespace VidiGraph
             public Color NodeHighlightColor;
             public Color LinkHighlightColor;
             public Color LinkFocusColor;
+
             [Range(0.0f, 0.1f)]
             public float LinkMinimumAlpha = 0.01f;
             [Range(0.0f, 1.0f)]
@@ -46,9 +47,14 @@ namespace VidiGraph
         Dictionary<int, List<Vector3>> _controlPointsMap = new Dictionary<int, List<Vector3>>();
         Material _batchSplineMaterial;
 
+
+        Dictionary<int, Renderer> _nodeColors = new Dictionary<int, Renderer>();
+        Dictionary<int, Renderer> _commColors = new Dictionary<int, Renderer>();
+
         BSplineShaderWrapper _shaderWrapper = new BSplineShaderWrapper();
-        NetworkDataStructure _networkData;
+        NetworkGlobal _networkGlobal;
         NetworkContext3D _networkContext;
+        int _lastHoveredNode = -1;
 
         void Reset()
         {
@@ -72,7 +78,7 @@ namespace VidiGraph
 
             InitializeShaders();
 
-            _networkData = GameObject.Find("/Network Manager").GetComponent<NetworkDataStructure>();
+            _networkGlobal = GameObject.Find("/Network Manager").GetComponent<NetworkGlobal>();
             _networkContext = (NetworkContext3D)networkContext;
 
             UpdateNetworkTransform();
@@ -115,7 +121,7 @@ namespace VidiGraph
 
         void CreateNodes()
         {
-            foreach (var node in _networkData.Nodes)
+            foreach (var node in _networkGlobal.Nodes)
             {
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
@@ -125,6 +131,7 @@ namespace VidiGraph
                         : NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps);
 
                     _nodeGameObjs[node.ID] = nodeObj;
+                    _nodeColors[node.ID] = nodeObj.GetComponentInChildren<Renderer>();
 
                     AddNodeInteraction(nodeObj, node);
                 }
@@ -133,13 +140,14 @@ namespace VidiGraph
 
         void CreateCommunities()
         {
-            foreach (var (communityID, community) in _networkData.Communities)
+            foreach (var (communityID, community) in _networkGlobal.Communities)
             {
                 var communityProps = _networkContext.Communities[communityID];
                 var commObj = CommunityRenderUtils.MakeCommunity(CommunityPrefab, transform,
                     communityProps);
 
                 _communityGameObjs[communityID] = commObj;
+                _commColors[communityID] = commObj.GetComponentInChildren<Renderer>();
 
                 AddCommunityInteraction(commObj, community);
             }
@@ -149,7 +157,7 @@ namespace VidiGraph
         {
             if (DrawTreeStructure)
             {
-                foreach (var link in _networkData.TreeLinks)
+                foreach (var link in _networkGlobal.TreeLinks)
                 {
                     Vector3 startPos = _networkContext.Nodes[link.SourceNodeID].Position,
                         endPos = _networkContext.Nodes[link.TargetNodeID].Position;
@@ -163,16 +171,16 @@ namespace VidiGraph
         void CreateGPULinks()
         {
             ComputeControlPoints();
-            _shaderWrapper.PrepareBuffers(_networkData, _networkContext, _controlPointsMap);
+            _shaderWrapper.PrepareBuffers(_networkGlobal, _networkContext, _controlPointsMap);
         }
 
         void ComputeControlPoints()
         {
-            foreach (var link in _networkData.Links)
+            foreach (var link in _networkGlobal.Links)
             {
                 float beta = Settings.EdgeBundlingStrength;
 
-                Vector3[] cp = BSplineMathUtils.ControlPoints(link, _networkData, _networkContext);
+                Vector3[] cp = BSplineMathUtils.ControlPoints(link, _networkGlobal, _networkContext);
                 int length = cp.Length;
 
                 Vector3 source = cp[0];
@@ -201,22 +209,65 @@ namespace VidiGraph
 
         void UpdateNodes()
         {
-            foreach (var node in _networkData.Nodes)
+            foreach (var node in _networkGlobal.Nodes)
             {
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
                     _nodeGameObjs[node.ID].transform.localPosition = _networkContext.Nodes[node.ID].Position;
 
+                    if (node.ID == _lastHoveredNode)
+                    {
+                        MaterialPropertyBlock props = new MaterialPropertyBlock();
+                        var renderer = _nodeColors[node.ID];
+
+                        renderer.GetPropertyBlock(props);
+                        props.SetColor("_Color", node.IsVirtualNode ? Color.black : node.ColorParsed);
+                        renderer.SetPropertyBlock(props);
+                    }
+
+                    if (_networkGlobal.HoveredNode != null && node.ID == _networkGlobal.HoveredNode.ID)
+                    {
+                        MaterialPropertyBlock props = new MaterialPropertyBlock();
+                        var renderer = _nodeColors[node.ID];
+
+                        renderer.GetPropertyBlock(props);
+                        props.SetColor("_Color", Settings.NodeHighlightColor);
+                        renderer.SetPropertyBlock(props);
+                    }
                 }
             }
+
+            if (_networkGlobal.HoveredNode != null)
+                _lastHoveredNode = _networkGlobal.HoveredNode.ID;
+            else
+                _lastHoveredNode = -1;
         }
 
         void UpdateCommunities()
         {
-            foreach (var communityID in _networkData.Communities.Keys)
+            foreach (var communityID in _networkGlobal.Communities.Keys)
             {
                 var communityProps = _networkContext.Communities[communityID];
                 CommunityRenderUtils.UpdateCommunity(_communityGameObjs[communityID], communityProps);
+
+                if (_networkGlobal.HoveredCommunity != null && _networkGlobal.HoveredCommunity.ID == communityID)
+                {
+                    MaterialPropertyBlock props = new MaterialPropertyBlock();
+                    var renderer = _commColors[communityID];
+
+                    renderer.GetPropertyBlock(props);
+                    props.SetColor("_Color", new Color(1f, 1f, 1f, 0.1f));
+                    renderer.SetPropertyBlock(props);
+                }
+                else
+                {
+                    MaterialPropertyBlock props = new MaterialPropertyBlock();
+                    var renderer = _commColors[communityID];
+
+                    renderer.GetPropertyBlock(props);
+                    props.SetColor("_Color", new Color(0f, 0f, 0f, 0f));
+                    renderer.SetPropertyBlock(props);
+                }
             }
         }
 
@@ -224,7 +275,7 @@ namespace VidiGraph
         {
             if (DrawTreeStructure)
             {
-                foreach (var link in _networkData.TreeLinks)
+                foreach (var link in _networkGlobal.TreeLinks)
                 {
                     Vector3 startPos = _networkContext.Nodes[link.SourceNodeID].Position,
                         endPos = _networkContext.Nodes[link.TargetNodeID].Position;
@@ -237,7 +288,7 @@ namespace VidiGraph
         void UpdateGPULinks()
         {
             ComputeControlPoints();
-            _shaderWrapper.UpdateBuffers(_networkData, _networkContext, _controlPointsMap);
+            _shaderWrapper.UpdateBuffers(_networkGlobal, _networkContext, _controlPointsMap);
         }
 
         void AddCommunityInteraction(GameObject gameObject, Community community)

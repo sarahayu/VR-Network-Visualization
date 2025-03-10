@@ -8,7 +8,7 @@ namespace VidiGraph
     public class HairballLayout : NetworkLayout
     {
         public Transform HairballPosition;
-        NetworkDataStructure _network;
+        NetworkGlobal _network;
         NetworkContext3D _networkContext;
         TransformInfo _hairballTransform;
 
@@ -20,7 +20,7 @@ namespace VidiGraph
             _networkContext = (NetworkContext3D)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _network = manager.NetworkData;
+            _network = manager.NetworkGlobal;
             _fileLoader = manager.FileLoader;
             _hairballTransform = new TransformInfo(HairballPosition);
         }
@@ -51,7 +51,7 @@ namespace VidiGraph
         TransformInfo _startingContextTransform;
         TransformInfo _endingContextTransform;
 
-        public HairballInterpolator(TransformInfo endingContextTransform, NetworkDataStructure networkData, NetworkContext3D networkContext, NetworkFilesLoader fileLoader)
+        public HairballInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkData, NetworkContext3D networkContext, NetworkFilesLoader fileLoader)
         {
             _networkContext = networkContext;
             // get actual array instead of the node collection so we can use list indices rather than 

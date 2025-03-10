@@ -13,7 +13,7 @@ namespace VidiGraph
         public Dictionary<int, int> C2NIdxMap = new Dictionary<int, int>();
         public int[,] matrix;
 
-        public void BuildInvertedIdx(NetworkDataStructure _network, int _communityIdx)
+        public void BuildInvertedIdx(NetworkGlobal _network, int _communityIdx)
         {
             var idx = 0;
             foreach (var node in _network.Communities[_communityIdx].Nodes)
@@ -79,7 +79,7 @@ namespace VidiGraph
 
             return FindShortestPathFromMatrix(matrix, nodesNumber);
         }
-        public static int[,] ShortestPathMatrix(NetworkDataStructure network)
+        public static int[,] ShortestPathMatrix(NetworkGlobal network)
         {
             var nodesNumber = network.Nodes.Count;
             var matrix = new int[nodesNumber, nodesNumber];
@@ -93,7 +93,7 @@ namespace VidiGraph
             return FindShortestPathFromMatrix(matrix, nodesNumber);
         }
 
-        public static int[,] ShortestPathAggregateMatrix(NetworkDataStructure network)
+        public static int[,] ShortestPathAggregateMatrix(NetworkGlobal network)
         {
             var nodesNumber = network.Communities.Count;
             var matrix = new int[nodesNumber, nodesNumber];
