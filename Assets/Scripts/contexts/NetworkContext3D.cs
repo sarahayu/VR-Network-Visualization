@@ -8,7 +8,14 @@ namespace VidiGraph
     {
         public class Node
         {
+            public enum NodeState
+            {
+                None,
+                Bring,
+                NumStates,
+            }
             public Vector3 Position = Vector3.zero;
+            public NodeState State = NodeState.None;
         }
 
         public class Link

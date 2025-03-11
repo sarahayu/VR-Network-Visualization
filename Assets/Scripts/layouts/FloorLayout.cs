@@ -9,7 +9,7 @@ namespace VidiGraph
     {
         public Transform FloorPosition;
 
-        NetworkGlobal _network;
+        NetworkGlobal _networkGlobal;
         NetworkContext3D _networkContext;
 
         // TODO remove this when we are able to calc at runtime
@@ -24,7 +24,7 @@ namespace VidiGraph
             _networkContext = (NetworkContext3D)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _network = manager.NetworkGlobal;
+            _networkGlobal = manager.NetworkGlobal;
             _fileLoader = manager.FileLoader;
             _floorTransform = new TransformInfo(FloorPosition);
         }
@@ -38,7 +38,7 @@ namespace VidiGraph
             var sphericalNodes = _fileLoader.SphericalLayout.nodes;
             var sphericalIdToIdx = _fileLoader.SphericalLayout.idToIdx;
 
-            foreach (var (communityIdx, community) in _network.Communities)
+            foreach (var (communityIdx, community) in _networkGlobal.Communities)
             {
                 if (!_focusCommunitiesToUpdate.ContainsKey(communityIdx)) continue;
 
@@ -73,7 +73,7 @@ namespace VidiGraph
 
         public override LayoutInterpolator GetInterpolator()
         {
-            return new FloorInterpolator(_floorTransform, _network, _networkContext, _fileLoader, _focusCommunities, _focusCommunitiesToUpdate);
+            return new FloorInterpolator(_floorTransform, _networkGlobal, _networkContext, _fileLoader, _focusCommunities, _focusCommunitiesToUpdate);
         }
 
         public void UnfocusAllCommunities()
@@ -84,7 +84,7 @@ namespace VidiGraph
             }
         }
 
-        public void SetFocusCommunity(int focusCommunity, bool isFocused)
+        public void SetFocusCommunityQueue(int focusCommunity, bool isFocused)
         {
             if (isFocused != _focusCommunities.Contains(focusCommunity))
             {
@@ -92,7 +92,7 @@ namespace VidiGraph
             }
         }
 
-        public void SetFocusCommunityNoRelayout(int focusCommunity, bool isFocused)
+        public void SetFocusCommunityImm(int focusCommunity, bool isFocused)
         {
             if (isFocused)
             {
@@ -119,7 +119,7 @@ namespace VidiGraph
         TransformInfo _startingContextTransform;
         TransformInfo _endingContextTransform;
 
-        public FloorInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkData, NetworkContext3D networkContext,
+        public FloorInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, NetworkContext3D networkContext,
             NetworkFilesLoader fileLoader, HashSet<int> focusCommunities, Dictionary<int, bool> focusCommunitiesToUpdate)
         {
             _networkContext = networkContext;
@@ -130,7 +130,7 @@ namespace VidiGraph
             var sphericalNodes = fileLoader.SphericalLayout.nodes;
             var sphericalIdToIdx = fileLoader.SphericalLayout.idToIdx;
 
-            foreach (var (communityIdx, community) in networkData.Communities)
+            foreach (var (communityIdx, community) in networkGlobal.Communities)
             {
                 if (!focusCommunitiesToUpdate.ContainsKey(communityIdx)) continue;
 

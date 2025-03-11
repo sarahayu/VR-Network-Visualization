@@ -76,6 +76,11 @@ namespace VidiGraph
             _bigNetwork.UpdateRenderElements();
         }
 
+        public void ToggleFocusNodes(int[] nodeIDs)
+        {
+            _bigNetwork.ToggleFocusNodes(nodeIDs);
+        }
+
         public void HoverCommunity(int communityID)
         {
             _networkGlobal.HoveredCommunity = _networkGlobal.Communities[communityID];

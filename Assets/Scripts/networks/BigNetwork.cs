@@ -17,8 +17,8 @@ namespace VidiGraph
         // keep a reference to spiderlayout specifically to focus on individual communities
         SpiderLayout _spiderLayout;
 
-        // keep a reference to sphericallayout to focus on individual nodes
-        SphericalLayout _sphericalLayout;
+        // keep a reference to bringNodeLayout to focus on individual nodes
+        BringNodeLayout _bringNodeLayout;
 
         // keep a reference to floorLayout specifically to focus on individual communities
         FloorLayout _floorLayout;
@@ -78,9 +78,12 @@ namespace VidiGraph
             _layouts["hairball"] = GetComponentInChildren<HairballLayout>();
             _layouts["hairball"].Initialize(_networkContext);
 
-            _sphericalLayout = GetComponentInChildren<SphericalLayout>();
-            _layouts["spherical"] = _sphericalLayout;
+            _layouts["spherical"] = GetComponentInChildren<SphericalLayout>();
             _layouts["spherical"].Initialize(_networkContext);
+
+            _bringNodeLayout = GetComponentInChildren<BringNodeLayout>();
+            _layouts["bringNode"] = _bringNodeLayout;
+            _layouts["bringNode"].Initialize(_networkContext);
 
             _spiderLayout = GetComponentInChildren<SpiderLayout>();
             _layouts["spider"] = _spiderLayout;
@@ -93,6 +96,9 @@ namespace VidiGraph
 
         public void CycleCommunityFocus(int community, bool animated = true)
         {
+            // only focus community if we're in spherical layout
+            if (!_isSphericalLayout) return;
+
             var nextState = CycleCommunityState(community);
 
             if (animated)
@@ -158,6 +164,27 @@ namespace VidiGraph
             }
         }
 
+        public void ToggleFocusNodes(int[] nodeIDs, bool animated = true)
+        {
+            foreach (var nodeID in nodeIDs)
+            {
+                bool setFocus = _networkContext.Nodes[nodeID].State == NetworkContext3D.Node.NodeState.None;
+
+                _bringNodeLayout.SetFocusNodeQueue(nodeID, setFocus);
+
+                _networkContext.Nodes[nodeID].State = setFocus ? NetworkContext3D.Node.NodeState.Bring : NetworkContext3D.Node.NodeState.None;
+            }
+
+            if (animated)
+            {
+                UpdateWithLayoutAnimated("bringNode");
+            }
+            else
+            {
+                UpdateWithLayoutUnanimated("bringNode");
+            }
+        }
+
         void UpdateWithLayoutAnimated(string layout)
         {
             if (_curAnim != null)
@@ -183,8 +210,8 @@ namespace VidiGraph
 
         void ClearCommunityState(int community)
         {
-            _spiderLayout.SetFocusCommunityNoRelayout(community, false);
-            _floorLayout.SetFocusCommunityNoRelayout(community, false);
+            _spiderLayout.SetFocusCommunityImm(community, false);
+            _floorLayout.SetFocusCommunityImm(community, false);
             _manager.NetworkGlobal.Communities[community].Focus = false;
             _networkContext.Communities[community].State = NetworkContext3D.Community.CommunityState.None;
         }
@@ -195,19 +222,20 @@ namespace VidiGraph
 
             if (nextState == NetworkContext3D.Community.CommunityState.Spider)
             {
-                _spiderLayout.SetFocusCommunity(community, true);
+                _spiderLayout.SetFocusCommunityQueue(community, true);
             }
             else if (nextState == NetworkContext3D.Community.CommunityState.Floor)
             {
-                _spiderLayout.SetFocusCommunityNoRelayout(community, false);
-                _floorLayout.SetFocusCommunity(community, true);
+                _spiderLayout.SetFocusCommunityImm(community, false);
+                _floorLayout.SetFocusCommunityQueue(community, true);
             }
             else
             {
-                _floorLayout.SetFocusCommunity(community, false);
+                _floorLayout.SetFocusCommunityQueue(community, false);
             }
 
-            _manager.NetworkGlobal.Communities[community].Focus = nextState == NetworkContext3D.Community.CommunityState.Floor || nextState == NetworkContext3D.Community.CommunityState.Spider;
+            bool isCommFocused = nextState == NetworkContext3D.Community.CommunityState.Floor || nextState == NetworkContext3D.Community.CommunityState.Spider;
+            _manager.NetworkGlobal.Communities[community].Focus = isCommFocused;
             _networkContext.Communities[community].State = nextState;
 
             return nextState;

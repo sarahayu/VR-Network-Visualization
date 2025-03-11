@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
@@ -14,11 +15,14 @@ namespace VidiGraph
         public XRInputButtonReader LeftTriggerPress = new XRInputButtonReader("LeftTriggerPress");
         public XRInputButtonReader RightGripPress = new XRInputButtonReader("RightGripPress");
         public XRInputButtonReader RightTriggerPress = new XRInputButtonReader("RightTriggerPress");
+        public XRInputButtonReader RightPrimaryButton = new XRInputButtonReader("RightPrimaryButton");
 
         NetworkManager _manager;
 
         Community _hoveredCommunity = null;
         Node _hoveredNode = null;
+
+        public TextMeshProUGUI TooltipText;
 
         public override void Initialize()
         {
@@ -39,6 +43,7 @@ namespace VidiGraph
             LeftTriggerPress.EnableDirectActionIfModeUsed();
             RightGripPress.EnableDirectActionIfModeUsed();
             RightTriggerPress.EnableDirectActionIfModeUsed();
+            RightPrimaryButton.EnableDirectActionIfModeUsed();
         }
 
         void Start()
@@ -47,11 +52,21 @@ namespace VidiGraph
 
         void Update()
         {
+            if (RightPrimaryButton.ReadWasPerformedThisFrame())
+            {
+                // _manager.ToggleFocusNodes(new int[] { 12, 77, 146, 289 });
+                _manager.ToggleFocusNodes(new int[] { 14, 28, 114, 121 });
+            }
+
             if (RightGripPress.ReadWasPerformedThisFrame())
             {
                 if (_hoveredCommunity != null)
                 {
                     _manager.CycleCommunityFocus(_hoveredCommunity.ID);
+                }
+                else if (_hoveredNode != null)
+                {
+                    _manager.ToggleFocusNodes(new int[] { _hoveredNode.ID });
                 }
             }
 
@@ -85,6 +100,8 @@ namespace VidiGraph
             {
                 _manager.HoverNode(node.ID);
                 _hoveredNode = node;
+
+                TooltipText.SetText(node.Label);
             }
         }
 

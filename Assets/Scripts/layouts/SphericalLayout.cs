@@ -51,12 +51,12 @@ namespace VidiGraph
         TransformInfo _startingContextTransform;
         TransformInfo _endingContextTransform;
 
-        public SphericalInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkData, NetworkContext3D networkContext, NetworkFilesLoader fileLoader)
+        public SphericalInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, NetworkContext3D networkContext, NetworkFilesLoader fileLoader)
         {
             _networkContext = networkContext;
             // get actual array instead of the node collection so we can use list indices rather than 
             // their ids specified in data
-            var nodes = networkData.Nodes.NodeArray;
+            var nodes = networkGlobal.Nodes.NodeArray;
             var nodeCount = nodes.Count;
 
             var sphericalNodes = fileLoader.SphericalLayout.nodes;
