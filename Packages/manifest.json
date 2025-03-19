@@ -2,6 +2,7 @@
   "dependencies": {
     "com.unity.ide.vscode": "1.2.5",
     "com.unity.render-pipelines.universal": "14.0.11",
+    "com.unity.scripting.python": "6.0.1",
     "com.unity.textmeshpro": "3.0.9",
     "com.unity.xr.interaction.toolkit": "3.0.5",
     "com.unity.xr.management": "4.5.0",
