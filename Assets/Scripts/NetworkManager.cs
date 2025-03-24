@@ -15,7 +15,7 @@ namespace VidiGraph
         [SerializeField]
         BigNetwork _bigNetwork;
         [SerializeField]
-        SmallNetwork _smallNetwork;
+        HandheldNetwork _smallNetwork;
 
         NetworkFilesLoader _fileLoader;
         NetworkGlobal _networkGlobal;
