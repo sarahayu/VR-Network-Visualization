@@ -4,9 +4,9 @@ using UnityEngine;
 
 namespace VidiGraph
 {
-    public static class PreprocFileUtils
+    public static class LoadFileUtils
     {
-        public static Node NodeFromPreprocNode(NodeFileData fileNode)
+        public static Node NodeFromFileData(NodeFileData fileNode)
         {
             Node node = new Node();
 
@@ -30,7 +30,7 @@ namespace VidiGraph
             return node;
         }
 
-        public static Link LinkFromPreprocLink(LinkFileData fileLink)
+        public static Link LinkFromFileData(LinkFileData fileLink)
         {
             Link link = new Link();
 

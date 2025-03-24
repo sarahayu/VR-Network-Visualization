@@ -9,7 +9,7 @@ namespace VidiGraph
         NetworkManager _manager;
         NetworkRenderer _renderer;
         NetworkContext3D _networkContext = new NetworkContext3D();
-        NetworkLayout _layout;
+        NetworkTransformer _layout;
 
         void Awake()
         {
@@ -34,7 +34,7 @@ namespace VidiGraph
 
             InitializeLayouts();
 
-            _layout.ApplyLayout();
+            _layout.ApplyTransformation();
             _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
             _renderer.UpdateRenderElements();
         }
@@ -56,8 +56,8 @@ namespace VidiGraph
 
         void InitializeLayouts()
         {
-            _layout = GetComponentInChildren<HairballLayout>();
-            _layout.Initialize(_networkContext);
+            _layout = GetComponentInChildren<HairballLayoutTransformer>();
+            _layout.Initialize(_manager.NetworkGlobal, _networkContext);
         }
     }
 }

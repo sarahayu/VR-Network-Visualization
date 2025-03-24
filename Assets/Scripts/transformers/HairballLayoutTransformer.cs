@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace VidiGraph
 {
-    public class HairballLayout : NetworkLayout
+    public class HairballLayoutTransformer : NetworkTransformer
     {
         public Transform HairballPosition;
         NetworkGlobal _networkGlobal;
@@ -15,7 +15,7 @@ namespace VidiGraph
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
 
-        public override void Initialize(NetworkContext networkContext)
+        public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
             _networkContext = (NetworkContext3D)networkContext;
 
@@ -25,7 +25,7 @@ namespace VidiGraph
             _hairballTransform = new TransformInfo(HairballPosition);
         }
 
-        public override void ApplyLayout()
+        public override void ApplyTransformation()
         {
             // TODO calculate at runtime
             foreach (var node in _fileLoader.HairballLayout.nodes)
@@ -36,13 +36,13 @@ namespace VidiGraph
             _networkContext.CurrentTransform.SetFromTransform(_hairballTransform);
         }
 
-        public override LayoutInterpolator GetInterpolator()
+        public override TransformInterpolator GetInterpolator()
         {
-            return new HairballInterpolator(_hairballTransform, _networkGlobal, _networkContext, _fileLoader);
+            return new HairballLayoutInterpolator(_hairballTransform, _networkGlobal, _networkContext, _fileLoader);
         }
     }
 
-    public class HairballInterpolator : LayoutInterpolator
+    public class HairballLayoutInterpolator : TransformInterpolator
     {
         NetworkContext3D _networkContext;
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
@@ -51,7 +51,7 @@ namespace VidiGraph
         TransformInfo _startingContextTransform;
         TransformInfo _endingContextTransform;
 
-        public HairballInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, NetworkContext3D networkContext, NetworkFilesLoader fileLoader)
+        public HairballLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, NetworkContext3D networkContext, NetworkFilesLoader fileLoader)
         {
             _networkContext = networkContext;
             // get actual array instead of the node collection so we can use list indices rather than 

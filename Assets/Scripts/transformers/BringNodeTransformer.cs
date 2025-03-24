@@ -6,7 +6,7 @@ using UnityEngine.Assertions;
 
 namespace VidiGraph
 {
-    public class BringNodeLayout : NetworkLayout
+    public class BringNodeTransformer : NetworkTransformer
     {
         public Transform BringNodePosition;
 
@@ -20,7 +20,7 @@ namespace VidiGraph
         Dictionary<int, bool> _focusNodesToUpdate = new Dictionary<int, bool>();
         TransformInfo _bringNodeTransform;
 
-        public override void Initialize(NetworkContext networkContext)
+        public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
             _networkContext = (NetworkContext3D)networkContext;
 
@@ -30,7 +30,7 @@ namespace VidiGraph
             _bringNodeTransform = new TransformInfo(BringNodePosition);
         }
 
-        public override void ApplyLayout()
+        public override void ApplyTransformation()
         {
             // TODO calculate at runtime
             var sphericalNodes = _fileLoader.SphericalLayout.nodes;
@@ -64,7 +64,7 @@ namespace VidiGraph
             _networkContext.CurrentTransform.SetFromTransform(_bringNodeTransform);
         }
 
-        public override LayoutInterpolator GetInterpolator()
+        public override TransformInterpolator GetInterpolator()
         {
             return new BringNodeInterpolator(_bringNodeTransform, _networkGlobal, _networkContext, _fileLoader, _focusNodes, _focusNodesToUpdate);
         }
@@ -103,7 +103,7 @@ namespace VidiGraph
         }
     }
 
-    public class BringNodeInterpolator : LayoutInterpolator
+    public class BringNodeInterpolator : TransformInterpolator
     {
         NetworkContext3D _networkContext;
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();

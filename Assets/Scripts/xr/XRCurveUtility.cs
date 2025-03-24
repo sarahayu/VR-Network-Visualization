@@ -1,3 +1,5 @@
+// this file taken from xr.interaction.toolkit CurveUtility
+
 #if BURST_PRESENT
 using Unity.Burst;
 #endif

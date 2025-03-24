@@ -1,3 +1,7 @@
+/*
+* NetworkContext2D contains network information specific to HandheldNetwork.
+*/
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;

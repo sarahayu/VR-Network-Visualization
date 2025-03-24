@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace VidiGraph
 {
-    public class BigNetwork : Network
+    public class MultiLayoutNetwork : Network
     {
         NetworkManager _manager;
 
@@ -12,21 +12,19 @@ namespace VidiGraph
         NetworkRenderer _bigNetworkRenderer;
         NetworkContext3D _networkContext = new NetworkContext3D();
 
-        Dictionary<string, NetworkLayout> _layouts = new Dictionary<string, NetworkLayout>();
+        Dictionary<string, NetworkTransformer> _transformers = new Dictionary<string, NetworkTransformer>();
 
         // keep a reference to spiderlayout specifically to focus on individual communities
-        SpiderLayout _spiderLayout;
+        SpiderLayoutTransformer _spiderLayoutTransformer;
 
         // keep a reference to bringNodeLayout to focus on individual nodes
-        BringNodeLayout _bringNodeLayout;
+        BringNodeTransformer _bringNodeTransformer;
 
         // keep a reference to floorLayout specifically to focus on individual communities
-        FloorLayout _floorLayout;
+        FloorLayoutTransformer _floorLayoutTransformer;
 
         bool _isSphericalLayout;
         Coroutine _curAnim = null;
-
-        public bool IsSphericalLayout { get { return _isSphericalLayout; } }
 
         void Awake()
         {
@@ -52,10 +50,10 @@ namespace VidiGraph
             _bigNetworkInput.Initialize();
             _bigNetworkRenderer.Initialize(_networkContext);
 
-            InitializeLayouts();
+            InitializeTransformers();
 
             _isSphericalLayout = true;
-            UpdateWithLayoutUnanimated("spherical");
+            TransformNetwork("spherical", animated: false);
         }
 
         public override void UpdateRenderElements()
@@ -73,25 +71,25 @@ namespace VidiGraph
             _bigNetworkRenderer.Draw();
         }
 
-        void InitializeLayouts()
+        void InitializeTransformers()
         {
-            _layouts["hairball"] = GetComponentInChildren<HairballLayout>();
-            _layouts["hairball"].Initialize(_networkContext);
+            _transformers["hairball"] = GetComponentInChildren<HairballLayoutTransformer>();
+            _transformers["hairball"].Initialize(_manager.NetworkGlobal, _networkContext);
 
-            _layouts["spherical"] = GetComponentInChildren<SphericalLayout>();
-            _layouts["spherical"].Initialize(_networkContext);
+            _transformers["spherical"] = GetComponentInChildren<SphericalLayoutTransformer>();
+            _transformers["spherical"].Initialize(_manager.NetworkGlobal, _networkContext);
 
-            _bringNodeLayout = GetComponentInChildren<BringNodeLayout>();
-            _layouts["bringNode"] = _bringNodeLayout;
-            _layouts["bringNode"].Initialize(_networkContext);
+            _bringNodeTransformer = GetComponentInChildren<BringNodeTransformer>();
+            _transformers["bringNode"] = _bringNodeTransformer;
+            _transformers["bringNode"].Initialize(_manager.NetworkGlobal, _networkContext);
 
-            _spiderLayout = GetComponentInChildren<SpiderLayout>();
-            _layouts["spider"] = _spiderLayout;
-            _layouts["spider"].Initialize(_networkContext);
+            _spiderLayoutTransformer = GetComponentInChildren<SpiderLayoutTransformer>();
+            _transformers["spider"] = _spiderLayoutTransformer;
+            _transformers["spider"].Initialize(_manager.NetworkGlobal, _networkContext);
 
-            _floorLayout = GetComponentInChildren<FloorLayout>();
-            _layouts["floor"] = _floorLayout;
-            _layouts["floor"].Initialize(_networkContext);
+            _floorLayoutTransformer = GetComponentInChildren<FloorLayoutTransformer>();
+            _transformers["floor"] = _floorLayoutTransformer;
+            _transformers["floor"].Initialize(_manager.NetworkGlobal, _networkContext);
         }
 
         public void CycleCommunityFocus(int community, bool animated = true)
@@ -101,39 +99,19 @@ namespace VidiGraph
 
             var nextState = CycleCommunityState(community);
 
-            if (animated)
+            switch (nextState)
             {
-                switch (nextState)
-                {
-                    case NetworkContext3D.Community.CommunityState.None:
-                        UpdateWithLayoutAnimated("floor");
-                        break;
-                    case NetworkContext3D.Community.CommunityState.Spider:
-                        UpdateWithLayoutAnimated("spider");
-                        break;
-                    case NetworkContext3D.Community.CommunityState.Floor:
-                        UpdateWithLayoutAnimated("floor");
-                        break;
-                    default:
-                        break;
-                }
-            }
-            else
-            {
-                switch (nextState)
-                {
-                    case NetworkContext3D.Community.CommunityState.None:
-                        UpdateWithLayoutUnanimated("floor");
-                        break;
-                    case NetworkContext3D.Community.CommunityState.Spider:
-                        UpdateWithLayoutUnanimated("spider");
-                        break;
-                    case NetworkContext3D.Community.CommunityState.Floor:
-                        UpdateWithLayoutUnanimated("floor");
-                        break;
-                    default:
-                        break;
-                }
+                case NetworkContext3D.Community.CommunityState.None:
+                    TransformNetwork("floor", animated);
+                    break;
+                case NetworkContext3D.Community.CommunityState.Spider:
+                    TransformNetwork("spider", animated);
+                    break;
+                case NetworkContext3D.Community.CommunityState.Floor:
+                    TransformNetwork("floor", animated);
+                    break;
+                default:
+                    break;
             }
         }
 
@@ -146,7 +124,7 @@ namespace VidiGraph
                     ClearCommunityState(communityIdx);
                 }
 
-                UpdateWithLayoutUnanimated("spider");
+                TransformNetwork("spider", animated: false);
                 _bigNetworkRenderer.UpdateRenderElements();
             }
 
@@ -154,14 +132,7 @@ namespace VidiGraph
 
             string layout = _isSphericalLayout ? "spherical" : "hairball";
 
-            if (animated)
-            {
-                UpdateWithLayoutAnimated(layout);
-            }
-            else
-            {
-                UpdateWithLayoutUnanimated(layout);
-            }
+            TransformNetwork(layout, animated);
         }
 
         public void ToggleFocusNodes(int[] nodeIDs, bool animated = true)
@@ -170,36 +141,31 @@ namespace VidiGraph
             {
                 bool setFocus = _networkContext.Nodes[nodeID].State == NetworkContext3D.Node.NodeState.None;
 
-                _bringNodeLayout.SetFocusNodeQueue(nodeID, setFocus);
+                _bringNodeTransformer.SetFocusNodeQueue(nodeID, setFocus);
 
                 _networkContext.Nodes[nodeID].State = setFocus ? NetworkContext3D.Node.NodeState.Bring : NetworkContext3D.Node.NodeState.None;
             }
 
+            TransformNetwork("bringNode", animated);
+        }
+
+        void TransformNetwork(string layout, bool animated)
+        {
             if (animated)
             {
-                UpdateWithLayoutAnimated("bringNode");
+                if (_curAnim != null)
+                {
+                    StopCoroutine(_curAnim);
+                }
+
+                _curAnim = StartCoroutine(CRAnimateLayout(layout));
             }
             else
             {
-                UpdateWithLayoutUnanimated("bringNode");
+                _transformers[layout].ApplyTransformation();
+                _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+                _bigNetworkRenderer.UpdateRenderElements();
             }
-        }
-
-        void UpdateWithLayoutAnimated(string layout)
-        {
-            if (_curAnim != null)
-            {
-                StopCoroutine(_curAnim);
-            }
-
-            _curAnim = StartCoroutine(CRAnimateLayout(layout));
-        }
-
-        void UpdateWithLayoutUnanimated(string layout)
-        {
-            _layouts[layout].ApplyLayout();
-            _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
-            _bigNetworkRenderer.UpdateRenderElements();
         }
 
         NetworkContext3D.Community.CommunityState GetNextCommunityState(int community)
@@ -210,8 +176,8 @@ namespace VidiGraph
 
         void ClearCommunityState(int community)
         {
-            _spiderLayout.SetFocusCommunityImm(community, false);
-            _floorLayout.SetFocusCommunityImm(community, false);
+            _spiderLayoutTransformer.SetFocusCommunityImm(community, false);
+            _floorLayoutTransformer.SetFocusCommunityImm(community, false);
             _manager.NetworkGlobal.Communities[community].Focus = false;
             _networkContext.Communities[community].State = NetworkContext3D.Community.CommunityState.None;
         }
@@ -222,16 +188,16 @@ namespace VidiGraph
 
             if (nextState == NetworkContext3D.Community.CommunityState.Spider)
             {
-                _spiderLayout.SetFocusCommunityQueue(community, true);
+                _spiderLayoutTransformer.SetFocusCommunityQueue(community, true);
             }
             else if (nextState == NetworkContext3D.Community.CommunityState.Floor)
             {
-                _spiderLayout.SetFocusCommunityImm(community, false);
-                _floorLayout.SetFocusCommunityQueue(community, true);
+                _spiderLayoutTransformer.SetFocusCommunityImm(community, false);
+                _floorLayoutTransformer.SetFocusCommunityQueue(community, true);
             }
             else
             {
-                _floorLayout.SetFocusCommunityQueue(community, false);
+                _floorLayoutTransformer.SetFocusCommunityQueue(community, false);
             }
 
             bool isCommFocused = nextState == NetworkContext3D.Community.CommunityState.Floor || nextState == NetworkContext3D.Community.CommunityState.Spider;
@@ -244,7 +210,7 @@ namespace VidiGraph
         IEnumerator CRAnimateLayout(string layout)
         {
             float dur = 1.0f;
-            var interpolator = _layouts[layout].GetInterpolator();
+            var interpolator = _transformers[layout].GetInterpolator();
 
             yield return AnimationUtils.Lerp(dur, t =>
             {

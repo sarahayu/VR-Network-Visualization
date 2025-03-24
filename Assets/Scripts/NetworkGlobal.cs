@@ -1,7 +1,6 @@
 /*
-*
-* NetworkDataStructure is our central point for accessing any additional global properties computed that was not found in data files
-* (i.e. in-game coordinates, current animated coordinates)
+* NetworkGlobal contains all information about the network needed for the network representation(s) in the scene.
+* To avoid bloating this class, anything specific to a network representation should go in a NetworkContext.
 */
 
 using System;
@@ -61,7 +60,7 @@ namespace VidiGraph
             // 2. Build Index
             for (var i = 0; i < fileNodes.Length; i++)
             {
-                var node = PreprocFileUtils.NodeFromPreprocNode(fileNodes[i]);
+                var node = LoadFileUtils.NodeFromFileData(fileNodes[i]);
 
                 // Initialize the node-link matrix
                 _nodeLinkMatrix.Add(node.ID, new List<Link>());
@@ -97,7 +96,7 @@ namespace VidiGraph
             // 3. find spline control points
             for (var i = 0; i < fileLinks.Length; i++)
             {
-                var link = PreprocFileUtils.LinkFromPreprocLink(fileLinks[i]);
+                var link = LoadFileUtils.LinkFromFileData(fileLinks[i]);
 
                 link.SourceNode = _nodes[link.SourceNodeID];
                 link.TargetNode = _nodes[link.TargetNodeID];

@@ -5,9 +5,9 @@ using UnityEngine.Assertions;
 
 namespace VidiGraph
 {
-    public class FloorLayout : NetworkLayout
+    public class SpiderLayoutTransformer : NetworkTransformer
     {
-        public Transform FloorPosition;
+        public Transform SpiderPosition;
 
         NetworkGlobal _networkGlobal;
         NetworkContext3D _networkContext;
@@ -17,23 +17,23 @@ namespace VidiGraph
         // use hashset to prevent duplicates
         HashSet<int> _focusCommunities = new HashSet<int>();
         Dictionary<int, bool> _focusCommunitiesToUpdate = new Dictionary<int, bool>();
-        TransformInfo _floorTransform;
+        TransformInfo _spiderTransform;
 
-        public override void Initialize(NetworkContext networkContext)
+        public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
             _networkContext = (NetworkContext3D)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
             _fileLoader = manager.FileLoader;
-            _floorTransform = new TransformInfo(FloorPosition);
+            _spiderTransform = new TransformInfo(SpiderPosition);
         }
 
-        public override void ApplyLayout()
+        public override void ApplyTransformation()
         {
             // TODO calculate at runtime
-            var floorNodes = _fileLoader.FlatLayout.nodes;
-            var floorIdToIdx = _fileLoader.FlatLayout.idToIdx;
+            var spiderNodes = _fileLoader.SpiderData.nodes;
+            var spiderIdToIdx = _fileLoader.SpiderData.idToIdx;
 
             var sphericalNodes = _fileLoader.SphericalLayout.nodes;
             var sphericalIdToIdx = _fileLoader.SphericalLayout.idToIdx;
@@ -42,13 +42,13 @@ namespace VidiGraph
             {
                 if (!_focusCommunitiesToUpdate.ContainsKey(communityIdx)) continue;
 
-                // move to flat position
+                // move to spider position
                 if (_focusCommunitiesToUpdate[communityIdx])
                 {
                     foreach (var node in community.Nodes)
                     {
-                        var floorPos = floorNodes[floorIdToIdx[node.ID]]._position3D;
-                        _networkContext.Nodes[node.ID].Position = new Vector3(floorPos.x, floorPos.y, floorPos.z);
+                        var spiderPos = spiderNodes[spiderIdToIdx[node.ID]].spiderPos;
+                        _networkContext.Nodes[node.ID].Position = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
                     }
 
                     _focusCommunities.Add(communityIdx);
@@ -68,12 +68,12 @@ namespace VidiGraph
                 _focusCommunitiesToUpdate.Remove(communityIdx);
             }
 
-            _networkContext.CurrentTransform.SetFromTransform(_floorTransform);
+            _networkContext.CurrentTransform.SetFromTransform(_spiderTransform);
         }
 
-        public override LayoutInterpolator GetInterpolator()
+        public override TransformInterpolator GetInterpolator()
         {
-            return new FloorInterpolator(_floorTransform, _networkGlobal, _networkContext, _fileLoader, _focusCommunities, _focusCommunitiesToUpdate);
+            return new SpiderLayoutInterpolator(_spiderTransform, _networkGlobal, _networkContext, _fileLoader, _focusCommunities, _focusCommunitiesToUpdate);
         }
 
         public void UnfocusAllCommunities()
@@ -110,7 +110,7 @@ namespace VidiGraph
         }
     }
 
-    public class FloorInterpolator : LayoutInterpolator
+    public class SpiderLayoutInterpolator : TransformInterpolator
     {
         NetworkContext3D _networkContext;
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
@@ -119,13 +119,13 @@ namespace VidiGraph
         TransformInfo _startingContextTransform;
         TransformInfo _endingContextTransform;
 
-        public FloorInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, NetworkContext3D networkContext,
+        public SpiderLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, NetworkContext3D networkContext,
             NetworkFilesLoader fileLoader, HashSet<int> focusCommunities, Dictionary<int, bool> focusCommunitiesToUpdate)
         {
             _networkContext = networkContext;
 
-            var floorNodes = fileLoader.FlatLayout.nodes;
-            var floorIdToIdx = fileLoader.FlatLayout.idToIdx;
+            var spiderNodes = fileLoader.SpiderData.nodes;
+            var spiderIdToIdx = fileLoader.SpiderData.idToIdx;
 
             var sphericalNodes = fileLoader.SphericalLayout.nodes;
             var sphericalIdToIdx = fileLoader.SphericalLayout.idToIdx;
@@ -134,15 +134,15 @@ namespace VidiGraph
             {
                 if (!focusCommunitiesToUpdate.ContainsKey(communityIdx)) continue;
 
-                // move to flat position
+                // move to spider position
                 if (focusCommunitiesToUpdate[communityIdx])
                 {
                     foreach (var node in community.Nodes)
                     {
                         _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
                         // TODO calculate at runtime
-                        var floorPos = floorNodes[floorIdToIdx[node.ID]]._position3D;
-                        _endPositions[node.ID] = new Vector3(floorPos.x, floorPos.y, floorPos.z);
+                        var spiderPos = spiderNodes[spiderIdToIdx[node.ID]].spiderPos;
+                        _endPositions[node.ID] = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
                     }
 
                     focusCommunities.Add(communityIdx);

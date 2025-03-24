@@ -1,3 +1,7 @@
+/*
+* NetworkContext3D contains network information specific to MultiLayoutNetwork.
+*/
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;

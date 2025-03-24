@@ -1,4 +1,6 @@
-// NetworkContext is for any data that is representation-specific, e.g. 3D position, state
+/*
+* NetworkContext is for any data that is representation-specific, e.g. 3D position, state
+*/
 
 using System.Collections;
 using System.Collections.Generic;

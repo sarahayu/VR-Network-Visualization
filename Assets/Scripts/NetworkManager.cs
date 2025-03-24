@@ -13,7 +13,7 @@ namespace VidiGraph
     public class NetworkManager : MonoBehaviour
     {
         [SerializeField]
-        BigNetwork _bigNetwork;
+        MultiLayoutNetwork _bigNetwork;
         [SerializeField]
         HandheldNetwork _smallNetwork;
 
