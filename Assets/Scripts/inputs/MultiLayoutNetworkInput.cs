@@ -8,7 +8,7 @@ using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 namespace VidiGraph
 {
-    public class BigNetworkInput : NetworkInput
+    public class MultiLayoutNetworkInput : NetworkInput
     {
         // TODO there's gotta be a better way to do this
         public XRInputButtonReader LeftGripPress = new XRInputButtonReader("LeftGripPress");
