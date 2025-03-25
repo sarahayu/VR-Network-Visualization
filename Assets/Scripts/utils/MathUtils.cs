@@ -194,10 +194,10 @@ namespace VidiGraph
             }
         }
 
-        // returns link weight as a percentage of the maximum possible number of links between two groups (which is the produce of the two group sizes)
-        public static float RelWeight(int linkWeight, int groupSize1, int groupSize2)
+        // returns link weight as a percentage of the maximum possible number of links between two groups (which is the product of the two group sizes)
+        public static float RelWeight(float linkWeight, float groupSize1, float groupSize2)
         {
-            return (float)linkWeight / (groupSize1 * groupSize2);
+            return linkWeight / (groupSize1 * groupSize2);
         }
     }
 

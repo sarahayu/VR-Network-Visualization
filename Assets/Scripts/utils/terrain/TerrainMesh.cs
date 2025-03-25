@@ -28,9 +28,9 @@ namespace VidiGraph
             _useNormalMap = useNormalMap;
         }
 
-        public void Generate(HeightMap heightMap, FlatMesh flatMesh)
+        public void Generate(MinimapContext networkContext, HeightMap heightMap, FlatMesh flatMesh)
         {
-            _mesh = CreateMeshFromTriangles(flatMesh.Mesh.Triangles, heightMap, _meshHeight, _meshSize, _curvatureRadius, _useNormalMap);
+            _mesh = CreateMeshFromTriangles(networkContext, flatMesh.Mesh.Triangles, heightMap, _meshHeight, _meshSize, _curvatureRadius, _useNormalMap);
         }
 
         // assume origin to be a point at xz-plane origin minus some y
@@ -63,15 +63,14 @@ namespace VidiGraph
         //         );
         // }
 
-        static Mesh CreateMeshFromTriangles(ICollection<Triangle> triangles, HeightMap heightMap, float meshHeight, float meshSize, float radius, bool useNormalMap)
+        static Mesh CreateMeshFromTriangles(MinimapContext networkContext, ICollection<Triangle> triangles, HeightMap heightMap,
+            float meshHeight, float meshSize, float curvatureRadius, bool useNormalMap)
         {
-            float startSubdivX = (meshSize - 1) / -2f, startSubdivZ = (meshSize - 1) / 2f;
-
             List<Vector3> vertices = new List<Vector3>(triangles.Count * 3);
             List<int> indices = new List<int>(triangles.Count * 3);
             List<Vector2> uvs = new List<Vector2>(triangles.Count * 3);
 
-            var vecOrigin = new Vector3(0, -radius, 0);
+            var vecOrigin = new Vector3(0, -curvatureRadius, 0);
 
             int i = 0;
             foreach (var triangle in triangles)
@@ -80,15 +79,34 @@ namespace VidiGraph
                 float x0 = (float)p0.x, y0 = (float)p0.y,
                     x1 = (float)p1.x, y1 = (float)p1.y,
                     x2 = (float)p2.x, y2 = (float)p2.y;
-                vertices.Add(flatToRoundCoords(new Vector3(startSubdivX + x0, meshHeight * heightMap.MaxWeightAt(x0 / (meshSize - 1), y0 / (meshSize - 1)), startSubdivZ - y0), vecOrigin));
-                vertices.Add(flatToRoundCoords(new Vector3(startSubdivX + x1, meshHeight * heightMap.MaxWeightAt(x1 / (meshSize - 1), y1 / (meshSize - 1)), startSubdivZ - y1), vecOrigin));
-                vertices.Add(flatToRoundCoords(new Vector3(startSubdivX + x2, meshHeight * heightMap.MaxWeightAt(x2 / (meshSize - 1), y2 / (meshSize - 1)), startSubdivZ - y2), vecOrigin));
+
+                var vx0 = x0 * meshSize;
+                var vx1 = x1 * meshSize;
+                var vx2 = x2 * meshSize;
+
+                var vy0 = meshHeight * heightMap.MaxWeightAt(networkContext, x0, y0);
+                var vy1 = meshHeight * heightMap.MaxWeightAt(networkContext, x1, y1);
+                var vy2 = meshHeight * heightMap.MaxWeightAt(networkContext, x2, y2);
+
+                var vz0 = y0 * meshSize;
+                var vz1 = y1 * meshSize;
+                var vz2 = y2 * meshSize;
+
+                var vf0 = new Vector3(vx0, vy0, vz0);
+                var vf1 = new Vector3(vx1, vy1, vz1);
+                var vf2 = new Vector3(vx2, vy2, vz2);
+
+                vertices.Add(flatToRoundCoords(vf0, vecOrigin));
+                vertices.Add(flatToRoundCoords(vf1, vecOrigin));
+                vertices.Add(flatToRoundCoords(vf2, vecOrigin));
+
                 indices.Add(i * 3);
-                indices.Add(i * 3 + 1);
                 indices.Add(i * 3 + 2); // Changes order
-                uvs.Add(new Vector2(x0 / (meshSize - 1), y0 / (meshSize - 1)));
-                uvs.Add(new Vector2(x1 / (meshSize - 1), y1 / (meshSize - 1)));
-                uvs.Add(new Vector2(x2 / (meshSize - 1), y2 / (meshSize - 1)));
+                indices.Add(i * 3 + 1);
+
+                uvs.Add(new Vector2((float)(x0 / 2 + 0.5), (float)(y0 / 2 + 0.5)));
+                uvs.Add(new Vector2((float)(x1 / 2 + 0.5), (float)(y1 / 2 + 0.5)));
+                uvs.Add(new Vector2((float)(x2 / 2 + 0.5), (float)(y2 / 2 + 0.5)));
                 i++;
             }
 

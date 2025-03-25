@@ -31,9 +31,8 @@ namespace VidiGraph
 
         public static void PopulateCirclePoints(List<Vertex> points, float rad, int subdivide)
         {
-            int n = (int)(Mathf.PI * rad * rad) / subdivide;
             var v3Points = new List<Vector3>();
-            MathUtils.PopulateSunflowerPoints(v3Points, rad, n, 2);
+            MathUtils.PopulateSunflowerPoints(v3Points, rad, subdivide, 2);
 
             foreach (var point in v3Points)
                 points.Add(new Vertex(point.x, point.z));

@@ -16,7 +16,7 @@ namespace VidiGraph
             for (int y = 0; y < resY; y++)
                 for (int x = 0; x < resX; x++)
                 {
-                    float gx = (float)x / resX - 0.5f, gy = (float)y * resY - 0.5f;
+                    float gx = (float)x / resX * 2 - 1, gy = (float)y / resY * 2 - 1;
 
                     Color finalColor = Color.clear;
 

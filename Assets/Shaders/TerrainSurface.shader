@@ -22,7 +22,7 @@ Shader "Custom/Terrain Surface"
         #pragma surface surf Lambert fullforwardshadows
 
         // Use shader model 3.0 target, to get nicer looking lighting
-        #pragma target 3.0
+        #pragma target 3.3
 
         fixed4 _Color;
         sampler2D _LineTex;
@@ -41,13 +41,6 @@ Shader "Custom/Terrain Surface"
             float2 uv_LineTex;
             float3 worldPos;
         };
-
-        // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
-        // See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
-        // #pragma instancing_options assumeuniformscaling
-        UNITY_INSTANCING_BUFFER_START(Props)
-            // put more per-instance properties here
-        UNITY_INSTANCING_BUFFER_END(Props)
 
         float inverseLerp(float a, float b, float value)
         {
@@ -75,6 +68,7 @@ Shader "Custom/Terrain Surface"
 
             // lower whiteness intensity by multiplying contour color by 0.7
             stepFactor *= 0.7;
+            stepFactor = 0;
 
             // combine background color and node color texture
             fixed4 nodeColAndBg = fixed4(_Color.rgb * (1 - nodeCol.a) + nodeCol.rgb * nodeCol.a, 1);
@@ -93,7 +87,9 @@ Shader "Custom/Terrain Surface"
             else
                 o.Albedo.rgb *= selCol.rgb;
 
-            o.Normal = UnpackNormal (tex2D (_BumpMap, IN.uv_LineTex));
+            // o.Albedo.rgb = float3(1.0, 0.0, 0.0);
+
+            // o.Normal = UnpackNormal (tex2D (_BumpMap, IN.uv_LineTex));
             o.Alpha = linkLineCol.a;
         }
         ENDCG

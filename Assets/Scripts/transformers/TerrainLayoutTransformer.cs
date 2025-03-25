@@ -38,7 +38,7 @@ namespace VidiGraph
                 {
                     // TODO calculate at runtime
                     float[] pos2D = _fileLoader.GraphData.nodes[node.ID].pos2D;
-                    center += new Vector3(pos2D[0], pos2D[1], 0f);
+                    center += new Vector3(-pos2D[0], -pos2D[1], 0f);
                 }
                 center /= community.Nodes.Count;
 
@@ -65,10 +65,16 @@ namespace VidiGraph
                 }
             }
 
+            // normalize so center is 0 and max distance of node is 1 from center
             double width = max.x - min.x;
             double height = max.y - min.y;
 
-            double halfSideLen = Math.Max(width / 2, height / 2);
+            double centerX = (min.x + max.x) / 2;
+            double centerY = (min.y + max.y) / 2;
+
+            float buf = 0.5f;
+
+            double halfSideLen = Math.Max(width / 2, height / 2) * (1 + buf);
 
             foreach (var commPair in _networkContext.CommunityNodes)
             {
@@ -76,11 +82,13 @@ namespace VidiGraph
 
                 var pos = community.Position;
 
-                pos.x += (float)(-min.x + width / 2);
-                pos.y += (float)(-min.y + height / 2);
+                pos.x += (float)-centerX;
+                pos.y += (float)-centerY;
 
                 pos.x /= (float)halfSideLen;
                 pos.y /= (float)halfSideLen;
+
+                community.Position = pos;
             }
 
             _networkContext.CurrentTransform.SetFromTransform(_terrainTransform);

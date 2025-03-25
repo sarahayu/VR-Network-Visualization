@@ -8,7 +8,7 @@
 
     SubShader
     {
-        Tags {"Queue"="Transparent"  "RenderType"="Transparent" "RenderPipeline" = "UniversalRenderPipeline" }
+        Tags {"Queue"="Transparent"  "RenderType"="Transparent" }
         ZWrite Off
         Blend SrcAlpha OneMinusSrcAlpha
         LOD 200

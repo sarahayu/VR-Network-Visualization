@@ -15,6 +15,7 @@ namespace VidiGraph
 
         [SerializeField]
         float _meshSize = 1f;
+        [SerializeField]
         float _meshHeight = 1f;
 
         [SerializeField]
@@ -47,6 +48,9 @@ namespace VidiGraph
         MinimapContext _networkContext;
         HeightMap _heightMap;
 
+        [SerializeField]
+        GameObject _meshPrefab;
+
         MeshFilter _meshFilter;
         MeshRenderer _meshRenderer;
         MeshCollider _meshCollider;
@@ -68,6 +72,10 @@ namespace VidiGraph
 
             _nodeGameObjs.Clear();
             _linkGameObjs.Clear();
+            _lineTex = null;
+            _heightTex = null;
+            _normalTex = null;
+            _nodeColTex = null;
         }
 
         public override void Initialize(NetworkContext networkContext)
@@ -77,23 +85,11 @@ namespace VidiGraph
             _networkGlobal = GameObject.Find("/Network Manager").GetComponent<NetworkGlobal>();
             _networkContext = (MinimapContext)networkContext;
 
-            _meshFilter = GetComponent<MeshFilter>();
-            _meshRenderer = GetComponent<MeshRenderer>();
-            _meshCollider = GetComponent<MeshCollider>();
+            GameObject linkObj = Instantiate(_meshPrefab, NetworkTransform);
 
-            _heightMap = new HeightMap(
-                falloffDistance: _falloff * GRAPH_AREA_LEN,
-                falloffShapeFunc: _falloffShapeFunc,
-                peakHeightFunc: _peakHeightFunc,
-                slackFunc: _slackFunc
-            );
-
-            _heightMap.SetMaxes(_networkContext);
-
-            _lineTex = null;
-            _heightTex = null;
-            _normalTex = null;
-            _nodeColTex = null;
+            _meshFilter = linkObj.GetComponent<MeshFilter>();
+            _meshRenderer = linkObj.GetComponent<MeshRenderer>();
+            _meshCollider = linkObj.GetComponent<MeshCollider>();
 
             var mMaterial = GetMeshMaterial();
 
@@ -103,20 +99,29 @@ namespace VidiGraph
             var flatMesh = new FlatMesh(
                 networkGlobal: _networkGlobal,
                 networkContext: _networkContext,
-                subdivideSunflower: 40,
+                subdivideSunflower: 2000,
                 subdivideRidges: 2
             );
 
             flatMesh.CalcMeshPoints();
 
+            _heightMap = new HeightMap(
+                falloffDistance: _falloff * GRAPH_AREA_LEN,
+                falloffShapeFunc: _falloffShapeFunc,
+                peakHeightFunc: _peakHeightFunc,
+                slackFunc: _slackFunc
+            );
+
+            _heightMap.CalcMaxes(_networkContext);
+
             GenerateTerrainLowQuality(flatMesh);
 
-            GenerateTerrainTextureLines();
+            // GenerateTerrainTextureLines();
             mMaterial.SetTexture("_LineTex", _lineTex);
 
             GenerateTerrainTextureHeightMap(flatMesh);
             mMaterial.SetTexture("_HeightMap", _heightTex);
-            mMaterial.SetInt("_UseHeightMap", 1);
+            mMaterial.SetInt("_UseHeightMap", 0);
 
             GenerateTerrainSmoothNormals();
             mMaterial.SetTexture("_BumpMap", _normalTex);
@@ -148,7 +153,7 @@ namespace VidiGraph
                 useNormalMap: false
             );
 
-            terrainMesh.Generate(_heightMap, meshCalculator);
+            terrainMesh.Generate(_networkContext, _heightMap, meshCalculator);
 
             _meshFilter.sharedMesh = terrainMesh.Mesh;
 
@@ -170,7 +175,7 @@ namespace VidiGraph
 
         public void GenerateTerrainTextureLines()
         {
-            _lineTex = _heightMap.GenerateTextureLines(TEX_RES_ALBEDO, TEX_RES_ALBEDO, _lineColorIntensity);
+            _lineTex = _heightMap.GenerateTextureLines(_networkContext, TEX_RES_ALBEDO, TEX_RES_ALBEDO, _lineColorIntensity);
         }
 
         Material GetMeshMaterial()
@@ -180,7 +185,7 @@ namespace VidiGraph
 
         void GenerateTerrainTextureHeightMap(FlatMesh meshCalculator)
         {
-            _heightTex = _heightMap.GenerateTextureHeight(meshCalculator, TEX_RES_NORMAL, TEX_RES_NORMAL);
+            _heightTex = _heightMap.GenerateTextureHeight(_networkContext, meshCalculator, TEX_RES_NORMAL, TEX_RES_NORMAL);
         }
 
         void GenerateTerrainSmoothNormals()
