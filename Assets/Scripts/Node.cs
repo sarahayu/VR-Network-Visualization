@@ -18,7 +18,6 @@ namespace VidiGraph
         public int AncID;
         public int[] ChildIDs;
 
-        public Vector3 PrecompPos3D;
         public IList<int> AncIDsOrderList = new List<int>();
     }
 }

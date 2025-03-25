@@ -6,12 +6,12 @@ using UnityEngine.Assertions;
 
 namespace VidiGraph
 {
-    public class BringNodeTransformer : NetworkTransformer
+    public class BringNodeTransformer : NetworkContextTransformer
     {
         public Transform BringNodePosition;
 
         NetworkGlobal _networkGlobal;
-        NetworkContext3D _networkContext;
+        MultiLayoutContext _networkContext;
 
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
@@ -22,7 +22,7 @@ namespace VidiGraph
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
-            _networkContext = (NetworkContext3D)networkContext;
+            _networkContext = (MultiLayoutContext)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
@@ -105,14 +105,14 @@ namespace VidiGraph
 
     public class BringNodeInterpolator : TransformInterpolator
     {
-        NetworkContext3D _networkContext;
+        MultiLayoutContext _networkContext;
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
         TransformInfo _startingContextTransform;
         TransformInfo _endingContextTransform;
 
-        public BringNodeInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, NetworkContext3D networkContext,
+        public BringNodeInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
             NetworkFilesLoader fileLoader, HashSet<int> focusNodes, Dictionary<int, bool> focusNodesToUpdate)
         {
             _networkContext = networkContext;

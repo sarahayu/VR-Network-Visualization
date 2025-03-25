@@ -10,9 +10,9 @@ namespace VidiGraph
 
         NetworkInput _bigNetworkInput;
         NetworkRenderer _bigNetworkRenderer;
-        NetworkContext3D _networkContext = new NetworkContext3D();
+        MultiLayoutContext _networkContext = new MultiLayoutContext();
 
-        Dictionary<string, NetworkTransformer> _transformers = new Dictionary<string, NetworkTransformer>();
+        Dictionary<string, NetworkContextTransformer> _transformers = new Dictionary<string, NetworkContextTransformer>();
 
         // keep a reference to spiderlayout specifically to focus on individual communities
         SpiderLayoutTransformer _spiderLayoutTransformer;
@@ -42,18 +42,18 @@ namespace VidiGraph
         public override void Initialize()
         {
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _networkContext.Update(_manager.NetworkGlobal);
+            _networkContext.SetFromGlobal(_manager.NetworkGlobal);
 
             _bigNetworkInput = GetComponent<NetworkInput>();
-            _bigNetworkRenderer = GetComponentInChildren<NetworkRenderer>();
-
             _bigNetworkInput.Initialize();
-            _bigNetworkRenderer.Initialize(_networkContext);
 
             InitializeTransformers();
 
             _isSphericalLayout = true;
-            TransformNetwork("spherical", animated: false);
+            TransformNetworkNoRender("spherical");
+
+            _bigNetworkRenderer = GetComponentInChildren<NetworkRenderer>();
+            _bigNetworkRenderer.Initialize(_networkContext);
         }
 
         public override void UpdateRenderElements()
@@ -101,13 +101,13 @@ namespace VidiGraph
 
             switch (nextState)
             {
-                case NetworkContext3D.Community.CommunityState.None:
+                case MultiLayoutContext.Community.CommunityState.None:
                     TransformNetwork("floor", animated);
                     break;
-                case NetworkContext3D.Community.CommunityState.Spider:
+                case MultiLayoutContext.Community.CommunityState.Spider:
                     TransformNetwork("spider", animated);
                     break;
-                case NetworkContext3D.Community.CommunityState.Floor:
+                case MultiLayoutContext.Community.CommunityState.Floor:
                     TransformNetwork("floor", animated);
                     break;
                 default:
@@ -139,11 +139,11 @@ namespace VidiGraph
         {
             foreach (var nodeID in nodeIDs)
             {
-                bool setFocus = _networkContext.Nodes[nodeID].State == NetworkContext3D.Node.NodeState.None;
+                bool setFocus = _networkContext.Nodes[nodeID].State == MultiLayoutContext.Node.NodeState.None;
 
                 _bringNodeTransformer.SetFocusNodeQueue(nodeID, setFocus);
 
-                _networkContext.Nodes[nodeID].State = setFocus ? NetworkContext3D.Node.NodeState.Bring : NetworkContext3D.Node.NodeState.None;
+                _networkContext.Nodes[nodeID].State = setFocus ? MultiLayoutContext.Node.NodeState.Bring : MultiLayoutContext.Node.NodeState.None;
             }
 
             TransformNetwork("bringNode", animated);
@@ -168,10 +168,16 @@ namespace VidiGraph
             }
         }
 
-        NetworkContext3D.Community.CommunityState GetNextCommunityState(int community)
+        void TransformNetworkNoRender(string layout)
+        {
+            _transformers[layout].ApplyTransformation();
+            _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+        }
+
+        MultiLayoutContext.Community.CommunityState GetNextCommunityState(int community)
         {
             var curState = _networkContext.Communities[community].State;
-            return (NetworkContext3D.Community.CommunityState)((uint)(curState + 1) % (uint)NetworkContext3D.Community.CommunityState.NumStates);
+            return (MultiLayoutContext.Community.CommunityState)((uint)(curState + 1) % (uint)MultiLayoutContext.Community.CommunityState.NumStates);
         }
 
         void ClearCommunityState(int community)
@@ -179,18 +185,18 @@ namespace VidiGraph
             _spiderLayoutTransformer.SetFocusCommunityImm(community, false);
             _floorLayoutTransformer.SetFocusCommunityImm(community, false);
             _manager.NetworkGlobal.Communities[community].Focus = false;
-            _networkContext.Communities[community].State = NetworkContext3D.Community.CommunityState.None;
+            _networkContext.Communities[community].State = MultiLayoutContext.Community.CommunityState.None;
         }
 
-        NetworkContext3D.Community.CommunityState CycleCommunityState(int community)
+        MultiLayoutContext.Community.CommunityState CycleCommunityState(int community)
         {
             var nextState = GetNextCommunityState(community);
 
-            if (nextState == NetworkContext3D.Community.CommunityState.Spider)
+            if (nextState == MultiLayoutContext.Community.CommunityState.Spider)
             {
                 _spiderLayoutTransformer.SetFocusCommunityQueue(community, true);
             }
-            else if (nextState == NetworkContext3D.Community.CommunityState.Floor)
+            else if (nextState == MultiLayoutContext.Community.CommunityState.Floor)
             {
                 _spiderLayoutTransformer.SetFocusCommunityImm(community, false);
                 _floorLayoutTransformer.SetFocusCommunityQueue(community, true);
@@ -200,7 +206,7 @@ namespace VidiGraph
                 _floorLayoutTransformer.SetFocusCommunityQueue(community, false);
             }
 
-            bool isCommFocused = nextState == NetworkContext3D.Community.CommunityState.Floor || nextState == NetworkContext3D.Community.CommunityState.Spider;
+            bool isCommFocused = nextState == MultiLayoutContext.Community.CommunityState.Floor || nextState == MultiLayoutContext.Community.CommunityState.Spider;
             _manager.NetworkGlobal.Communities[community].Focus = isCommFocused;
             _networkContext.Communities[community].State = nextState;
 

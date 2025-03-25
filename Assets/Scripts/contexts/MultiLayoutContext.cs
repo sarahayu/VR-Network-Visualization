@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace VidiGraph
 {
-    public class NetworkContext3D : NetworkContext
+    public class MultiLayoutContext : NetworkContext
     {
         public class Node
         {
@@ -18,12 +18,14 @@ namespace VidiGraph
                 Bring,
                 NumStates,
             }
+            public float Size = 1f;
             public Vector3 Position = Vector3.zero;
             public NodeState State = NodeState.None;
         }
 
         public class Link
         {
+            public float OverrideBundlingStrength = -1f;
         }
 
         public class Community
@@ -50,36 +52,36 @@ namespace VidiGraph
         [HideInInspector]
         public TransformInfo CurrentTransform = new TransformInfo();
 
-        public NetworkContext3D()
+        public MultiLayoutContext()
         {
             // expose constructor
         }
 
-        public void Update(NetworkGlobal networkData)
+        public void SetFromGlobal(NetworkGlobal networkGlobal)
         {
             Nodes.Clear();
             Links.Clear();
             Communities.Clear();
 
-            foreach (var node in networkData.Nodes)
+            foreach (var node in networkGlobal.Nodes)
             {
                 Nodes[node.ID] = new Node();
             }
 
-            foreach (var link in networkData.Links)
+            foreach (var link in networkGlobal.Links)
             {
                 Links[link.ID] = new Link();
             }
 
-            foreach (var community in networkData.Communities.Values)
+            foreach (var community in networkGlobal.Communities.Values)
             {
                 Communities[community.ID] = new Community();
             }
         }
 
-        public void RecomputeGeometricProps(NetworkGlobal networkData)
+        public void RecomputeGeometricProps(NetworkGlobal networkGlobal)
         {
-            foreach (var community in networkData.Communities.Values)
+            foreach (var community in networkGlobal.Communities.Values)
             {
                 var contextCommunity = Communities[community.ID];
 

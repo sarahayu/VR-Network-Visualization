@@ -19,13 +19,14 @@ namespace VidiGraph
 
             if (node.Color != null)
                 node.ColorParsed = ColorUtils.StringToColor(node.Color.ToUpper());
+            else
+                node.ColorParsed = Color.black;
 
             node.IsVirtualNode = fileNode.virtualNode;
             node.Degree = fileNode.degree;
             node.Height = fileNode.height;
             node.AncID = fileNode.ancIdx;
             node.ChildIDs = fileNode.childIdx;
-            node.PrecompPos3D = fileNode._position3D;
 
             return node;
         }

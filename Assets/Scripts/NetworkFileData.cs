@@ -36,6 +36,7 @@ namespace VidiGraph
         public int ancIdx;
         public int[] childIdx;
         public Vector3 _position3D;
+        public float[] pos2D;
     }
 
     [Serializable]

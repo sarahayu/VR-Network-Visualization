@@ -12,6 +12,8 @@ namespace VidiGraph
         [Serializable]
         public class BundledNetworkSettings
         {
+            [Range(0.0f, 100f)]
+            public float NodeScale = 1f;
             [Range(0.0f, 0.1f)]
             public float LinkWidth = 0.005f;
             [Range(0.0f, 1.0f)]
@@ -53,7 +55,7 @@ namespace VidiGraph
 
         BSplineShaderWrapper _shaderWrapper = new BSplineShaderWrapper();
         NetworkGlobal _networkGlobal;
-        NetworkContext3D _networkContext;
+        MultiLayoutContext _networkContext;
         int _lastHoveredNode = -1;
 
         void Reset()
@@ -79,7 +81,7 @@ namespace VidiGraph
             InitializeShaders();
 
             _networkGlobal = GameObject.Find("/Network Manager").GetComponent<NetworkGlobal>();
-            _networkContext = (NetworkContext3D)networkContext;
+            _networkContext = (MultiLayoutContext)networkContext;
 
             UpdateNetworkTransform();
 
@@ -88,6 +90,8 @@ namespace VidiGraph
             CreateLinks();
 
             CreateGPULinks();
+
+            UpdateRenderElements();
         }
 
         public override void UpdateRenderElements()
@@ -126,9 +130,7 @@ namespace VidiGraph
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
                     var nodeProps = _networkContext.Nodes[node.ID];
-                    var nodeObj = node.IsVirtualNode
-                        ? NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps, Color.black)
-                        : NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps);
+                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps, Settings.NodeScale);
 
                     _nodeGameObjs[node.ID] = nodeObj;
                     _nodeColors[node.ID] = nodeObj.GetComponentInChildren<Renderer>();
@@ -162,7 +164,7 @@ namespace VidiGraph
                     Vector3 startPos = _networkContext.Nodes[link.SourceNodeID].Position,
                         endPos = _networkContext.Nodes[link.TargetNodeID].Position;
                     var linkObj = NodeLinkRenderUtils.MakeStraightLink(StraightLinkPrefab, transform,
-                        link, startPos, endPos, Settings.LinkWidth);
+                        startPos, endPos, Settings.LinkWidth);
                     _linkGameObjs[link.ID] = linkObj;
                 }
             }
@@ -178,7 +180,12 @@ namespace VidiGraph
         {
             foreach (var link in _networkGlobal.Links)
             {
-                float beta = Settings.EdgeBundlingStrength;
+                float beta;
+
+                if (_networkContext.Links[link.ID].OverrideBundlingStrength != -1f)
+                    beta = _networkContext.Links[link.ID].OverrideBundlingStrength;
+                else
+                    beta = Settings.EdgeBundlingStrength;
 
                 Vector3[] cp = BSplineMathUtils.ControlPoints(link, _networkGlobal, _networkContext);
                 int length = cp.Length;
@@ -213,27 +220,8 @@ namespace VidiGraph
             {
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
-                    _nodeGameObjs[node.ID].transform.localPosition = _networkContext.Nodes[node.ID].Position;
-
-                    if (node.ID == _lastHoveredNode)
-                    {
-                        MaterialPropertyBlock props = new MaterialPropertyBlock();
-                        var renderer = _nodeColors[node.ID];
-
-                        renderer.GetPropertyBlock(props);
-                        props.SetColor("_Color", node.IsVirtualNode ? Color.black : node.ColorParsed);
-                        renderer.SetPropertyBlock(props);
-                    }
-
-                    if (_networkGlobal.HoveredNode != null && node.ID == _networkGlobal.HoveredNode.ID)
-                    {
-                        MaterialPropertyBlock props = new MaterialPropertyBlock();
-                        var renderer = _nodeColors[node.ID];
-
-                        renderer.GetPropertyBlock(props);
-                        props.SetColor("_Color", Settings.NodeHighlightColor);
-                        renderer.SetPropertyBlock(props);
-                    }
+                    var nodeProps = _networkContext.Nodes[node.ID];
+                    NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[node.ID], node, nodeProps, Settings.NodeScale);
                 }
             }
 
@@ -280,7 +268,7 @@ namespace VidiGraph
                     Vector3 startPos = _networkContext.Nodes[link.SourceNodeID].Position,
                         endPos = _networkContext.Nodes[link.TargetNodeID].Position;
                     NodeLinkRenderUtils.UpdateStraightLink(_linkGameObjs[link.ID],
-                        link, startPos, endPos, Settings.LinkWidth);
+                        startPos, endPos, Settings.LinkWidth);
                 }
             }
         }

@@ -5,11 +5,11 @@ using UnityEngine;
 
 namespace VidiGraph
 {
-    public class HairballLayoutTransformer : NetworkTransformer
+    public class HairballLayoutTransformer : NetworkContextTransformer
     {
         public Transform HairballPosition;
         NetworkGlobal _networkGlobal;
-        NetworkContext3D _networkContext;
+        MultiLayoutContext _networkContext;
         TransformInfo _hairballTransform;
 
         // TODO remove this when we are able to calc at runtime
@@ -17,7 +17,7 @@ namespace VidiGraph
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
-            _networkContext = (NetworkContext3D)networkContext;
+            _networkContext = (MultiLayoutContext)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
@@ -33,6 +33,11 @@ namespace VidiGraph
                 _networkContext.Nodes[node.idx].Position = node._position3D;
             }
 
+            foreach (var link in _networkContext.Links.Values)
+            {
+                link.OverrideBundlingStrength = 0f;
+            }
+
             _networkContext.CurrentTransform.SetFromTransform(_hairballTransform);
         }
 
@@ -44,14 +49,14 @@ namespace VidiGraph
 
     public class HairballLayoutInterpolator : TransformInterpolator
     {
-        NetworkContext3D _networkContext;
+        MultiLayoutContext _networkContext;
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
         TransformInfo _startingContextTransform;
         TransformInfo _endingContextTransform;
 
-        public HairballLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, NetworkContext3D networkContext, NetworkFilesLoader fileLoader)
+        public HairballLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext, NetworkFilesLoader fileLoader)
         {
             _networkContext = networkContext;
             // get actual array instead of the node collection so we can use list indices rather than 
@@ -69,6 +74,11 @@ namespace VidiGraph
                 _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
                 // TODO calculate at runtime
                 _endPositions[node.ID] = hairballNodes[idToIdx[node.ID]]._position3D;
+            }
+
+            foreach (var link in _networkContext.Links.Values)
+            {
+                link.OverrideBundlingStrength = 0f;
             }
 
 

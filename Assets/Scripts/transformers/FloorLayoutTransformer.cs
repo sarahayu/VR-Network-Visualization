@@ -5,12 +5,12 @@ using UnityEngine.Assertions;
 
 namespace VidiGraph
 {
-    public class FloorLayoutTransformer : NetworkTransformer
+    public class FloorLayoutTransformer : NetworkContextTransformer
     {
         public Transform FloorPosition;
 
         NetworkGlobal _networkGlobal;
-        NetworkContext3D _networkContext;
+        MultiLayoutContext _networkContext;
 
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
@@ -21,7 +21,7 @@ namespace VidiGraph
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
-            _networkContext = (NetworkContext3D)networkContext;
+            _networkContext = (MultiLayoutContext)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
@@ -112,14 +112,14 @@ namespace VidiGraph
 
     public class FloorLayoutInterpolator : TransformInterpolator
     {
-        NetworkContext3D _networkContext;
+        MultiLayoutContext _networkContext;
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
         TransformInfo _startingContextTransform;
         TransformInfo _endingContextTransform;
 
-        public FloorLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, NetworkContext3D networkContext,
+        public FloorLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
             NetworkFilesLoader fileLoader, HashSet<int> focusCommunities, Dictionary<int, bool> focusCommunitiesToUpdate)
         {
             _networkContext = networkContext;

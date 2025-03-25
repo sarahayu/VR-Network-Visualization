@@ -13,9 +13,9 @@ namespace VidiGraph
     public class NetworkManager : MonoBehaviour
     {
         [SerializeField]
-        MultiLayoutNetwork _bigNetwork;
+        MultiLayoutNetwork _multiLayoutNetwork;
         [SerializeField]
-        HandheldNetwork _smallNetwork;
+        HandheldNetwork _handheldNetwork;
 
         NetworkFilesLoader _fileLoader;
         NetworkGlobal _networkGlobal;
@@ -44,53 +44,53 @@ namespace VidiGraph
             _fileLoader.LoadFiles();
             _networkGlobal.InitNetwork();
 
-            _bigNetwork.Initialize();
-            _smallNetwork.Initialize();
+            _multiLayoutNetwork.Initialize();
+            _handheldNetwork?.Initialize();
         }
 
         public void DrawPreview()
         {
-            _bigNetwork.DrawPreview();
-            _smallNetwork.DrawPreview();
+            _multiLayoutNetwork.DrawPreview();
+            _handheldNetwork?.DrawPreview();
         }
 
         public void CycleCommunityFocus(int community, bool animated = true)
         {
-            _bigNetwork.CycleCommunityFocus(community, animated);
+            _multiLayoutNetwork.CycleCommunityFocus(community, animated);
         }
 
         public void ToggleBigNetworkSphericalAndHairball(bool animated = true)
         {
-            _bigNetwork.ToggleSphericalAndHairball(animated);
+            _multiLayoutNetwork.ToggleSphericalAndHairball(animated);
         }
 
         public void HoverNode(int nodeID)
         {
             _networkGlobal.HoveredNode = _networkGlobal.Nodes[nodeID];
-            _bigNetwork.UpdateRenderElements();
+            _multiLayoutNetwork.UpdateRenderElements();
         }
 
         public void UnhoverNode(int nodeID)
         {
             _networkGlobal.HoveredNode = null;
-            _bigNetwork.UpdateRenderElements();
+            _multiLayoutNetwork.UpdateRenderElements();
         }
 
         public void ToggleFocusNodes(int[] nodeIDs)
         {
-            _bigNetwork.ToggleFocusNodes(nodeIDs);
+            _multiLayoutNetwork.ToggleFocusNodes(nodeIDs);
         }
 
         public void HoverCommunity(int communityID)
         {
             _networkGlobal.HoveredCommunity = _networkGlobal.Communities[communityID];
-            _bigNetwork.UpdateRenderElements();
+            _multiLayoutNetwork.UpdateRenderElements();
         }
 
         public void UnhoverCommunity(int communityID)
         {
             _networkGlobal.HoveredCommunity = null;
-            _bigNetwork.UpdateRenderElements();
+            _multiLayoutNetwork.UpdateRenderElements();
         }
     }
 }

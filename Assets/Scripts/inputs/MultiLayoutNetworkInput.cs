@@ -52,12 +52,6 @@ namespace VidiGraph
 
         void Update()
         {
-            if (RightPrimaryButton.ReadWasPerformedThisFrame())
-            {
-                // _manager.ToggleFocusNodes(new int[] { 12, 77, 146, 289 });
-                _manager.ToggleFocusNodes(new int[] { 14, 28, 114, 121 });
-            }
-
             if (RightGripPress.ReadWasPerformedThisFrame())
             {
                 if (_hoveredCommunity != null)
@@ -70,7 +64,7 @@ namespace VidiGraph
                 }
             }
 
-            if (LeftGripPress.ReadWasPerformedThisFrame() && LeftTriggerPress.ReadWasPerformedThisFrame())
+            if (LeftGripPress.ReadWasPerformedThisFrame())
             {
                 _manager.ToggleBigNetworkSphericalAndHairball();
             }

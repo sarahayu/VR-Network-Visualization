@@ -8,8 +8,8 @@ namespace VidiGraph
     {
         NetworkManager _manager;
         NetworkRenderer _renderer;
-        NetworkContext3D _networkContext = new NetworkContext3D();
-        NetworkTransformer _layout;
+        MinimapContext _networkContext = new MinimapContext();
+        NetworkContextTransformer _transformer;
 
         void Awake()
         {
@@ -27,15 +27,15 @@ namespace VidiGraph
         public override void Initialize()
         {
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _networkContext.Update(_manager.NetworkGlobal);
+            _networkContext.SetFromGlobal(_manager.NetworkGlobal);
+
+            InitializeTransformers();
+
+            _transformer.ApplyTransformation();
+            _networkContext.RecomputeProps(_manager.NetworkGlobal);
 
             _renderer = GetComponentInChildren<NetworkRenderer>();
             _renderer.Initialize(_networkContext);
-
-            InitializeLayouts();
-
-            _layout.ApplyTransformation();
-            _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
             _renderer.UpdateRenderElements();
         }
 
@@ -54,10 +54,10 @@ namespace VidiGraph
             _renderer.Draw();
         }
 
-        void InitializeLayouts()
+        void InitializeTransformers()
         {
-            _layout = GetComponentInChildren<HairballLayoutTransformer>();
-            _layout.Initialize(_manager.NetworkGlobal, _networkContext);
+            _transformer = GetComponentInChildren<TerrainLayoutTransformer>();
+            _transformer.Initialize(_manager.NetworkGlobal, _networkContext);
         }
     }
 }

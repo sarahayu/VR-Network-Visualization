@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace VidiGraph
 {
-    abstract public class NetworkTransformer : MonoBehaviour
+    abstract public class NetworkContextTransformer : MonoBehaviour
     {
         public abstract void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext);
         public abstract void ApplyTransformation();

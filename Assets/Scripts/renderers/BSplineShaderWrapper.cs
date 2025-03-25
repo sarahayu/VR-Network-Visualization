@@ -44,7 +44,7 @@ namespace VidiGraph
             _batchComputeShader.SetFloat("COLOR_FOCUS2CONTEXT_ALPHA_FACTOR", _settings.LinkContext2FocusAlphaFactor);
         }
 
-        public void PrepareBuffers(NetworkGlobal networkGlobal, NetworkContext3D networkContext, Dictionary<int, List<Vector3>> controlPoints)
+        public void PrepareBuffers(NetworkGlobal networkGlobal, MultiLayoutContext networkContext, Dictionary<int, List<Vector3>> controlPoints)
         {
             // Initialize Compute Shader data
             _splines = new List<SplineData>();
@@ -136,7 +136,7 @@ namespace VidiGraph
             _splineMaterial.SetBuffer("OutSamplePointData", _outSampleControlPointData);
         }
 
-        public void UpdateBuffers(NetworkGlobal networkGlobal, NetworkContext3D networkContext, Dictionary<int, List<Vector3>> controlPoints)
+        public void UpdateBuffers(NetworkGlobal networkGlobal, MultiLayoutContext networkContext, Dictionary<int, List<Vector3>> controlPoints)
         {
             // Initialize Compute Shader data
             _splineControlPoints = new List<SplineControlPointData>();

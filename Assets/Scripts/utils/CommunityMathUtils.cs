@@ -8,7 +8,7 @@ namespace VidiGraph
 
     public static class CommunityMathUtils
     {
-        public static void ComputeMassProperties(List<Node> nodes, Dictionary<int, NetworkContext3D.Node> nodeContexts,
+        public static void ComputeMassProperties(List<Node> nodes, Dictionary<int, MultiLayoutContext.Node> nodeContexts,
             out double mass, out Vector3 massCenter)
         {
             mass = 0;
@@ -23,7 +23,7 @@ namespace VidiGraph
             massCenter /= nodes.Count;
         }
 
-        public static float ComputeSize(List<Node> nodes, Dictionary<int, NetworkContext3D.Node> nodeContexts, Vector3 massCenter)
+        public static float ComputeSize(List<Node> nodes, Dictionary<int, MultiLayoutContext.Node> nodeContexts, Vector3 massCenter)
         {
             float size = 0.1f;
 
@@ -34,6 +34,15 @@ namespace VidiGraph
             }
 
             return size;
+        }
+
+        // Key should have the community ID that is smaller first so we don't have doubles of links
+        public static Tuple<int, int> IDsToLinkKey(int c1, int c2)
+        {
+            if (c1 > c2)
+                return new Tuple<int, int>(c2, c1);
+            else
+                return new Tuple<int, int>(c1, c2);
         }
     }
 

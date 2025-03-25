@@ -9,6 +9,8 @@ namespace VidiGraph
         public GameObject NodePrefab;
         public GameObject StraightLinkPrefab;
 
+        [Range(0.0f, 100f)]
+        public float NodeScale = 1f;
         [Range(0.0f, 0.1f)]
         public float LinkWidth = 0.005f;
         public bool DrawVirtualNodes = true;
@@ -18,7 +20,7 @@ namespace VidiGraph
         Dictionary<int, GameObject> _nodeGameObjs = new Dictionary<int, GameObject>();
         Dictionary<int, GameObject> _linkGameObjs = new Dictionary<int, GameObject>();
         NetworkGlobal _networkData;
-        NetworkContext3D _networkProperties;
+        MultiLayoutContext _networkProperties;
 
         void Reset()
         {
@@ -40,7 +42,7 @@ namespace VidiGraph
             Reset();
 
             _networkData = GameObject.Find("/Network Manager").GetComponent<NetworkGlobal>();
-            _networkProperties = (NetworkContext3D)networkContext;
+            _networkProperties = (MultiLayoutContext)networkContext;
 
             CreateNodes();
             CreateLinks();
@@ -65,9 +67,7 @@ namespace VidiGraph
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
                     var nodeProps = _networkProperties.Nodes[node.ID];
-                    var nodeObj = node.IsVirtualNode
-                        ? NodeLinkRenderUtils.MakeNode(NodePrefab, NetworkTransform, node, nodeProps, Color.black)
-                        : NodeLinkRenderUtils.MakeNode(NodePrefab, NetworkTransform, node, nodeProps);
+                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, NetworkTransform, node, nodeProps, NodeScale);
 
                     _nodeGameObjs[node.ID] = nodeObj;
                 }
@@ -84,7 +84,7 @@ namespace VidiGraph
                     Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
                         endPos = _networkProperties.Nodes[link.TargetNodeID].Position;
                     var linkObj = NodeLinkRenderUtils.MakeStraightLink(StraightLinkPrefab, NetworkTransform,
-                        link, startPos, endPos, LinkWidth);
+                        startPos, endPos, LinkWidth);
                     _linkGameObjs[link.ID] = linkObj;
                 }
             }
@@ -95,7 +95,7 @@ namespace VidiGraph
                 Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
                     endPos = _networkProperties.Nodes[link.TargetNodeID].Position;
                 var linkObj = NodeLinkRenderUtils.MakeStraightLink(StraightLinkPrefab, NetworkTransform,
-                    link, startPos, endPos, LinkWidth);
+                    startPos, endPos, LinkWidth);
                 _linkGameObjs[link.ID] = linkObj;
             }
         }
@@ -106,7 +106,8 @@ namespace VidiGraph
             {
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
-                    _nodeGameObjs[node.ID].transform.localPosition = _networkProperties.Nodes[node.ID].Position;
+                    var nodeProps = _networkProperties.Nodes[node.ID];
+                    NodeLinkRenderUtils.UpdateNode(NodePrefab, node, nodeProps, NodeScale);
                 }
             }
         }
@@ -121,7 +122,7 @@ namespace VidiGraph
                     Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
                         endPos = _networkProperties.Nodes[link.TargetNodeID].Position;
                     NodeLinkRenderUtils.UpdateStraightLink(_linkGameObjs[link.ID],
-                        link, startPos, endPos, LinkWidth);
+                        startPos, endPos, LinkWidth);
                 }
             }
             // ...whereas this is concerned with the visible links between nodes in the graph
@@ -131,7 +132,7 @@ namespace VidiGraph
                 Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
                     endPos = _networkProperties.Nodes[link.TargetNodeID].Position;
                 NodeLinkRenderUtils.UpdateStraightLink(_linkGameObjs[link.ID],
-                    link, startPos, endPos, LinkWidth);
+                    startPos, endPos, LinkWidth);
             }
         }
     }
