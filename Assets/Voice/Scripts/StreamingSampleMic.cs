@@ -133,10 +133,21 @@ namespace Whisper.Samples
 
                     if (classification != null)
                     {
-                        // We have a command. Execute it.
                         Debug.Log("Command: " + classification.command);
+
+                        if (classification.functions != null)
+                        {
+                            Debug.Log("Functions: " + string.Join(", ", classification.functions));
+                        }
+
+                        if (classification.tasks != null)
+                        {
+                            Debug.Log("Tasks: " + string.Join(", ", classification.tasks));
+                        }
+
                         ExecuteOperation(classification.command);
                     }
+
                 }
             }
         }
@@ -200,5 +211,8 @@ namespace Whisper.Samples
     public class ClassificationResponse
     {
         public string command;
+        public string[] functions;
+        public string[] tasks;
     }
+
 }

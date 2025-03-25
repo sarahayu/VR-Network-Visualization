@@ -1,52 +1,58 @@
 from flask import Flask, request, jsonify
 from openai import OpenAI
 import os
+import json
+
 
 app = Flask(__name__)
-
-# Initialize OpenAI client
-# client = OpenAI()  # This reads OPENAI_API_KEY from environment
-
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY").strip())
 
-# Few-shot prompt
-FEW_SHOT_PROMPT = """
-You are a command classifier for a visualization system. Based on the user's input, return the exact name of the command that best matches.
+FEW_SHOT_PROMPT = FEW_SHOT_PROMPT = """
+You are a graph command interpreter. For any given user input, classify it into:
+- The matching command name
+- A list of function calls
+- A list of visualization tasks
 
-Available commands:
-- Highlight Node
-- Select Node
-- Highlight Group
-- Group Nodes
-- Change layout
-- Make Work Surface
-- Project Nodes
+Output your response as JSON in the following format:
+{{
+  "command": "...",
+  "functions": ["..."],
+  "tasks": ["..."]
+}}
 
-Examples:
+Here are some examples:
+
 User: Highlight the node with the highest degree
-Command: Highlight Node
+{{
+  "command": "Highlight Node",
+  "functions": ["Node Query", "Node Highlight"],
+  "tasks": ["Create active node set using query", "Highlight currently selected nodes"]
+}}
 
 User: Select the 5 least well-connected nodes
-Command: Select Node
+{{
+  "command": "Select Node",
+  "functions": ["Node Query", "Node Select"],
+  "tasks": ["Create active node set using query", "Select the currently active nodes"]
+}}
 
 User: Show me the 3 smallest groups
-Command: Highlight Group
+{{
+  "command": "Highlight Group",
+  "functions": ["Node Query", "Group Highlight"],
+  "tasks": ["Create active node set using query", "Select containing group for each selected node in active set"]
+}}
 
 User: Create a new group containing the top 10 most bullied students
-Command: Group Nodes
-
-User: Change to a 3D layout
-Command: Change layout
-
-User: Make a new surface for me
-Command: Make Work Surface
-
-User: Place all the nodes in the smallest group onto my work surface
-Command: Project Nodes
+{{
+  "command": "Group Nodes",
+  "functions": ["Node Query", "Detach Nodes", "Group Nodes", "Layout \\"Force-Directed 2D Group\\""],
+  "tasks": ["Create active node set using query", "Detach the nodes from their current group", "Regroup nodes into a new group", "Compute layout for new group and recompute other layouts based on LLM specs"]
+}}
 
 User: {user_input}
-Command:
 """
+
 
 @app.route('/classify', methods=['POST'])
 def classify():
@@ -58,19 +64,24 @@ def classify():
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You classify visualization commands."},
+                {"role": "system", "content": "You are a helpful assistant that outputs JSON."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0,
-            max_tokens=10
+            max_tokens=300
         )
 
-        command = response.choices[0].message.content.strip()
-        return jsonify({"command": command})
+        raw = response.choices[0].message.content.strip()
+        try:
+            structured = json.loads(raw)
+            return jsonify(structured)
+        except json.JSONDecodeError:
+            print("Error: GPT response was not valid JSON:\n", raw)
+            return jsonify({"error": "Invalid JSON response from GPT", "raw": raw}), 500
 
     except Exception as e:
         import traceback
-        print("🔥 ERROR during /classify call:")
+        print("Error: ERROR during /classify call:")
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
