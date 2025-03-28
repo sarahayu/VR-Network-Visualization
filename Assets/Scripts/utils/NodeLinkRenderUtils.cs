@@ -26,7 +26,7 @@ namespace VidiGraph
             MaterialPropertyBlock props = new MaterialPropertyBlock();
 
             renderer.GetPropertyBlock(props);
-            props.SetColor("_Color", node.ColorParsed);
+            props.SetColor("_Color", nodeProps.Color);
 
             renderer.SetPropertyBlock(props);
 

@@ -37,14 +37,14 @@ namespace VidiGraph
                 foreach (var node in community.Nodes)
                 {
                     // TODO calculate at runtime
-                    float[] pos2D = _fileLoader.GraphData.nodes[node.ID].pos2D;
+                    float[] pos2D = _fileLoader.SphericalLayout.nodes[node.ID].pos2D;
                     center += new Vector3(-pos2D[0], -pos2D[1], 0f);
                 }
                 center /= community.Nodes.Count;
 
                 _networkContext.CommunityNodes[community.ID].Position = center;
                 _networkContext.CommunityNodes[community.ID].Size = community.Nodes.Count;
-                _networkContext.CommunityNodes[community.ID].Color = community.Nodes[0].ColorParsed;
+                _networkContext.CommunityNodes[community.ID].Color = community.Color;
 
                 if (center.x < min.x || min == Vector3.zero)
                 {

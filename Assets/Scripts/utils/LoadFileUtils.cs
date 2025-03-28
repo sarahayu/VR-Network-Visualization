@@ -10,7 +10,7 @@ namespace VidiGraph
         {
             Node node = new Node();
 
-            node.CommunityID = fileNode.communityIdx;
+            // node.CommunityID = fileNode.communityIdx;
             node.Label = fileNode.label;
 
             // idx gets remapped to node id, because we do not assume it's the same as the order stated in datafile. why? idk the original code didn't either.

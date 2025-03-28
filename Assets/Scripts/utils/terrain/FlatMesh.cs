@@ -69,19 +69,19 @@ namespace VidiGraph
                 float distX = Mathf.Abs(x2 - x1), distY = Mathf.Abs(y2 - y1);
                 float dist = Mathf.Sqrt(distX * distX + distY * distY);
 
-                var dir = new Vertex((x2 - x1) / dist / 4, (y2 - y1) / dist / 4);
+                var dir = new Vertex((x2 - x1) / dist, (y2 - y1) / dist);
                 // dir.Normalize();
                 // dir = dir / 2;
                 float x = x1, y = y1;
 
-                x += (float)dir.x * _subdivideSunflower;
-                y += (float)dir.y * _subdivideSunflower;
+                x += (float)dir.x / _subdivideRidges;
+                y += (float)dir.y / _subdivideRidges;
 
                 while (Mathf.Abs(x - x1) < distX && Mathf.Abs(y - y1) < distY)
                 {
                     FlatPoints.Add(new Vertex(x, y));
-                    x += (float)dir.x * _subdivideSunflower;
-                    y += (float)dir.y * _subdivideSunflower;
+                    x += (float)dir.x / _subdivideRidges;
+                    y += (float)dir.y / _subdivideRidges;
                 }
                 // points.Add(new Vertex(x2 * (meshWidth - 1) / graphWidth, y2 * (meshLength - 1) / graphHeight));
             }

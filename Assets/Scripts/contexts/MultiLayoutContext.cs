@@ -10,22 +10,42 @@ namespace VidiGraph
 {
     public class MultiLayoutContext : NetworkContext
     {
+        public class Settings
+        {
+            public float NodeScale = 1f;
+            public float LinkWidth = 0.0025f;
+            public float EdgeBundlingStrength = 0.8f;
+
+            public Color NodeHighlightColor;
+            public Color LinkHighlightColor;
+            public Color LinkFocusColor;
+
+            public float LinkMinimumAlpha = 0.01f;
+            public float LinkNormalAlphaFactor = 0.05f;
+            public float LinkContextAlphaFactor = 0.5f;
+            public float LinkContext2FocusAlphaFactor = 0.8f;
+        }
+
         public class Node
         {
-            public enum NodeState
-            {
-                None,
-                Bring,
-                NumStates,
-            }
             public float Size = 1f;
             public Vector3 Position = Vector3.zero;
-            public NodeState State = NodeState.None;
+            public Color Color;
+
+            // detect if node needs to be rerendered
+            public bool Dirty = false;
         }
 
         public class Link
         {
             public float OverrideBundlingStrength = -1f;
+            public float Width = 1f;
+            public Color ColorStart;
+            public Color ColorEnd;
+            public float Alpha = 1f;
+
+            // detect if link needs to be rerendered
+            public bool Dirty = false;
         }
 
         public class Community
@@ -43,7 +63,12 @@ namespace VidiGraph
             public double Size;
 
             public CommunityState State = CommunityState.None;
+
+            // detect if link needs to be rerendered
+            public bool Dirty = false;
         }
+
+        public Settings ContextSettings = new Settings();
 
         public Dictionary<int, Node> Nodes = new Dictionary<int, Node>();
         public Dictionary<int, Link> Links = new Dictionary<int, Link>();

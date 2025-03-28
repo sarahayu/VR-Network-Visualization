@@ -13,24 +13,25 @@ namespace VidiGraph
 {
     public class NetworkGlobal : MonoBehaviour
     {
-        bool _isCoded = false;
         int _rootNodeID;
 
+        // TODO change to maps... KISS
         NodeCollection _nodes = new NodeCollection();
+        public NodeCollection Nodes { get { return _nodes; } }
         List<Link> _links = new List<Link>();
+        public List<Link> Links { get { return _links; } }
         Dictionary<int, Community> _communities = new Dictionary<int, Community>();
+        public Dictionary<int, Community> Communities { get { return _communities; } }
 
         List<Link> _treeLinks = new List<Link>();
+        public List<Link> TreeLinks { get { return _treeLinks; } }
         List<int> _realNodeIDs = new List<int>();
         List<int> _virtualNodeIDs = new List<int>();
-        IDictionary<int, List<Link>> _nodeLinkMatrix
+        Dictionary<int, List<Link>> _nodeLinkMatrix
              = new Dictionary<int, List<Link>>();
 
+        public Dictionary<int, List<Link>> NodeLinkMatrix { get { return _nodeLinkMatrix; } }
 
-        public NodeCollection Nodes { get { return _nodes; } }
-        public List<Link> Links { get { return _links; } }
-        public Dictionary<int, Community> Communities { get { return _communities; } }
-        public List<Link> TreeLinks { get { return _treeLinks; } }
         public Node HoveredNode = null;
         public Community HoveredCommunity = null;
 
@@ -43,6 +44,7 @@ namespace VidiGraph
             _virtualNodeIDs.Clear();
             _nodeLinkMatrix.Clear();
             _communities.Clear();
+            HighContrastColors.ResetRandomColor();
         }
 
         public void InitNetwork()
@@ -50,11 +52,10 @@ namespace VidiGraph
             Reset();
 
             var fileLoader = GetComponent<NetworkFilesLoader>();
-            var fileNodes = fileLoader.GraphData.nodes;
-            var fileLinks = fileLoader.GraphData.links;
+            var fileNodes = fileLoader.SphericalLayout.nodes;
+            var fileLinks = fileLoader.SphericalLayout.links;
 
-            _isCoded = fileLoader.GraphData.coded;
-            _rootNodeID = fileLoader.GraphData.rootIdx;
+            _rootNodeID = fileLoader.SphericalLayout.rootIdx;
 
             // 1. Calculate the number of real Node and virtual node
             // 2. Build Index
@@ -68,6 +69,8 @@ namespace VidiGraph
                 // Group the nodes by virtual or not
                 if (node.IsVirtualNode) _virtualNodeIDs.Add(node.ID);
                 else _realNodeIDs.Add(node.ID);
+
+                node.Dirty = true;
 
                 _nodes.Add(node);
             }
@@ -104,7 +107,9 @@ namespace VidiGraph
                 // Build Node-Link Matrix
                 _nodeLinkMatrix[link.SourceNodeID].Add(link);
                 _nodeLinkMatrix[link.TargetNodeID].Add(link);
+
                 link.ID = i;
+                link.Dirty = true;
 
                 // calculate the degree
                 _nodes[link.SourceNodeID].Degree += 0.01;
@@ -136,6 +141,8 @@ namespace VidiGraph
             {
                 var sourceCommunity = _nodes[link.SourceNodeID].CommunityID;
                 var targetCommunity = _nodes[link.TargetNodeID].CommunityID;
+
+                if (sourceCommunity == -1 || targetCommunity == -1) continue;
 
                 // for the link inside a community
                 if (sourceCommunity == targetCommunity)
@@ -200,9 +207,15 @@ namespace VidiGraph
             {
                 var curNode = _nodes[nodeStack.Pop()];
 
-                if (HasLeaves(curNode))
+                if (IsCommunity(curNode))
                 {
                     TagCommunity(curNode, communityID++);
+
+                    foreach (var childID in curNode.ChildIDs)
+                    {
+                        if (_nodes[childID].IsVirtualNode)
+                            nodeStack.Push(childID);
+                    }
                 }
                 else
                 {
@@ -216,9 +229,10 @@ namespace VidiGraph
 
         }
 
-        bool HasLeaves(Node node)
+        bool IsCommunity(Node node)
         {
-            return node.ChildIDs.Count() != 0 && !_nodes[node.ChildIDs[0]].IsVirtualNode;
+            // node is root of a community if any of its children are non-virtual
+            return node.ChildIDs.Count() != 0 && node.ChildIDs.Any(c => !_nodes[c].IsVirtualNode);
         }
 
         void TagCommunity(Node node, int clusterIdx)
@@ -228,14 +242,17 @@ namespace VidiGraph
             var community = new Community
             {
                 RootNodeID = node.ID,
-                ID = clusterIdx
+                ID = clusterIdx,
+                Color = HighContrastColors.GenerateRandomColor(),
+                Dirty = true
             };
 
             _communities.Add(clusterIdx, community);
 
             foreach (var childIdx in node.ChildIDs)
             {
-                _nodes[childIdx].CommunityID = clusterIdx;
+                if (!_nodes[childIdx].IsVirtualNode)
+                    _nodes[childIdx].CommunityID = clusterIdx;
             }
         }
 

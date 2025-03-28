@@ -9,6 +9,7 @@ namespace VidiGraph
     {
         public bool IsSpline = true;
         public int ID;
+        // TODO remove
         public int SourceNodeID;
         public int TargetNodeID;
 
@@ -16,6 +17,10 @@ namespace VidiGraph
         public Node TargetNode;
         // the shortest path between two nodes in the hierarchical tree
         public List<Node> PathInTree = new List<Node>();
+
+        // detect if link needs to be rerendered
+        public bool Dirty = false;
+        public bool Selected = false;
 
         public Link()
         {

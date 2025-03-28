@@ -27,21 +27,21 @@ namespace VidiGraph
         ComputeShader _batchComputeShader;
         Material _splineMaterial;
 
-        BundledNetworkRenderer.BundledNetworkSettings _settings;
+        MultiLayoutContext.Settings _contextSettings;
 
-        public void Initialize(ComputeShader computeShader, Material material, BundledNetworkRenderer.BundledNetworkSettings settings)
+        public void Initialize(ComputeShader computeShader, Material material, MultiLayoutContext.Settings contextSettings)
         {
             _batchComputeShader = computeShader;
             _splineMaterial = material;
-            _settings = settings;
+            _contextSettings = contextSettings;
 
             // Configure the spline compute shader
-            _batchComputeShader.SetVector("COLOR_HIGHLIGHT", _settings.LinkHighlightColor);
-            _batchComputeShader.SetVector("COLOR_FOCUS", _settings.LinkFocusColor);
-            _batchComputeShader.SetFloat("COLOR_MINIMUM_ALPHA", _settings.LinkMinimumAlpha);
-            _batchComputeShader.SetFloat("COLOR_NORMAL_ALPHA_FACTOR", _settings.LinkNormalAlphaFactor);
-            _batchComputeShader.SetFloat("COLOR_CONTEXT_ALPHA_FACTOR", _settings.LinkContextAlphaFactor);
-            _batchComputeShader.SetFloat("COLOR_FOCUS2CONTEXT_ALPHA_FACTOR", _settings.LinkContext2FocusAlphaFactor);
+            _batchComputeShader.SetVector("COLOR_HIGHLIGHT", _contextSettings.LinkHighlightColor);
+            _batchComputeShader.SetVector("COLOR_FOCUS", _contextSettings.LinkFocusColor);
+            _batchComputeShader.SetFloat("COLOR_MINIMUM_ALPHA", _contextSettings.LinkMinimumAlpha);
+            _batchComputeShader.SetFloat("COLOR_NORMAL_ALPHA_FACTOR", _contextSettings.LinkNormalAlphaFactor);
+            _batchComputeShader.SetFloat("COLOR_CONTEXT_ALPHA_FACTOR", _contextSettings.LinkContextAlphaFactor);
+            _batchComputeShader.SetFloat("COLOR_FOCUS2CONTEXT_ALPHA_FACTOR", _contextSettings.LinkContext2FocusAlphaFactor);
         }
 
         public void PrepareBuffers(NetworkGlobal networkGlobal, MultiLayoutContext networkContext, Dictionary<int, List<Vector3>> controlPoints)
@@ -129,7 +129,7 @@ namespace VidiGraph
             _batchComputeShader.SetBuffer(kernel, "InSplineSegmentData", _inSplineSegmentData);
             _batchComputeShader.SetBuffer(kernel, "OutSamplePointData", _outSampleControlPointData);
 
-            _splineMaterial.SetFloat("_LineWidth", _settings.LinkWidth * networkContext.CurrentTransform.scale.y);
+            _splineMaterial.SetFloat("_LineWidth", _contextSettings.LinkWidth * networkContext.CurrentTransform.scale.y);
 
 
             // Bind the buffers to the LineRenderer Material
@@ -151,9 +151,11 @@ namespace VidiGraph
 
             foreach (var link in networkGlobal.Links)
             {
+                link.Dirty = false;
                 var cp = controlPoints[link.ID];
                 int ControlPointCount = cp.Count;
 
+                var contextLink = networkContext.Links[link.ID];
 
                 /*
                 * Add Compute Shader data
@@ -161,8 +163,8 @@ namespace VidiGraph
                 SplineData spline = _splines[splineIdx];
                 spline.StartPosition = cp[0];
                 spline.EndPosition = cp[ControlPointCount - 1];
-                spline.StartColorRGBA = link.SourceNode.ColorParsed;
-                spline.EndColorRGBA = link.TargetNode.ColorParsed;
+                spline.StartColorRGBA = contextLink.ColorStart;
+                spline.EndColorRGBA = contextLink.ColorEnd;
 
                 uint linkType = (uint)LinkType.StraightLink;
 
@@ -170,8 +172,8 @@ namespace VidiGraph
                 {
                     linkType = (uint)LinkType.BundledLink;
 
-                    spline.StartColorRGBA.a = _settings.LinkNormalAlphaFactor;
-                    spline.EndColorRGBA.a = _settings.LinkNormalAlphaFactor;
+                    spline.StartColorRGBA.a *= contextLink.Alpha;
+                    // spline.EndColorRGBA.a = _settings.LinkNormalAlphaFactor;
                 }
                 else
                 {
@@ -182,29 +184,29 @@ namespace VidiGraph
                     {
                         linkType = (uint)LinkType.StraightLink;
 
-                        spline.StartColorRGBA = _settings.LinkFocusColor;
-                        spline.EndColorRGBA = _settings.LinkFocusColor;
+                        // spline.StartColorRGBA = _settings.LinkFocusColor;
+                        // spline.EndColorRGBA = _settings.LinkFocusColor;
                     }
                     else if (a.Focus || b.Focus)
                     {
                         linkType = (uint)LinkType.BundledLink;
-                        spline.StartColorRGBA.a = _settings.LinkContext2FocusAlphaFactor;
-                        spline.EndColorRGBA.a = _settings.LinkContext2FocusAlphaFactor;
+                        // spline.StartColorRGBA.a = _settings.LinkContext2FocusAlphaFactor;
+                        // spline.EndColorRGBA.a = _settings.LinkContext2FocusAlphaFactor;
                     }
                     else
                     {
                         linkType = (uint)LinkType.BundledLink;
 
-                        spline.StartColorRGBA.a = _settings.LinkContextAlphaFactor;
-                        spline.EndColorRGBA.a = _settings.LinkContextAlphaFactor;
+                        // spline.StartColorRGBA.a = _settings.LinkContextAlphaFactor;
+                        // spline.EndColorRGBA.a = _settings.LinkContextAlphaFactor;
                     }
                 }
 
                 if (link.SourceNode == networkGlobal.HoveredNode || link.TargetNode == networkGlobal.HoveredNode)
                 {
 
-                    spline.StartColorRGBA = _settings.LinkHighlightColor;
-                    spline.EndColorRGBA = _settings.LinkHighlightColor;
+                    // spline.StartColorRGBA = _settings.LinkHighlightColor;
+                    // spline.EndColorRGBA = _settings.LinkHighlightColor;
                 }
 
                 int NumSegments = ControlPointCount + BSplineDegree - 2; //NumControlPoints + Degree - 2 (First/Last Point)
@@ -285,7 +287,7 @@ namespace VidiGraph
             _inSplineControlPointData.SetData(_splineControlPoints);
             _inSplineSegmentData.SetData(_splineSegments);
 
-            _splineMaterial.SetFloat("_LineWidth", _settings.LinkWidth * networkContext.CurrentTransform.scale.y);
+            _splineMaterial.SetFloat("_LineWidth", _contextSettings.LinkWidth * networkContext.CurrentTransform.scale.y);
         }
 
         public void Draw()

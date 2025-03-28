@@ -100,7 +100,7 @@ namespace VidiGraph
                 networkGlobal: _networkGlobal,
                 networkContext: _networkContext,
                 subdivideSunflower: 2000,
-                subdivideRidges: 2
+                subdivideRidges: 50
             );
 
             flatMesh.CalcMeshPoints();

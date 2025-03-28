@@ -9,35 +9,9 @@ namespace VidiGraph
 {
     public class BundledNetworkRenderer : NetworkRenderer
     {
-        [Serializable]
-        public class BundledNetworkSettings
-        {
-            [Range(0.0f, 100f)]
-            public float NodeScale = 1f;
-            [Range(0.0f, 0.1f)]
-            public float LinkWidth = 0.005f;
-            [Range(0.0f, 1.0f)]
-            public float EdgeBundlingStrength = 0.8f;
-
-            public Color NodeHighlightColor;
-            public Color LinkHighlightColor;
-            public Color LinkFocusColor;
-
-            [Range(0.0f, 0.1f)]
-            public float LinkMinimumAlpha = 0.01f;
-            [Range(0.0f, 1.0f)]
-            public float LinkNormalAlphaFactor = 1f;
-            [Range(0.0f, 1.0f)]
-            public float LinkContextAlphaFactor = 0.5f;
-            [Range(0.0f, 1.0f)]
-            public float LinkContext2FocusAlphaFactor = 0.8f;
-
-        }
         public GameObject NodePrefab;
         public GameObject CommunityPrefab;
         public GameObject StraightLinkPrefab;
-
-        public BundledNetworkSettings Settings;
 
         public bool DrawVirtualNodes = true;
         public bool DrawTreeStructure = false;
@@ -57,6 +31,9 @@ namespace VidiGraph
         NetworkGlobal _networkGlobal;
         MultiLayoutContext _networkContext;
         int _lastHoveredNode = -1;
+
+        // allow us to access what color nodes/links are supposed to be
+        MLEncodingTransformer _encoder;
 
         void Reset()
         {
@@ -78,10 +55,11 @@ namespace VidiGraph
         {
             Reset();
 
-            InitializeShaders();
-
             _networkGlobal = GameObject.Find("/Network Manager").GetComponent<NetworkGlobal>();
             _networkContext = (MultiLayoutContext)networkContext;
+            _encoder = transform.parent.parent.GetComponentInChildren<MLEncodingTransformer>();
+
+            InitializeShaders();
 
             UpdateNetworkTransform();
 
@@ -113,9 +91,9 @@ namespace VidiGraph
         void InitializeShaders()
         {
             _batchSplineMaterial = new Material(Shader.Find("Custom/Batch BSpline Unlit"));
-            _batchSplineMaterial.SetFloat("_LineWidth", Settings.LinkWidth);
+            _batchSplineMaterial.SetFloat("_LineWidth", _networkContext.ContextSettings.LinkWidth);
 
-            _shaderWrapper.Initialize(SplineComputeShader, _batchSplineMaterial, Settings);
+            _shaderWrapper.Initialize(SplineComputeShader, _batchSplineMaterial, _networkContext.ContextSettings);
         }
 
         void UpdateNetworkTransform()
@@ -130,7 +108,7 @@ namespace VidiGraph
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
                     var nodeProps = _networkContext.Nodes[node.ID];
-                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps, Settings.NodeScale);
+                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps, _networkContext.ContextSettings.NodeScale);
 
                     _nodeGameObjs[node.ID] = nodeObj;
                     _nodeColors[node.ID] = nodeObj.GetComponentInChildren<Renderer>();
@@ -164,7 +142,7 @@ namespace VidiGraph
                     Vector3 startPos = _networkContext.Nodes[link.SourceNodeID].Position,
                         endPos = _networkContext.Nodes[link.TargetNodeID].Position;
                     var linkObj = NodeLinkRenderUtils.MakeStraightLink(StraightLinkPrefab, transform,
-                        startPos, endPos, Settings.LinkWidth);
+                        startPos, endPos, _networkContext.ContextSettings.LinkWidth);
                     _linkGameObjs[link.ID] = linkObj;
                 }
             }
@@ -185,7 +163,7 @@ namespace VidiGraph
                 if (_networkContext.Links[link.ID].OverrideBundlingStrength != -1f)
                     beta = _networkContext.Links[link.ID].OverrideBundlingStrength;
                 else
-                    beta = Settings.EdgeBundlingStrength;
+                    beta = _networkContext.ContextSettings.EdgeBundlingStrength;
 
                 Vector3[] cp = BSplineMathUtils.ControlPoints(link, _networkGlobal, _networkContext);
                 int length = cp.Length;
@@ -216,47 +194,50 @@ namespace VidiGraph
 
         void UpdateNodes()
         {
-            foreach (var node in _networkGlobal.Nodes)
+            foreach (var nodeID in _networkContext.Nodes.Keys)
             {
-                if (DrawVirtualNodes || !node.IsVirtualNode)
+                Node globalNode = _networkGlobal.Nodes[nodeID];
+                MultiLayoutContext.Node contextNode = _networkContext.Nodes[nodeID];
+
+                bool needsUpdate = globalNode.Dirty || contextNode.Dirty;
+
+                if ((DrawVirtualNodes || !globalNode.IsVirtualNode) && needsUpdate)
                 {
-                    var nodeProps = _networkContext.Nodes[node.ID];
-                    NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[node.ID], node, nodeProps, Settings.NodeScale);
+                    NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[nodeID], globalNode, contextNode, _networkContext.ContextSettings.NodeScale);
+                    globalNode.Dirty = contextNode.Dirty = false;
                 }
             }
 
-            if (_networkGlobal.HoveredNode != null)
-                _lastHoveredNode = _networkGlobal.HoveredNode.ID;
-            else
-                _lastHoveredNode = -1;
+            UpdateHoverNode();
         }
 
         void UpdateCommunities()
         {
             foreach (var communityID in _networkGlobal.Communities.Keys)
             {
-                var communityProps = _networkContext.Communities[communityID];
-                CommunityRenderUtils.UpdateCommunity(_communityGameObjs[communityID], communityProps);
+                var globalComm = _networkGlobal.Communities[communityID];
+                var contextComm = _networkContext.Communities[communityID];
 
-                if (_networkGlobal.HoveredCommunity != null && _networkGlobal.HoveredCommunity.ID == communityID)
+                bool needsUpdate = globalComm.Dirty || contextComm.Dirty;
+
+                if (needsUpdate)
                 {
-                    MaterialPropertyBlock props = new MaterialPropertyBlock();
-                    var renderer = _commColors[communityID];
-
-                    renderer.GetPropertyBlock(props);
-                    props.SetColor("_Color", new Color(1f, 1f, 1f, 0.1f));
-                    renderer.SetPropertyBlock(props);
+                    CommunityRenderUtils.UpdateCommunity(_communityGameObjs[communityID], contextComm);
+                    globalComm.Dirty = contextComm.Dirty = false;
                 }
-                else
-                {
-                    MaterialPropertyBlock props = new MaterialPropertyBlock();
-                    var renderer = _commColors[communityID];
 
-                    renderer.GetPropertyBlock(props);
-                    props.SetColor("_Color", new Color(0f, 0f, 0f, 0f));
-                    renderer.SetPropertyBlock(props);
-                }
+                // just set color to gray if applicable, too lazy
+                // TODO move this somewhere else
+                MaterialPropertyBlock props = new MaterialPropertyBlock();
+                var renderer = _commColors[communityID];
+
+                renderer.GetPropertyBlock(props);
+                props.SetColor("_Color", new Color(1f, 1f, 1f, 0f));
+                renderer.SetPropertyBlock(props);
+
             }
+
+            UpdateHoverCommunity();
         }
 
         void UpdateLinks()
@@ -268,7 +249,7 @@ namespace VidiGraph
                     Vector3 startPos = _networkContext.Nodes[link.SourceNodeID].Position,
                         endPos = _networkContext.Nodes[link.TargetNodeID].Position;
                     NodeLinkRenderUtils.UpdateStraightLink(_linkGameObjs[link.ID],
-                        startPos, endPos, Settings.LinkWidth);
+                        startPos, endPos, _networkContext.ContextSettings.LinkWidth);
                 }
             }
         }
@@ -277,6 +258,73 @@ namespace VidiGraph
         {
             ComputeControlPoints();
             _shaderWrapper.UpdateBuffers(_networkGlobal, _networkContext, _controlPointsMap);
+        }
+
+        void UpdateHoverNode()
+        {
+            if (_networkGlobal.HoveredNode != null)
+            {
+                var nodeID = _networkGlobal.HoveredNode.ID;
+                MaterialPropertyBlock props = new MaterialPropertyBlock();
+
+                var renderer = _nodeGameObjs[nodeID].GetComponentInChildren<Renderer>();
+                renderer.GetPropertyBlock(props);
+                props.SetColor("_Color", _networkContext.ContextSettings.NodeHighlightColor);
+
+                renderer.SetPropertyBlock(props);
+                _lastHoveredNode = _networkGlobal.HoveredNode.ID;
+
+                // change color of all links connected to this node
+
+                foreach (var globalLink in _networkGlobal.NodeLinkMatrix[nodeID])
+                {
+                    var contextLink = _networkContext.Links[globalLink.ID];
+                    contextLink.ColorStart = _networkContext.ContextSettings.LinkHighlightColor;
+                    contextLink.ColorEnd = _networkContext.ContextSettings.LinkHighlightColor;
+                    contextLink.Dirty = true;
+                }
+            }
+            else if (_lastHoveredNode != -1)
+            {
+                var nodeID = _lastHoveredNode;
+                if (!_networkGlobal.Nodes[nodeID].Selected)
+                {
+                    MaterialPropertyBlock props = new MaterialPropertyBlock();
+
+                    var renderer = _nodeGameObjs[nodeID].GetComponentInChildren<Renderer>();
+                    renderer.GetPropertyBlock(props);
+                    props.SetColor("_Color", _encoder.GetNodeColor(_networkGlobal.Nodes[nodeID]));
+
+                    renderer.SetPropertyBlock(props);
+
+                    // change color of all links connected to this node
+
+                    foreach (var globalLink in _networkGlobal.NodeLinkMatrix[nodeID])
+                    {
+                        var contextLink = _networkContext.Links[globalLink.ID];
+                        contextLink.ColorStart = _encoder.GetLinkColorStart(globalLink);
+                        contextLink.ColorEnd = _encoder.GetLinkColorEnd(globalLink);
+                        contextLink.Dirty = true;
+                    }
+                }
+                _lastHoveredNode = -1;
+            }
+        }
+
+        void UpdateHoverCommunity()
+        {
+            // TODO replicate node hover logic here
+            // TODO change link colors
+            if (_networkGlobal.HoveredCommunity != null)
+            {
+                var communityID = _networkGlobal.HoveredCommunity.ID;
+                MaterialPropertyBlock props = new MaterialPropertyBlock();
+                var renderer = _commColors[communityID];
+
+                renderer.GetPropertyBlock(props);
+                props.SetColor("_Color", new Color(1f, 1f, 1f, 0.1f));
+                renderer.SetPropertyBlock(props);
+            }
         }
 
         void AddCommunityInteraction(GameObject gameObject, Community community)

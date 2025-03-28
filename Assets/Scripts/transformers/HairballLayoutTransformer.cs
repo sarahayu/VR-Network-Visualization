@@ -31,11 +31,13 @@ namespace VidiGraph
             foreach (var node in _fileLoader.HairballLayout.nodes)
             {
                 _networkContext.Nodes[node.idx].Position = node._position3D;
+                _networkContext.Nodes[node.idx].Dirty = true;
             }
 
             foreach (var link in _networkContext.Links.Values)
             {
                 link.OverrideBundlingStrength = 0f;
+                link.Dirty = true;
             }
 
             _networkContext.CurrentTransform.SetFromTransform(_hairballTransform);

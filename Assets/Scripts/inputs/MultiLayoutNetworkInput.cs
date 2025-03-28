@@ -56,11 +56,17 @@ namespace VidiGraph
             {
                 if (_hoveredCommunity != null)
                 {
-                    _manager.CycleCommunityFocus(_hoveredCommunity.ID);
+                    // _manager.CycleCommunityFocus(_hoveredCommunity.ID);
+
+                    _manager.ToggleSelectedCommunities(new List<int> { _hoveredCommunity.ID });
                 }
                 else if (_hoveredNode != null)
                 {
-                    _manager.ToggleFocusNodes(new int[] { _hoveredNode.ID });
+                    _manager.ToggleSelectedNodes(new List<int> { _hoveredNode.ID });
+                }
+                else
+                {
+                    _manager.ClearSelection();
                 }
             }
 
