@@ -17,6 +17,7 @@ namespace VidiGraph
             public float EdgeBundlingStrength = 0.8f;
 
             public Color NodeHighlightColor;
+            public Color CommHighlightColor;
             public Color LinkHighlightColor;
             public Color LinkFocusColor;
 

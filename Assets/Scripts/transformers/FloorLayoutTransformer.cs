@@ -49,6 +49,7 @@ namespace VidiGraph
                     {
                         var floorPos = floorNodes[floorIdToIdx[node.ID]]._position3D;
                         _networkContext.Nodes[node.ID].Position = new Vector3(floorPos.x, floorPos.y, floorPos.z);
+                        _networkContext.Nodes[node.ID].Dirty = true;
                     }
 
                     _focusCommunities.Add(communityIdx);
@@ -60,6 +61,7 @@ namespace VidiGraph
                     {
                         var sphericalPos = sphericalNodes[sphericalIdToIdx[node.ID]]._position3D;
                         _networkContext.Nodes[node.ID].Position = sphericalPos;
+                        _networkContext.Nodes[node.ID].Dirty = true;
                     }
 
                     _focusCommunities.Remove(communityIdx);
@@ -173,6 +175,7 @@ namespace VidiGraph
             {
                 _networkContext.Nodes[nodeID].Position
                     = Vector3.Lerp(_startPositions[nodeID], _endPositions[nodeID], Mathf.SmoothStep(0f, 1f, t));
+                _networkContext.Nodes[nodeID].Dirty = true;
             }
 
             GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);

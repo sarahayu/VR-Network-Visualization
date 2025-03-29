@@ -24,13 +24,14 @@ namespace VidiGraph
         Material _batchSplineMaterial;
 
 
-        Dictionary<int, Renderer> _nodeColors = new Dictionary<int, Renderer>();
-        Dictionary<int, Renderer> _commColors = new Dictionary<int, Renderer>();
+        Dictionary<int, Renderer> _nodeRenderers = new Dictionary<int, Renderer>();
+        Dictionary<int, Renderer> _commRenderers = new Dictionary<int, Renderer>();
 
         BSplineShaderWrapper _shaderWrapper = new BSplineShaderWrapper();
         NetworkGlobal _networkGlobal;
         MultiLayoutContext _networkContext;
         int _lastHoveredNode = -1;
+        int _lastHoveredComm = -1;
 
         // allow us to access what color nodes/links are supposed to be
         MLEncodingTransformer _encoder;
@@ -108,10 +109,11 @@ namespace VidiGraph
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
                     var nodeProps = _networkContext.Nodes[node.ID];
-                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps, _networkContext.ContextSettings.NodeScale);
+                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps,
+                        _networkContext.ContextSettings.NodeScale);
 
                     _nodeGameObjs[node.ID] = nodeObj;
-                    _nodeColors[node.ID] = nodeObj.GetComponentInChildren<Renderer>();
+                    _nodeRenderers[node.ID] = nodeObj.GetComponentInChildren<Renderer>();
 
                     AddNodeInteraction(nodeObj, node);
                 }
@@ -127,7 +129,7 @@ namespace VidiGraph
                     communityProps);
 
                 _communityGameObjs[communityID] = commObj;
-                _commColors[communityID] = commObj.GetComponentInChildren<Renderer>();
+                _commRenderers[communityID] = commObj.GetComponentInChildren<Renderer>();
 
                 AddCommunityInteraction(commObj, community);
             }
@@ -160,6 +162,7 @@ namespace VidiGraph
             {
                 float beta;
 
+                // TODO always get beta from context
                 if (_networkContext.Links[link.ID].OverrideBundlingStrength != -1f)
                     beta = _networkContext.Links[link.ID].OverrideBundlingStrength;
                 else
@@ -199,16 +202,24 @@ namespace VidiGraph
                 Node globalNode = _networkGlobal.Nodes[nodeID];
                 MultiLayoutContext.Node contextNode = _networkContext.Nodes[nodeID];
 
-                bool needsUpdate = globalNode.Dirty || contextNode.Dirty;
+                // update if global or context node is dirty, or it's been unhovered
+                bool needsUpdate = globalNode.Dirty || contextNode.Dirty || _lastHoveredNode == nodeID || _lastHoveredComm == globalNode.CommunityID;
 
                 if ((DrawVirtualNodes || !globalNode.IsVirtualNode) && needsUpdate)
                 {
-                    NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[nodeID], globalNode, contextNode, _networkContext.ContextSettings.NodeScale);
+                    NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[nodeID], globalNode, contextNode,
+                        _networkContext.ContextSettings.NodeScale, _nodeRenderers[nodeID]);
                     globalNode.Dirty = contextNode.Dirty = false;
+                }
+
+                if (nodeID == _networkGlobal.HoveredNode?.ID || globalNode.CommunityID == _networkGlobal.HoveredCommunity?.ID)
+                {
+                    var highlightCol = _networkContext.ContextSettings.NodeHighlightColor;
+                    NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], highlightCol, _nodeRenderers[nodeID]);
                 }
             }
 
-            UpdateHoverNode();
+            BookkeepHoverNode();
         }
 
         void UpdateCommunities()
@@ -218,26 +229,27 @@ namespace VidiGraph
                 var globalComm = _networkGlobal.Communities[communityID];
                 var contextComm = _networkContext.Communities[communityID];
 
-                bool needsUpdate = globalComm.Dirty || contextComm.Dirty;
+                // update if global or context community is dirty, or it's been unhovered
+                bool needsUpdate = globalComm.Dirty || contextComm.Dirty || _lastHoveredComm == communityID;
 
                 if (needsUpdate)
                 {
-                    CommunityRenderUtils.UpdateCommunity(_communityGameObjs[communityID], contextComm);
+                    Color color = globalComm.Selected ? _networkContext.ContextSettings.CommHighlightColor : new Color(0f, 0f, 0f, 0f);
+                    CommunityRenderUtils.UpdateCommunity(_communityGameObjs[communityID], contextComm, _commRenderers[communityID]);
+                    CommunityRenderUtils.SetCommunityColor(_communityGameObjs[communityID], color, _commRenderers[communityID]);
                     globalComm.Dirty = contextComm.Dirty = false;
                 }
 
-                // just set color to gray if applicable, too lazy
-                // TODO move this somewhere else
-                MaterialPropertyBlock props = new MaterialPropertyBlock();
-                var renderer = _commColors[communityID];
+                if (communityID == _networkGlobal.HoveredCommunity?.ID)
+                {
+                    var highlightCol = _networkContext.ContextSettings.CommHighlightColor;
+                    CommunityRenderUtils.SetCommunityColor(_communityGameObjs[communityID], highlightCol, _commRenderers[communityID]);
+                }
 
-                renderer.GetPropertyBlock(props);
-                props.SetColor("_Color", new Color(1f, 1f, 1f, 0f));
-                renderer.SetPropertyBlock(props);
 
             }
 
-            UpdateHoverCommunity();
+            BookkeepHoverCommunity();
         }
 
         void UpdateLinks()
@@ -260,70 +272,27 @@ namespace VidiGraph
             _shaderWrapper.UpdateBuffers(_networkGlobal, _networkContext, _controlPointsMap);
         }
 
-        void UpdateHoverNode()
+        void BookkeepHoverNode()
         {
             if (_networkGlobal.HoveredNode != null)
             {
-                var nodeID = _networkGlobal.HoveredNode.ID;
-                MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-                var renderer = _nodeGameObjs[nodeID].GetComponentInChildren<Renderer>();
-                renderer.GetPropertyBlock(props);
-                props.SetColor("_Color", _networkContext.ContextSettings.NodeHighlightColor);
-
-                renderer.SetPropertyBlock(props);
                 _lastHoveredNode = _networkGlobal.HoveredNode.ID;
-
-                // change color of all links connected to this node
-
-                foreach (var globalLink in _networkGlobal.NodeLinkMatrix[nodeID])
-                {
-                    var contextLink = _networkContext.Links[globalLink.ID];
-                    contextLink.ColorStart = _networkContext.ContextSettings.LinkHighlightColor;
-                    contextLink.ColorEnd = _networkContext.ContextSettings.LinkHighlightColor;
-                    contextLink.Dirty = true;
-                }
             }
             else if (_lastHoveredNode != -1)
             {
-                var nodeID = _lastHoveredNode;
-                if (!_networkGlobal.Nodes[nodeID].Selected)
-                {
-                    MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-                    var renderer = _nodeGameObjs[nodeID].GetComponentInChildren<Renderer>();
-                    renderer.GetPropertyBlock(props);
-                    props.SetColor("_Color", _encoder.GetNodeColor(_networkGlobal.Nodes[nodeID]));
-
-                    renderer.SetPropertyBlock(props);
-
-                    // change color of all links connected to this node
-
-                    foreach (var globalLink in _networkGlobal.NodeLinkMatrix[nodeID])
-                    {
-                        var contextLink = _networkContext.Links[globalLink.ID];
-                        contextLink.ColorStart = _encoder.GetLinkColorStart(globalLink);
-                        contextLink.ColorEnd = _encoder.GetLinkColorEnd(globalLink);
-                        contextLink.Dirty = true;
-                    }
-                }
                 _lastHoveredNode = -1;
             }
         }
 
-        void UpdateHoverCommunity()
+        void BookkeepHoverCommunity()
         {
-            // TODO replicate node hover logic here
-            // TODO change link colors
             if (_networkGlobal.HoveredCommunity != null)
             {
-                var communityID = _networkGlobal.HoveredCommunity.ID;
-                MaterialPropertyBlock props = new MaterialPropertyBlock();
-                var renderer = _commColors[communityID];
-
-                renderer.GetPropertyBlock(props);
-                props.SetColor("_Color", new Color(1f, 1f, 1f, 0.1f));
-                renderer.SetPropertyBlock(props);
+                _lastHoveredComm = _networkGlobal.HoveredCommunity.ID;
+            }
+            else if (_lastHoveredComm != -1)
+            {
+                _lastHoveredComm = -1;
             }
         }
 

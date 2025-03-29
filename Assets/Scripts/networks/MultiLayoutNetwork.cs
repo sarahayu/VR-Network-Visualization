@@ -17,6 +17,7 @@ namespace VidiGraph
             [Range(0.0f, 1.0f)]
             public float EdgeBundlingStrength = 0.8f;
 
+            public Color CommHighlightColor;
             public Color NodeHighlightColor;
             public Color LinkHighlightColor;
             public Color LinkFocusColor;
@@ -108,6 +109,7 @@ namespace VidiGraph
             _networkContext.ContextSettings.NodeScale = BaseSettings.NodeScale;
             _networkContext.ContextSettings.LinkWidth = BaseSettings.LinkWidth;
             _networkContext.ContextSettings.EdgeBundlingStrength = BaseSettings.EdgeBundlingStrength;
+            _networkContext.ContextSettings.CommHighlightColor = BaseSettings.CommHighlightColor;
             _networkContext.ContextSettings.NodeHighlightColor = BaseSettings.NodeHighlightColor;
             _networkContext.ContextSettings.LinkHighlightColor = BaseSettings.LinkHighlightColor;
             _networkContext.ContextSettings.LinkFocusColor = BaseSettings.LinkFocusColor;
@@ -201,6 +203,9 @@ namespace VidiGraph
                 _networkContext.Links[link.ID].ColorEnd = selected
                     ? BaseSettings.LinkHighlightColor
                     : _mlEncodingTransformer.GetLinkColorEnd(link);
+                _networkContext.Links[link.ID].Alpha = selected
+                    ? BaseSettings.LinkHighlightColor.a
+                    : _mlEncodingTransformer.GetLinkAlpha(link);
                 _networkContext.Links[link.ID].Dirty = true;
             }
 
@@ -217,11 +222,16 @@ namespace VidiGraph
         public void SetCommunitySelected(int communityID, bool selected)
         {
             // TODO change comm color?
+            _networkContext.Communities[communityID].Dirty = true;
         }
 
         public void SetCommunitiesSelected(List<int> communityIDs, bool selected)
         {
             // TODO change comm color?
+            foreach (var commID in communityIDs)
+            {
+                SetCommunitySelected(commID, selected);
+            }
         }
 
         public void ClearSelection()
@@ -305,12 +315,13 @@ namespace VidiGraph
             yield return AnimationUtils.Lerp(dur, t =>
             {
                 interpolator.Interpolate(t);
+                _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
                 _multiLayoutRenderer.UpdateRenderElements();
             });
 
-            // update render elements one more time to update input elements after recomputing geometric info
-            _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
-            _multiLayoutRenderer.UpdateRenderElements();
+            // // update render elements one more time to update input elements after recomputing geometric info
+            // _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+            // _multiLayoutRenderer.UpdateRenderElements();
 
             _curAnim = null;
         }

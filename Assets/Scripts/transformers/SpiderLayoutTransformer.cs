@@ -173,6 +173,7 @@ namespace VidiGraph
             {
                 _networkContext.Nodes[nodeID].Position
                     = Vector3.Lerp(_startPositions[nodeID], _endPositions[nodeID], Mathf.SmoothStep(0f, 1f, t));
+                _networkContext.Nodes[nodeID].Dirty = true;
             }
 
             GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);

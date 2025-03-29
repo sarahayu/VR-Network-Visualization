@@ -36,12 +36,12 @@ namespace VidiGraph
             _contextSettings = contextSettings;
 
             // Configure the spline compute shader
-            _batchComputeShader.SetVector("COLOR_HIGHLIGHT", _contextSettings.LinkHighlightColor);
-            _batchComputeShader.SetVector("COLOR_FOCUS", _contextSettings.LinkFocusColor);
-            _batchComputeShader.SetFloat("COLOR_MINIMUM_ALPHA", _contextSettings.LinkMinimumAlpha);
-            _batchComputeShader.SetFloat("COLOR_NORMAL_ALPHA_FACTOR", _contextSettings.LinkNormalAlphaFactor);
-            _batchComputeShader.SetFloat("COLOR_CONTEXT_ALPHA_FACTOR", _contextSettings.LinkContextAlphaFactor);
-            _batchComputeShader.SetFloat("COLOR_FOCUS2CONTEXT_ALPHA_FACTOR", _contextSettings.LinkContext2FocusAlphaFactor);
+            // _batchComputeShader.SetVector("COLOR_HIGHLIGHT", _contextSettings.LinkHighlightColor);
+            // _batchComputeShader.SetVector("COLOR_FOCUS", _contextSettings.LinkFocusColor);
+            // _batchComputeShader.SetFloat("COLOR_MINIMUM_ALPHA", _contextSettings.LinkMinimumAlpha);
+            // _batchComputeShader.SetFloat("COLOR_NORMAL_ALPHA_FACTOR", _contextSettings.LinkNormalAlphaFactor);
+            // _batchComputeShader.SetFloat("COLOR_CONTEXT_ALPHA_FACTOR", _contextSettings.LinkContextAlphaFactor);
+            // _batchComputeShader.SetFloat("COLOR_FOCUS2CONTEXT_ALPHA_FACTOR", _contextSettings.LinkContext2FocusAlphaFactor);
         }
 
         public void PrepareBuffers(NetworkGlobal networkGlobal, MultiLayoutContext networkContext, Dictionary<int, List<Vector3>> controlPoints)
@@ -166,47 +166,56 @@ namespace VidiGraph
                 spline.StartColorRGBA = contextLink.ColorStart;
                 spline.EndColorRGBA = contextLink.ColorEnd;
 
-                uint linkType = (uint)LinkType.StraightLink;
+                uint linkType = (uint)LinkType.BundledLink;
+                spline.StartColorRGBA.a *= contextLink.Alpha;
+                spline.EndColorRGBA.a *= contextLink.Alpha;
+                // uint linkType = (uint)LinkType.StraightLink;
 
-                if (!anyCommunitiesFocused)
+                // if (!anyCommunitiesFocused)
+                // {
+                //     linkType = (uint)LinkType.BundledLink;
+
+                //     spline.StartColorRGBA.a *= contextLink.Alpha;
+                //     // spline.EndColorRGBA.a = _settings.LinkNormalAlphaFactor;
+                // }
+                // else
+                // {
+                //     var a = networkGlobal.Communities[link.SourceNode.CommunityID];
+                //     var b = networkGlobal.Communities[link.TargetNode.CommunityID];
+
+                //     if (a.Focus && b.Focus)
+                //     {
+                //         linkType = (uint)LinkType.StraightLink;
+
+                //         // spline.StartColorRGBA = _settings.LinkFocusColor;
+                //         // spline.EndColorRGBA = _settings.LinkFocusColor;
+                //     }
+                //     else if (a.Focus || b.Focus)
+                //     {
+                //         linkType = (uint)LinkType.BundledLink;
+                //         // spline.StartColorRGBA.a = _settings.LinkContext2FocusAlphaFactor;
+                //         // spline.EndColorRGBA.a = _settings.LinkContext2FocusAlphaFactor;
+                //     }
+                //     else
+                //     {
+                //         linkType = (uint)LinkType.BundledLink;
+
+                //         // spline.StartColorRGBA.a = _settings.LinkContextAlphaFactor;
+                //         // spline.EndColorRGBA.a = _settings.LinkContextAlphaFactor;
+                //     }
+                // }
+
+                // if (link.SourceNode == networkGlobal.HoveredNode || link.TargetNode == networkGlobal.HoveredNode)
+                // {
+
+                //     // spline.StartColorRGBA = _settings.LinkHighlightColor;
+                //     // spline.EndColorRGBA = _settings.LinkHighlightColor;
+                // }
+
+                if (networkGlobal.HoveredNode?.ID == link.SourceNodeID || networkGlobal.HoveredNode?.ID == link.TargetNodeID
+                    || networkGlobal.HoveredCommunity?.ID == link.SourceNode.CommunityID || networkGlobal.HoveredCommunity?.ID == link.TargetNode.CommunityID)
                 {
-                    linkType = (uint)LinkType.BundledLink;
-
-                    spline.StartColorRGBA.a *= contextLink.Alpha;
-                    // spline.EndColorRGBA.a = _settings.LinkNormalAlphaFactor;
-                }
-                else
-                {
-                    var a = networkGlobal.Communities[link.SourceNode.CommunityID];
-                    var b = networkGlobal.Communities[link.TargetNode.CommunityID];
-
-                    if (a.Focus && b.Focus)
-                    {
-                        linkType = (uint)LinkType.StraightLink;
-
-                        // spline.StartColorRGBA = _settings.LinkFocusColor;
-                        // spline.EndColorRGBA = _settings.LinkFocusColor;
-                    }
-                    else if (a.Focus || b.Focus)
-                    {
-                        linkType = (uint)LinkType.BundledLink;
-                        // spline.StartColorRGBA.a = _settings.LinkContext2FocusAlphaFactor;
-                        // spline.EndColorRGBA.a = _settings.LinkContext2FocusAlphaFactor;
-                    }
-                    else
-                    {
-                        linkType = (uint)LinkType.BundledLink;
-
-                        // spline.StartColorRGBA.a = _settings.LinkContextAlphaFactor;
-                        // spline.EndColorRGBA.a = _settings.LinkContextAlphaFactor;
-                    }
-                }
-
-                if (link.SourceNode == networkGlobal.HoveredNode || link.TargetNode == networkGlobal.HoveredNode)
-                {
-
-                    // spline.StartColorRGBA = _settings.LinkHighlightColor;
-                    // spline.EndColorRGBA = _settings.LinkHighlightColor;
+                    spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkHighlightColor;
                 }
 
                 int NumSegments = ControlPointCount + BSplineDegree - 2; //NumControlPoints + Degree - 2 (First/Last Point)

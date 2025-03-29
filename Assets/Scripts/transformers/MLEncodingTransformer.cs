@@ -50,10 +50,10 @@ namespace VidiGraph
                 Link globalLink = _networkGlobal.Links[linkID];
                 MultiLayoutContext.Link contextLink = _networkContext.Links[linkID];
 
-                contextLink.Width = GetLinkWidth(globalLink) * _networkContext.ContextSettings.LinkWidth;
+                contextLink.Width = GetLinkWidth(globalLink);
                 contextLink.ColorStart = GetLinkColorStart(globalLink);
                 contextLink.ColorEnd = GetLinkColorEnd(globalLink);
-                contextLink.Alpha = GetLinkAlpha(globalLink) * _networkContext.ContextSettings.LinkNormalAlphaFactor;
+                contextLink.Alpha = GetLinkAlpha(globalLink);
             }
         }
 
@@ -66,10 +66,10 @@ namespace VidiGraph
         {
             GetNodeSize = _ => 1f;
             GetNodeColor = node => GetColor(_networkGlobal.Nodes[node.ID].CommunityID);
-            GetLinkWidth = _ => 1f;
+            GetLinkWidth = _ => _networkContext.ContextSettings.LinkWidth;
             GetLinkColorStart = link => GetColor(link.SourceNode.CommunityID);
             GetLinkColorEnd = link => GetColor(link.TargetNode.CommunityID);
-            GetLinkAlpha = _ => 1f;
+            GetLinkAlpha = _ => _networkContext.ContextSettings.LinkNormalAlphaFactor;
         }
 
         Color GetColor(int commID)

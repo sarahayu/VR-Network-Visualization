@@ -17,17 +17,31 @@ namespace VidiGraph
             return UpdateNode(nodeObj, node, nodeProps, nodeScale);
         }
         public static GameObject UpdateNode(GameObject nodeObj,
-            Node node, MultiLayoutContext.Node nodeProps, float nodeScale)
+            Node node, MultiLayoutContext.Node nodeProps, float nodeScale, Renderer renderer = null)
         {
             nodeObj.transform.localPosition = nodeProps.Position;
             nodeObj.transform.localScale = Vector3.one * nodeProps.Size * nodeScale;
 
-            var renderer = nodeObj.GetComponentInChildren<Renderer>();
+            if (!renderer)
+                renderer = nodeObj.GetComponentInChildren<Renderer>();
+
             MaterialPropertyBlock props = new MaterialPropertyBlock();
 
             renderer.GetPropertyBlock(props);
             props.SetColor("_Color", nodeProps.Color);
+            renderer.SetPropertyBlock(props);
 
+            return nodeObj;
+        }
+        public static GameObject SetNodeColor(GameObject nodeObj, Color color, Renderer renderer = null)
+        {
+            if (!renderer)
+                renderer = nodeObj.GetComponentInChildren<Renderer>();
+
+            MaterialPropertyBlock props = new MaterialPropertyBlock();
+
+            renderer.GetPropertyBlock(props);
+            props.SetColor("_Color", color);
             renderer.SetPropertyBlock(props);
 
             return nodeObj;
@@ -40,17 +54,18 @@ namespace VidiGraph
             return UpdateCommunityNode(nodeObj, nodeProps, nodeScale);
         }
         public static GameObject UpdateCommunityNode(GameObject nodeObj,
-            MinimapContext.Node nodeProps, float nodeScale)
+            MinimapContext.Node nodeProps, float nodeScale, Renderer renderer = null)
         {
             nodeObj.transform.localPosition = nodeProps.Position;
             nodeObj.transform.localScale = Vector3.one * nodeProps.Size * nodeScale;
 
-            var renderer = nodeObj.GetComponentInChildren<Renderer>();
+            if (!renderer)
+                renderer = nodeObj.GetComponentInChildren<Renderer>();
+
             MaterialPropertyBlock props = new MaterialPropertyBlock();
 
             renderer.GetPropertyBlock(props);
             props.SetColor("_Color", nodeProps.Color);
-
             renderer.SetPropertyBlock(props);
 
             return nodeObj;

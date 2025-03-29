@@ -26,9 +26,10 @@ namespace VidiGraph
 
         HashSet<int> _selectedNodes = new HashSet<int>();
         public HashSet<int> SelectedNodes { get { return _selectedNodes; } }
-        HashSet<int> _selectedCommunities = new HashSet<int>();
-        public HashSet<int> SelectedCommunities { get { return _selectedCommunities; } }
-        Dictionary<int, HashSet<int>> _selectedNodesInCommunity = new Dictionary<int, HashSet<int>>();
+        // HashSet<int> _selectedCommunities = new HashSet<int>();
+        // public HashSet<int> SelectedCommunities { get { return _selectedCommunities; } }
+        // Dictionary<int, HashSet<int>> _selectedNodesInCommunity = new Dictionary<int, HashSet<int>>();
+        public HashSet<int> SelectedCommunities { get { return GetCompleteCommunities(SelectedNodes); } }
 
 
         void Awake()
@@ -91,17 +92,13 @@ namespace VidiGraph
 
         public void ToggleSelectedNodes(List<int> nodeIDs)
         {
-            // TODO REFACTOR
+            // TODO move this to NetworkGlobal
+            // we'll only keep track of nodes that have changed
             List<int> selectOn = new List<int>();
             List<int> selectOff = new List<int>();
 
-            List<int> selectOnComm = new List<int>();
-            List<int> selectOffComm = new List<int>();
-
             foreach (var nodeID in nodeIDs)
             {
-                var commID = _networkGlobal.Nodes[nodeID].CommunityID;
-
                 if (_selectedNodes.Contains(nodeID))
                 {
                     selectOff.Add(nodeID);
@@ -109,16 +106,6 @@ namespace VidiGraph
 
                     _networkGlobal.Nodes[nodeID].Selected = false;
                     _networkGlobal.Nodes[nodeID].Dirty = true;
-
-                    // if we're removing node from community that had all its nodes selected, also deselect that community
-                    if (_selectedNodesInCommunity[commID].Count == _networkGlobal.Communities[commID].Nodes.Count)
-                    {
-                        selectOffComm.Add(commID);
-                        _networkGlobal.Communities[commID].Selected = false;
-                        _networkGlobal.Communities[commID].Dirty = true;
-                    }
-
-                    _selectedNodesInCommunity[commID].Remove(nodeID);
                 }
                 else
                 {
@@ -127,27 +114,12 @@ namespace VidiGraph
 
                     _networkGlobal.Nodes[nodeID].Selected = true;
                     _networkGlobal.Nodes[nodeID].Dirty = true;
-
-                    if (!_selectedNodesInCommunity.ContainsKey(commID))
-                        _selectedNodesInCommunity[commID] = new HashSet<int>();
-
-                    _selectedNodesInCommunity[commID].Add(nodeID);
-
-                    // if we're adding a node to community and it becomes full, also select that community
-                    if (_selectedNodesInCommunity[commID].Count == _networkGlobal.Communities[commID].Nodes.Count)
-                    {
-                        selectOnComm.Add(commID);
-
-                        _networkGlobal.Communities[commID].Selected = true;
-                        _networkGlobal.Communities[commID].Dirty = true;
-                    }
                 }
             }
             _multiLayoutNetwork.SetNodesSelected(selectOn, true);
             _multiLayoutNetwork.SetNodesSelected(selectOff, false);
 
-            _multiLayoutNetwork.SetCommunitiesSelected(selectOnComm, true);
-            _multiLayoutNetwork.SetCommunitiesSelected(selectOffComm, false);
+            UpdateSelectedCommunities();
             _multiLayoutNetwork.UpdateRenderElements();
         }
 
@@ -165,65 +137,33 @@ namespace VidiGraph
 
         public void ToggleSelectedCommunities(List<int> commIDs)
         {
-            // TODO REFACTOR
-            List<int> selectOn = new List<int>();
-            List<int> selectOff = new List<int>();
+            var oldSelectedNodes = new HashSet<int>(_selectedNodes);
 
-            List<int> selectOnNode = new List<int>();
-            List<int> selectOffNode = new List<int>();
+            _selectedNodes.Clear();
 
             foreach (var commID in commIDs)
             {
-                if (_selectedCommunities.Contains(commID))
+                var globalComm = _networkGlobal.Communities[commID];
+                if (globalComm.Selected)
                 {
-                    selectOff.Add(commID);
-                    _selectedCommunities.Remove(commID);
-
-                    _networkGlobal.Communities[commID].Selected = false;
-                    _networkGlobal.Communities[commID].Dirty = true;
-
-                    // remove all nodes in the community from selectedNodes, if they appear there
-                    var nodeIDs = _networkGlobal.Communities[commID].Nodes.Select(n => n.ID);
-                    _selectedNodes.RemoveWhere(n => nodeIDs.Contains(n));
-                    _selectedNodesInCommunity[commID].Clear();
-                    selectOffNode.AddRange(nodeIDs);
-
-                    foreach (var nodeID in nodeIDs)
-                    {
-                        _networkGlobal.Nodes[nodeID].Selected = false;
-                        _networkGlobal.Nodes[nodeID].Dirty = true;
-                    }
+                    globalComm.Selected = false;
+                    _multiLayoutNetwork.SetCommunitySelected(commID, false);
+                    _selectedNodes.ExceptWith(globalComm.Nodes.Select(n => n.ID));
                 }
                 else
                 {
-                    selectOn.Add(commID);
-                    _selectedCommunities.Add(commID);
-
-                    _networkGlobal.Communities[commID].Selected = true;
-                    _networkGlobal.Communities[commID].Dirty = true;
-
-                    // add all nodes in the community into selectedNodes, even if they are already there (hashset ensures uniqueness)
-                    var nodeIDs = _networkGlobal.Communities[commID].Nodes.Select(n => n.ID);
-                    _selectedNodes.UnionWith(nodeIDs);
-                    if (!_selectedNodesInCommunity.ContainsKey(commID))
-                        _selectedNodesInCommunity[commID] = new HashSet<int>();
-                    _selectedNodesInCommunity[commID].UnionWith(nodeIDs);
-                    // also select all nodes in community
-                    selectOnNode.AddRange(nodeIDs);
-
-                    foreach (var nodeID in nodeIDs)
-                    {
-                        _networkGlobal.Nodes[nodeID].Selected = true;
-                        _networkGlobal.Nodes[nodeID].Dirty = true;
-                    }
+                    globalComm.Selected = true;
+                    _multiLayoutNetwork.SetCommunitySelected(commID, true);
+                    _selectedNodes.UnionWith(globalComm.Nodes.Select(n => n.ID));
                 }
+                globalComm.Dirty = true;
             }
 
-            _multiLayoutNetwork.SetCommunitiesSelected(selectOn, true);
-            _multiLayoutNetwork.SetCommunitiesSelected(selectOff, false);
+            var newSelected = _selectedNodes.Except(oldSelectedNodes);
+            var removed = oldSelectedNodes.Except(_selectedNodes);
 
-            _multiLayoutNetwork.SetNodesSelected(selectOnNode, true);
-            _multiLayoutNetwork.SetNodesSelected(selectOffNode, false);
+            _multiLayoutNetwork.SetNodesSelected(newSelected.ToList(), true);
+            _multiLayoutNetwork.SetNodesSelected(removed.ToList(), false);
             _multiLayoutNetwork.UpdateRenderElements();
         }
 
@@ -235,16 +175,67 @@ namespace VidiGraph
                 _networkGlobal.Nodes[nodeID].Dirty = true;
             }
 
-            foreach (var commID in _selectedCommunities)
+            _selectedNodes.Clear();
+
+            foreach (var (_, comm) in _networkGlobal.Communities)
             {
-                _networkGlobal.Communities[commID].Selected = false;
-                _networkGlobal.Communities[commID].Dirty = true;
+                comm.Selected = false;
+                // just mark all of them dirty, there usually isn't many communities
+                comm.Dirty = true;
             }
 
-            _selectedNodes.Clear();
-            _selectedCommunities.Clear();
             _multiLayoutNetwork.ClearSelection();
             _multiLayoutNetwork.UpdateRenderElements();
+        }
+
+        // return a list of communityIDs of communities where all of its nodes are selected.
+        // this helps us select a community by also selecting all of its nodes.
+        // hashsets ensure no duplicates.
+        HashSet<int> GetCompleteCommunities(HashSet<int> nodeIDs)
+        {
+            Dictionary<int, int> curCommSize = new Dictionary<int, int>();
+
+            foreach (var nodeID in nodeIDs)
+            {
+                int commID = _networkGlobal.Nodes[nodeID].CommunityID;
+
+                if (!curCommSize.ContainsKey(commID))
+                    curCommSize[commID] = 0;
+
+                curCommSize[commID] += 1;
+            }
+
+            HashSet<int> completeComm = new HashSet<int>();
+
+            foreach (var (commID, size) in curCommSize)
+            {
+                if (size == _networkGlobal.Communities[commID].Nodes.Count)
+                    completeComm.Add(commID);
+            }
+
+            return completeComm;
+        }
+
+        void UpdateSelectedCommunities()
+        {
+            // we'll just calculate complete communities every time since there usually isn't a lot of communities.
+            var completeComms = GetCompleteCommunities(_selectedNodes);
+            var incompleteComms = _networkGlobal.Communities.Keys.ToHashSet().Except(completeComms);
+
+            _multiLayoutNetwork.SetCommunitiesSelected(completeComms.ToList(), true);
+            _multiLayoutNetwork.SetCommunitiesSelected(incompleteComms.ToList(), false);
+
+            foreach (var comm in completeComms)
+            {
+                _networkGlobal.Communities[comm].Selected = true;
+                _networkGlobal.Communities[comm].Dirty = true;
+            }
+
+            foreach (var comm in incompleteComms)
+            {
+                _networkGlobal.Communities[comm].Selected = false;
+                _networkGlobal.Communities[comm].Dirty = true;
+            }
         }
     }
 }
