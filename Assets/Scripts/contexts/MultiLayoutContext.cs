@@ -2,9 +2,11 @@
 * NetworkContext3D contains network information specific to MultiLayoutNetwork.
 */
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace VidiGraph
 {
@@ -51,13 +53,6 @@ namespace VidiGraph
 
         public class Community
         {
-            public enum CommunityState
-            {
-                None,
-                Spider,
-                Floor,
-                NumStates,
-            }
 
             public double Mass;
             public Vector3 MassCenter;
@@ -69,6 +64,14 @@ namespace VidiGraph
             public bool Dirty = false;
         }
 
+        public enum CommunityState
+        {
+            None,
+            Spider,
+            Floor,
+            NumStates,
+        }
+
         public Settings ContextSettings = new Settings();
 
         public Dictionary<int, Node> Nodes = new Dictionary<int, Node>();
@@ -77,6 +80,13 @@ namespace VidiGraph
 
         [HideInInspector]
         public TransformInfo CurrentTransform = new TransformInfo();
+
+        public Func<VidiGraph.Node, float> GetNodeSize = null;
+        public Func<VidiGraph.Node, Color> GetNodeColor = null;
+        public Func<VidiGraph.Link, float> GetLinkWidth = null;
+        public Func<VidiGraph.Link, Color> GetLinkColorStart = null;
+        public Func<VidiGraph.Link, Color> GetLinkColorEnd = null;
+        public Func<VidiGraph.Link, float> GetLinkAlpha = null;
 
         public MultiLayoutContext()
         {
@@ -103,6 +113,7 @@ namespace VidiGraph
             {
                 Communities[community.ID] = new Community();
             }
+            SetDefaultEncodings(networkGlobal);
         }
 
         public void RecomputeGeometricProps(NetworkGlobal networkGlobal)
@@ -117,6 +128,39 @@ namespace VidiGraph
                 contextCommunity.Size = CommunityMathUtils.ComputeSize(community.Nodes, Nodes,
                     contextCommunity.MassCenter);
             }
+        }
+
+        void SetDefaultEncodings(NetworkGlobal networkGlobal)
+        {
+            GetNodeSize = _ => 1f;
+            GetNodeColor = node => GetColor(networkGlobal.Nodes[node.ID].CommunityID, networkGlobal.Communities);
+            GetLinkWidth = _ => ContextSettings.LinkWidth;
+            GetLinkColorStart = link => GetColor(link.SourceNode.CommunityID, networkGlobal.Communities);
+            GetLinkColorEnd = link => GetColor(link.TargetNode.CommunityID, networkGlobal.Communities);
+            GetLinkAlpha = _ => ContextSettings.LinkNormalAlphaFactor;
+        }
+
+        Color GetColor(int commID, Dictionary<int, VidiGraph.Community> comms)
+        {
+            return commID == -1 ? Color.black : comms[commID].Color;
+        }
+
+        static public CommunityState StrToState(string state)
+        {
+            switch (state)
+            {
+                case "spherical":
+                    return CommunityState.None;
+                case "spider":
+                    return CommunityState.Spider;
+                case "floor":
+                    return CommunityState.Floor;
+            }
+
+            Debug.Assert(true);
+
+            // unreachable
+            return CommunityState.None;
         }
     }
 }

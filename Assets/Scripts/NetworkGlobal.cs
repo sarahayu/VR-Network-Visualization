@@ -34,6 +34,10 @@ namespace VidiGraph
 
         public Node HoveredNode = null;
         public Community HoveredCommunity = null;
+        HashSet<int> _selectedNodes = new HashSet<int>();
+        public HashSet<int> SelectedNodes { get { return _selectedNodes; } }
+
+        public HashSet<int> SelectedCommunities { get { return GetCompleteCommunities(SelectedNodes); } }
 
         void Reset()
         {
@@ -128,6 +132,146 @@ namespace VidiGraph
         public List<Community> HighlightedCommunities()
         {
             return (from comms in _communities.Values where comms.Focus == true select comms).ToList();
+        }
+
+        public void SetSelectedNodes(List<int> nodeIDs, bool selected)
+        {
+            if (selected)
+            {
+                foreach (var nodeID in nodeIDs)
+                {
+                    if (!_selectedNodes.Contains(nodeID))
+                    {
+                        _selectedNodes.Add(nodeID);
+
+                        Nodes[nodeID].Selected = true;
+                        Nodes[nodeID].Dirty = true;
+                    }
+                }
+            }
+            else
+            {
+                foreach (var nodeID in nodeIDs)
+                {
+                    if (_selectedNodes.Contains(nodeID))
+                    {
+                        _selectedNodes.Remove(nodeID);
+
+                        Nodes[nodeID].Selected = false;
+                        Nodes[nodeID].Dirty = true;
+                    }
+                }
+            }
+
+            UpdateSelectedCommunities();
+        }
+
+        public void ToggleSelectedNodes(List<int> nodeIDs)
+        {
+            foreach (var nodeID in nodeIDs)
+            {
+                if (_selectedNodes.Contains(nodeID))
+                {
+                    _selectedNodes.Remove(nodeID);
+
+                    Nodes[nodeID].Selected = false;
+                    Nodes[nodeID].Dirty = true;
+                }
+                else
+                {
+                    _selectedNodes.Add(nodeID);
+
+                    Nodes[nodeID].Selected = true;
+                    Nodes[nodeID].Dirty = true;
+                }
+            }
+
+            UpdateSelectedCommunities();
+        }
+
+        public void SetSelectedCommunities(List<int> commIDs, bool selected)
+        {
+            if (selected)
+            {
+                foreach (var commID in commIDs)
+                {
+                    var globalComm = Communities[commID];
+                    if (!globalComm.Selected)
+                    {
+                        globalComm.Selected = true;
+                        _selectedNodes.UnionWith(globalComm.Nodes.Select(n => n.ID));
+                    }
+                    globalComm.Dirty = true;
+                }
+            }
+            else
+            {
+                foreach (var commID in commIDs)
+                {
+                    var globalComm = Communities[commID];
+                    if (globalComm.Selected)
+                    {
+                        globalComm.Selected = false;
+                        _selectedNodes.ExceptWith(globalComm.Nodes.Select(n => n.ID));
+                    }
+                    globalComm.Dirty = true;
+                }
+            }
+        }
+
+        public void ToggleSelectedCommunities(List<int> commIDs)
+        {
+            var oldSelectedNodes = new HashSet<int>(_selectedNodes);
+
+            foreach (var commID in commIDs)
+            {
+                var globalComm = Communities[commID];
+                if (globalComm.Selected)
+                {
+                    globalComm.Selected = false;
+                    _selectedNodes.ExceptWith(globalComm.Nodes.Select(n => n.ID));
+                }
+                else
+                {
+                    globalComm.Selected = true;
+                    _selectedNodes.UnionWith(globalComm.Nodes.Select(n => n.ID));
+                }
+                globalComm.Dirty = true;
+            }
+
+            var newSelected = _selectedNodes.Except(oldSelectedNodes);
+            var removed = oldSelectedNodes.Except(_selectedNodes);
+
+            foreach (var newNodeID in newSelected)
+            {
+                Nodes[newNodeID].Selected = true;
+                Nodes[newNodeID].Dirty = true;
+            }
+
+            foreach (var oldNodeID in removed)
+            {
+                Nodes[oldNodeID].Selected = false;
+                Nodes[oldNodeID].Dirty = true;
+            }
+        }
+
+        // clears both nodes and communities
+        public void ClearSelectedItems()
+        {
+            foreach (var nodeID in _selectedNodes)
+            {
+                Nodes[nodeID].Selected = false;
+                Nodes[nodeID].Dirty = true;
+            }
+
+            _selectedNodes.Clear();
+
+            foreach (var (_, comm) in Communities)
+            {
+                comm.Selected = false;
+                // just mark all of them dirty, there usually isn't many communities
+                comm.Dirty = true;
+            }
         }
 
         void CommunitiesInit()
@@ -301,7 +445,7 @@ namespace VidiGraph
             link.PathInTree.Add(targetNode);
         }
 
-        private void BuildTreeLinks(int nodeID)
+        void BuildTreeLinks(int nodeID)
         {
             if (!_nodes[nodeID].IsVirtualNode) return;
 
@@ -313,6 +457,53 @@ namespace VidiGraph
                 _treeLinks.Add(new Link(_nodes[nodeID], _nodes[childID], treeLinkID));
 
                 BuildTreeLinks(childID);
+            }
+        }
+
+        // return a list of communityIDs of communities where all of its nodes are selected.
+        // this helps us select a community by also selecting all of its nodes.
+        // hashsets ensure no duplicates.
+        HashSet<int> GetCompleteCommunities(HashSet<int> nodeIDs)
+        {
+            Dictionary<int, int> curCommSize = new Dictionary<int, int>();
+
+            foreach (var nodeID in nodeIDs)
+            {
+                int commID = Nodes[nodeID].CommunityID;
+
+                if (!curCommSize.ContainsKey(commID))
+                    curCommSize[commID] = 0;
+
+                curCommSize[commID] += 1;
+            }
+
+            HashSet<int> completeComm = new HashSet<int>();
+
+            foreach (var (commID, size) in curCommSize)
+            {
+                if (size == Communities[commID].Nodes.Count)
+                    completeComm.Add(commID);
+            }
+
+            return completeComm;
+        }
+
+        void UpdateSelectedCommunities()
+        {
+            // we'll just calculate complete communities every time since there usually isn't a lot of communities.
+            var completeComms = GetCompleteCommunities(_selectedNodes);
+            var incompleteComms = Communities.Keys.ToHashSet().Except(completeComms);
+
+            foreach (var comm in completeComms)
+            {
+                Communities[comm].Selected = true;
+                Communities[comm].Dirty = true;
+            }
+
+            foreach (var comm in incompleteComms)
+            {
+                Communities[comm].Selected = false;
+                Communities[comm].Dirty = true;
             }
         }
     }

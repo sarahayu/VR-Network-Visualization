@@ -16,13 +16,6 @@ namespace VidiGraph
 
         TransformInfo _mlEncodingTransform;
 
-        public Func<Node, float> GetNodeSize = null;
-        public Func<Node, Color> GetNodeColor = null;
-        public Func<Link, float> GetLinkWidth = null;
-        public Func<Link, Color> GetLinkColorStart = null;
-        public Func<Link, Color> GetLinkColorEnd = null;
-        public Func<Link, float> GetLinkAlpha = null;
-
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
             _networkContext = (MultiLayoutContext)networkContext;
@@ -30,8 +23,6 @@ namespace VidiGraph
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
             _mlEncodingTransform = new TransformInfo(MlEncodingPosition);
-
-            SetDefaultEncodings();
         }
 
         public override void ApplyTransformation()
@@ -41,8 +32,8 @@ namespace VidiGraph
                 Node globalNode = _networkGlobal.Nodes[nodeID];
                 MultiLayoutContext.Node contextNode = _networkContext.Nodes[nodeID];
 
-                contextNode.Size = GetNodeSize(globalNode);
-                contextNode.Color = GetNodeColor(globalNode);
+                contextNode.Size = _networkContext.GetNodeSize(globalNode);
+                contextNode.Color = _networkContext.GetNodeColor(globalNode);
             }
 
             foreach (var linkID in _networkContext.Links.Keys)
@@ -50,31 +41,16 @@ namespace VidiGraph
                 Link globalLink = _networkGlobal.Links[linkID];
                 MultiLayoutContext.Link contextLink = _networkContext.Links[linkID];
 
-                contextLink.Width = GetLinkWidth(globalLink);
-                contextLink.ColorStart = GetLinkColorStart(globalLink);
-                contextLink.ColorEnd = GetLinkColorEnd(globalLink);
-                contextLink.Alpha = GetLinkAlpha(globalLink);
+                contextLink.Width = _networkContext.GetLinkWidth(globalLink);
+                contextLink.ColorStart = _networkContext.GetLinkColorStart(globalLink);
+                contextLink.ColorEnd = _networkContext.GetLinkColorEnd(globalLink);
+                contextLink.Alpha = _networkContext.GetLinkAlpha(globalLink);
             }
         }
 
         public override TransformInterpolator GetInterpolator()
         {
             return new MLEncodingInterpolator();
-        }
-
-        void SetDefaultEncodings()
-        {
-            GetNodeSize = _ => 1f;
-            GetNodeColor = node => GetColor(_networkGlobal.Nodes[node.ID].CommunityID);
-            GetLinkWidth = _ => _networkContext.ContextSettings.LinkWidth;
-            GetLinkColorStart = link => GetColor(link.SourceNode.CommunityID);
-            GetLinkColorEnd = link => GetColor(link.TargetNode.CommunityID);
-            GetLinkAlpha = _ => _networkContext.ContextSettings.LinkNormalAlphaFactor;
-        }
-
-        Color GetColor(int commID)
-        {
-            return commID == -1 ? Color.black : _networkGlobal.Communities[commID].Color;
         }
     }
 

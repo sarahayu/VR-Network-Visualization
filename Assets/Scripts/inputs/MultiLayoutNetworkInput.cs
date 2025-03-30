@@ -16,6 +16,7 @@ namespace VidiGraph
         public XRInputButtonReader RightGripPress = new XRInputButtonReader("RightGripPress");
         public XRInputButtonReader RightTriggerPress = new XRInputButtonReader("RightTriggerPress");
         public XRInputButtonReader RightPrimaryButton = new XRInputButtonReader("RightPrimaryButton");
+        public XRInputButtonReader RightSecondaryButton = new XRInputButtonReader("RightSecondaryButton");
 
         NetworkManager _manager;
 
@@ -44,6 +45,7 @@ namespace VidiGraph
             RightGripPress.EnableDirectActionIfModeUsed();
             RightTriggerPress.EnableDirectActionIfModeUsed();
             RightPrimaryButton.EnableDirectActionIfModeUsed();
+            RightSecondaryButton.EnableDirectActionIfModeUsed();
         }
 
         void Start()
@@ -67,6 +69,21 @@ namespace VidiGraph
                 else
                 {
                     _manager.ClearSelection();
+                }
+            }
+
+            if (RightPrimaryButton.ReadWasPerformedThisFrame())
+            {
+                foreach (var commID in _manager.SelectedCommunities)
+                {
+                    _manager.SetLayout(commID, "spider");
+                }
+            }
+            if (RightSecondaryButton.ReadWasPerformedThisFrame())
+            {
+                foreach (var commID in _manager.SelectedCommunities)
+                {
+                    _manager.SetLayout(commID, "spherical");
                 }
             }
 

@@ -6,9 +6,10 @@ namespace VidiGraph
 {
     public class HandheldNetwork : Network
     {
+        MinimapContext _networkContext = new MinimapContext();
+        public MinimapContext Context { get { return _networkContext; } }
         NetworkManager _manager;
         NetworkRenderer _renderer;
-        MinimapContext _networkContext = new MinimapContext();
         NetworkContextTransformer _transformer;
 
         void Awake()
