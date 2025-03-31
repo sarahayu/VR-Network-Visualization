@@ -151,6 +151,12 @@ namespace VidiGraph
             _multiLayoutNetwork.SetLayout(commIDs, layout);
         }
 
+        // layout = [spherical, spider, floor]
+        public void SetLayout(int commID, string layout)
+        {
+            _multiLayoutNetwork.SetLayout(new List<int> { commID }, layout);
+        }
+
         public void BringNodes(List<int> nodeIDs)
         {
             _multiLayoutNetwork.SetNodesBrought(nodeIDs, true);
