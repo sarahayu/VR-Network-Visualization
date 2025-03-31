@@ -31,8 +31,8 @@ namespace VidiGraph
         public override void ApplyTransformation()
         {
             // TODO calculate at runtime
-            var spiderNodes = _fileLoader.SpiderData.nodes;
-            var spiderIdToIdx = _fileLoader.SpiderData.idToIdx;
+            var spiderNodes = _fileLoader.SphericalLayout.nodes;
+            var spiderIdToIdx = _fileLoader.SphericalLayout.idToIdx;
 
             foreach (var commID in _commsToUpdate)
             {
@@ -40,8 +40,8 @@ namespace VidiGraph
 
                 foreach (var node in _networkGlobal.Communities[commID].Nodes)
                 {
-                    var spiderPos = spiderNodes[spiderIdToIdx[node.ID]].spiderPos;
-                    _networkContext.Nodes[node.ID].Position = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
+                    var spiderPos = spiderNodes[spiderIdToIdx[node.ID]]._position3D;
+                    _networkContext.Nodes[node.ID].Position = new Vector3(spiderPos[0], spiderPos[1], spiderPos[2]);
                     _networkContext.Nodes[node.ID].Dirty = true;
 
                 }
@@ -87,8 +87,8 @@ namespace VidiGraph
         {
             _networkContext = networkContext;
 
-            var spiderNodes = fileLoader.SpiderData.nodes;
-            var spiderIdToIdx = fileLoader.SpiderData.idToIdx;
+            var spiderNodes = fileLoader.SphericalLayout.nodes;
+            var spiderIdToIdx = fileLoader.SphericalLayout.idToIdx;
 
 
             foreach (var commID in toUpdate)
@@ -97,10 +97,10 @@ namespace VidiGraph
 
                 foreach (var node in networkGlobal.Communities[commID].Nodes)
                 {
-                    var spiderPos = spiderNodes[spiderIdToIdx[node.ID]].spiderPos;
+                    var spiderPos = spiderNodes[spiderIdToIdx[node.ID]]._position3D;
 
                     _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
-                    _endPositions[node.ID] = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
+                    _endPositions[node.ID] = new Vector3(spiderPos[0], spiderPos[1], spiderPos[2]);
                 }
 
                 foreach (var link in networkGlobal.Communities[commID].InnerLinks)

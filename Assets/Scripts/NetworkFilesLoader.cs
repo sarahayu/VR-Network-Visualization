@@ -34,14 +34,14 @@ namespace VidiGraph
             string sphericalFile = $"{DatasetName}{SphericalSuffix}";
             string hairballFile = $"{DatasetName}{HairballSuffix}";
 
-            SpiderData = SpiderFileDecoder.Decode(spiderFile);
+            // SpiderData = SpiderFileDecoder.Decode(spiderFile);
 
             FlatLayout = Decode<NetworkFileData>(flatFile);
             SphericalLayout = Decode<NetworkFileData>(sphericalFile);
             HairballLayout = Decode<NetworkFileData>(hairballFile);
 
             InitializeIdMap(SphericalLayout);
-            InitializeIdMap(SpiderData);
+            // InitializeIdMap(SpiderData);
             InitializeIdMap(FlatLayout);
             InitializeIdMap(SphericalLayout);
             InitializeIdMap(HairballLayout);
