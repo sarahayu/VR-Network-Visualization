@@ -29,6 +29,30 @@ User: Highlight the node with the highest degree
   "tasks": ["Create active node set using query", "Highlight currently selected nodes"]
 }}
 
+User: Change the layout of the selected group to spherical
+{{
+  "command": "Change Layout Spherical",
+  "functions": ["Change Layout Spherical"],
+  "tasks": ["Apply spherical layout to selected communities"]
+}}
+
+User: Use spider layout for the current community
+{{
+  "command": "Change Layout Spider",
+  "functions": ["Change Layout Spider"],
+  "tasks": ["Apply spider layout to selected communities"]
+}}
+
+
+User: Put the group layout on the floor
+{{
+  "command": "Change Layout Floor",
+  "functions": ["Change Layout floor"],
+  "tasks": ["Apply floor layout to selected communities"]
+}}
+
+
+
 User: Select the 5 least well-connected nodes
 {{
   "command": "Select Node",

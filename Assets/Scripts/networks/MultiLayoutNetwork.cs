@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -6,13 +7,42 @@ namespace VidiGraph
 {
     public class MultiLayoutNetwork : Network
     {
+        [Serializable]
+        public class Settings
+        {
+            [Range(0.0f, 100f)]
+            public float NodeScale = 1f;
+            [Range(0.0f, 0.1f)]
+            public float LinkWidth = 0.0025f;
+            [Range(0.0f, 1.0f)]
+            public float EdgeBundlingStrength = 0.8f;
+
+            public Color CommHighlightColor;
+            public Color NodeHighlightColor;
+            public Color LinkHighlightColor;
+            public Color LinkFocusColor;
+
+            [Range(0.0f, 0.1f)]
+            public float LinkMinimumAlpha = 0.01f;
+            [Range(0.0f, 1.0f)]
+            public float LinkNormalAlphaFactor = 0.05f;
+            [Range(0.0f, 1.0f)]
+            public float LinkContextAlphaFactor = 0.5f;
+            [Range(0.0f, 1.0f)]
+            public float LinkContext2FocusAlphaFactor = 0.8f;
+        }
+
+        public Settings BaseSettings;
+
+        MultiLayoutContext _networkContext = new MultiLayoutContext();
+        public MultiLayoutContext Context { get { return _networkContext; } }
+
         NetworkManager _manager;
 
-        NetworkInput _bigNetworkInput;
-        NetworkRenderer _bigNetworkRenderer;
-        NetworkContext3D _networkContext = new NetworkContext3D();
+        NetworkInput _multiLayoutInput;
+        NetworkRenderer _multiLayoutRenderer;
 
-        Dictionary<string, NetworkTransformer> _transformers = new Dictionary<string, NetworkTransformer>();
+        Dictionary<string, NetworkContextTransformer> _transformers = new Dictionary<string, NetworkContextTransformer>();
 
         // keep a reference to spiderlayout specifically to focus on individual communities
         SpiderLayoutTransformer _spiderLayoutTransformer;
@@ -42,23 +72,25 @@ namespace VidiGraph
         public override void Initialize()
         {
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _networkContext.Update(_manager.NetworkGlobal);
+            _networkContext.SetFromGlobal(_manager.NetworkGlobal);
+            SetContextSettings();
 
-            _bigNetworkInput = GetComponent<NetworkInput>();
-            _bigNetworkRenderer = GetComponentInChildren<NetworkRenderer>();
-
-            _bigNetworkInput.Initialize();
-            _bigNetworkRenderer.Initialize(_networkContext);
+            _multiLayoutInput = GetComponent<NetworkInput>();
+            _multiLayoutInput.Initialize();
 
             InitializeTransformers();
 
+            TransformNetworkNoRender("encoding");
             _isSphericalLayout = true;
-            TransformNetwork("spherical", animated: false);
+            TransformNetworkNoRender("spherical");
+
+            _multiLayoutRenderer = GetComponentInChildren<NetworkRenderer>();
+            _multiLayoutRenderer.Initialize(_networkContext);
         }
 
         public override void UpdateRenderElements()
         {
-            _bigNetworkRenderer.UpdateRenderElements();
+            _multiLayoutRenderer.UpdateRenderElements();
         }
 
         public override void DrawPreview()
@@ -68,7 +100,22 @@ namespace VidiGraph
 
         void Draw()
         {
-            _bigNetworkRenderer.Draw();
+            _multiLayoutRenderer.Draw();
+        }
+
+        void SetContextSettings()
+        {
+            _networkContext.ContextSettings.NodeScale = BaseSettings.NodeScale;
+            _networkContext.ContextSettings.LinkWidth = BaseSettings.LinkWidth;
+            _networkContext.ContextSettings.EdgeBundlingStrength = BaseSettings.EdgeBundlingStrength;
+            _networkContext.ContextSettings.CommHighlightColor = BaseSettings.CommHighlightColor;
+            _networkContext.ContextSettings.NodeHighlightColor = BaseSettings.NodeHighlightColor;
+            _networkContext.ContextSettings.LinkHighlightColor = BaseSettings.LinkHighlightColor;
+            _networkContext.ContextSettings.LinkFocusColor = BaseSettings.LinkFocusColor;
+            _networkContext.ContextSettings.LinkMinimumAlpha = BaseSettings.LinkMinimumAlpha;
+            _networkContext.ContextSettings.LinkNormalAlphaFactor = BaseSettings.LinkNormalAlphaFactor;
+            _networkContext.ContextSettings.LinkContextAlphaFactor = BaseSettings.LinkContextAlphaFactor;
+            _networkContext.ContextSettings.LinkContext2FocusAlphaFactor = BaseSettings.LinkContext2FocusAlphaFactor;
         }
 
         void InitializeTransformers()
@@ -90,6 +137,12 @@ namespace VidiGraph
             _floorLayoutTransformer = GetComponentInChildren<FloorLayoutTransformer>();
             _transformers["floor"] = _floorLayoutTransformer;
             _transformers["floor"].Initialize(_manager.NetworkGlobal, _networkContext);
+
+            _transformers["encoding"] = GetComponentInChildren<MLEncodingTransformer>();
+            _transformers["encoding"].Initialize(_manager.NetworkGlobal, _networkContext);
+
+            _transformers["highlight"] = GetComponentInChildren<HighlightTransformer>();
+            _transformers["highlight"].Initialize(_manager.NetworkGlobal, _networkContext);
         }
 
         public void CycleCommunityFocus(int community, bool animated = true)
@@ -101,13 +154,13 @@ namespace VidiGraph
 
             switch (nextState)
             {
-                case NetworkContext3D.Community.CommunityState.None:
+                case MultiLayoutContext.CommunityState.None:
                     TransformNetwork("floor", animated);
                     break;
-                case NetworkContext3D.Community.CommunityState.Spider:
+                case MultiLayoutContext.CommunityState.Spider:
                     TransformNetwork("spider", animated);
                     break;
-                case NetworkContext3D.Community.CommunityState.Floor:
+                case MultiLayoutContext.CommunityState.Floor:
                     TransformNetwork("floor", animated);
                     break;
                 default:
@@ -125,7 +178,7 @@ namespace VidiGraph
                 }
 
                 TransformNetwork("spider", animated: false);
-                _bigNetworkRenderer.UpdateRenderElements();
+                _multiLayoutRenderer.UpdateRenderElements();
             }
 
             _isSphericalLayout = !_isSphericalLayout;
@@ -135,18 +188,43 @@ namespace VidiGraph
             TransformNetwork(layout, animated);
         }
 
-        public void ToggleFocusNodes(int[] nodeIDs, bool animated = true)
+        public void UpdateSelectedElements()
         {
-            foreach (var nodeID in nodeIDs)
+            TransformNetwork("highlight", animated: false);
+        }
+
+        // layout = [spherical, spider, floor]
+        public void SetLayout(int commID, string layout)
+        {
+            var curLayout = _networkContext.Communities[commID].State;
+
+            bool isCommFocused = layout == "floor" || layout == "spider";
+            _manager.NetworkGlobal.Communities[commID].Focus = isCommFocused;
+            _networkContext.Communities[commID].State = MultiLayoutContext.StrToState(layout);
+
+            if (layout == "spider")
             {
-                bool setFocus = _networkContext.Nodes[nodeID].State == NetworkContext3D.Node.NodeState.None;
-
-                _bringNodeTransformer.SetFocusNodeQueue(nodeID, setFocus);
-
-                _networkContext.Nodes[nodeID].State = setFocus ? NetworkContext3D.Node.NodeState.Bring : NetworkContext3D.Node.NodeState.None;
+                _spiderLayoutTransformer.SetFocusCommunityQueue(commID, true);
+                TransformNetwork("spider", animated: true);
+            }
+            else if (layout == "floor")
+            {
+                _floorLayoutTransformer.SetFocusCommunityQueue(commID, true);
+                TransformNetwork("floor", animated: true);
+            }
+            else if (layout == "spherical")
+            {
+                if (curLayout == MultiLayoutContext.CommunityState.Spider)
+                {
+                    _spiderLayoutTransformer.SetFocusCommunityQueue(commID, false);
+                }
+                else if (curLayout == MultiLayoutContext.CommunityState.Floor)
+                {
+                    _floorLayoutTransformer.SetFocusCommunityQueue(commID, false);
+                }
+                TransformNetwork("spherical", animated: true);
             }
 
-            TransformNetwork("bringNode", animated);
         }
 
         void TransformNetwork(string layout, bool animated)
@@ -164,14 +242,20 @@ namespace VidiGraph
             {
                 _transformers[layout].ApplyTransformation();
                 _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
-                _bigNetworkRenderer.UpdateRenderElements();
+                _multiLayoutRenderer.UpdateRenderElements();
             }
         }
 
-        NetworkContext3D.Community.CommunityState GetNextCommunityState(int community)
+        void TransformNetworkNoRender(string layout)
+        {
+            _transformers[layout].ApplyTransformation();
+            _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+        }
+
+        MultiLayoutContext.CommunityState GetNextCommunityState(int community)
         {
             var curState = _networkContext.Communities[community].State;
-            return (NetworkContext3D.Community.CommunityState)((uint)(curState + 1) % (uint)NetworkContext3D.Community.CommunityState.NumStates);
+            return (MultiLayoutContext.CommunityState)((uint)(curState + 1) % (uint)MultiLayoutContext.CommunityState.NumStates);
         }
 
         void ClearCommunityState(int community)
@@ -179,18 +263,18 @@ namespace VidiGraph
             _spiderLayoutTransformer.SetFocusCommunityImm(community, false);
             _floorLayoutTransformer.SetFocusCommunityImm(community, false);
             _manager.NetworkGlobal.Communities[community].Focus = false;
-            _networkContext.Communities[community].State = NetworkContext3D.Community.CommunityState.None;
+            _networkContext.Communities[community].State = MultiLayoutContext.CommunityState.None;
         }
 
-        NetworkContext3D.Community.CommunityState CycleCommunityState(int community)
+        MultiLayoutContext.CommunityState CycleCommunityState(int community)
         {
             var nextState = GetNextCommunityState(community);
 
-            if (nextState == NetworkContext3D.Community.CommunityState.Spider)
+            if (nextState == MultiLayoutContext.CommunityState.Spider)
             {
                 _spiderLayoutTransformer.SetFocusCommunityQueue(community, true);
             }
-            else if (nextState == NetworkContext3D.Community.CommunityState.Floor)
+            else if (nextState == MultiLayoutContext.CommunityState.Floor)
             {
                 _spiderLayoutTransformer.SetFocusCommunityImm(community, false);
                 _floorLayoutTransformer.SetFocusCommunityQueue(community, true);
@@ -200,7 +284,7 @@ namespace VidiGraph
                 _floorLayoutTransformer.SetFocusCommunityQueue(community, false);
             }
 
-            bool isCommFocused = nextState == NetworkContext3D.Community.CommunityState.Floor || nextState == NetworkContext3D.Community.CommunityState.Spider;
+            bool isCommFocused = nextState == MultiLayoutContext.CommunityState.Floor || nextState == MultiLayoutContext.CommunityState.Spider;
             _manager.NetworkGlobal.Communities[community].Focus = isCommFocused;
             _networkContext.Communities[community].State = nextState;
 
@@ -215,12 +299,13 @@ namespace VidiGraph
             yield return AnimationUtils.Lerp(dur, t =>
             {
                 interpolator.Interpolate(t);
-                _bigNetworkRenderer.UpdateRenderElements();
+                _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+                _multiLayoutRenderer.UpdateRenderElements();
             });
 
-            // update render elements one more time to update input elements after recomputing geometric info
-            _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
-            _bigNetworkRenderer.UpdateRenderElements();
+            // // update render elements one more time to update input elements after recomputing geometric info
+            // _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+            // _multiLayoutRenderer.UpdateRenderElements();
 
             _curAnim = null;
         }

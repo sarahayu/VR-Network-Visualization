@@ -10,7 +10,7 @@ namespace VidiGraph
         {
             Node node = new Node();
 
-            node.CommunityID = fileNode.communityIdx;
+            // node.CommunityID = fileNode.communityIdx;
             node.Label = fileNode.label;
 
             // idx gets remapped to node id, because we do not assume it's the same as the order stated in datafile. why? idk the original code didn't either.
@@ -19,13 +19,14 @@ namespace VidiGraph
 
             if (node.Color != null)
                 node.ColorParsed = ColorUtils.StringToColor(node.Color.ToUpper());
+            else
+                node.ColorParsed = Color.black;
 
             node.IsVirtualNode = fileNode.virtualNode;
             node.Degree = fileNode.degree;
             node.Height = fileNode.height;
             node.AncID = fileNode.ancIdx;
             node.ChildIDs = fileNode.childIdx;
-            node.PrecompPos3D = fileNode._position3D;
 
             return node;
         }

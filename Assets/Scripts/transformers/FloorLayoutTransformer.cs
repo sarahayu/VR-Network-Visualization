@@ -5,12 +5,12 @@ using UnityEngine.Assertions;
 
 namespace VidiGraph
 {
-    public class FloorLayoutTransformer : NetworkTransformer
+    public class FloorLayoutTransformer : NetworkContextTransformer
     {
         public Transform FloorPosition;
 
         NetworkGlobal _networkGlobal;
-        NetworkContext3D _networkContext;
+        MultiLayoutContext _networkContext;
 
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
@@ -21,7 +21,7 @@ namespace VidiGraph
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
-            _networkContext = (NetworkContext3D)networkContext;
+            _networkContext = (MultiLayoutContext)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
@@ -49,6 +49,7 @@ namespace VidiGraph
                     {
                         var floorPos = floorNodes[floorIdToIdx[node.ID]]._position3D;
                         _networkContext.Nodes[node.ID].Position = new Vector3(floorPos.x, floorPos.y, floorPos.z);
+                        _networkContext.Nodes[node.ID].Dirty = true;
                     }
 
                     _focusCommunities.Add(communityIdx);
@@ -60,6 +61,7 @@ namespace VidiGraph
                     {
                         var sphericalPos = sphericalNodes[sphericalIdToIdx[node.ID]]._position3D;
                         _networkContext.Nodes[node.ID].Position = sphericalPos;
+                        _networkContext.Nodes[node.ID].Dirty = true;
                     }
 
                     _focusCommunities.Remove(communityIdx);
@@ -112,14 +114,14 @@ namespace VidiGraph
 
     public class FloorLayoutInterpolator : TransformInterpolator
     {
-        NetworkContext3D _networkContext;
+        MultiLayoutContext _networkContext;
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
         TransformInfo _startingContextTransform;
         TransformInfo _endingContextTransform;
 
-        public FloorLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, NetworkContext3D networkContext,
+        public FloorLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
             NetworkFilesLoader fileLoader, HashSet<int> focusCommunities, Dictionary<int, bool> focusCommunitiesToUpdate)
         {
             _networkContext = networkContext;
@@ -173,6 +175,7 @@ namespace VidiGraph
             {
                 _networkContext.Nodes[nodeID].Position
                     = Vector3.Lerp(_startPositions[nodeID], _endPositions[nodeID], Mathf.SmoothStep(0f, 1f, t));
+                _networkContext.Nodes[nodeID].Dirty = true;
             }
 
             GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);

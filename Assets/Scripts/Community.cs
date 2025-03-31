@@ -17,7 +17,11 @@ namespace VidiGraph
         // target : link number
         public Dictionary<int, int> AggregateLinks = new Dictionary<int, int>();
 
-        public float Depth = 1;
         public bool Focus = false;
+        public Color Color;
+
+        // detect if community needs to be rerendered
+        public bool Dirty = false;
+        public bool Selected = false;
     }
 }

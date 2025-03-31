@@ -5,12 +5,12 @@ using UnityEngine.Assertions;
 
 namespace VidiGraph
 {
-    public class SpiderLayoutTransformer : NetworkTransformer
+    public class SpiderLayoutTransformer : NetworkContextTransformer
     {
         public Transform SpiderPosition;
 
         NetworkGlobal _networkGlobal;
-        NetworkContext3D _networkContext;
+        MultiLayoutContext _networkContext;
 
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
@@ -21,7 +21,7 @@ namespace VidiGraph
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
-            _networkContext = (NetworkContext3D)networkContext;
+            _networkContext = (MultiLayoutContext)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
@@ -112,14 +112,14 @@ namespace VidiGraph
 
     public class SpiderLayoutInterpolator : TransformInterpolator
     {
-        NetworkContext3D _networkContext;
+        MultiLayoutContext _networkContext;
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
         TransformInfo _startingContextTransform;
         TransformInfo _endingContextTransform;
 
-        public SpiderLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, NetworkContext3D networkContext,
+        public SpiderLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
             NetworkFilesLoader fileLoader, HashSet<int> focusCommunities, Dictionary<int, bool> focusCommunitiesToUpdate)
         {
             _networkContext = networkContext;
@@ -173,6 +173,7 @@ namespace VidiGraph
             {
                 _networkContext.Nodes[nodeID].Position
                     = Vector3.Lerp(_startPositions[nodeID], _endPositions[nodeID], Mathf.SmoothStep(0f, 1f, t));
+                _networkContext.Nodes[nodeID].Dirty = true;
             }
 
             GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);

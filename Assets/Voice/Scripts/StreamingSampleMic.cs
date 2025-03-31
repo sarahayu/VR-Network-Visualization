@@ -4,6 +4,7 @@ using UnityEngine.Networking;
 using System.Collections;
 using System.Text;
 using Whisper.Utils;
+using VidiGraph;
 
 namespace Whisper.Samples
 {
@@ -15,6 +16,7 @@ namespace Whisper.Samples
     {
         public WhisperManager whisper;
         public MicrophoneRecord microphoneRecord;
+        public NetworkManager _networkManager;
     
         [Header("UI")] 
         public Button button;
@@ -159,16 +161,19 @@ namespace Whisper.Samples
                 case "Highlight Node":
                     // highlight a node
                     Debug.Log("Highlight Node operation triggered!");
+                    _networkManager.HoverNode(0); // Example: highlight node with ID 0
                     break;
 
                 case "Select Node":
                     // select a node
                     Debug.Log("Select Node operation triggered!");
+                    _networkManager.HoverNode(0); // Example: select node with ID 0
                     break;
 
                 case "Highlight Group":
                     // highlight a group
                     Debug.Log("Highlight Group operation triggered!");
+                    _networkManager.CycleCommunityFocus(0); // Example: highlight group with ID 0
                     break;
                 
                 case "Group Nodes":
@@ -176,19 +181,43 @@ namespace Whisper.Samples
                     Debug.Log("Group Nodes operation triggered!");
                     break;
 
-                case "Change Layout":
+                case "Change Layout Spherical":
                     // change layout
-                    Debug.Log("Change Layout operation triggered!");
+                    Debug.Log("Change Layout operation [spherical] triggered!");
+                    foreach (var commID in _networkManager.SelectedCommunities)
+                    {
+                        _networkManager.SetLayout(commID, "spherical"); // Example: toggle layout
+                    }
+                    break;
+
+                case "Change Layout Spider":
+                    // change layout
+                    Debug.Log("Change Layout operation [spider] triggered!");
+                    foreach (var commID in _networkManager.SelectedCommunities)
+                    {
+                        _networkManager.SetLayout(commID, "spider"); // Example: toggle layout
+                    }
+                    break;
+
+                case "Change Layout Floor":
+                    // change layout
+                    Debug.Log("Change Layout operation [floor] triggered!");
+                    foreach (var commID in _networkManager.SelectedCommunities)
+                    {
+                        _networkManager.SetLayout(commID, "floor"); // Example: toggle layout
+                    }
                     break;
 
                 case "Make Work Surface":
                     // create a new work surface
                     Debug.Log("Make Work Surface operation triggered!");
+                    _networkManager.ToggleBigNetworkSphericalAndHairball(); // Example: create a new work surface
                     break;
 
                 case "Project Nodes":
                     // project nodes onto surface
                     Debug.Log("Project Nodes operation triggered!");
+                    _networkManager.ToggleBigNetworkSphericalAndHairball(); // Example: project nodes onto surface
                     break;
 
                 default:

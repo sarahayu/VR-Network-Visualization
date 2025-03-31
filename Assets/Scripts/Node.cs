@@ -10,15 +10,20 @@ namespace VidiGraph
         public int ID;
         public string Label;
         public bool IsVirtualNode;
-        public int CommunityID;
+        // TODO change to Community object
+        public int CommunityID = -1;
         public string Color;
         public Color ColorParsed;
         public double Degree = 0;
         public int Height;
-        public int AncID;
         public int[] ChildIDs;
 
-        public Vector3 PrecompPos3D;
+        // TODO change to Nodes instead of int?
+        public int AncID;
         public IList<int> AncIDsOrderList = new List<int>();
+
+        // detect if node needs to be rerendered
+        public bool Dirty = false;
+        public bool Selected = false;
     }
 }

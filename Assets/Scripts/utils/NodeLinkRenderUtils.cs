@@ -9,35 +9,78 @@ namespace VidiGraph
 
     public static class NodeLinkRenderUtils
     {
-        public static GameObject MakeNode(GameObject prefab, Transform parent, Node node, NetworkContext3D.Node nodeProps)
-        {
-            return MakeNode(prefab, parent, node, nodeProps, node.ColorParsed);
-        }
-        public static GameObject MakeNode(GameObject prefab, Transform parent, Node node, NetworkContext3D.Node nodeProps, Color color)
+        public static GameObject MakeNode(GameObject prefab, Transform parent,
+            Node node, MultiLayoutContext.Node nodeProps, float nodeScale)
         {
             GameObject nodeObj = UnityEngine.Object.Instantiate(prefab, parent);
-            nodeObj.transform.localPosition = nodeProps.Position;
 
-            var renderer = nodeObj.GetComponentInChildren<Renderer>();
+            return UpdateNode(nodeObj, node, nodeProps, nodeScale);
+        }
+        public static GameObject UpdateNode(GameObject nodeObj,
+            Node node, MultiLayoutContext.Node nodeProps, float nodeScale, Renderer renderer = null)
+        {
+            nodeObj.transform.localPosition = nodeProps.Position;
+            nodeObj.transform.localScale = Vector3.one * nodeProps.Size * nodeScale;
+
+            if (!renderer)
+                renderer = nodeObj.GetComponentInChildren<Renderer>();
+
+            MaterialPropertyBlock props = new MaterialPropertyBlock();
+
+            renderer.GetPropertyBlock(props);
+            props.SetColor("_Color", nodeProps.Color);
+            renderer.SetPropertyBlock(props);
+
+            return nodeObj;
+        }
+        public static GameObject SetNodeColor(GameObject nodeObj, Color color, Renderer renderer = null)
+        {
+            if (!renderer)
+                renderer = nodeObj.GetComponentInChildren<Renderer>();
+
             MaterialPropertyBlock props = new MaterialPropertyBlock();
 
             renderer.GetPropertyBlock(props);
             props.SetColor("_Color", color);
+            renderer.SetPropertyBlock(props);
 
+            return nodeObj;
+        }
+        public static GameObject MakeCommunityNode(GameObject prefab, Transform parent,
+            MinimapContext.Node nodeProps, float nodeScale)
+        {
+            GameObject nodeObj = UnityEngine.Object.Instantiate(prefab, parent);
+
+            return UpdateCommunityNode(nodeObj, nodeProps, nodeScale);
+        }
+        public static GameObject UpdateCommunityNode(GameObject nodeObj,
+            MinimapContext.Node nodeProps, float nodeScale, Renderer renderer = null)
+        {
+            nodeObj.transform.localPosition = nodeProps.Position;
+            nodeObj.transform.localScale = Vector3.one * nodeProps.Size * nodeScale;
+
+            if (!renderer)
+                renderer = nodeObj.GetComponentInChildren<Renderer>();
+
+            MaterialPropertyBlock props = new MaterialPropertyBlock();
+
+            renderer.GetPropertyBlock(props);
+            props.SetColor("_Color", nodeProps.Color);
             renderer.SetPropertyBlock(props);
 
             return nodeObj;
         }
 
+
         public static GameObject MakeStraightLink(GameObject prefab, Transform parent,
-            Link link, Vector3 startPos, Vector3 endPos, float linkWidth)
+            Vector3 startPos, Vector3 endPos, float linkWidth)
         {
             GameObject linkObj = UnityEngine.Object.Instantiate(prefab, parent);
 
-            return UpdateStraightLink(linkObj, link, startPos, endPos, linkWidth);
+            return UpdateStraightLink(linkObj, startPos, endPos, linkWidth);
         }
 
-        public static GameObject UpdateStraightLink(GameObject linkObj, Link link,
+        public static GameObject UpdateStraightLink(GameObject linkObj,
             Vector3 startPos, Vector3 endPos, float linkWidth)
         {
             linkObj.transform.localPosition = (startPos + endPos) / 2.0f;

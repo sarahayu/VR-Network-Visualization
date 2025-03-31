@@ -5,11 +5,11 @@ using UnityEngine;
 
 namespace VidiGraph
 {
-    public class HairballLayoutTransformer : NetworkTransformer
+    public class HairballLayoutTransformer : NetworkContextTransformer
     {
         public Transform HairballPosition;
         NetworkGlobal _networkGlobal;
-        NetworkContext3D _networkContext;
+        MultiLayoutContext _networkContext;
         TransformInfo _hairballTransform;
 
         // TODO remove this when we are able to calc at runtime
@@ -17,7 +17,7 @@ namespace VidiGraph
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
-            _networkContext = (NetworkContext3D)networkContext;
+            _networkContext = (MultiLayoutContext)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
@@ -31,6 +31,13 @@ namespace VidiGraph
             foreach (var node in _fileLoader.HairballLayout.nodes)
             {
                 _networkContext.Nodes[node.idx].Position = node._position3D;
+                _networkContext.Nodes[node.idx].Dirty = true;
+            }
+
+            foreach (var link in _networkContext.Links.Values)
+            {
+                link.OverrideBundlingStrength = 0f;
+                link.Dirty = true;
             }
 
             _networkContext.CurrentTransform.SetFromTransform(_hairballTransform);
@@ -44,14 +51,14 @@ namespace VidiGraph
 
     public class HairballLayoutInterpolator : TransformInterpolator
     {
-        NetworkContext3D _networkContext;
+        MultiLayoutContext _networkContext;
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
         TransformInfo _startingContextTransform;
         TransformInfo _endingContextTransform;
 
-        public HairballLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, NetworkContext3D networkContext, NetworkFilesLoader fileLoader)
+        public HairballLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext, NetworkFilesLoader fileLoader)
         {
             _networkContext = networkContext;
             // get actual array instead of the node collection so we can use list indices rather than 
@@ -71,6 +78,11 @@ namespace VidiGraph
                 _endPositions[node.ID] = hairballNodes[idToIdx[node.ID]]._position3D;
             }
 
+            foreach (var link in _networkContext.Links.Values)
+            {
+                link.OverrideBundlingStrength = 0f;
+            }
+
 
             _startingContextTransform = networkContext.CurrentTransform.Copy();
             _endingContextTransform = endingContextTransform;
@@ -82,6 +94,7 @@ namespace VidiGraph
             {
                 _networkContext.Nodes[nodeID].Position
                     = Vector3.Lerp(_startPositions[nodeID], _endPositions[nodeID], Mathf.SmoothStep(0f, 1f, t));
+                _networkContext.Nodes[nodeID].Dirty = true;
             }
 
             GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);

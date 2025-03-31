@@ -14,16 +14,12 @@ namespace VidiGraph
 {
     public class NetworkFilesLoader : MonoBehaviour
     {
-
-        const string LayoutSuffix = "-layout.json";
         const string SpiderSuffix = "-spiders.dat";
         const string FlatSuffix = "-layout.json-flat.json";
         const string SphericalSuffix = "-layout.json-spherical.json";
         const string HairballSuffix = "-layout.json-hairball.json";
 
         public string DatasetName;
-
-        public NetworkFileData GraphData { get; private set; }
         public RNetwork SpiderData { get; private set; }
 
         public NetworkFileData FlatLayout { get; private set; }
@@ -33,21 +29,18 @@ namespace VidiGraph
         public void LoadFiles()
         {
             print($"loading dataset {DatasetName}");
-
-            string layoutFile = $"{DatasetName}{LayoutSuffix}";
             string spiderFile = $"{DatasetName}{SpiderSuffix}";
             string flatFile = $"{DatasetName}{FlatSuffix}";
             string sphericalFile = $"{DatasetName}{SphericalSuffix}";
             string hairballFile = $"{DatasetName}{HairballSuffix}";
 
-            GraphData = Decode<NetworkFileData>(layoutFile);
             SpiderData = SpiderFileDecoder.Decode(spiderFile);
 
             FlatLayout = Decode<NetworkFileData>(flatFile);
             SphericalLayout = Decode<NetworkFileData>(sphericalFile);
             HairballLayout = Decode<NetworkFileData>(hairballFile);
 
-            InitializeIdMap(GraphData);
+            InitializeIdMap(SphericalLayout);
             InitializeIdMap(SpiderData);
             InitializeIdMap(FlatLayout);
             InitializeIdMap(SphericalLayout);

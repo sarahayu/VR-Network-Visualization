@@ -6,6 +6,7 @@
 
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace VidiGraph
@@ -13,15 +14,20 @@ namespace VidiGraph
     public class NetworkManager : MonoBehaviour
     {
         [SerializeField]
-        MultiLayoutNetwork _bigNetwork;
+        MultiLayoutNetwork _multiLayoutNetwork;
         [SerializeField]
-        HandheldNetwork _smallNetwork;
+        HandheldNetwork _handheldNetwork;
 
         NetworkFilesLoader _fileLoader;
         NetworkGlobal _networkGlobal;
 
         public NetworkFilesLoader FileLoader { get { return _fileLoader; } }
         public NetworkGlobal NetworkGlobal { get { return _networkGlobal; } }
+
+        public HashSet<int> SelectedNodes { get { return _networkGlobal.SelectedNodes; } }
+        public HashSet<int> SelectedCommunities { get { return _networkGlobal.SelectedCommunities; } }
+
+
 
         void Awake()
         {
@@ -44,53 +50,85 @@ namespace VidiGraph
             _fileLoader.LoadFiles();
             _networkGlobal.InitNetwork();
 
-            _bigNetwork.Initialize();
-            _smallNetwork.Initialize();
+            _multiLayoutNetwork.Initialize();
+            _handheldNetwork?.Initialize();
         }
 
         public void DrawPreview()
         {
-            _bigNetwork.DrawPreview();
-            _smallNetwork.DrawPreview();
+            _multiLayoutNetwork.DrawPreview();
+            _handheldNetwork?.DrawPreview();
         }
 
         public void CycleCommunityFocus(int community, bool animated = true)
         {
-            _bigNetwork.CycleCommunityFocus(community, animated);
+            _multiLayoutNetwork.CycleCommunityFocus(community, animated);
         }
 
         public void ToggleBigNetworkSphericalAndHairball(bool animated = true)
         {
-            _bigNetwork.ToggleSphericalAndHairball(animated);
+            _multiLayoutNetwork.ToggleSphericalAndHairball(animated);
         }
 
         public void HoverNode(int nodeID)
         {
             _networkGlobal.HoveredNode = _networkGlobal.Nodes[nodeID];
-            _bigNetwork.UpdateRenderElements();
+            _multiLayoutNetwork.UpdateRenderElements();
         }
 
         public void UnhoverNode(int nodeID)
         {
             _networkGlobal.HoveredNode = null;
-            _bigNetwork.UpdateRenderElements();
+            _multiLayoutNetwork.UpdateRenderElements();
         }
 
-        public void ToggleFocusNodes(int[] nodeIDs)
+        public void SetSelectedNodes(List<int> nodeIDs, bool selected)
         {
-            _bigNetwork.ToggleFocusNodes(nodeIDs);
+            _networkGlobal.SetSelectedNodes(nodeIDs, selected);
+            _multiLayoutNetwork.UpdateSelectedElements();
+        }
+
+        public void ToggleSelectedNodes(List<int> nodeIDs)
+        {
+            _networkGlobal.ToggleSelectedNodes(nodeIDs);
+            _multiLayoutNetwork.UpdateSelectedElements();
         }
 
         public void HoverCommunity(int communityID)
         {
             _networkGlobal.HoveredCommunity = _networkGlobal.Communities[communityID];
-            _bigNetwork.UpdateRenderElements();
+            _multiLayoutNetwork.UpdateRenderElements();
         }
 
         public void UnhoverCommunity(int communityID)
         {
             _networkGlobal.HoveredCommunity = null;
-            _bigNetwork.UpdateRenderElements();
+            _multiLayoutNetwork.UpdateRenderElements();
+        }
+
+        public void SetSelectedCommunities(List<int> commIDs, bool selected)
+        {
+            _networkGlobal.SetSelectedCommunities(commIDs, selected);
+            _multiLayoutNetwork.UpdateSelectedElements();
+        }
+
+        public void ToggleSelectedCommunities(List<int> commIDs)
+        {
+            _networkGlobal.ToggleSelectedCommunities(commIDs);
+            _multiLayoutNetwork.UpdateSelectedElements();
+        }
+
+        public void ClearSelection()
+        {
+            _networkGlobal.ClearSelectedItems();
+            _multiLayoutNetwork.UpdateSelectedElements();
+
+        }
+
+        // layout = [spherical, spider, floor]
+        public void SetLayout(int commID, string layout)
+        {
+            _multiLayoutNetwork.SetLayout(commID, layout);
         }
     }
 }

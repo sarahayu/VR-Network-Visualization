@@ -16,6 +16,7 @@ namespace VidiGraph
         public XRInputButtonReader RightGripPress = new XRInputButtonReader("RightGripPress");
         public XRInputButtonReader RightTriggerPress = new XRInputButtonReader("RightTriggerPress");
         public XRInputButtonReader RightPrimaryButton = new XRInputButtonReader("RightPrimaryButton");
+        public XRInputButtonReader RightSecondaryButton = new XRInputButtonReader("RightSecondaryButton");
 
         NetworkManager _manager;
 
@@ -44,6 +45,7 @@ namespace VidiGraph
             RightGripPress.EnableDirectActionIfModeUsed();
             RightTriggerPress.EnableDirectActionIfModeUsed();
             RightPrimaryButton.EnableDirectActionIfModeUsed();
+            RightSecondaryButton.EnableDirectActionIfModeUsed();
         }
 
         void Start()
@@ -52,25 +54,40 @@ namespace VidiGraph
 
         void Update()
         {
-            if (RightPrimaryButton.ReadWasPerformedThisFrame())
-            {
-                // _manager.ToggleFocusNodes(new int[] { 12, 77, 146, 289 });
-                _manager.ToggleFocusNodes(new int[] { 14, 28, 114, 121 });
-            }
-
             if (RightGripPress.ReadWasPerformedThisFrame())
             {
                 if (_hoveredCommunity != null)
                 {
-                    _manager.CycleCommunityFocus(_hoveredCommunity.ID);
+                    // _manager.CycleCommunityFocus(_hoveredCommunity.ID);
+
+                    _manager.ToggleSelectedCommunities(new List<int> { _hoveredCommunity.ID });
                 }
                 else if (_hoveredNode != null)
                 {
-                    _manager.ToggleFocusNodes(new int[] { _hoveredNode.ID });
+                    _manager.ToggleSelectedNodes(new List<int> { _hoveredNode.ID });
+                }
+                else
+                {
+                    _manager.ClearSelection();
                 }
             }
 
-            if (LeftGripPress.ReadWasPerformedThisFrame() && LeftTriggerPress.ReadWasPerformedThisFrame())
+            if (RightPrimaryButton.ReadWasPerformedThisFrame())
+            {
+                foreach (var commID in _manager.SelectedCommunities)
+                {
+                    _manager.SetLayout(commID, "spider");
+                }
+            }
+            if (RightSecondaryButton.ReadWasPerformedThisFrame())
+            {
+                foreach (var commID in _manager.SelectedCommunities)
+                {
+                    _manager.SetLayout(commID, "spherical");
+                }
+            }
+
+            if (LeftGripPress.ReadWasPerformedThisFrame())
             {
                 _manager.ToggleBigNetworkSphericalAndHairball();
             }
