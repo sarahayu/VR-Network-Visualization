@@ -26,7 +26,6 @@ namespace Whisper.Samples
         private WhisperStream _stream;
 
         // ====== 1) Classification Endpoint URL ======
-        // Replace with your actual server endpoint (local or remote).
         private string serverUrl = "http://localhost:5000/classify";
 
 
@@ -158,37 +157,37 @@ namespace Whisper.Samples
             switch (command)
             {
                 case "Highlight Node":
-                    // Insert your logic to highlight a node
+                    // highlight a node
                     Debug.Log("Highlight Node operation triggered!");
                     break;
 
                 case "Select Node":
-                    // Insert your logic to select a node
+                    // select a node
                     Debug.Log("Select Node operation triggered!");
                     break;
 
                 case "Highlight Group":
-                    // Insert your logic for highlighting a group
+                    // highlight a group
                     Debug.Log("Highlight Group operation triggered!");
                     break;
                 
                 case "Group Nodes":
-                    // Insert your logic to group nodes
+                    // group nodes
                     Debug.Log("Group Nodes operation triggered!");
                     break;
 
                 case "Change Layout":
-                    // Insert logic to update or change layout
+                    // change layout
                     Debug.Log("Change Layout operation triggered!");
                     break;
 
                 case "Make Work Surface":
-                    // Insert logic to create a new work surface
+                    // create a new work surface
                     Debug.Log("Make Work Surface operation triggered!");
                     break;
 
                 case "Project Nodes":
-                    // Insert logic to project nodes onto surface
+                    // project nodes onto surface
                     Debug.Log("Project Nodes operation triggered!");
                     break;
 
