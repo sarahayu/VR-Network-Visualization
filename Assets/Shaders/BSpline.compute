@@ -46,11 +46,7 @@ void CSMain(uint3 id : SV_DispatchThreadID, uint3 GroupThreadId : SV_GroupThread
         sample.SplineIdx = SplineData.Idx;
 
         // Position
-        if (SplineData.LinkType == STRAIGHT_LINK) {
-            sample.Position = lerp(SplineData.StartPosition, SplineData.EndPosition, t);
-        } else if (SplineData.LinkType == BUNDLED_LINK) {
             sample.Position = (mul(mul(params, Coefficients), Geometry)).xyz;
-        }
 
         // Color
         sample.ColorRGBA = lerp(SplineData.StartColorRGBA, SplineData.EndColorRGBA, colorBlendFactor);

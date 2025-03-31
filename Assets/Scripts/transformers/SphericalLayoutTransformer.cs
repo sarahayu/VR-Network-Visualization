@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.PlayerLoop;
 
 namespace VidiGraph
 {
@@ -14,6 +16,7 @@ namespace VidiGraph
 
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
+        HashSet<int> _nodesToUpdate = new HashSet<int>();
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
@@ -28,22 +31,68 @@ namespace VidiGraph
         public override void ApplyTransformation()
         {
             // TODO calculate at runtime
-            foreach (var node in _fileLoader.SphericalLayout.nodes)
+            var sphericalNodes = _fileLoader.SphericalLayout.nodes;
+            var sphericalIdToIdx = _fileLoader.SphericalLayout.idToIdx;
+
+            foreach (var nodeID in _nodesToUpdate)
             {
-                _networkContext.Nodes[node.idx].Position = node._position3D;
+                var sphericalPos = sphericalNodes[sphericalIdToIdx[nodeID]]._position3D;
+                _networkContext.Nodes[nodeID].Position = new Vector3(sphericalPos.x, sphericalPos.y, sphericalPos.z);
+                _networkContext.Nodes[nodeID].Dirty = true;
+
+                foreach (var link in _networkGlobal.NodeLinkMatrix[nodeID])
+                {
+                    _networkContext.Links[link.ID].BundlingStrength = _networkContext.ContextSettings.EdgeBundlingStrength;
+                }
             }
 
-            foreach (var link in _networkContext.Links.Values)
+            // just mark all communities as dirty
+            // TODO optimize?
+            foreach (var comm in _networkGlobal.Communities.Values)
             {
-                link.OverrideBundlingStrength = -1f;
+                comm.Dirty = true;
             }
+
+            _nodesToUpdate.Clear();
 
             _networkContext.CurrentTransform.SetFromTransform(_sphericalTransform);
         }
 
         public override TransformInterpolator GetInterpolator()
         {
-            return new SphericalLayoutInterpolator(_sphericalTransform, _networkGlobal, _networkContext, _fileLoader);
+            return new SphericalLayoutInterpolator(_sphericalTransform, _networkGlobal, _networkContext, _fileLoader, _nodesToUpdate);
+        }
+
+        public void UpdateNodeOnNextApply(int nodeID)
+        {
+            _nodesToUpdate.Add(nodeID);
+        }
+
+        public void UpdateNodeOnNextApply(List<int> nodeIDs)
+        {
+            _nodesToUpdate.UnionWith(nodeIDs);
+        }
+
+        public void UpdateCommOnNextApply(int commID)
+        {
+            var rootNode = _networkGlobal.Communities[commID].RootNodeID;
+            var ancestors = _networkGlobal.Nodes[rootNode].AncIDsOrderList;
+            _nodesToUpdate.Add(rootNode);
+
+            foreach (var virtualID in _networkGlobal.VirtualNodes)
+            {
+                if (ancestors.Contains(virtualID))
+                {
+                    _nodesToUpdate.Add(virtualID);
+                }
+            }
+
+            _nodesToUpdate.UnionWith(_networkGlobal.Communities[commID].Nodes.Select(n => n.ID));
+        }
+
+        public void UpdateCommOnNextApply(List<int> commIDs)
+        {
+            foreach (var commID in commIDs) UpdateCommOnNextApply(commID);
         }
     }
 
@@ -56,30 +105,35 @@ namespace VidiGraph
         TransformInfo _startingContextTransform;
         TransformInfo _endingContextTransform;
 
-        public SphericalLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext, NetworkFilesLoader fileLoader)
+        public SphericalLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal,
+            MultiLayoutContext networkContext, NetworkFilesLoader fileLoader, HashSet<int> nodesToUpdate)
         {
             _networkContext = networkContext;
-            // get actual array instead of the node collection so we can use list indices rather than 
-            // their ids specified in data
-            var nodes = networkGlobal.Nodes.NodeArray;
-            var nodeCount = nodes.Count;
-
+            // TODO calculate at runtime
             var sphericalNodes = fileLoader.SphericalLayout.nodes;
-            var idToIdx = fileLoader.SphericalLayout.idToIdx;
+            var sphericalIdToIdx = fileLoader.SphericalLayout.idToIdx;
 
-            for (int i = 0; i < nodeCount; i++)
+            foreach (var nodeID in nodesToUpdate)
             {
-                var node = nodes[i];
+                var sphericalPos = sphericalNodes[sphericalIdToIdx[nodeID]]._position3D;
 
-                _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
-                // TODO calculate at runtime
-                _endPositions[node.ID] = sphericalNodes[idToIdx[node.ID]]._position3D;
+                _startPositions[nodeID] = networkContext.Nodes[nodeID].Position;
+                _endPositions[nodeID] = new Vector3(sphericalPos.x, sphericalPos.y, sphericalPos.z);
+
+                foreach (var link in networkGlobal.NodeLinkMatrix[nodeID])
+                {
+                    _networkContext.Links[link.ID].BundlingStrength = _networkContext.ContextSettings.EdgeBundlingStrength;
+                }
             }
 
-            foreach (var link in _networkContext.Links.Values)
+            // just mark all communities as dirty
+            // TODO optimize?
+            foreach (var comm in networkGlobal.Communities.Values)
             {
-                link.OverrideBundlingStrength = -1f;
+                comm.Dirty = true;
             }
+
+            nodesToUpdate.Clear();
 
             _startingContextTransform = networkContext.CurrentTransform.Copy();
             _endingContextTransform = endingContextTransform;

@@ -36,8 +36,15 @@ namespace VidiGraph
 
             foreach (var link in _networkContext.Links.Values)
             {
-                link.OverrideBundlingStrength = 0f;
+                link.BundlingStrength = 0f;
                 link.Dirty = true;
+            }
+
+            // just mark all communities as dirty
+            // TODO optimize?
+            foreach (var comm in _networkGlobal.Communities.Values)
+            {
+                comm.Dirty = true;
             }
 
             _networkContext.CurrentTransform.SetFromTransform(_hairballTransform);
@@ -80,7 +87,14 @@ namespace VidiGraph
 
             foreach (var link in _networkContext.Links.Values)
             {
-                link.OverrideBundlingStrength = 0f;
+                link.BundlingStrength = 0f;
+            }
+
+            // just mark all communities as dirty
+            // TODO optimize?
+            foreach (var comm in networkGlobal.Communities.Values)
+            {
+                comm.Dirty = true;
             }
 
 

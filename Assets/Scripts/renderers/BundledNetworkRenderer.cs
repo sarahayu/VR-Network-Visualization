@@ -160,13 +160,7 @@ namespace VidiGraph
         {
             foreach (var link in _networkGlobal.Links)
             {
-                float beta;
-
-                // TODO always get beta from context
-                if (_networkContext.Links[link.ID].OverrideBundlingStrength != -1f)
-                    beta = _networkContext.Links[link.ID].OverrideBundlingStrength;
-                else
-                    beta = _networkContext.ContextSettings.EdgeBundlingStrength;
+                float beta = _networkContext.Links[link.ID].BundlingStrength;
 
                 Vector3[] cp = BSplineMathUtils.ControlPoints(link, _networkGlobal, _networkContext);
                 int length = cp.Length;

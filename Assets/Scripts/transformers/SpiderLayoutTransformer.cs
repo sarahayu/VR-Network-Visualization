@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -14,10 +15,8 @@ namespace VidiGraph
 
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
-        // use hashset to prevent duplicates
-        HashSet<int> _focusCommunities = new HashSet<int>();
-        Dictionary<int, bool> _focusCommunitiesToUpdate = new Dictionary<int, bool>();
         TransformInfo _spiderTransform;
+        HashSet<int> _commsToUpdate = new HashSet<int>();
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
@@ -35,78 +34,42 @@ namespace VidiGraph
             var spiderNodes = _fileLoader.SpiderData.nodes;
             var spiderIdToIdx = _fileLoader.SpiderData.idToIdx;
 
-            var sphericalNodes = _fileLoader.SphericalLayout.nodes;
-            var sphericalIdToIdx = _fileLoader.SphericalLayout.idToIdx;
-
-            foreach (var (communityIdx, community) in _networkGlobal.Communities)
+            foreach (var commID in _commsToUpdate)
             {
-                if (!_focusCommunitiesToUpdate.ContainsKey(communityIdx)) continue;
+                _networkGlobal.Communities[commID].Dirty = true;
 
-                // move to spider position
-                if (_focusCommunitiesToUpdate[communityIdx])
+                foreach (var node in _networkGlobal.Communities[commID].Nodes)
                 {
-                    foreach (var node in community.Nodes)
-                    {
-                        var spiderPos = spiderNodes[spiderIdToIdx[node.ID]].spiderPos;
-                        _networkContext.Nodes[node.ID].Position = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
-                    }
+                    var spiderPos = spiderNodes[spiderIdToIdx[node.ID]].spiderPos;
+                    _networkContext.Nodes[node.ID].Position = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
+                    _networkContext.Nodes[node.ID].Dirty = true;
 
-                    _focusCommunities.Add(communityIdx);
-                }
-                // reset to original position
-                else
-                {
-                    foreach (var node in community.Nodes)
-                    {
-                        var sphericalPos = sphericalNodes[sphericalIdToIdx[node.ID]]._position3D;
-                        _networkContext.Nodes[node.ID].Position = sphericalPos;
-                    }
-
-                    _focusCommunities.Remove(communityIdx);
                 }
 
-                _focusCommunitiesToUpdate.Remove(communityIdx);
+                foreach (var link in _networkGlobal.Communities[commID].InnerLinks)
+                {
+                    _networkContext.Links[link.ID].BundlingStrength = 0f;
+                }
             }
+
+            _commsToUpdate.Clear();
 
             _networkContext.CurrentTransform.SetFromTransform(_spiderTransform);
         }
 
         public override TransformInterpolator GetInterpolator()
         {
-            return new SpiderLayoutInterpolator(_spiderTransform, _networkGlobal, _networkContext, _fileLoader, _focusCommunities, _focusCommunitiesToUpdate);
+            return new SpiderLayoutInterpolator(_spiderTransform, _networkGlobal, _networkContext, _fileLoader, _commsToUpdate);
         }
 
-        public void UnfocusAllCommunities()
+        public void UpdateOnNextApply(int commID)
         {
-            foreach (var c in _focusCommunities)
-            {
-                _focusCommunitiesToUpdate[c] = false;
-            }
+            _commsToUpdate.Add(commID);
         }
 
-        public void SetFocusCommunityQueue(int focusCommunity, bool isFocused)
+        public void UpdateOnNextApply(List<int> commIDs)
         {
-            if (isFocused != _focusCommunities.Contains(focusCommunity))
-            {
-                _focusCommunitiesToUpdate[focusCommunity] = isFocused;
-            }
-        }
-
-        public void SetFocusCommunityImm(int focusCommunity, bool isFocused)
-        {
-            if (isFocused)
-            {
-                _focusCommunities.Add(focusCommunity);
-            }
-            else
-            {
-                _focusCommunities.Remove(focusCommunity);
-            }
-
-            if (_focusCommunitiesToUpdate.ContainsKey(focusCommunity))
-            {
-                _focusCommunitiesToUpdate.Remove(focusCommunity);
-            }
+            _commsToUpdate.UnionWith(commIDs);
         }
     }
 
@@ -120,48 +83,33 @@ namespace VidiGraph
         TransformInfo _endingContextTransform;
 
         public SpiderLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
-            NetworkFilesLoader fileLoader, HashSet<int> focusCommunities, Dictionary<int, bool> focusCommunitiesToUpdate)
+            NetworkFilesLoader fileLoader, HashSet<int> toUpdate)
         {
             _networkContext = networkContext;
 
             var spiderNodes = fileLoader.SpiderData.nodes;
             var spiderIdToIdx = fileLoader.SpiderData.idToIdx;
 
-            var sphericalNodes = fileLoader.SphericalLayout.nodes;
-            var sphericalIdToIdx = fileLoader.SphericalLayout.idToIdx;
 
-            foreach (var (communityIdx, community) in networkGlobal.Communities)
+            foreach (var commID in toUpdate)
             {
-                if (!focusCommunitiesToUpdate.ContainsKey(communityIdx)) continue;
+                networkGlobal.Communities[commID].Dirty = true;
 
-                // move to spider position
-                if (focusCommunitiesToUpdate[communityIdx])
+                foreach (var node in networkGlobal.Communities[commID].Nodes)
                 {
-                    foreach (var node in community.Nodes)
-                    {
-                        _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
-                        // TODO calculate at runtime
-                        var spiderPos = spiderNodes[spiderIdToIdx[node.ID]].spiderPos;
-                        _endPositions[node.ID] = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
-                    }
+                    var spiderPos = spiderNodes[spiderIdToIdx[node.ID]].spiderPos;
 
-                    focusCommunities.Add(communityIdx);
-                }
-                // reset to original position
-                else
-                {
-                    foreach (var node in community.Nodes)
-                    {
-                        _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
-                        // TODO calculate at runtime
-                        _endPositions[node.ID] = sphericalNodes[sphericalIdToIdx[node.ID]]._position3D;
-                    }
-
-                    focusCommunities.Remove(communityIdx);
+                    _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
+                    _endPositions[node.ID] = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
                 }
 
-                focusCommunitiesToUpdate.Remove(communityIdx);
+                foreach (var link in networkGlobal.Communities[commID].InnerLinks)
+                {
+                    _networkContext.Links[link.ID].BundlingStrength = 0f;
+                }
             }
+
+            toUpdate.Clear();
 
             _startingContextTransform = networkContext.CurrentTransform.Copy();
             _endingContextTransform = endingContextTransform;

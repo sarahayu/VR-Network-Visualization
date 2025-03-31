@@ -26,7 +26,9 @@ namespace VidiGraph
         List<Link> _treeLinks = new List<Link>();
         public List<Link> TreeLinks { get { return _treeLinks; } }
         List<int> _realNodeIDs = new List<int>();
+        public List<int> RealNodes { get { return _realNodeIDs; } }
         List<int> _virtualNodeIDs = new List<int>();
+        public List<int> VirtualNodes { get { return _virtualNodeIDs; } }
         Dictionary<int, List<Link>> _nodeLinkMatrix
              = new Dictionary<int, List<Link>>();
 
@@ -37,7 +39,8 @@ namespace VidiGraph
         HashSet<int> _selectedNodes = new HashSet<int>();
         public HashSet<int> SelectedNodes { get { return _selectedNodes; } }
 
-        public HashSet<int> SelectedCommunities { get { return GetCompleteCommunities(SelectedNodes); } }
+        HashSet<int> _selectedComms = new HashSet<int>();
+        public HashSet<int> SelectedCommunities { get { return _selectedComms; } }
 
         void Reset()
         {
@@ -105,6 +108,8 @@ namespace VidiGraph
             {
                 var link = LoadFileUtils.LinkFromFileData(fileLinks[i]);
 
+                if (_nodes[link.SourceNodeID].IsVirtualNode || _nodes[link.TargetNodeID].IsVirtualNode) continue;
+
                 link.SourceNode = _nodes[link.SourceNodeID];
                 link.TargetNode = _nodes[link.TargetNodeID];
 
@@ -140,6 +145,7 @@ namespace VidiGraph
             {
                 foreach (var nodeID in nodeIDs)
                 {
+                    if (Nodes[nodeID].IsVirtualNode) continue;
                     if (!_selectedNodes.Contains(nodeID))
                     {
                         _selectedNodes.Add(nodeID);
@@ -153,6 +159,7 @@ namespace VidiGraph
             {
                 foreach (var nodeID in nodeIDs)
                 {
+                    if (Nodes[nodeID].IsVirtualNode) continue;
                     if (_selectedNodes.Contains(nodeID))
                     {
                         _selectedNodes.Remove(nodeID);
@@ -170,6 +177,8 @@ namespace VidiGraph
         {
             foreach (var nodeID in nodeIDs)
             {
+                if (Nodes[nodeID].IsVirtualNode) continue;
+
                 if (_selectedNodes.Contains(nodeID))
                 {
                     _selectedNodes.Remove(nodeID);
@@ -217,6 +226,8 @@ namespace VidiGraph
                     globalComm.Dirty = true;
                 }
             }
+
+            UpdateSelectedCommunities();
         }
 
         public void ToggleSelectedCommunities(List<int> commIDs)
@@ -253,6 +264,8 @@ namespace VidiGraph
                 Nodes[oldNodeID].Selected = false;
                 Nodes[oldNodeID].Dirty = true;
             }
+
+            UpdateSelectedCommunities();
         }
 
         // clears both nodes and communities
@@ -272,6 +285,8 @@ namespace VidiGraph
                 // just mark all of them dirty, there usually isn't many communities
                 comm.Dirty = true;
             }
+
+            UpdateSelectedCommunities();
         }
 
         void CommunitiesInit()
@@ -505,6 +520,8 @@ namespace VidiGraph
                 Communities[comm].Selected = false;
                 Communities[comm].Dirty = true;
             }
+
+            _selectedComms = completeComms;
         }
     }
 }

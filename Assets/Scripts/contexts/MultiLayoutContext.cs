@@ -41,7 +41,7 @@ namespace VidiGraph
 
         public class Link
         {
-            public float OverrideBundlingStrength = -1f;
+            public float BundlingStrength = 0f;
             public float Width = 1f;
             public Color ColorStart;
             public Color ColorEnd;

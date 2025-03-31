@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace VidiGraph
@@ -44,6 +45,9 @@ namespace VidiGraph
 
         Dictionary<string, NetworkContextTransformer> _transformers = new Dictionary<string, NetworkContextTransformer>();
 
+        // keep a reference to sphericallayout specifically to focus on individual communities
+        SphericalLayoutTransformer _sphericalLayoutTransformer;
+
         // keep a reference to spiderlayout specifically to focus on individual communities
         SpiderLayoutTransformer _spiderLayoutTransformer;
 
@@ -82,6 +86,7 @@ namespace VidiGraph
 
             TransformNetworkNoRender("encoding");
             _isSphericalLayout = true;
+            _sphericalLayoutTransformer.UpdateCommOnNextApply(_networkContext.Communities.Keys.ToList());
             TransformNetworkNoRender("spherical");
 
             _multiLayoutRenderer = GetComponentInChildren<NetworkRenderer>();
@@ -123,7 +128,8 @@ namespace VidiGraph
             _transformers["hairball"] = GetComponentInChildren<HairballLayoutTransformer>();
             _transformers["hairball"].Initialize(_manager.NetworkGlobal, _networkContext);
 
-            _transformers["spherical"] = GetComponentInChildren<SphericalLayoutTransformer>();
+            _sphericalLayoutTransformer = GetComponentInChildren<SphericalLayoutTransformer>();
+            _transformers["spherical"] = _sphericalLayoutTransformer;
             _transformers["spherical"].Initialize(_manager.NetworkGlobal, _networkContext);
 
             _bringNodeTransformer = GetComponentInChildren<BringNodeTransformer>();
@@ -155,7 +161,7 @@ namespace VidiGraph
             switch (nextState)
             {
                 case MultiLayoutContext.CommunityState.None:
-                    TransformNetwork("floor", animated);
+                    TransformNetwork("spherical", animated);
                     break;
                 case MultiLayoutContext.CommunityState.Spider:
                     TransformNetwork("spider", animated);
@@ -170,20 +176,18 @@ namespace VidiGraph
 
         public void ToggleSphericalAndHairball(bool animated = true)
         {
-            if (_isSphericalLayout)
-            {
-                foreach (var communityIdx in _manager.NetworkGlobal.Communities.Keys)
-                {
-                    ClearCommunityState(communityIdx);
-                }
-
-                TransformNetwork("spider", animated: false);
-                _multiLayoutRenderer.UpdateRenderElements();
-            }
-
             _isSphericalLayout = !_isSphericalLayout;
 
             string layout = _isSphericalLayout ? "spherical" : "hairball";
+
+            if (layout == "spherical")
+            {
+                foreach (var commID in _networkContext.Communities.Keys)
+                {
+                    _sphericalLayoutTransformer.UpdateCommOnNextApply(commID);
+                    ClearCommunityState(commID);
+                }
+            }
 
             TransformNetwork(layout, animated);
         }
@@ -194,37 +198,40 @@ namespace VidiGraph
         }
 
         // layout = [spherical, spider, floor]
-        public void SetLayout(int commID, string layout)
+        public void SetLayout(List<int> commIDs, string layout)
         {
-            var curLayout = _networkContext.Communities[commID].State;
+            foreach (var commID in commIDs)
+            {
+                bool isCommFocused = layout == "floor" || layout == "spider";
+                _manager.NetworkGlobal.Communities[commID].Focus = isCommFocused;
+                _networkContext.Communities[commID].State = MultiLayoutContext.StrToState(layout);
 
-            bool isCommFocused = layout == "floor" || layout == "spider";
-            _manager.NetworkGlobal.Communities[commID].Focus = isCommFocused;
-            _networkContext.Communities[commID].State = MultiLayoutContext.StrToState(layout);
-
-            if (layout == "spider")
-            {
-                _spiderLayoutTransformer.SetFocusCommunityQueue(commID, true);
-                TransformNetwork("spider", animated: true);
-            }
-            else if (layout == "floor")
-            {
-                _floorLayoutTransformer.SetFocusCommunityQueue(commID, true);
-                TransformNetwork("floor", animated: true);
-            }
-            else if (layout == "spherical")
-            {
-                if (curLayout == MultiLayoutContext.CommunityState.Spider)
+                if (layout == "spider")
                 {
-                    _spiderLayoutTransformer.SetFocusCommunityQueue(commID, false);
+                    _spiderLayoutTransformer.UpdateOnNextApply(commID);
                 }
-                else if (curLayout == MultiLayoutContext.CommunityState.Floor)
+                else if (layout == "floor")
                 {
-                    _floorLayoutTransformer.SetFocusCommunityQueue(commID, false);
+                    _floorLayoutTransformer.UpdateOnNextApply(commID);
                 }
-                TransformNetwork("spherical", animated: true);
+                else if (layout == "spherical")
+                {
+                    _sphericalLayoutTransformer.UpdateCommOnNextApply(commID);
+                }
             }
 
+            TransformNetwork(layout, animated: true);
+
+        }
+
+        public void SetNodesBrought(List<int> nodeIDs, bool brought)
+        {
+            foreach (var nodeID in nodeIDs)
+            {
+                _bringNodeTransformer.SetFocusNodeQueue(nodeID, brought);
+            }
+
+            TransformNetwork("bringNode", animated: true);
         }
 
         void TransformNetwork(string layout, bool animated)
@@ -260,8 +267,6 @@ namespace VidiGraph
 
         void ClearCommunityState(int community)
         {
-            _spiderLayoutTransformer.SetFocusCommunityImm(community, false);
-            _floorLayoutTransformer.SetFocusCommunityImm(community, false);
             _manager.NetworkGlobal.Communities[community].Focus = false;
             _networkContext.Communities[community].State = MultiLayoutContext.CommunityState.None;
         }
@@ -272,16 +277,15 @@ namespace VidiGraph
 
             if (nextState == MultiLayoutContext.CommunityState.Spider)
             {
-                _spiderLayoutTransformer.SetFocusCommunityQueue(community, true);
+                _spiderLayoutTransformer.UpdateOnNextApply(community);
             }
             else if (nextState == MultiLayoutContext.CommunityState.Floor)
             {
-                _spiderLayoutTransformer.SetFocusCommunityImm(community, false);
-                _floorLayoutTransformer.SetFocusCommunityQueue(community, true);
+                _floorLayoutTransformer.UpdateOnNextApply(community);
             }
             else
             {
-                _floorLayoutTransformer.SetFocusCommunityQueue(community, false);
+                _sphericalLayoutTransformer.UpdateCommOnNextApply(community);
             }
 
             bool isCommFocused = nextState == MultiLayoutContext.CommunityState.Floor || nextState == MultiLayoutContext.CommunityState.Spider;

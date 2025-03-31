@@ -60,6 +60,26 @@ namespace VidiGraph
             _handheldNetwork?.DrawPreview();
         }
 
+        public HashSet<string> GetValidOptions()
+        {
+            HashSet<string> opts = new HashSet<string>();
+
+            if (SelectedNodes.Count > 0)
+            {
+                opts.Add("Bring Node");
+                opts.Add("Return Node");
+            }
+
+            if (SelectedCommunities.Count > 0)
+            {
+                opts.Add("Bring Comm.");
+                opts.Add("Return Comm.");
+                opts.Add("Project Comm. Floor");
+            }
+
+            return opts;
+        }
+
         public void CycleCommunityFocus(int community, bool animated = true)
         {
             _multiLayoutNetwork.CycleCommunityFocus(community, animated);
@@ -126,9 +146,19 @@ namespace VidiGraph
         }
 
         // layout = [spherical, spider, floor]
-        public void SetLayout(int commID, string layout)
+        public void SetLayout(List<int> commIDs, string layout)
         {
-            _multiLayoutNetwork.SetLayout(commID, layout);
+            _multiLayoutNetwork.SetLayout(commIDs, layout);
+        }
+
+        public void BringNodes(List<int> nodeIDs)
+        {
+            _multiLayoutNetwork.SetNodesBrought(nodeIDs, true);
+        }
+
+        public void ReturnNodes(List<int> nodeIDs)
+        {
+            _multiLayoutNetwork.SetNodesBrought(nodeIDs, false);
         }
     }
 }

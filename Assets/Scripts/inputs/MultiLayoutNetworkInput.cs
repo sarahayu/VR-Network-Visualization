@@ -1,7 +1,10 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
@@ -11,12 +14,18 @@ namespace VidiGraph
     public class MultiLayoutNetworkInput : NetworkInput
     {
         // TODO there's gotta be a better way to do this
-        public XRInputButtonReader LeftGripPress = new XRInputButtonReader("LeftGripPress");
-        public XRInputButtonReader LeftTriggerPress = new XRInputButtonReader("LeftTriggerPress");
-        public XRInputButtonReader RightGripPress = new XRInputButtonReader("RightGripPress");
-        public XRInputButtonReader RightTriggerPress = new XRInputButtonReader("RightTriggerPress");
-        public XRInputButtonReader RightPrimaryButton = new XRInputButtonReader("RightPrimaryButton");
-        public XRInputButtonReader RightSecondaryButton = new XRInputButtonReader("RightSecondaryButton");
+        [SerializeField]
+        XRInputButtonReader LeftGripPress = new XRInputButtonReader("LeftGripPress");
+        [SerializeField]
+        XRInputButtonReader LeftTriggerPress = new XRInputButtonReader("LeftTriggerPress");
+        [SerializeField]
+        XRInputButtonReader RightGripPress = new XRInputButtonReader("RightGripPress");
+        [SerializeField]
+        XRInputButtonReader RightTriggerPress = new XRInputButtonReader("RightTriggerPress");
+        [SerializeField]
+        XRInputValueReader<Vector2> Thumbstick = new XRInputValueReader<Vector2>("Thumbstick");
+        [SerializeField]
+        XRInputButtonReader ThumbstickClick = new XRInputButtonReader("ThumbstickClick");
 
         NetworkManager _manager;
 
@@ -24,6 +33,14 @@ namespace VidiGraph
         Node _hoveredNode = null;
 
         public TextMeshProUGUI TooltipText;
+        public Transform ButtonsTransform;
+        public GameObject OptionPrefab;
+
+        List<Tuple<string, GameObject>> CurOptions = new List<Tuple<string, GameObject>>();
+
+        HashSet<string> LastOptions = new HashSet<string>();
+
+        string lastOptLabel = "";
 
         public override void Initialize()
         {
@@ -44,12 +61,14 @@ namespace VidiGraph
             LeftTriggerPress.EnableDirectActionIfModeUsed();
             RightGripPress.EnableDirectActionIfModeUsed();
             RightTriggerPress.EnableDirectActionIfModeUsed();
-            RightPrimaryButton.EnableDirectActionIfModeUsed();
-            RightSecondaryButton.EnableDirectActionIfModeUsed();
+            Thumbstick.EnableDirectActionIfModeUsed();
+            ThumbstickClick.EnableDirectActionIfModeUsed();
         }
 
         void Start()
         {
+            // ContextMenuUtils.MakeOption(OptionPrefab, ButtonsTransform, "test1", -45);
+            // ContextMenuUtils.MakeOption(OptionPrefab, ButtonsTransform, "test2", 45);
         }
 
         void Update()
@@ -72,24 +91,138 @@ namespace VidiGraph
                 }
             }
 
-            if (RightPrimaryButton.ReadWasPerformedThisFrame())
+            var curOpts = _manager.GetValidOptions();
+
+            if (!curOpts.SetEquals(LastOptions))
             {
-                foreach (var commID in _manager.SelectedCommunities)
+                foreach (var (_, go) in CurOptions)
                 {
-                    _manager.SetLayout(commID, "spider");
+                    UnityEngine.Object.Destroy(go);
                 }
+
+                CurOptions.Clear();
+
+                CreateOptionBtns(curOpts);
+
+                LastOptions = curOpts;
             }
-            if (RightSecondaryButton.ReadWasPerformedThisFrame())
-            {
-                foreach (var commID in _manager.SelectedCommunities)
-                {
-                    _manager.SetLayout(commID, "spherical");
-                }
-            }
+
+            // if (RightSecondaryButton.ReadWasPerformedThisFrame())
+            // {
+            //     foreach (var commID in _manager.SelectedCommunities)
+            //     {
+            //         _manager.SetLayout(commID, "spherical");
+            //     }
+            // }
 
             if (LeftGripPress.ReadWasPerformedThisFrame())
             {
                 _manager.ToggleBigNetworkSphericalAndHairball();
+            }
+
+            var thumbVal = Thumbstick.ReadValue();
+            string curOptnLabel = "";
+
+            if (thumbVal != Vector2.zero)
+            {
+                float angle = -Vector2.SignedAngle(Vector2.up, thumbVal);
+
+                int optInd = GetHoveredOpt(angle);
+
+                int curInd = 0;
+                foreach (var (label, go) in CurOptions)
+                {
+                    if (curInd == optInd)
+                    {
+                        go.GetComponentInChildren<Image>().color = new Color(200f / 255, 200f / 255, 200f / 255);
+                        curOptnLabel = label;
+
+                    }
+                    else
+                    {
+                        go.GetComponentInChildren<Image>().color = new Color(94f / 255, 94f / 255, 94f / 255);
+                    }
+
+                    curInd++;
+                }
+
+                lastOptLabel = curOptnLabel;
+            }
+            else if (lastOptLabel != curOptnLabel)
+            {
+                foreach (var (_, go) in CurOptions)
+                {
+                    go.GetComponentInChildren<Image>().color = new Color(94f / 255, 94f / 255, 94f / 255);
+
+                }
+                lastOptLabel = curOptnLabel;
+            }
+
+            if (ThumbstickClick.ReadWasPerformedThisFrame())
+            {
+                switch (curOptnLabel)
+                {
+                    case "Bring Node":
+                        _manager.BringNodes(_manager.SelectedNodes.ToList());
+                        break;
+                    case "Return Node":
+                        _manager.ReturnNodes(_manager.SelectedNodes.ToList());
+                        break;
+                    case "Bring Comm.":
+                        _manager.SetLayout(_manager.SelectedCommunities.ToList(), "spider");
+                        break;
+                    case "Return Comm.":
+                        _manager.SetLayout(_manager.SelectedCommunities.ToList(), "spherical");
+                        break;
+                    case "Project Comm. Floor":
+                        _manager.SetLayout(_manager.SelectedCommunities.ToList(), "floor");
+                        break;
+                }
+            }
+        }
+
+        int GetHoveredOpt(float angle)
+        {
+            if (CurOptions.Count == 0) return -1;
+
+            float totPhi = 275f;
+
+            float phi = totPhi / CurOptions.Count;
+            float curAngle = -totPhi / 2 + phi / 2;
+
+            float minAnglDiff = 10000f;
+            int optionMinDiff = -1;
+
+            for (int i = 0; i < CurOptions.Count; i++)
+            {
+                float curDiff = Math.Abs(angle - curAngle);
+                if (curDiff < minAnglDiff)
+                {
+                    minAnglDiff = curDiff;
+                    optionMinDiff = i;
+                }
+
+                curAngle += phi;
+            }
+
+            return optionMinDiff;
+        }
+
+        void CreateOptionBtns(HashSet<string> opts)
+        {
+            if (opts.Count == 0) return;
+
+            float totPhi = 275f;
+
+            float phi = totPhi / opts.Count;
+            float curAngle = -totPhi / 2 + phi / 2;
+
+            foreach (var label in opts)
+            {
+                var btn = ContextMenuUtils.MakeOption(OptionPrefab, ButtonsTransform, label, curAngle);
+                CurOptions.Add(new Tuple<string, GameObject>(label, btn));
+
+                curAngle += phi;
             }
         }
 
