@@ -17,8 +17,8 @@ namespace Whisper.Samples
         public WhisperManager whisper;
         public MicrophoneRecord microphoneRecord;
         public NetworkManager _networkManager;
-    
-        [Header("UI")] 
+
+        [Header("UI")]
         public Button button;
         public Text buttonText;
         public Text text;
@@ -44,6 +44,8 @@ namespace Whisper.Samples
 
             microphoneRecord.OnRecordStop += OnRecordStop;
             button.onClick.AddListener(OnButtonPressed);
+
+            OnButtonPressed();
         }
 
         private void OnButtonPressed()
@@ -59,16 +61,16 @@ namespace Whisper.Samples
                 // Stop listening
                 microphoneRecord.StopRecord();
             }
-        
+
             buttonText.text = microphoneRecord.IsRecording ? "Stop" : "Record";
         }
-    
+
         private void OnRecordStop(AudioChunk recordedAudio)
         {
             // Reset button label to "Record"
             buttonText.text = "Record";
         }
-    
+
         /// <summary>
         /// Called whenever Whisper produces new recognized text.
         /// </summary>
@@ -81,18 +83,18 @@ namespace Whisper.Samples
             // ====== 2) Send text for classification ======
             StartCoroutine(ClassifyUserCommand(result));
         }
-        
+
         private void OnSegmentUpdated(WhisperResult segment)
         {
             // This is partial text as it’s recognized
             Debug.Log($"Segment updated: {segment.Result}");
         }
-        
+
         private void OnSegmentFinished(WhisperResult segment)
         {
             Debug.Log($"Segment finished: {segment.Result}");
         }
-        
+
         private void OnFinished(string finalResult)
         {
             Debug.Log("Stream finished!");
@@ -104,7 +106,7 @@ namespace Whisper.Samples
             // Prepare JSON body for the request
             ClassificationRequest requestBody = new ClassificationRequest { userText = recognizedText };
             string jsonBody = JsonUtility.ToJson(requestBody);
-            
+
             // Convert to raw bytes
             byte[] postData = Encoding.UTF8.GetBytes(jsonBody);
 
@@ -175,7 +177,7 @@ namespace Whisper.Samples
                     Debug.Log("Highlight Group operation triggered!");
                     _networkManager.CycleCommunityFocus(0); // Example: highlight group with ID 0
                     break;
-                
+
                 case "Group Nodes":
                     // group nodes
                     Debug.Log("Group Nodes operation triggered!");

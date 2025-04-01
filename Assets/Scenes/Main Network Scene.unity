@@ -7266,6 +7266,37 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   FloorPosition: {fileID: 2041632859}
+--- !u!1 &576938283
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 576938284}
+  m_Layer: 0
+  m_Name: Buttons
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &576938284
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 576938283}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 0.001, y: 0.001, z: 0.001}
+  m_ConstrainProportionsScale: 1
+  m_Children: []
+  m_Father: {fileID: 1126304766}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &588350009
 GameObject:
   m_ObjectHideFlags: 0
@@ -14052,7 +14083,7 @@ MonoBehaviour:
     m_ManualQueueValue: 0
     m_ManualQueueTargetFrame: 0
   Thumbstick:
-    m_InputSourceMode: 2
+    m_InputSourceMode: 1
     m_InputAction:
       m_Name: Thumbstick
       m_Type: 0
@@ -14060,13 +14091,21 @@ MonoBehaviour:
       m_Id: 9320c01c-025b-46b1-9dd8-ffe19bec126b
       m_Processors: 
       m_Interactions: 
-      m_SingletonActionBindings: []
+      m_SingletonActionBindings:
+      - m_Name: 
+        m_Id: a9cdab24-d481-4cad-b31a-09d131d99795
+        m_Path: <XRController>{RightHand}/{Primary2DAxis}
+        m_Interactions: 
+        m_Processors: 
+        m_Groups: 
+        m_Action: Thumbstick
+        m_Flags: 0
       m_Flags: 0
     m_InputActionReference: {fileID: 0}
     m_ObjectReferenceObject: {fileID: 0}
     m_ManualValue: {x: 0, y: 0}
   ThumbstickClick:
-    m_InputSourceMode: 2
+    m_InputSourceMode: 1
     m_InputActionPerformed:
       m_Name: ThumbstickClick
       m_Type: 1
@@ -14074,7 +14113,15 @@ MonoBehaviour:
       m_Id: 2cba8183-5825-41cb-8a41-063ea1e786a6
       m_Processors: 
       m_Interactions: 
-      m_SingletonActionBindings: []
+      m_SingletonActionBindings:
+      - m_Name: 
+        m_Id: 8cc8f8de-178a-4ae8-83ae-9cda1d549086
+        m_Path: <XRController>{RightHand}/{Primary2DAxisClick}
+        m_Interactions: 
+        m_Processors: 
+        m_Groups: 
+        m_Action: ThumbstickClick
+        m_Flags: 0
       m_Flags: 0
     m_InputActionValue:
       m_Name: ThumbstickClick Value
@@ -14096,7 +14143,7 @@ MonoBehaviour:
     m_ManualQueueValue: 0
     m_ManualQueueTargetFrame: 0
   TooltipText: {fileID: 1016493473}
-  ButtonsTransform: {fileID: 0}
+  ButtonsTransform: {fileID: 5277637222492995880, guid: 91ed03deebb0e21459fd9a3c93e82f6d, type: 3}
   OptionPrefab: {fileID: 0}
 --- !u!4 &1048627704
 Transform:
@@ -28220,6 +28267,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1670256625, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 194512488}
+    - targetCorrespondingSourceObject: {fileID: 1670256625, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 576938284}
     - targetCorrespondingSourceObject: {fileID: 8393186890254128703, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1504172425}
