@@ -19,7 +19,7 @@ namespace VidiGraph
         public static GameObject UpdateCommunity(GameObject commObj, MultiLayoutContext.Community community, Renderer renderer = null)
         {
             commObj.transform.localPosition = community.MassCenter;
-            commObj.transform.localScale = Vector3.one * (float)community.Size;
+            commObj.transform.localScale = Vector3.one * (float)community.Size * 2;
 
             if (!renderer)
                 renderer = commObj.GetComponentInChildren<Renderer>();
