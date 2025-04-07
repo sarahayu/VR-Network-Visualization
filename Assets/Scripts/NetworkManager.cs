@@ -145,13 +145,13 @@ namespace VidiGraph
 
         }
 
-        // layout = [spherical, spider, floor]
+        // layout = [spherical, cluster, floor]
         public void SetLayout(List<int> commIDs, string layout)
         {
             _multiLayoutNetwork.SetLayout(commIDs, layout);
         }
 
-        // layout = [spherical, spider, floor]
+        // layout = [spherical, cluster, floor]
         public void SetLayout(int commID, string layout)
         {
             _multiLayoutNetwork.SetLayout(new List<int> { commID }, layout);

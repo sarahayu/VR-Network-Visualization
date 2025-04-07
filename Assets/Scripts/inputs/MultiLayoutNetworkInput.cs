@@ -169,7 +169,7 @@ namespace VidiGraph
                         _manager.ReturnNodes(_manager.SelectedNodes.ToList());
                         break;
                     case "Bring Comm.":
-                        _manager.SetLayout(_manager.SelectedCommunities.ToList(), "spider");
+                        _manager.SetLayout(_manager.SelectedCommunities.ToList(), "cluster");
                         break;
                     case "Return Comm.":
                         _manager.SetLayout(_manager.SelectedCommunities.ToList(), "spherical");

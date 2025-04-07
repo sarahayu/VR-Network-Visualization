@@ -6,16 +6,16 @@ using UnityEngine.Assertions;
 
 namespace VidiGraph
 {
-    public class SpiderLayoutTransformer : NetworkContextTransformer
+    public class ClusterLayoutTransformer : NetworkContextTransformer
     {
-        public Transform SpiderPosition;
+        public Transform ClusterPosition;
 
         NetworkGlobal _networkGlobal;
         MultiLayoutContext _networkContext;
 
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
-        TransformInfo _spiderTransform;
+        TransformInfo _clusterTransform;
         HashSet<int> _commsToUpdate = new HashSet<int>();
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
@@ -25,14 +25,14 @@ namespace VidiGraph
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
             _fileLoader = manager.FileLoader;
-            _spiderTransform = new TransformInfo(SpiderPosition);
+            _clusterTransform = new TransformInfo(ClusterPosition);
         }
 
         public override void ApplyTransformation()
         {
             // TODO calculate at runtime
-            var spiderNodes = _fileLoader.SpiderLayout.nodes;
-            var spiderIdToIdx = _fileLoader.SpiderLayout.idToIdx;
+            var clusterNodes = _fileLoader.ClusterLayout.nodes;
+            var clusterIdToIdx = _fileLoader.ClusterLayout.idToIdx;
 
             foreach (var commID in _commsToUpdate)
             {
@@ -40,8 +40,8 @@ namespace VidiGraph
 
                 foreach (var node in _networkGlobal.Communities[commID].Nodes)
                 {
-                    var spiderPos = spiderNodes[spiderIdToIdx[node.ID]]._position3D;
-                    _networkContext.Nodes[node.ID].Position = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
+                    var clusterPos = clusterNodes[clusterIdToIdx[node.ID]]._position3D;
+                    _networkContext.Nodes[node.ID].Position = new Vector3(clusterPos.x, clusterPos.y, clusterPos.z);
                     _networkContext.Nodes[node.ID].Dirty = true;
 
                 }
@@ -54,12 +54,12 @@ namespace VidiGraph
 
             _commsToUpdate.Clear();
 
-            _networkContext.CurrentTransform.SetFromTransform(_spiderTransform);
+            _networkContext.CurrentTransform.SetFromTransform(_clusterTransform);
         }
 
         public override TransformInterpolator GetInterpolator()
         {
-            return new SpiderLayoutInterpolator(_spiderTransform, _networkGlobal, _networkContext, _fileLoader, _commsToUpdate);
+            return new ClusterLayoutInterpolator(_clusterTransform, _networkGlobal, _networkContext, _fileLoader, _commsToUpdate);
         }
 
         public void UpdateOnNextApply(int commID)
@@ -73,7 +73,7 @@ namespace VidiGraph
         }
     }
 
-    public class SpiderLayoutInterpolator : TransformInterpolator
+    public class ClusterLayoutInterpolator : TransformInterpolator
     {
         MultiLayoutContext _networkContext;
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
@@ -82,13 +82,13 @@ namespace VidiGraph
         TransformInfo _startingContextTransform;
         TransformInfo _endingContextTransform;
 
-        public SpiderLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
+        public ClusterLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
             NetworkFilesLoader fileLoader, HashSet<int> toUpdate)
         {
             _networkContext = networkContext;
 
-            var spiderNodes = fileLoader.SpiderLayout.nodes;
-            var spiderIdToIdx = fileLoader.SpiderLayout.idToIdx;
+            var clusterNodes = fileLoader.ClusterLayout.nodes;
+            var clusterIdToIdx = fileLoader.ClusterLayout.idToIdx;
 
 
             foreach (var commID in toUpdate)
@@ -97,10 +97,10 @@ namespace VidiGraph
 
                 foreach (var node in networkGlobal.Communities[commID].Nodes)
                 {
-                    var spiderPos = spiderNodes[spiderIdToIdx[node.ID]]._position3D;
+                    var clusterPos = clusterNodes[clusterIdToIdx[node.ID]]._position3D;
 
                     _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
-                    _endPositions[node.ID] = new Vector3(spiderPos.x, spiderPos.y, spiderPos.z);
+                    _endPositions[node.ID] = new Vector3(clusterPos.x, clusterPos.y, clusterPos.z);
                 }
 
                 foreach (var link in networkGlobal.Communities[commID].InnerLinks)

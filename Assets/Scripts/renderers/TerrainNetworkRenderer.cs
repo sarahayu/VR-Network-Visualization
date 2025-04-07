@@ -22,9 +22,6 @@ namespace VidiGraph
         float _falloff = 1f;
 
         [SerializeField]
-        int _subdivide = 1;
-
-        [SerializeField]
         float _lineColorIntensity = 0.2f;
 
         [SerializeField]
@@ -38,9 +35,6 @@ namespace VidiGraph
 
         [SerializeField]
         float _curvatureRadius = 100f;
-
-        [SerializeField]
-        int _maxNumLinks = 300;
 
         Dictionary<int, GameObject> _nodeGameObjs = new Dictionary<int, GameObject>();
         Dictionary<Tuple<int, int>, GameObject> _linkGameObjs = new Dictionary<Tuple<int, int>, GameObject>();

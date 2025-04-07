@@ -48,8 +48,8 @@ namespace VidiGraph
         // keep a reference to sphericallayout specifically to focus on individual communities
         SphericalLayoutTransformer _sphericalLayoutTransformer;
 
-        // keep a reference to spiderlayout specifically to focus on individual communities
-        SpiderLayoutTransformer _spiderLayoutTransformer;
+        // keep a reference to clusterlayout specifically to focus on individual communities
+        ClusterLayoutTransformer _clusterLayoutTransformer;
 
         // keep a reference to bringNodeLayout to focus on individual nodes
         BringNodeTransformer _bringNodeTransformer;
@@ -136,9 +136,9 @@ namespace VidiGraph
             _transformers["bringNode"] = _bringNodeTransformer;
             _transformers["bringNode"].Initialize(_manager.NetworkGlobal, _networkContext);
 
-            _spiderLayoutTransformer = GetComponentInChildren<SpiderLayoutTransformer>();
-            _transformers["spider"] = _spiderLayoutTransformer;
-            _transformers["spider"].Initialize(_manager.NetworkGlobal, _networkContext);
+            _clusterLayoutTransformer = GetComponentInChildren<ClusterLayoutTransformer>();
+            _transformers["cluster"] = _clusterLayoutTransformer;
+            _transformers["cluster"].Initialize(_manager.NetworkGlobal, _networkContext);
 
             _floorLayoutTransformer = GetComponentInChildren<FloorLayoutTransformer>();
             _transformers["floor"] = _floorLayoutTransformer;
@@ -163,8 +163,8 @@ namespace VidiGraph
                 case MultiLayoutContext.CommunityState.None:
                     TransformNetwork("spherical", animated);
                     break;
-                case MultiLayoutContext.CommunityState.Spider:
-                    TransformNetwork("spider", animated);
+                case MultiLayoutContext.CommunityState.Cluster:
+                    TransformNetwork("cluster", animated);
                     break;
                 case MultiLayoutContext.CommunityState.Floor:
                     TransformNetwork("floor", animated);
@@ -197,18 +197,18 @@ namespace VidiGraph
             TransformNetwork("highlight", animated: false);
         }
 
-        // layout = [spherical, spider, floor]
+        // layout = [spherical, cluster, floor]
         public void SetLayout(List<int> commIDs, string layout)
         {
             foreach (var commID in commIDs)
             {
-                bool isCommFocused = layout == "floor" || layout == "spider";
+                bool isCommFocused = layout == "floor" || layout == "cluster";
                 _manager.NetworkGlobal.Communities[commID].Focus = isCommFocused;
                 _networkContext.Communities[commID].State = MultiLayoutContext.StrToState(layout);
 
-                if (layout == "spider")
+                if (layout == "cluster")
                 {
-                    _spiderLayoutTransformer.UpdateOnNextApply(commID);
+                    _clusterLayoutTransformer.UpdateOnNextApply(commID);
                 }
                 else if (layout == "floor")
                 {
@@ -275,9 +275,9 @@ namespace VidiGraph
         {
             var nextState = GetNextCommunityState(community);
 
-            if (nextState == MultiLayoutContext.CommunityState.Spider)
+            if (nextState == MultiLayoutContext.CommunityState.Cluster)
             {
-                _spiderLayoutTransformer.UpdateOnNextApply(community);
+                _clusterLayoutTransformer.UpdateOnNextApply(community);
             }
             else if (nextState == MultiLayoutContext.CommunityState.Floor)
             {
@@ -288,7 +288,7 @@ namespace VidiGraph
                 _sphericalLayoutTransformer.UpdateCommOnNextApply(community);
             }
 
-            bool isCommFocused = nextState == MultiLayoutContext.CommunityState.Floor || nextState == MultiLayoutContext.CommunityState.Spider;
+            bool isCommFocused = nextState == MultiLayoutContext.CommunityState.Floor || nextState == MultiLayoutContext.CommunityState.Cluster;
             _manager.NetworkGlobal.Communities[community].Focus = isCommFocused;
             _networkContext.Communities[community].State = nextState;
 

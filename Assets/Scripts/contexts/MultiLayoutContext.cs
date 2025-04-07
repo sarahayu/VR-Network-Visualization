@@ -67,7 +67,7 @@ namespace VidiGraph
         public enum CommunityState
         {
             None,
-            Spider,
+            Cluster,
             Floor,
             NumStates,
         }
@@ -151,8 +151,8 @@ namespace VidiGraph
             {
                 case "spherical":
                     return CommunityState.None;
-                case "spider":
-                    return CommunityState.Spider;
+                case "cluster":
+                    return CommunityState.Cluster;
                 case "floor":
                     return CommunityState.Floor;
             }
