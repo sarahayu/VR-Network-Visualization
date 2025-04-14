@@ -85,15 +85,19 @@ def classify():
         recognized_text = data.get("userText", "")
         prompt = FEW_SHOT_PROMPT.format(user_input=recognized_text)
 
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that outputs JSON."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0,
-            max_tokens=300
-        )
+        const response = await client.responses.create({
+            model: "gpt-4o-mini",
+            input=[
+                {
+                  "role": "developer", 
+                  "content": prompt
+                },
+                {
+                  "role": "user", 
+                  "content": "You are a graph command interpreter. For any given user input, classify it into: - The matching command name - A list of function calls - A list of visualization tasks Output your response as JSON in the following format: { \"command\": \"...\", \"functions\": [\"...\"], \"tasks\": [\"...\"] }"
+                }
+            ]
+        }
 
         raw = response.choices[0].message.content.strip()
         try:

@@ -17,6 +17,7 @@ namespace Whisper.Samples
         public WhisperManager whisper;
         public MicrophoneRecord microphoneRecord;
         public NetworkManager _networkManager;
+        public Query _query;
 
         [Header("UI")]
         public Button button;
@@ -158,6 +159,8 @@ namespace Whisper.Samples
         // ====== 4) Execute the Classified Command ======
         private void ExecuteOperation(string command)
         {
+            // TODO: Should change to queries
+            // _query.exec_query(_networkManager.Nodes, _networkManager.Links, command);
             switch (command)
             {
                 case "Highlight Node":
