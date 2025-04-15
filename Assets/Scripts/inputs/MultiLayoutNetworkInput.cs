@@ -2,6 +2,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Dynamic.Core;
+using System.Runtime.InteropServices;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -26,6 +28,8 @@ namespace VidiGraph
         XRInputValueReader<Vector2> Thumbstick = new XRInputValueReader<Vector2>("Thumbstick");
         [SerializeField]
         XRInputButtonReader ThumbstickClick = new XRInputButtonReader("ThumbstickClick");
+        [SerializeField]
+        XRInputButtonReader CommandPress = new XRInputButtonReader("CommandPress");
 
         NetworkManager _manager;
 
@@ -63,6 +67,8 @@ namespace VidiGraph
             RightTriggerPress.EnableDirectActionIfModeUsed();
             Thumbstick.EnableDirectActionIfModeUsed();
             ThumbstickClick.EnableDirectActionIfModeUsed();
+
+            CommandPress.EnableDirectActionIfModeUsed();
         }
 
         void Start()
@@ -90,7 +96,21 @@ namespace VidiGraph
                     _manager.ClearSelection();
                 }
             }
+            else if (LeftGripPress.ReadWasPerformedThisFrame())
+            {
+                _manager.ToggleBigNetworkSphericalAndHairball();
+            }
+            else if (CheckSelectionActions()) { }
+            else if (CommandPress.ReadWasPerformedThisFrame())
+            {
+                var queryer = _manager.NetworkGlobal.Nodes.NodeArray.AsQueryable();
 
+                var a = queryer.OrderBy("Degree").Take(10);
+            }
+        }
+
+        bool CheckSelectionActions()
+        {
             var curOpts = _manager.GetValidOptions();
 
             if (!curOpts.SetEquals(LastOptions))
@@ -107,21 +127,11 @@ namespace VidiGraph
                 LastOptions = curOpts;
             }
 
-            // if (RightSecondaryButton.ReadWasPerformedThisFrame())
-            // {
-            //     foreach (var commID in _manager.SelectedCommunities)
-            //     {
-            //         _manager.SetLayout(commID, "spherical");
-            //     }
-            // }
-
-            if (LeftGripPress.ReadWasPerformedThisFrame())
-            {
-                _manager.ToggleBigNetworkSphericalAndHairball();
-            }
-
             var thumbVal = Thumbstick.ReadValue();
             string curOptnLabel = "";
+
+            var highlightCol = new Color(200f / 255, 200f / 255, 200f / 255);
+            var neutralCol = new Color(94f / 255, 94f / 255, 94f / 255);
 
             if (thumbVal != Vector2.zero)
             {
@@ -134,13 +144,13 @@ namespace VidiGraph
                 {
                     if (curInd == optInd)
                     {
-                        go.GetComponentInChildren<Image>().color = new Color(200f / 255, 200f / 255, 200f / 255);
+                        go.GetComponentInChildren<Image>().color = highlightCol;
                         curOptnLabel = label;
 
                     }
                     else
                     {
-                        go.GetComponentInChildren<Image>().color = new Color(94f / 255, 94f / 255, 94f / 255);
+                        go.GetComponentInChildren<Image>().color = neutralCol;
                     }
 
                     curInd++;
@@ -152,14 +162,17 @@ namespace VidiGraph
             {
                 foreach (var (_, go) in CurOptions)
                 {
-                    go.GetComponentInChildren<Image>().color = new Color(94f / 255, 94f / 255, 94f / 255);
+                    go.GetComponentInChildren<Image>().color = neutralCol;
 
                 }
                 lastOptLabel = curOptnLabel;
             }
 
+            bool inputAction = false;
+
             if (ThumbstickClick.ReadWasPerformedThisFrame())
             {
+                inputAction = true;
                 switch (curOptnLabel)
                 {
                     case "Bring Node":
@@ -177,8 +190,13 @@ namespace VidiGraph
                     case "Project Comm. Floor":
                         _manager.SetLayout(_manager.SelectedCommunities.ToList(), "floor");
                         break;
+                    default:
+                        inputAction = false;
+                        break;
                 }
             }
+
+            return inputAction;
         }
 
         int GetHoveredOpt(float angle)
@@ -251,7 +269,7 @@ namespace VidiGraph
                 _manager.HoverNode(node.ID);
                 _hoveredNode = node;
 
-                TooltipText.SetText(node.Label);
+                TooltipText.SetText($"{node.Label}\n{node.Degree}");
             }
         }
 

@@ -23,7 +23,6 @@ namespace VidiGraph
                 node.ColorParsed = Color.black;
 
             node.IsVirtualNode = fileNode.virtualNode;
-            node.Degree = fileNode.degree;
             node.Height = fileNode.height;
             node.AncID = fileNode.ancIdx;
             node.ChildIDs = fileNode.childIdx;

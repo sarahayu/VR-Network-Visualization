@@ -18,10 +18,11 @@ namespace VidiGraph
         [SerializeField]
         HandheldNetwork _handheldNetwork;
 
-        NetworkFilesLoader _fileLoader;
-        NetworkGlobal _networkGlobal;
 
+        NetworkFilesLoader _fileLoader;
         public NetworkFilesLoader FileLoader { get { return _fileLoader; } }
+
+        NetworkGlobal _networkGlobal;
         public NetworkGlobal NetworkGlobal { get { return _networkGlobal; } }
 
         public HashSet<int> SelectedNodes { get { return _networkGlobal.SelectedNodes; } }

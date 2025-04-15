@@ -31,7 +31,6 @@ namespace VidiGraph
         public int idx;
         public string color = null;
         public bool virtualNode;
-        public double degree = 0;
         public int height;
         public int ancIdx;
         public int[] childIdx;

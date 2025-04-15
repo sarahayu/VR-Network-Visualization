@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.github-glitchenzo.nugetforunity": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
     "com.unity.ide.vscode": "1.2.5",
     "com.unity.render-pipelines.universal": "14.0.11",
     "com.unity.scripting.python": "6.0.1",
