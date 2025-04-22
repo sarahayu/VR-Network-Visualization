@@ -2,104 +2,41 @@ from flask import Flask, request, jsonify
 from openai import OpenAI
 import os
 import json
-
+from examples import EXAMPLES
 
 app = Flask(__name__)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY").strip())
-
-FEW_SHOT_PROMPT = FEW_SHOT_PROMPT = """
-You are a graph command interpreter. For any given user input, classify it into:
-- The matching command name
-- A list of function calls
-- A list of visualization tasks
-
-Output your response as JSON in the following format:
-{{
-  "command": "...",
-  "functions": ["..."],
-  "tasks": ["..."]
-}}
-
-Here are some examples:
-
-User: Highlight the node with the highest degree
-{{
-  "command": "Highlight Node",
-  "functions": ["Node Query", "Node Highlight"],
-  "tasks": ["Create active node set using query", "Highlight currently selected nodes"]
-}}
-
-User: Change the layout of the selected group to spherical
-{{
-  "command": "Change Layout Spherical",
-  "functions": ["Change Layout Spherical"],
-  "tasks": ["Apply spherical layout to selected communities"]
-}}
-
-User: Use spider layout for the current community
-{{
-  "command": "Change Layout Spider",
-  "functions": ["Change Layout Spider"],
-  "tasks": ["Apply spider layout to selected communities"]
-}}
-
-
-User: Put the group layout on the floor
-{{
-  "command": "Change Layout Floor",
-  "functions": ["Change Layout floor"],
-  "tasks": ["Apply floor layout to selected communities"]
-}}
-
-
-
-User: Select the 5 least well-connected nodes
-{{
-  "command": "Select Node",
-  "functions": ["Node Query", "Node Select"],
-  "tasks": ["Create active node set using query", "Select the currently active nodes"]
-}}
-
-User: Show me the 3 smallest groups
-{{
-  "command": "Highlight Group",
-  "functions": ["Node Query", "Group Highlight"],
-  "tasks": ["Create active node set using query", "Select containing group for each selected node in active set"]
-}}
-
-User: Create a new group containing the top 10 most bullied students
-{{
-  "command": "Group Nodes",
-  "functions": ["Node Query", "Detach Nodes", "Group Nodes", "Layout \\"Force-Directed 2D Group\\""],
-  "tasks": ["Create active node set using query", "Detach the nodes from their current group", "Regroup nodes into a new group", "Compute layout for new group and recompute other layouts based on LLM specs"]
-}}
-
-User: {user_input}
-"""
 
 
 @app.route('/classify', methods=['POST'])
 def classify():
     try:
         data = request.get_json()
-        recognized_text = data.get("userText", "")
-        prompt = FEW_SHOT_PROMPT.format(user_input=recognized_text)
+        user_input = data.get("userText", "")
 
-        const response = await client.responses.create({
-            model: "gpt-4o-mini",
-            input=[
-                {
-                  "role": "developer", 
-                  "content": prompt
-                },
-                {
-                  "role": "user", 
-                  "content": "You are a graph command interpreter. For any given user input, classify it into: - The matching command name - A list of function calls - A list of visualization tasks Output your response as JSON in the following format: { \"command\": \"...\", \"functions\": [\"...\"], \"tasks\": [\"...\"] }"
-                }
-            ]
-        }
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a .NET dynamic LINQ query interpreter. Given a user's intent, respond with a valid C# dynamic LINQ query string using System.Linq.Dynamic. Wrap the query in a JSON response as: { \"query\": \"...\" }"
+            }
+        ]
+
+        # Add few-shot examples to messages
+        for ex in EXAMPLES:
+            messages.append({"role": "user", "content": ex["user"]})
+            messages.append({"role": "assistant", "content": json.dumps(ex["assistant"])})
+
+        # Add live user input at the end
+        messages.append({"role": "user", "content": user_input})
+
+        # Call OpenAI
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages
+        )
 
         raw = response.choices[0].message.content.strip()
+
         try:
             structured = json.loads(raw)
             return jsonify(structured)
@@ -109,7 +46,7 @@ def classify():
 
     except Exception as e:
         import traceback
-        print("Error: ERROR during /classify call:")
+        print("Error during /classify call:")
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
