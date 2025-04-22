@@ -57,17 +57,6 @@ namespace VidiGraph
             }
         }
 
-        void InitializeIdMap(RNetwork network)
-        {
-            network.idToIdx = new Dictionary<int, int>();
-
-            for (int i = 0; i < network.nodes.Count(); i++)
-            {
-                if (network.nodes[i] == null) continue; // why would this be null??
-                network.idToIdx[network.nodes[i].idx] = i;
-            }
-        }
-
         T Decode<T>(string filename)
         {
             string filepath = $"{Application.streamingAssetsPath}/{filename}";

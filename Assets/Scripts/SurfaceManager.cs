@@ -1,6 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 public class SurfaceManager : MonoBehaviour
 {
@@ -10,6 +13,11 @@ public class SurfaceManager : MonoBehaviour
     Dictionary<int, GameObject> _surfaces = new Dictionary<int, GameObject>();
 
     public Dictionary<int, GameObject> Surfaces { get { return _surfaces; } }
+
+    public delegate void SurfaceHoverEnterEvent(int surfaceID, HoverEnterEventArgs evt);
+    public event SurfaceHoverEnterEvent OnSurfaceHoverEnter;
+    public delegate void SurfaceHoverExitEvent(int surfaceID, HoverExitEventArgs evt);
+    public event SurfaceHoverExitEvent OnSurfaceHoverExit;
 
     int _curID = 0;
 
@@ -30,9 +38,13 @@ public class SurfaceManager : MonoBehaviour
     {
         var surfObject = Object.Instantiate(_surfacePrefab, transform);
 
-        surfObject.transform.SetPositionAndRotation(position, rotation);
-
         int id = GetNextID();
+
+        surfObject.transform.SetPositionAndRotation(position, rotation);
+        TextMeshPro text = surfObject.GetComponentInChildren<TextMeshPro>();
+        text.SetText(id.ToString());
+
+        AddSurfaceInteraction(surfObject, id);
 
         _surfaces[id] = surfObject;
 
@@ -52,5 +64,20 @@ public class SurfaceManager : MonoBehaviour
     int GetNextID()
     {
         return _curID++;
+    }
+
+    void AddSurfaceInteraction(GameObject gameObject, int id)
+    {
+        XRGrabInteractable xrInteractable = gameObject.GetComponent<XRGrabInteractable>();
+
+        xrInteractable.hoverEntered.AddListener(evt =>
+        {
+            OnSurfaceHoverEnter(id, evt);
+        });
+
+        xrInteractable.hoverExited.AddListener(evt =>
+        {
+            OnSurfaceHoverExit(id, evt);
+        });
     }
 }

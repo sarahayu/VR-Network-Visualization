@@ -8,19 +8,24 @@ using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 public class SurfaceInput : MonoBehaviour
 {
+    public Vector3 surfSpawnOffset = Vector3.zero;
+
     [SerializeField]
     XRInputButtonReader _commandPress = new XRInputButtonReader("CommandPress");
-    bool _commandPressed = false;
 
     [SerializeField]
     Transform _spawnOrigin;
 
     SurfaceManager _surfManager;
 
-    // Start is called before the first frame update
+    int _curHoveredSurface = -1;
+
     void Start()
     {
         _surfManager = GetComponent<SurfaceManager>();
+
+        _surfManager.OnSurfaceHoverEnter += RegisterHoveredSurface;
+        _surfManager.OnSurfaceHoverExit += RegisterUnhoveredSurface;
     }
 
     void OnEnable()
@@ -28,23 +33,24 @@ public class SurfaceInput : MonoBehaviour
         _commandPress.EnableDirectActionIfModeUsed();
     }
 
-    // Update is called once per frame
     void Update()
     {
         if (_commandPress.ReadWasPerformedThisFrame())
         {
-            if (!_commandPressed)
-            {
-                if (_surfManager.Surfaces.Count == 0)
-                    _surfManager.SpawnSurface(_spawnOrigin.position, _spawnOrigin.rotation);
-                else
-                    _surfManager.DeleteSurface(_surfManager.Surfaces.Keys.First());
-                _commandPressed = true;
-            }
+            if (_curHoveredSurface == -1)
+                _surfManager.SpawnSurface(_spawnOrigin.position + _spawnOrigin.rotation * surfSpawnOffset, _spawnOrigin.rotation);
+            else
+                _surfManager.DeleteSurface(_curHoveredSurface);
         }
-        else
-        {
-            _commandPressed = false;
-        }
+    }
+
+    void RegisterHoveredSurface(int surfID, HoverEnterEventArgs evt)
+    {
+        _curHoveredSurface = surfID;
+    }
+
+    void RegisterUnhoveredSurface(int surfID, HoverExitEventArgs evt)
+    {
+        _curHoveredSurface = -1;
     }
 }

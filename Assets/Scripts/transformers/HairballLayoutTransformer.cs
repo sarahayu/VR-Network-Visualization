@@ -30,6 +30,7 @@ namespace VidiGraph
             // TODO calculate at runtime
             foreach (var node in _fileLoader.HairballLayout.nodes)
             {
+                if (node.virtualNode) continue;
                 _networkContext.Nodes[node.idx].Position = node._position3D;
                 _networkContext.Nodes[node.idx].Dirty = true;
             }

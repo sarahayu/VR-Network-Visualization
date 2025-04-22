@@ -292,7 +292,7 @@ namespace VidiGraph
 
         void AddCommunityInteraction(GameObject gameObject, Community community)
         {
-            XRSimpleInteractable xrInteractable = gameObject.GetComponent<XRSimpleInteractable>();
+            XRGrabInteractable xrInteractable = gameObject.GetComponent<XRGrabInteractable>();
 
             xrInteractable.hoverEntered.AddListener(evt =>
             {
