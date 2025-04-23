@@ -78,9 +78,6 @@ namespace VidiGraph
         public Dictionary<int, Link> Links = new Dictionary<int, Link>();
         public Dictionary<int, Community> Communities = new Dictionary<int, Community>();
 
-        [HideInInspector]
-        public TransformInfo CurrentTransform = new TransformInfo();
-
         public Func<VidiGraph.Node, float> GetNodeSize = null;
         public Func<VidiGraph.Node, Color> GetNodeColor = null;
         public Func<VidiGraph.Link, float> GetLinkWidth = null;

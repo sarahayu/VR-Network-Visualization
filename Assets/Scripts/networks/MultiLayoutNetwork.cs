@@ -307,6 +307,9 @@ namespace VidiGraph
                 _multiLayoutRenderer.UpdateRenderElements();
             });
 
+            interpolator.Interpolate(1f);
+            _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+            _multiLayoutRenderer.UpdateRenderElements();
             // // update render elements one more time to update input elements after recomputing geometric info
             // _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
             // _multiLayoutRenderer.UpdateRenderElements();

@@ -78,9 +78,6 @@ namespace VidiGraph
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
-        TransformInfo _startingContextTransform;
-        TransformInfo _endingContextTransform;
-
         public FloorLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
             NetworkFilesLoader fileLoader, HashSet<int> toUpdate)
         {
@@ -109,9 +106,6 @@ namespace VidiGraph
             }
 
             toUpdate.Clear();
-
-            _startingContextTransform = networkContext.CurrentTransform.Copy();
-            _endingContextTransform = endingContextTransform;
         }
 
         public override void Interpolate(float t)
@@ -122,8 +116,6 @@ namespace VidiGraph
                     = Vector3.Lerp(_startPositions[nodeID], _endPositions[nodeID], Mathf.SmoothStep(0f, 1f, t));
                 _networkContext.Nodes[nodeID].Dirty = true;
             }
-
-            // GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);
         }
     }
 

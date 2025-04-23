@@ -62,8 +62,6 @@ namespace VidiGraph
 
             InitializeShaders();
 
-            UpdateNetworkTransform();
-
             CreateNodes();
             CreateCommunities();
             CreateLinks();
@@ -75,8 +73,6 @@ namespace VidiGraph
 
         public override void UpdateRenderElements()
         {
-            UpdateNetworkTransform();
-
             UpdateNodes();
             UpdateCommunities();
             UpdateLinks();
@@ -95,11 +91,6 @@ namespace VidiGraph
             _batchSplineMaterial.SetFloat("_LineWidth", _networkContext.ContextSettings.LinkWidth);
 
             _shaderWrapper.Initialize(SplineComputeShader, _batchSplineMaterial, _networkContext.ContextSettings);
-        }
-
-        void UpdateNetworkTransform()
-        {
-            _networkContext.CurrentTransform.AssignToTransform(transform);
         }
 
         void CreateNodes()
@@ -171,7 +162,7 @@ namespace VidiGraph
 
                 Vector3[] cpDistributed = new Vector3[length + 2];
 
-                cpDistributed[0] = _networkContext.CurrentTransform.TransformPoint(source);
+                cpDistributed[0] = source;
 
                 for (int i = 0; i < length; i++)
                 {
@@ -180,10 +171,8 @@ namespace VidiGraph
                     cpDistributed[i + 1].x = beta * point.x + (1 - beta) * (source.x + (i + 1) * dVector3.x / length);
                     cpDistributed[i + 1].y = beta * point.y + (1 - beta) * (source.y + (i + 1) * dVector3.y / length);
                     cpDistributed[i + 1].z = beta * point.z + (1 - beta) * (source.z + (i + 1) * dVector3.z / length);
-
-                    cpDistributed[i + 1] = _networkContext.CurrentTransform.TransformPoint(cpDistributed[i + 1]);
                 }
-                cpDistributed[length + 1] = _networkContext.CurrentTransform.TransformPoint(target);
+                cpDistributed[length + 1] = target;
 
                 _controlPointsMap[link.ID] = new List<Vector3>(cpDistributed);
             }

@@ -111,9 +111,6 @@ namespace VidiGraph
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
-        TransformInfo _startingContextTransform;
-        TransformInfo _endingContextTransform;
-
         public BringNodeInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
             NetworkFilesLoader fileLoader, HashSet<int> focusNodes, Dictionary<int, bool> focusNodesToUpdate)
         {
@@ -147,9 +144,6 @@ namespace VidiGraph
 
                 focusNodesToUpdate.Remove(node.ID);
             }
-
-            _startingContextTransform = networkContext.CurrentTransform.Copy();
-            _endingContextTransform = endingContextTransform;
         }
 
         public override void Interpolate(float t)

@@ -63,27 +63,21 @@ namespace VidiGraph
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
-        TransformInfo _startingContextTransform;
-        TransformInfo _endingContextTransform;
-
         public HairballLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext, NetworkFilesLoader fileLoader)
         {
             _networkContext = networkContext;
-            // get actual array instead of the node collection so we can use list indices rather than 
-            // their ids specified in data
-            var nodes = networkGlobal.Nodes.NodeArray;
-            var nodeCount = nodes.Count;
 
             var hairballNodes = fileLoader.HairballLayout.nodes;
             var idToIdx = fileLoader.HairballLayout.idToIdx;
 
-            for (int i = 0; i < nodeCount; i++)
-            {
-                var node = nodes[i];
 
-                _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
+            foreach (var node in fileLoader.HairballLayout.nodes)
+            {
+                if (node.virtualNode) continue;
+
+                _startPositions[node.idx] = networkContext.Nodes[node.idx].Position;
                 // TODO calculate at runtime
-                _endPositions[node.ID] = endingContextTransform.TransformPoint(hairballNodes[idToIdx[node.ID]]._position3D);
+                _endPositions[node.idx] = endingContextTransform.TransformPoint(hairballNodes[idToIdx[node.idx]]._position3D);
             }
 
             foreach (var link in _networkContext.Links.Values)
@@ -97,10 +91,6 @@ namespace VidiGraph
             {
                 comm.Dirty = true;
             }
-
-
-            _startingContextTransform = networkContext.CurrentTransform.Copy();
-            _endingContextTransform = endingContextTransform;
         }
 
         public override void Interpolate(float t)
@@ -112,7 +102,12 @@ namespace VidiGraph
                 _networkContext.Nodes[nodeID].Dirty = true;
             }
 
-            // GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);
+            // just mark all communities as dirty
+            // TODO optimize?
+            foreach (var comm in _networkContext.Communities.Values)
+            {
+                comm.Dirty = true;
+            }
         }
     }
 

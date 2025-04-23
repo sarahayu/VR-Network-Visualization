@@ -19,7 +19,7 @@ namespace VidiGraph
         public static GameObject UpdateNode(GameObject nodeObj,
             Node node, MultiLayoutContext.Node nodeProps, float nodeScale, Renderer renderer = null)
         {
-            nodeObj.transform.localPosition = nodeProps.Position;
+            nodeObj.transform.position = nodeProps.Position;
             nodeObj.transform.localScale = Vector3.one * nodeProps.Size * nodeScale;
 
             if (!renderer)
@@ -56,7 +56,7 @@ namespace VidiGraph
         public static GameObject UpdateCommunityNode(GameObject nodeObj,
             MinimapContext.Node nodeProps, float nodeScale, Renderer renderer = null)
         {
-            nodeObj.transform.localPosition = nodeProps.Position;
+            nodeObj.transform.position = nodeProps.Position;
             nodeObj.transform.localScale = Vector3.one * nodeProps.Size * nodeScale;
 
             if (!renderer)
