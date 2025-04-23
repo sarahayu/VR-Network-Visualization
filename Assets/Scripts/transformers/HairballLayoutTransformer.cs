@@ -31,7 +31,7 @@ namespace VidiGraph
             foreach (var node in _fileLoader.HairballLayout.nodes)
             {
                 if (node.virtualNode) continue;
-                _networkContext.Nodes[node.idx].Position = node._position3D;
+                _networkContext.Nodes[node.idx].Position = _hairballTransform.TransformPoint(node._position3D);
                 _networkContext.Nodes[node.idx].Dirty = true;
             }
 
@@ -48,7 +48,7 @@ namespace VidiGraph
                 comm.Dirty = true;
             }
 
-            _networkContext.CurrentTransform.SetFromTransform(_hairballTransform);
+            // _networkContext.CurrentTransform.SetFromTransform(_hairballTransform);
         }
 
         public override TransformInterpolator GetInterpolator()
@@ -83,7 +83,7 @@ namespace VidiGraph
 
                 _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
                 // TODO calculate at runtime
-                _endPositions[node.ID] = hairballNodes[idToIdx[node.ID]]._position3D;
+                _endPositions[node.ID] = endingContextTransform.TransformPoint(hairballNodes[idToIdx[node.ID]]._position3D);
             }
 
             foreach (var link in _networkContext.Links.Values)
@@ -112,7 +112,7 @@ namespace VidiGraph
                 _networkContext.Nodes[nodeID].Dirty = true;
             }
 
-            GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);
+            // GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);
         }
     }
 

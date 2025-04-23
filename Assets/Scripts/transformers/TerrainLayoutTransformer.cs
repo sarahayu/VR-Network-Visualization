@@ -91,7 +91,7 @@ namespace VidiGraph
                 community.Position = pos;
             }
 
-            _networkContext.CurrentTransform.SetFromTransform(_terrainTransform);
+            // _networkContext.CurrentTransform.SetFromTransform(_terrainTransform);
         }
 
         public override TransformInterpolator GetInterpolator()

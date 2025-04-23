@@ -37,7 +37,7 @@ namespace VidiGraph
             foreach (var nodeID in _nodesToUpdate)
             {
                 var sphericalPos = sphericalNodes[sphericalIdToIdx[nodeID]]._position3D;
-                _networkContext.Nodes[nodeID].Position = new Vector3(sphericalPos.x, sphericalPos.y, sphericalPos.z);
+                _networkContext.Nodes[nodeID].Position = _sphericalTransform.TransformPoint(new Vector3(sphericalPos.x, sphericalPos.y, sphericalPos.z));
                 _networkContext.Nodes[nodeID].Dirty = true;
 
                 foreach (var link in _networkGlobal.NodeLinkMatrix[nodeID])
@@ -55,7 +55,7 @@ namespace VidiGraph
 
             _nodesToUpdate.Clear();
 
-            _networkContext.CurrentTransform.SetFromTransform(_sphericalTransform);
+            // _networkContext.CurrentTransform.SetFromTransform(_sphericalTransform);
         }
 
         public override TransformInterpolator GetInterpolator()
@@ -118,7 +118,7 @@ namespace VidiGraph
                 var sphericalPos = sphericalNodes[sphericalIdToIdx[nodeID]]._position3D;
 
                 _startPositions[nodeID] = networkContext.Nodes[nodeID].Position;
-                _endPositions[nodeID] = new Vector3(sphericalPos.x, sphericalPos.y, sphericalPos.z);
+                _endPositions[nodeID] = endingContextTransform.TransformPoint(new Vector3(sphericalPos.x, sphericalPos.y, sphericalPos.z));
 
                 foreach (var link in networkGlobal.NodeLinkMatrix[nodeID])
                 {
@@ -148,7 +148,7 @@ namespace VidiGraph
                 _networkContext.Nodes[nodeID].Dirty = true;
             }
 
-            GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);
+            // GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);
         }
     }
 

@@ -45,7 +45,7 @@ namespace VidiGraph
                 {
                     // TODO calculate at runtime
                     var bringNodePos = sphericalNodes[sphericalIdToIdx[node.ID]]._position3D * 0.2f;
-                    _networkContext.Nodes[node.ID].Position = new Vector3(bringNodePos.x, bringNodePos.y, bringNodePos.z);
+                    _networkContext.Nodes[node.ID].Position = _bringNodeTransform.TransformPoint(new Vector3(bringNodePos.x, bringNodePos.y, bringNodePos.z));
                     _networkContext.Nodes[node.ID].Dirty = true;
 
                     _focusNodes.Add(node.ID);
@@ -63,7 +63,7 @@ namespace VidiGraph
                 _focusNodesToUpdate.Remove(node.ID);
             }
 
-            _networkContext.CurrentTransform.SetFromTransform(_bringNodeTransform);
+            // _networkContext.CurrentTransform.SetFromTransform(_bringNodeTransform);
         }
 
         public override TransformInterpolator GetInterpolator()
@@ -131,7 +131,7 @@ namespace VidiGraph
                     _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
                     // TODO calculate at runtime
                     var bringNodePos = sphericalNodes[sphericalIdToIdx[node.ID]]._position3D * 0.2f;
-                    _endPositions[node.ID] = new Vector3(bringNodePos.x, bringNodePos.y, bringNodePos.z);
+                    _endPositions[node.ID] = endingContextTransform.TransformPoint(new Vector3(bringNodePos.x, bringNodePos.y, bringNodePos.z));
 
                     focusNodes.Add(node.ID);
                 }
@@ -161,7 +161,7 @@ namespace VidiGraph
                 _networkContext.Nodes[nodeID].Dirty = true;
             }
 
-            GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);
+            // GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);
         }
     }
 

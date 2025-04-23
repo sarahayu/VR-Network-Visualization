@@ -41,7 +41,7 @@ namespace VidiGraph
                 foreach (var node in _networkGlobal.Communities[commID].Nodes)
                 {
                     var floorPos = floorNodes[floorIdToIdx[node.ID]]._position3D;
-                    _networkContext.Nodes[node.ID].Position = new Vector3(floorPos.x, floorPos.y, floorPos.z);
+                    _networkContext.Nodes[node.ID].Position = _floorTransform.TransformPoint(new Vector3(floorPos.x, floorPos.y, floorPos.z));
                     _networkContext.Nodes[node.ID].Dirty = true;
                 }
 
@@ -53,7 +53,7 @@ namespace VidiGraph
 
             _commsToUpdate.Clear();
 
-            _networkContext.CurrentTransform.SetFromTransform(_floorTransform);
+            // _networkContext.CurrentTransform.SetFromTransform(_floorTransform);
         }
 
         public override TransformInterpolator GetInterpolator()
@@ -99,7 +99,7 @@ namespace VidiGraph
                     var floorPos = floorNodes[floorIdToIdx[node.ID]]._position3D;
 
                     _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
-                    _endPositions[node.ID] = new Vector3(floorPos.x, floorPos.y, floorPos.z);
+                    _endPositions[node.ID] = endingContextTransform.TransformPoint(new Vector3(floorPos.x, floorPos.y, floorPos.z));
                 }
 
                 foreach (var link in networkGlobal.Communities[commID].InnerLinks)
@@ -123,7 +123,7 @@ namespace VidiGraph
                 _networkContext.Nodes[nodeID].Dirty = true;
             }
 
-            GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);
+            // GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);
         }
     }
 

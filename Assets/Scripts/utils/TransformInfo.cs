@@ -10,9 +10,9 @@ public class TransformInfo
 
     public TransformInfo()
     {
-        position = new Vector3();
-        scale = new Vector3();
-        rotation = new Quaternion();
+        position = Vector3.zero;
+        scale = Vector3.one;
+        rotation = Quaternion.identity;
     }
 
     public TransformInfo(Transform trans)
