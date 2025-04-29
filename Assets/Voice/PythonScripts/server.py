@@ -17,7 +17,13 @@ def classify():
         messages = [
             {
                 "role": "system",
-                "content": "You are a dynamic LINQ query interpreter. Given a user's intent, respond with a valid C# dynamic LINQ query string using System.Linq.Dynamic. Wrap the query in a JSON response as: { \"query\": \"...\" }"
+                "content": "You are a command parser for a voice-based VR network visualization system.\
+                            When a user gives a natural language instruction, your job is to convert it into structured task units that include:\
+                            Task: one of \"Select\", \"Layout\", \"Surface\", \"Move\", \"Create Group\", etc.\
+                            Attribute: the property you're targeting (e.g., \"Degree\", \"Color\", \"Most Bullied\", \"Smallest Group\").\
+                            Number: how many to take or rank (e.g., \"5\", \"10\", \"1\"). Leave it empty if not needed.\
+                            Sequence: \"0\" for first step, \"1\" for second step (if there is a sequence like select → move).\
+                            If the command has multiple steps, return an array of steps, each with increasing \"Sequence\" values."
             }
         ]
 
