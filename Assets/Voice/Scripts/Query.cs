@@ -125,14 +125,25 @@ public class Query : MonoBehaviour
             // Print result
             foreach (var node in result)
             {
-                Debug.Log($"Query result: {node.ID}");
+                Debug.Log($"Query result: {node.ID} with {node.Degree} degree and {node.Height} height");
             }
         }
         catch (Exception ex)
         {
             Debug.LogError($"Query execution failed: {ex.Message}");
         }
+    }
 
-
+    public void TaskWithIDs(string task, List<int> ids)
+    {
+        switch (task)
+        {
+            case "Highlight", "Select", "SelectAll":
+                networkManager.SetSelectedNodes(ids, true);
+                break;
+            case "Unhighlight", "Unselect", "UnselectAll":
+                networkManager.SetSelectedNodes(ids, false);
+                break;
+        }
     }
 }

@@ -27,6 +27,11 @@ namespace Whisper.Samples
 
         // Reference to the whisper stream
         private WhisperStream _stream;
+        // Timer for detecting pause
+        private float lastRecognizedTime = 0f;
+
+        // Buffer to store what is currently being transcribed
+        private string currentBuffer = "";
 
         // ====== 1) Classification Endpoint URL ======
         private string serverUrl = "http://localhost:5000/classify";
@@ -78,13 +83,29 @@ namespace Whisper.Samples
         /// </summary>
         private void OnResult(string result)
         {
-            // Display transcribed text
-            // text.text = result;
-            // UiUtils.ScrollDown(scroll);
+            float currentTime = Time.time;
 
-            // ====== 2) Send text for classification ======
-            StartCoroutine(ClassifyUserCommand(result));
+            if (currentTime - lastRecognizedTime > 3.0f)
+            {
+                // More than 2 seconds passed → treat as new sentence
+                currentBuffer = result;
+            }
+            else
+            {
+                // Within 2 seconds → keep appending
+                currentBuffer += " " + result;
+            }
+
+            lastRecognizedTime = currentTime;
+
+            // Display current transcription
+            text.text = currentBuffer;
+            UiUtils.ScrollDown(scroll);
+
+            StartCoroutine(ClassifyUserCommand(currentBuffer));
+            currentBuffer = "";
         }
+
 
         private void OnSegmentUpdated(WhisperResult segment)
         {
@@ -107,7 +128,6 @@ namespace Whisper.Samples
         {
             Debug.Log("Recognized TEXT: " + recognizedText);
             ClassificationRequest requestBody = new ClassificationRequest { userText = recognizedText };
-            recognizedText = "";
             string jsonBody = JsonUtility.ToJson(requestBody);
 
             byte[] postData = Encoding.UTF8.GetBytes(jsonBody);
@@ -133,13 +153,15 @@ namespace Whisper.Samples
 
                     if (classification != null && !string.IsNullOrEmpty(classification.query))
                     {
-                        // _query.ExecuteQuery(classification.query);
+                        _query.ExecuteQuery(classification.query);
+                        currentBuffer = "";
                     }
                     else
                     {
                         Debug.LogWarning("Invalid or empty query received.");
                     }
                 }
+
             }
         }
 
