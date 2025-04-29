@@ -20,6 +20,11 @@ namespace VidiGraph
         // A inverted index allow reference the node by its own idx
         public IDictionary<int, int> IdToIndex { get; } = new Dictionary<int, int>();
 
+        public List<Node> GetNodeArray()
+        {
+            return NodeArray;
+        }
+
         public void Clear()
         {
             NodeArray.Clear();

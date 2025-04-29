@@ -17,21 +17,18 @@ def classify():
         messages = [
             {
                 "role": "system",
-                "content": "You are a .NET dynamic LINQ query interpreter. Given a user's intent, respond with a valid C# dynamic LINQ query string using System.Linq.Dynamic. Wrap the query in a JSON response as: { \"query\": \"...\" }"
+                "content": "You are a dynamic LINQ query interpreter. Given a user's intent, respond with a valid C# dynamic LINQ query string using System.Linq.Dynamic. Wrap the query in a JSON response as: { \"query\": \"...\" }"
             }
         ]
 
-        # Add few-shot examples to messages
         for ex in EXAMPLES:
             messages.append({"role": "user", "content": ex["user"]})
             messages.append({"role": "assistant", "content": json.dumps(ex["assistant"])})
 
-        # Add live user input at the end
         messages.append({"role": "user", "content": user_input})
 
-        # Call OpenAI
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=messages
         )
 
@@ -42,13 +39,13 @@ def classify():
             return jsonify(structured)
         except json.JSONDecodeError:
             print("Error: GPT response was not valid JSON:\n", raw)
-            return jsonify({"error": "Invalid JSON response from GPT", "raw": raw}), 500
+            return jsonify({"Error": "Invalid JSON response from GPT", "raw": raw}), 500
 
     except Exception as e:
         import traceback
         print("Error during /classify call:")
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"Error": str(e)}), 500
 
 
 if __name__ == '__main__':
