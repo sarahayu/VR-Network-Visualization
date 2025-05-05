@@ -59,6 +59,7 @@ namespace VidiGraph
 
         bool _isSphericalLayout;
         Coroutine _curAnim = null;
+        Coroutine _curNodeMover = null;
 
         void Awake()
         {
@@ -234,6 +235,24 @@ namespace VidiGraph
             TransformNetwork("bringNode", animated: true);
         }
 
+        public void StartNodeMove(int nodeID, Transform toTrack)
+        {
+            if (_curNodeMover != null)
+            {
+                StopCoroutine(_curNodeMover);
+            }
+
+            _curNodeMover = StartCoroutine(CRMoveNode(nodeID, toTrack));
+        }
+
+        public void EndNodeMove()
+        {
+            if (_curNodeMover != null)
+            {
+                StopCoroutine(_curNodeMover);
+            }
+        }
+
         void TransformNetwork(string layout, bool animated)
         {
             if (animated)
@@ -315,6 +334,18 @@ namespace VidiGraph
             // _multiLayoutRenderer.UpdateRenderElements();
 
             _curAnim = null;
+        }
+
+        IEnumerator CRMoveNode(int nodeID, Transform toTrack)
+        {
+            for (; ; )
+            {
+                _networkContext.Nodes[nodeID].Position = toTrack.position;
+                _networkContext.Nodes[nodeID].Dirty = true;
+                _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+                _multiLayoutRenderer.UpdateRenderElements();
+                yield return null;
+            }
         }
     }
 }

@@ -40,11 +40,18 @@ namespace VidiGraph
         public Transform ButtonsTransform;
         public GameObject OptionPrefab;
 
+        [SerializeField]
+        Transform RightTransform;
+
         List<Tuple<string, GameObject>> CurOptions = new List<Tuple<string, GameObject>>();
 
         HashSet<string> LastOptions = new HashSet<string>();
 
         string lastOptLabel = "";
+
+        bool _wasMovement = false;
+        Vector3 _selectPos;
+        Vector3 _curHoverPos;
 
         public override void Initialize()
         {
@@ -57,6 +64,12 @@ namespace VidiGraph
 
             renderer.OnNodeHoverEnter += OnNodeHoverEnter;
             renderer.OnNodeHoverExit += OnNodeHoverExit;
+
+            renderer.OnCommunitySelectEnter += OnCommunitySelectEnter;
+            renderer.OnCommunitySelectExit += OnCommunitySelectExit;
+
+            renderer.OnNodeSelectEnter += OnNodeSelectEnter;
+            renderer.OnNodeSelectExit += OnNodeSelectExit;
         }
 
         void OnEnable()
@@ -73,18 +86,20 @@ namespace VidiGraph
 
         void Start()
         {
-            // ContextMenuUtils.MakeOption(OptionPrefab, ButtonsTransform, "test1", -45);
-            // ContextMenuUtils.MakeOption(OptionPrefab, ButtonsTransform, "test2", 45);
         }
 
         void Update()
         {
-            if (RightGripPress.ReadWasPerformedThisFrame())
+            var dist = Vector3.Distance(_selectPos, RightTransform.transform.position);
+            print(dist.ToString());
+            bool moved = dist > 10f;
+
+            // is ReadWasCompletedThisFrame the problem?
+
+            if (RightGripPress.ReadWasCompletedThisFrame() && !moved)
             {
                 if (_hoveredCommunity != null)
                 {
-                    // _manager.CycleCommunityFocus(_hoveredCommunity.ID);
-
                     _manager.ToggleSelectedCommunities(new List<int> { _hoveredCommunity.ID });
                 }
                 else if (_hoveredNode != null)
@@ -96,12 +111,12 @@ namespace VidiGraph
                     _manager.ClearSelection();
                 }
             }
-            else if (LeftGripPress.ReadWasPerformedThisFrame())
+            else if (LeftGripPress.ReadWasCompletedThisFrame())
             {
                 _manager.ToggleBigNetworkSphericalAndHairball();
             }
             else if (CheckSelectionActions()) { }
-            else if (CommandPress.ReadWasPerformedThisFrame())
+            else if (CommandPress.ReadWasCompletedThisFrame())
             {
                 var queryer = _manager.NetworkGlobal.Nodes.NodeArray.AsQueryable();
 
@@ -279,6 +294,39 @@ namespace VidiGraph
             {
                 _manager.UnhoverNode(node.ID);
                 _hoveredNode = null;
+            }
+        }
+
+        void OnCommunitySelectEnter(Community community, SelectEnterEventArgs evt)
+        {
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                // _manager.SelectCommunity(community.ID);
+            }
+        }
+
+        void OnCommunitySelectExit(Community community, SelectExitEventArgs evt)
+        {
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                // _manager.UnselectCommunity(community.ID);
+            }
+        }
+
+        void OnNodeSelectEnter(Node node, SelectEnterEventArgs evt)
+        {
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                _manager.StartNodeMove(node.ID, evt.interactableObject.transform);
+                _selectPos = RightTransform.position;
+            }
+        }
+
+        void OnNodeSelectExit(Node node, SelectExitEventArgs evt)
+        {
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                _manager.EndNodeMove(node.ID, evt.interactableObject.transform);
             }
         }
     }

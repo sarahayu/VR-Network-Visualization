@@ -292,11 +292,22 @@ namespace VidiGraph
             {
                 CallCommunityHoverExit(community, evt);
             });
+
+            xrInteractable.selectEntered.AddListener(evt =>
+            {
+                CallCommunitySelectEnter(community, evt);
+            });
+
+            xrInteractable.selectExited.AddListener(evt =>
+            {
+                CallCommunitySelectExit(community, evt);
+
+            });
         }
 
         void AddNodeInteraction(GameObject gameObject, Node node)
         {
-            XRSimpleInteractable xrInteractable = gameObject.GetComponentInChildren<XRSimpleInteractable>();
+            XRGrabInteractable xrInteractable = gameObject.GetComponentInChildren<XRGrabInteractable>();
 
             xrInteractable.hoverEntered.AddListener(evt =>
             {
@@ -306,6 +317,16 @@ namespace VidiGraph
             xrInteractable.hoverExited.AddListener(evt =>
             {
                 CallNodeHoverExit(node, evt);
+            });
+
+            xrInteractable.selectEntered.AddListener(evt =>
+            {
+                CallNodeSelectEnter(node, evt);
+            });
+
+            xrInteractable.selectExited.AddListener(evt =>
+            {
+                CallNodeSelectExit(node, evt);
             });
         }
 

@@ -115,6 +115,17 @@ namespace VidiGraph
             _multiLayoutNetwork.UpdateSelectedElements();
         }
 
+        public void StartNodeMove(int nodeID, Transform transform)
+        {
+            _multiLayoutNetwork.StartNodeMove(nodeID, transform);
+        }
+
+        public void EndNodeMove(int nodeID, Transform transform)
+        {
+            _multiLayoutNetwork.EndNodeMove();
+
+        }
+
         public void HoverCommunity(int communityID)
         {
             _networkGlobal.HoveredCommunity = _networkGlobal.Communities[communityID];
@@ -143,6 +154,16 @@ namespace VidiGraph
         {
             _networkGlobal.ClearSelectedItems();
             _multiLayoutNetwork.UpdateSelectedElements();
+
+        }
+
+        public void StartCommunityMove(int communityID, Transform transform)
+        {
+
+        }
+
+        public void EndCommunityMove(int communityID, Transform transform)
+        {
 
         }
 
