@@ -26,6 +26,19 @@ EXAMPLES = [
         }
     },
     {
+        "user": "Highlight the node with the lowest three degree",
+        "assistant": {
+            "steps": [
+                {
+                    "Task": "Select",
+                    "Attribute": "Degree",
+                    "Number": "-3",
+                    "Sequence": "0"
+                }
+            ]
+        }
+    },
+    {
         "user": "Select the 5 least well-connected nodes",
         "assistant": {
             "steps": [
