@@ -85,6 +85,11 @@ namespace VidiGraph
             _shaderWrapper.Draw();
         }
 
+        public override Transform GetNodeTransform(int nodeID)
+        {
+            return _nodeGameObjs[nodeID].transform;
+        }
+
         void InitializeShaders()
         {
             _batchSplineMaterial = new Material(Shader.Find("Custom/Batch BSpline Unlit"));

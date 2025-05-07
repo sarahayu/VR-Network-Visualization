@@ -191,7 +191,7 @@ namespace Whisper.Samples
                     Debug.Log("Change Layout operation [spherical] triggered!");
                     foreach (var commID in _networkManager.SelectedCommunities)
                     {
-                        _networkManager.SetLayout(commID, "spherical"); // Example: toggle layout
+                        _networkManager.SetMLLayout(commID, "spherical"); // Example: toggle layout
                     }
                     break;
 
@@ -200,7 +200,7 @@ namespace Whisper.Samples
                     Debug.Log("Change Layout operation [spider] triggered!");
                     foreach (var commID in _networkManager.SelectedCommunities)
                     {
-                        _networkManager.SetLayout(commID, "spider"); // Example: toggle layout
+                        _networkManager.SetMLLayout(commID, "spider"); // Example: toggle layout
                     }
                     break;
 
@@ -209,7 +209,7 @@ namespace Whisper.Samples
                     Debug.Log("Change Layout operation [floor] triggered!");
                     foreach (var commID in _networkManager.SelectedCommunities)
                     {
-                        _networkManager.SetLayout(commID, "floor"); // Example: toggle layout
+                        _networkManager.SetMLLayout(commID, "floor"); // Example: toggle layout
                     }
                     break;
 

@@ -87,6 +87,11 @@ namespace VidiGraph
                 _linkGameObjs[linkID] = linkObj;
             }
         }
+
+        public override Transform GetNodeTransform(int nodeID)
+        {
+            return _nodeGameObjs[nodeID].transform;
+        }
     }
 
 }

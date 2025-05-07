@@ -60,6 +60,12 @@ namespace VidiGraph
             // nothing to call
         }
 
+        public override Transform GetNodeTransform(int nodeID)
+        {
+            // nothing to implement
+            return transform;
+        }
+
         void CreateNodes()
         {
             foreach (var node in _networkData.Nodes)

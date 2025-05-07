@@ -11,6 +11,8 @@ namespace VidiGraph
         public abstract void UpdateRenderElements();
         public abstract void Draw();
 
+        public abstract Transform GetNodeTransform(int nodeID);
+
         // start events
 
         public delegate void CommunityHoverEnterEvent(Community community, HoverEnterEventArgs evt);

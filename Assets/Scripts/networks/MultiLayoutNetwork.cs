@@ -56,6 +56,8 @@ namespace VidiGraph
 
         // keep a reference to floorLayout specifically to focus on individual communities
         FloorLayoutTransformer _floorLayoutTransformer;
+        // keep a reference to encoding specifically to change encoding
+        MLEncodingTransformer _encodingTransformer;
 
         bool _isSphericalLayout;
         Coroutine _curAnim = null;
@@ -145,7 +147,8 @@ namespace VidiGraph
             _transformers["floor"] = _floorLayoutTransformer;
             _transformers["floor"].Initialize(_manager.NetworkGlobal, _networkContext);
 
-            _transformers["encoding"] = GetComponentInChildren<MLEncodingTransformer>();
+            _encodingTransformer = GetComponentInChildren<MLEncodingTransformer>();
+            _transformers["encoding"] = _encodingTransformer;
             _transformers["encoding"].Initialize(_manager.NetworkGlobal, _networkContext);
 
             _transformers["highlight"] = GetComponentInChildren<HighlightTransformer>();
@@ -245,12 +248,34 @@ namespace VidiGraph
             _curNodeMover = StartCoroutine(CRMoveNode(nodeID, toTrack));
         }
 
-        public void EndNodeMove()
+        public void StartNodesMove(List<int> nodeIDs, List<Transform> toTracks)
         {
             if (_curNodeMover != null)
             {
                 StopCoroutine(_curNodeMover);
             }
+
+            _curNodeMover = StartCoroutine(CRMoveNodes(nodeIDs, toTracks));
+        }
+
+        public void EndNodeMove(int nodeID)
+        {
+            if (_curNodeMover != null)
+            {
+                StopCoroutine(_curNodeMover);
+            }
+        }
+
+        public void SetNodeSizeEncoding(Func<VidiGraph.Node, float> func)
+        {
+            _networkContext.GetNodeSize = func;
+            TransformNetwork("encoding", animated: false);
+
+        }
+
+        public Transform GetNodeTransform(int nodeID)
+        {
+            return _multiLayoutRenderer.GetNodeTransform(nodeID);
         }
 
         void TransformNetwork(string layout, bool animated)
@@ -329,9 +354,6 @@ namespace VidiGraph
             interpolator.Interpolate(1f);
             _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
             _multiLayoutRenderer.UpdateRenderElements();
-            // // update render elements one more time to update input elements after recomputing geometric info
-            // _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
-            // _multiLayoutRenderer.UpdateRenderElements();
 
             _curAnim = null;
         }
@@ -342,6 +364,21 @@ namespace VidiGraph
             {
                 _networkContext.Nodes[nodeID].Position = toTrack.position;
                 _networkContext.Nodes[nodeID].Dirty = true;
+                _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+                _multiLayoutRenderer.UpdateRenderElements();
+                yield return null;
+            }
+        }
+
+        IEnumerator CRMoveNodes(List<int> nodeIDs, List<Transform> toTracks)
+        {
+            for (; ; )
+            {
+                for (int i = 0; i < nodeIDs.Count; i++)
+                {
+                    _networkContext.Nodes[nodeIDs[i]].Position = toTracks[i].position;
+                    _networkContext.Nodes[nodeIDs[i]].Dirty = true;
+                }
                 _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
                 _multiLayoutRenderer.UpdateRenderElements();
                 yield return null;

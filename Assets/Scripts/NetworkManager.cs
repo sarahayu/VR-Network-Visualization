@@ -4,6 +4,7 @@
 *
 */
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -115,14 +116,24 @@ namespace VidiGraph
             _multiLayoutNetwork.UpdateSelectedElements();
         }
 
-        public void StartNodeMove(int nodeID, Transform transform)
+        public void StartMLNodeMove(int nodeID, Transform transform)
         {
             _multiLayoutNetwork.StartNodeMove(nodeID, transform);
         }
 
-        public void EndNodeMove(int nodeID, Transform transform)
+        public void StartMLNodeMove(int nodeID)
         {
-            _multiLayoutNetwork.EndNodeMove();
+            _multiLayoutNetwork.StartNodeMove(nodeID, _multiLayoutNetwork.GetNodeTransform(nodeID));
+        }
+
+        public void StartMLNodesMove(List<int> nodeIDs)
+        {
+            _multiLayoutNetwork.StartNodesMove(nodeIDs, nodeIDs.Select(id => _multiLayoutNetwork.GetNodeTransform(id)).ToList());
+        }
+
+        public void EndMLNodeMove(int nodeID, Transform transform)
+        {
+            _multiLayoutNetwork.EndNodeMove(nodeID);
 
         }
 
@@ -168,25 +179,35 @@ namespace VidiGraph
         }
 
         // layout = [spherical, cluster, floor]
-        public void SetLayout(List<int> commIDs, string layout)
+        public void SetMLLayout(List<int> commIDs, string layout)
         {
             _multiLayoutNetwork.SetLayout(commIDs, layout);
         }
 
         // layout = [spherical, cluster, floor]
-        public void SetLayout(int commID, string layout)
+        public void SetMLLayout(int commID, string layout)
         {
             _multiLayoutNetwork.SetLayout(new List<int> { commID }, layout);
         }
 
-        public void BringNodes(List<int> nodeIDs)
+        public void BringMLNodes(List<int> nodeIDs)
         {
             _multiLayoutNetwork.SetNodesBrought(nodeIDs, true);
         }
 
-        public void ReturnNodes(List<int> nodeIDs)
+        public void ReturnMLNodes(List<int> nodeIDs)
         {
             _multiLayoutNetwork.SetNodesBrought(nodeIDs, false);
+        }
+
+        public void SetMLNodeSizeEncoding(Func<VidiGraph.Node, float> func)
+        {
+            _multiLayoutNetwork.SetNodeSizeEncoding(func);
+        }
+
+        public Transform GetMLNodeTransform(int nodeID)
+        {
+            return _multiLayoutNetwork.GetNodeTransform(nodeID);
         }
     }
 }

@@ -1,9 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using VidiGraph;
 
 public class SurfaceManager : MonoBehaviour
 {
@@ -13,6 +15,8 @@ public class SurfaceManager : MonoBehaviour
     Dictionary<int, GameObject> _surfaces = new Dictionary<int, GameObject>();
 
     public Dictionary<int, GameObject> Surfaces { get { return _surfaces; } }
+    Dictionary<int, List<Transform>> _surfaceChildren = new Dictionary<int, List<Transform>>();
+    Dictionary<int, List<int>> _surfaceChildrenNodes = new Dictionary<int, List<int>>();
 
     public delegate void SurfaceHoverEnterEvent(int surfaceID, HoverEnterEventArgs evt);
     public event SurfaceHoverEnterEvent OnSurfaceHoverEnter;
@@ -21,10 +25,12 @@ public class SurfaceManager : MonoBehaviour
 
     int _curID = 0;
 
+    NetworkManager _manager;
+
     // Start is called before the first frame update
     void Start()
     {
-
+        _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
     }
 
     // Update is called once per frame
@@ -47,6 +53,8 @@ public class SurfaceManager : MonoBehaviour
         AddSurfaceInteraction(surfObject, id);
 
         _surfaces[id] = surfObject;
+        _surfaceChildren[id] = new List<Transform>();
+        _surfaceChildrenNodes[id] = new List<int>();
 
         return id;
     }
@@ -59,6 +67,17 @@ public class SurfaceManager : MonoBehaviour
 
             _surfaces.Remove(surfID);
         }
+    }
+
+    public void TryAttach(int nodeID)
+    {
+        // check distance
+        // attach if distance less
+
+        int surfID = _surfaces.Keys.ToList()[0];
+
+        _surfaceChildrenNodes[surfID].Add(nodeID);
+        _surfaceChildren[surfID].Add(_manager.GetMLNodeTransform(nodeID));
     }
 
     int GetNextID()
@@ -79,5 +98,42 @@ public class SurfaceManager : MonoBehaviour
         {
             OnSurfaceHoverExit(id, evt);
         });
+
+        xrInteractable.selectEntered.AddListener(evt =>
+        {
+            // start coroutine to change transforms
+            // start node moves
+            StartCoroutine(CRMoveSurfaceAndChildren(_surfaces[id].transform, _surfaceChildren[id]));
+            _manager.StartMLNodesMove(_surfaceChildrenNodes[id]);
+        });
+
+        xrInteractable.selectExited.AddListener(evt =>
+        {
+            // end coroutine to change transforms
+            // end node moves
+        });
+    }
+
+    Vector3 lastSurfPosition = Vector3.positiveInfinity;
+
+    IEnumerator CRMoveSurfaceAndChildren(Transform surf, List<Transform> toMove)
+    {
+        for (; ; )
+        {
+            var curPosition = surf.transform.position;
+
+            if (float.IsFinite(lastSurfPosition.x))
+            {
+                var diff = curPosition - lastSurfPosition;
+
+                foreach (var tform in toMove)
+                {
+                    tform.position += diff;
+                }
+            }
+
+            lastSurfPosition = curPosition;
+            yield return null;
+        }
     }
 }

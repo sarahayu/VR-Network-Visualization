@@ -34,6 +34,8 @@ namespace VidiGraph
 
                 contextNode.Size = _networkContext.GetNodeSize(globalNode);
                 contextNode.Color = _networkContext.GetNodeColor(globalNode);
+
+                contextNode.Dirty = true;
             }
 
             foreach (var linkID in _networkContext.Links.Keys)
@@ -45,6 +47,8 @@ namespace VidiGraph
                 contextLink.ColorStart = _networkContext.GetLinkColorStart(globalLink);
                 contextLink.ColorEnd = _networkContext.GetLinkColorEnd(globalLink);
                 contextLink.Alpha = _networkContext.GetLinkAlpha(globalLink);
+
+                contextLink.Dirty = true;
             }
         }
 

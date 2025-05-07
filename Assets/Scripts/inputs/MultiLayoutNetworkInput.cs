@@ -49,9 +49,7 @@ namespace VidiGraph
 
         string lastOptLabel = "";
 
-        bool _wasMovement = false;
-        Vector3 _selectPos;
-        Vector3 _curHoverPos;
+        Vector3 _selectPos = Vector3.positiveInfinity;
 
         public override void Initialize()
         {
@@ -90,14 +88,12 @@ namespace VidiGraph
 
         void Update()
         {
-            var dist = Vector3.Distance(_selectPos, RightTransform.transform.position);
-            print(dist.ToString());
+            var dist = float.IsFinite(_selectPos.x) ? Vector3.Distance(_selectPos, RightTransform.transform.position) : 0f;
             bool moved = dist > 10f;
-
-            // is ReadWasCompletedThisFrame the problem?
 
             if (RightGripPress.ReadWasCompletedThisFrame() && !moved)
             {
+                print("click detected");
                 if (_hoveredCommunity != null)
                 {
                     _manager.ToggleSelectedCommunities(new List<int> { _hoveredCommunity.ID });
@@ -111,16 +107,14 @@ namespace VidiGraph
                     _manager.ClearSelection();
                 }
             }
-            else if (LeftGripPress.ReadWasCompletedThisFrame())
+            else if (LeftGripPress.ReadWasPerformedThisFrame())
             {
                 _manager.ToggleBigNetworkSphericalAndHairball();
             }
             else if (CheckSelectionActions()) { }
-            else if (CommandPress.ReadWasCompletedThisFrame())
+            else if (CommandPress.ReadWasPerformedThisFrame())
             {
-                var queryer = _manager.NetworkGlobal.Nodes.NodeArray.AsQueryable();
-
-                var a = queryer.OrderBy("Degree").Take(10);
+                _manager.SetMLNodeSizeEncoding(node => (float)node.Degree);
             }
         }
 
@@ -191,19 +185,19 @@ namespace VidiGraph
                 switch (curOptnLabel)
                 {
                     case "Bring Node":
-                        _manager.BringNodes(_manager.SelectedNodes.ToList());
+                        _manager.BringMLNodes(_manager.SelectedNodes.ToList());
                         break;
                     case "Return Node":
-                        _manager.ReturnNodes(_manager.SelectedNodes.ToList());
+                        _manager.ReturnMLNodes(_manager.SelectedNodes.ToList());
                         break;
                     case "Bring Comm.":
-                        _manager.SetLayout(_manager.SelectedCommunities.ToList(), "cluster");
+                        _manager.SetMLLayout(_manager.SelectedCommunities.ToList(), "cluster");
                         break;
                     case "Return Comm.":
-                        _manager.SetLayout(_manager.SelectedCommunities.ToList(), "spherical");
+                        _manager.SetMLLayout(_manager.SelectedCommunities.ToList(), "spherical");
                         break;
                     case "Project Comm. Floor":
-                        _manager.SetLayout(_manager.SelectedCommunities.ToList(), "floor");
+                        _manager.SetMLLayout(_manager.SelectedCommunities.ToList(), "floor");
                         break;
                     default:
                         inputAction = false;
@@ -292,8 +286,13 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _manager.UnhoverNode(node.ID);
-                _hoveredNode = null;
+                if (float.IsInfinity(_selectPos.x))
+                {
+                    _manager.UnhoverNode(node.ID);
+                    _hoveredNode = null;
+                    print("unhover null");
+
+                }
             }
         }
 
@@ -317,8 +316,10 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _manager.StartNodeMove(node.ID, evt.interactableObject.transform);
+                _manager.StartMLNodeMove(node.ID, evt.interactableObject.transform);
+                _hoveredNode = node;
                 _selectPos = RightTransform.position;
+                print("select hover");
             }
         }
 
@@ -326,7 +327,8 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _manager.EndNodeMove(node.ID, evt.interactableObject.transform);
+                _manager.EndMLNodeMove(node.ID, evt.interactableObject.transform);
+                _selectPos = Vector3.positiveInfinity;
             }
         }
     }
