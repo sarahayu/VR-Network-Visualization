@@ -30,17 +30,17 @@ namespace VidiGraph
         }
 
         public delegate void CommunitySelectEnterEvent(Community community, SelectEnterEventArgs evt);
-        public event CommunitySelectEnterEvent OnCommunitySelectEnter;
+        public event CommunitySelectEnterEvent OnCommunityGrabEnter;
         protected void CallCommunitySelectEnter(Community community, SelectEnterEventArgs evt)
         {
-            OnCommunitySelectEnter(community, evt);
+            OnCommunityGrabEnter(community, evt);
         }
 
         public delegate void CommunitySelectExitEvent(Community community, SelectExitEventArgs evt);
-        public event CommunitySelectExitEvent OnCommunitySelectExit;
+        public event CommunitySelectExitEvent OnCommunityGrabExit;
         protected void CallCommunitySelectExit(Community community, SelectExitEventArgs evt)
         {
-            OnCommunitySelectExit(community, evt);
+            OnCommunityGrabExit(community, evt);
         }
 
         public delegate void NodeHoverEnterEvent(Node node, HoverEnterEventArgs evt);
@@ -58,17 +58,17 @@ namespace VidiGraph
         }
 
         public delegate void NodeSelectEnterEvent(Node node, SelectEnterEventArgs evt);
-        public event NodeSelectEnterEvent OnNodeSelectEnter;
+        public event NodeSelectEnterEvent OnNodeGrabEnter;
         protected void CallNodeSelectEnter(Node node, SelectEnterEventArgs evt)
         {
-            OnNodeSelectEnter(node, evt);
+            OnNodeGrabEnter(node, evt);
         }
 
         public delegate void NodeSelectExitEvent(Node node, SelectExitEventArgs evt);
-        public event NodeSelectExitEvent OnNodeSelectExit;
+        public event NodeSelectExitEvent OnNodeGrabExit;
         protected void CallNodeSelectExit(Node node, SelectExitEventArgs evt)
         {
-            OnNodeSelectExit(node, evt);
+            OnNodeGrabExit(node, evt);
         }
     }
 

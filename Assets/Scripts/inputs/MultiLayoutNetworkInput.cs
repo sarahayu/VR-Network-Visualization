@@ -49,7 +49,7 @@ namespace VidiGraph
 
         string lastOptLabel = "";
 
-        Vector3 _selectPos = Vector3.positiveInfinity;
+        Vector3 _startMovePos = Vector3.positiveInfinity;
 
         public override void Initialize()
         {
@@ -63,11 +63,11 @@ namespace VidiGraph
             renderer.OnNodeHoverEnter += OnNodeHoverEnter;
             renderer.OnNodeHoverExit += OnNodeHoverExit;
 
-            renderer.OnCommunitySelectEnter += OnCommunitySelectEnter;
-            renderer.OnCommunitySelectExit += OnCommunitySelectExit;
+            renderer.OnCommunityGrabEnter += OnCommunityGrabEnter;
+            renderer.OnCommunityGrabExit += OnCommunityGrabExit;
 
-            renderer.OnNodeSelectEnter += OnNodeSelectEnter;
-            renderer.OnNodeSelectExit += OnNodeSelectExit;
+            renderer.OnNodeGrabEnter += OnNodeGrabEnter;
+            renderer.OnNodeGrabExit += OnNodeGrabExit;
         }
 
         void OnEnable()
@@ -88,12 +88,10 @@ namespace VidiGraph
 
         void Update()
         {
-            var dist = float.IsFinite(_selectPos.x) ? Vector3.Distance(_selectPos, RightTransform.transform.position) : 0f;
-            bool moved = dist > 10f;
+            bool stationary = !GrabInProgress() || MathUtils.VecEqual(_startMovePos, RightTransform.transform.position);
 
-            if (RightGripPress.ReadWasCompletedThisFrame() && !moved)
+            if (RightGripPress.ReadWasCompletedThisFrame() && stationary)
             {
-                print("click detected");
                 if (_hoveredCommunity != null)
                 {
                     _manager.ToggleSelectedCommunities(new List<int> { _hoveredCommunity.ID });
@@ -115,6 +113,11 @@ namespace VidiGraph
             else if (CommandPress.ReadWasPerformedThisFrame())
             {
                 _manager.SetMLNodeSizeEncoding(node => (float)node.Degree);
+            }
+
+            if (RightGripPress.ReadWasCompletedThisFrame())
+            {
+                _startMovePos = Vector3.positiveInfinity;
             }
         }
 
@@ -284,19 +287,14 @@ namespace VidiGraph
 
         void OnNodeHoverExit(Node node, HoverExitEventArgs evt)
         {
-            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            if (evt.interactorObject.handedness == InteractorHandedness.Right && !GrabInProgress())
             {
-                if (float.IsInfinity(_selectPos.x))
-                {
-                    _manager.UnhoverNode(node.ID);
-                    _hoveredNode = null;
-                    print("unhover null");
-
-                }
+                _manager.UnhoverNode(node.ID);
+                _hoveredNode = null;
             }
         }
 
-        void OnCommunitySelectEnter(Community community, SelectEnterEventArgs evt)
+        void OnCommunityGrabEnter(Community community, SelectEnterEventArgs evt)
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
@@ -304,7 +302,7 @@ namespace VidiGraph
             }
         }
 
-        void OnCommunitySelectExit(Community community, SelectExitEventArgs evt)
+        void OnCommunityGrabExit(Community community, SelectExitEventArgs evt)
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
@@ -312,24 +310,28 @@ namespace VidiGraph
             }
         }
 
-        void OnNodeSelectEnter(Node node, SelectEnterEventArgs evt)
+        void OnNodeGrabEnter(Node node, SelectEnterEventArgs evt)
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 _manager.StartMLNodeMove(node.ID, evt.interactableObject.transform);
                 _hoveredNode = node;
-                _selectPos = RightTransform.position;
-                print("select hover");
+                _startMovePos = RightTransform.position;
             }
         }
 
-        void OnNodeSelectExit(Node node, SelectExitEventArgs evt)
+        void OnNodeGrabExit(Node node, SelectExitEventArgs evt)
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
+                _manager.UnhoverNode(node.ID);
                 _manager.EndMLNodeMove(node.ID, evt.interactableObject.transform);
-                _selectPos = Vector3.positiveInfinity;
             }
+        }
+
+        bool GrabInProgress()
+        {
+            return float.IsFinite(_startMovePos.x);
         }
     }
 

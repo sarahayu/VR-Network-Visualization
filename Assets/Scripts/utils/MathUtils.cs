@@ -199,6 +199,11 @@ namespace VidiGraph
         {
             return linkWeight / (groupSize1 * groupSize2);
         }
+
+        public static bool VecEqual(Vector3 a, Vector3 b, float delta = 0.01f)
+        {
+            return Vector3.Distance(a, b) < delta;
+        }
     }
 
     public class LineDistItem
