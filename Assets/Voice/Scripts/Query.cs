@@ -136,14 +136,14 @@ public class Query : MonoBehaviour
 
     public void TaskWithIDs(string task, List<int> ids)
     {
-        switch (task)
-        {
-            case "Highlight", "Select", "SelectAll":
-                networkManager.SetSelectedNodes(ids, true);
-                break;
-            case "Unhighlight", "Unselect", "UnselectAll":
-                networkManager.SetSelectedNodes(ids, false);
-                break;
-        }
+        // switch (task)
+        // {
+        //     case "Highlight", "Select", "SelectAll":
+        //         networkManager.SetSelectedNodes(ids, true);
+        //         break;
+        //     case "Unhighlight", "Unselect", "UnselectAll":
+        //         networkManager.SetSelectedNodes(ids, false);
+        //         break;
+        // }
     }
 }
