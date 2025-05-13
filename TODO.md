@@ -1,9 +1,10 @@
 # TODO
 
-- put things on surfaces
-- database
 - delete surfaces
+- database
+
 - move surfaces with things
+- put things on surfaces
 
 ## Troubleshooting
 
