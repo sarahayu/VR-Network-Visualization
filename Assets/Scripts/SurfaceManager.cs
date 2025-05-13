@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
+using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
@@ -15,7 +16,7 @@ public class SurfaceManager : MonoBehaviour
     [SerializeField]
     float _surfaceAttractionDist = 0.1f;
     [SerializeField]
-    Color _highlightColor = Color.blue;
+    Color _highlightCol = Color.green;
 
     Dictionary<int, GameObject> _surfaces = new Dictionary<int, GameObject>();
     Dictionary<int, Renderer> _surfRenderers = new Dictionary<int, Renderer>();
@@ -23,6 +24,7 @@ public class SurfaceManager : MonoBehaviour
     public Dictionary<int, GameObject> Surfaces { get { return _surfaces; } }
     Dictionary<int, List<Transform>> _surfaceChildren = new Dictionary<int, List<Transform>>();
     Dictionary<int, List<int>> _surfaceChildrenNodes = new Dictionary<int, List<int>>();
+    Dictionary<int, int> _nodeToSurf = new Dictionary<int, int>();
 
     public delegate void SurfaceHoverEnterEvent(int surfaceID, HoverEnterEventArgs evt);
     public event SurfaceHoverEnterEvent OnSurfaceHoverEnter;
@@ -51,14 +53,6 @@ public class SurfaceManager : MonoBehaviour
         _mlRenderer.OnNodeGrabExit += OnNodeGrabExit;
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-
-    }
-
-    Color? defaultColor = null;
-
     // return surface ID
     public int SpawnSurface(Vector3 position, Quaternion rotation)
     {
@@ -73,18 +67,9 @@ public class SurfaceManager : MonoBehaviour
         AddSurfaceInteraction(surfObject, id);
 
         _surfaces[id] = surfObject;
-        _surfRenderers[id] = surfObject.GetComponentInChildren<Renderer>();
+        _surfRenderers[id] = surfObject.GetNamedChild("Highlight").GetComponent<Renderer>();
         _surfaceChildren[id] = new List<Transform>();
         _surfaceChildrenNodes[id] = new List<int>();
-
-        if (defaultColor == null)
-        {
-            // TODO figure out why basecolor is black
-            MaterialPropertyBlock props = new MaterialPropertyBlock();
-            _surfRenderers[id].GetPropertyBlock(props);
-            defaultColor = props.GetColor("_BaseColor");
-            print(defaultColor.ToString());
-        }
 
         return id;
     }
@@ -96,10 +81,20 @@ public class SurfaceManager : MonoBehaviour
             Object.Destroy(_surfaces[surfID]);
 
             _surfaces.Remove(surfID);
+            _surfRenderers.Remove(surfID);
+
+            foreach (var nodeID in _surfaceChildrenNodes[surfID])
+            {
+                _nodeToSurf.Remove(nodeID);
+            }
+
+            _surfaceChildren.Remove(surfID);
+            _surfaceChildrenNodes.Remove(surfID);
         }
     }
 
-    public void TryAttach(int nodeID)
+    // return ID of closest surface
+    public int TryAttach(int nodeID)
     {
         // check distance
         // attach if distance less
@@ -108,9 +103,21 @@ public class SurfaceManager : MonoBehaviour
 
         if (closest != -1)
         {
+            if (_nodeToSurf.ContainsKey(nodeID))
+            {
+                var parent = _nodeToSurf[nodeID];
+                var indInList = _surfaceChildrenNodes[parent].IndexOf(nodeID);
+
+                _surfaceChildren[parent].RemoveAt(indInList);
+                _surfaceChildrenNodes[parent].RemoveAt(indInList);
+            }
+
             _surfaceChildrenNodes[closest].Add(nodeID);
             _surfaceChildren[closest].Add(_manager.GetMLNodeTransform(nodeID));
+            _nodeToSurf[nodeID] = closest;
         }
+
+        return closest;
     }
 
     int GetNextID()
@@ -146,7 +153,23 @@ public class SurfaceManager : MonoBehaviour
             // end node moves
             StopCoroutine(_surfaceMover);
             _manager.EndMLNodesMove(_surfaceChildrenNodes[id]);
+
+            lastSurfPosition = Vector3.positiveInfinity;
         });
+    }
+
+    void UnhighlightSurfaces()
+    {
+        foreach (var (surfID, surf) in _surfaces)
+        {
+            var renderer = _surfRenderers[surfID];
+            MaterialPropertyBlock props = new MaterialPropertyBlock();
+
+            renderer.GetPropertyBlock(props);
+            props.SetColor("_Color", Color.clear);
+            renderer.SetPropertyBlock(props);
+
+        }
     }
 
     IEnumerator CRMoveSurfaceAndChildren(Transform surf, List<Transform> toMove)
@@ -183,6 +206,7 @@ public class SurfaceManager : MonoBehaviour
         {
             StopCoroutine(_surfaceHighlighter);
             TryAttach(node.ID);
+            UnhighlightSurfaces();
         }
     }
 
@@ -225,12 +249,11 @@ public class SurfaceManager : MonoBehaviour
 
             foreach (var (surfID, surf) in _surfaces)
             {
-                //  TODO fix why this doesn't change color
                 var renderer = _surfRenderers[surfID];
                 MaterialPropertyBlock props = new MaterialPropertyBlock();
 
                 renderer.GetPropertyBlock(props);
-                props.SetColor("_BaseColor", (Color)(surfID == closest ? _highlightColor : defaultColor));
+                props.SetColor("_Color", surfID == closest ? _highlightCol : Color.clear);
                 renderer.SetPropertyBlock(props);
 
             }
