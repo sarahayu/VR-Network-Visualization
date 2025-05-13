@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
 using VidiGraph;
 
 public class SurfaceManager : MonoBehaviour
@@ -26,11 +27,19 @@ public class SurfaceManager : MonoBehaviour
     int _curID = 0;
 
     NetworkManager _manager;
+    NetworkRenderer _mlRenderer;
+
+    Vector3 lastSurfPosition = Vector3.positiveInfinity;
+    Quaternion lastSurfRotation = Quaternion.identity;
 
     // Start is called before the first frame update
     void Start()
     {
         _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
+        _mlRenderer = GameObject.Find("/MultiLayout Network").GetComponentInChildren<NetworkRenderer>();
+
+
+        _mlRenderer.OnNodeGrabExit += OnNodeGrabExit;
     }
 
     // Update is called once per frame
@@ -74,10 +83,10 @@ public class SurfaceManager : MonoBehaviour
         // check distance
         // attach if distance less
 
-        int surfID = _surfaces.Keys.ToList()[0];
+        // int surfID = _surfaces.Keys.ToList()[0];
 
-        _surfaceChildrenNodes[surfID].Add(nodeID);
-        _surfaceChildren[surfID].Add(_manager.GetMLNodeTransform(nodeID));
+        // _surfaceChildrenNodes[surfID].Add(nodeID);
+        // _surfaceChildren[surfID].Add(_manager.GetMLNodeTransform(nodeID));
     }
 
     int GetNextID()
@@ -114,26 +123,39 @@ public class SurfaceManager : MonoBehaviour
         });
     }
 
-    Vector3 lastSurfPosition = Vector3.positiveInfinity;
-
     IEnumerator CRMoveSurfaceAndChildren(Transform surf, List<Transform> toMove)
     {
         for (; ; )
         {
             var curPosition = surf.transform.position;
+            var curRotation = surf.transform.rotation;
 
             if (float.IsFinite(lastSurfPosition.x))
             {
                 var diff = curPosition - lastSurfPosition;
+                var diffRot = curRotation * Quaternion.Inverse(lastSurfRotation);
+                diffRot.ToAngleAxis(out var angle, out var axis);
 
                 foreach (var tform in toMove)
                 {
+
+                    tform.RotateAround(lastSurfPosition, axis, angle);
+
                     tform.position += diff;
                 }
             }
 
             lastSurfPosition = curPosition;
+            lastSurfRotation = curRotation;
             yield return null;
+        }
+    }
+
+    void OnNodeGrabExit(Node node, SelectExitEventArgs evt)
+    {
+        if (evt.interactorObject.handedness == InteractorHandedness.Right)
+        {
+            TryAttach(node.ID);
         }
     }
 }

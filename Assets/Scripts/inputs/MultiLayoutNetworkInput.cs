@@ -51,6 +51,9 @@ namespace VidiGraph
 
         Vector3 _startMovePos = Vector3.positiveInfinity;
 
+        int _framesSinceUnhover = 10;
+        int _framesSinceGrab = 10;
+
         public override void Initialize()
         {
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
@@ -88,20 +91,21 @@ namespace VidiGraph
 
         void Update()
         {
-            bool stationary = !GrabInProgress() || MathUtils.VecEqual(_startMovePos, RightTransform.transform.position);
-
-            if (RightGripPress.ReadWasCompletedThisFrame() && stationary)
+            if (RightGripPress.ReadWasCompletedThisFrame())
             {
                 if (_hoveredCommunity != null)
                 {
+                    print("community");
                     _manager.ToggleSelectedCommunities(new List<int> { _hoveredCommunity.ID });
                 }
                 else if (_hoveredNode != null)
                 {
+                    print("node");
                     _manager.ToggleSelectedNodes(new List<int> { _hoveredNode.ID });
                 }
                 else
                 {
+                    print("air");
                     _manager.ClearSelection();
                 }
             }
@@ -115,9 +119,25 @@ namespace VidiGraph
                 _manager.SetMLNodeSizeEncoding(node => (float)node.Degree);
             }
 
-            if (RightGripPress.ReadWasCompletedThisFrame())
+            // unhover and grab detected within acceptable frame timespan. ignore unhover
+            if (_framesSinceUnhover < 2 && _framesSinceGrab < 2)
             {
-                _startMovePos = Vector3.positiveInfinity;
+                _framesSinceUnhover = 1000;
+            }
+            // if sufficient time has passed unhovered, register it
+            else if (_framesSinceUnhover == 1 && _hoveredNode != null)
+            {
+                _manager.UnhoverNode(_hoveredNode.ID);
+                _hoveredNode = null;
+            }
+
+            if (_framesSinceUnhover < 1000)
+            {
+                _framesSinceUnhover += 1;
+            }
+            if (_framesSinceGrab < 1000)
+            {
+                _framesSinceGrab += 1;
             }
         }
 
@@ -260,8 +280,6 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _manager.HoverCommunity(community.ID);
-                _hoveredCommunity = community;
             }
         }
 
@@ -269,8 +287,6 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _manager.UnhoverCommunity(community.ID);
-                _hoveredCommunity = null;
             }
         }
 
@@ -278,6 +294,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
+                print("hover enter");
                 _manager.HoverNode(node.ID);
                 _hoveredNode = node;
 
@@ -287,10 +304,9 @@ namespace VidiGraph
 
         void OnNodeHoverExit(Node node, HoverExitEventArgs evt)
         {
-            if (evt.interactorObject.handedness == InteractorHandedness.Right && !GrabInProgress())
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _manager.UnhoverNode(node.ID);
-                _hoveredNode = null;
+                _framesSinceUnhover = 0;
             }
         }
 
@@ -298,7 +314,6 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                // _manager.SelectCommunity(community.ID);
             }
         }
 
@@ -306,7 +321,6 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                // _manager.UnselectCommunity(community.ID);
             }
         }
 
@@ -315,8 +329,7 @@ namespace VidiGraph
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 _manager.StartMLNodeMove(node.ID, evt.interactableObject.transform);
-                _hoveredNode = node;
-                _startMovePos = RightTransform.position;
+                _framesSinceGrab = 0;
             }
         }
 
@@ -324,7 +337,6 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _manager.UnhoverNode(node.ID);
                 _manager.EndMLNodeMove(node.ID, evt.interactableObject.transform);
             }
         }
