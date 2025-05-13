@@ -137,6 +137,12 @@ namespace VidiGraph
 
         }
 
+        public void EndMLNodesMove(List<int> nodeIDs)
+        {
+            _multiLayoutNetwork.EndNodesMove(nodeIDs);
+
+        }
+
         public void HoverCommunity(int communityID)
         {
             _networkGlobal.HoveredCommunity = _networkGlobal.Communities[communityID];

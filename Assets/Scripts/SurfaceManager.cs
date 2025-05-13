@@ -12,8 +12,13 @@ public class SurfaceManager : MonoBehaviour
 {
     [SerializeField]
     GameObject _surfacePrefab;
+    [SerializeField]
+    float _surfaceAttractionDist = 0.1f;
+    [SerializeField]
+    Color _highlightColor = Color.blue;
 
     Dictionary<int, GameObject> _surfaces = new Dictionary<int, GameObject>();
+    Dictionary<int, Renderer> _surfRenderers = new Dictionary<int, Renderer>();
 
     public Dictionary<int, GameObject> Surfaces { get { return _surfaces; } }
     Dictionary<int, List<Transform>> _surfaceChildren = new Dictionary<int, List<Transform>>();
@@ -32,6 +37,9 @@ public class SurfaceManager : MonoBehaviour
     Vector3 lastSurfPosition = Vector3.positiveInfinity;
     Quaternion lastSurfRotation = Quaternion.identity;
 
+    Coroutine _surfaceHighlighter = null;
+    Coroutine _surfaceMover = null;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -39,6 +47,7 @@ public class SurfaceManager : MonoBehaviour
         _mlRenderer = GameObject.Find("/MultiLayout Network").GetComponentInChildren<NetworkRenderer>();
 
 
+        _mlRenderer.OnNodeGrabEnter += OnNodeGrabEnter;
         _mlRenderer.OnNodeGrabExit += OnNodeGrabExit;
     }
 
@@ -47,6 +56,8 @@ public class SurfaceManager : MonoBehaviour
     {
 
     }
+
+    Color? defaultColor = null;
 
     // return surface ID
     public int SpawnSurface(Vector3 position, Quaternion rotation)
@@ -62,8 +73,18 @@ public class SurfaceManager : MonoBehaviour
         AddSurfaceInteraction(surfObject, id);
 
         _surfaces[id] = surfObject;
+        _surfRenderers[id] = surfObject.GetComponentInChildren<Renderer>();
         _surfaceChildren[id] = new List<Transform>();
         _surfaceChildrenNodes[id] = new List<int>();
+
+        if (defaultColor == null)
+        {
+            // TODO figure out why basecolor is black
+            MaterialPropertyBlock props = new MaterialPropertyBlock();
+            _surfRenderers[id].GetPropertyBlock(props);
+            defaultColor = props.GetColor("_BaseColor");
+            print(defaultColor.ToString());
+        }
 
         return id;
     }
@@ -83,10 +104,13 @@ public class SurfaceManager : MonoBehaviour
         // check distance
         // attach if distance less
 
-        // int surfID = _surfaces.Keys.ToList()[0];
+        var closest = GetClosestSurface(_manager.GetMLNodeTransform(nodeID).position);
 
-        // _surfaceChildrenNodes[surfID].Add(nodeID);
-        // _surfaceChildren[surfID].Add(_manager.GetMLNodeTransform(nodeID));
+        if (closest != -1)
+        {
+            _surfaceChildrenNodes[closest].Add(nodeID);
+            _surfaceChildren[closest].Add(_manager.GetMLNodeTransform(nodeID));
+        }
     }
 
     int GetNextID()
@@ -112,7 +136,7 @@ public class SurfaceManager : MonoBehaviour
         {
             // start coroutine to change transforms
             // start node moves
-            StartCoroutine(CRMoveSurfaceAndChildren(_surfaces[id].transform, _surfaceChildren[id]));
+            _surfaceMover = StartCoroutine(CRMoveSurfaceAndChildren(_surfaces[id].transform, _surfaceChildren[id]));
             _manager.StartMLNodesMove(_surfaceChildrenNodes[id]);
         });
 
@@ -120,6 +144,8 @@ public class SurfaceManager : MonoBehaviour
         {
             // end coroutine to change transforms
             // end node moves
+            StopCoroutine(_surfaceMover);
+            _manager.EndMLNodesMove(_surfaceChildrenNodes[id]);
         });
     }
 
@@ -155,7 +181,60 @@ public class SurfaceManager : MonoBehaviour
     {
         if (evt.interactorObject.handedness == InteractorHandedness.Right)
         {
+            StopCoroutine(_surfaceHighlighter);
             TryAttach(node.ID);
+        }
+    }
+
+    void OnNodeGrabEnter(Node node, SelectEnterEventArgs evt)
+    {
+        if (evt.interactorObject.handedness == InteractorHandedness.Right)
+        {
+            if (_surfaceHighlighter != null)
+            {
+                StopCoroutine(_surfaceHighlighter);
+            }
+
+            _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLNodeTransform(node.ID)));
+        }
+    }
+
+    int GetClosestSurface(Vector3 position)
+    {
+        int closest = -1;
+        float closestDist = float.PositiveInfinity;
+        foreach (var (surfID, surf) in _surfaces)
+        {
+            float dist = Vector3.Distance(surf.transform.position, position);
+
+            if (dist < closestDist && dist < _surfaceAttractionDist)
+            {
+                closest = surfID;
+                closestDist = dist;
+            }
+        }
+
+        return closest;
+    }
+
+    IEnumerator CRHighlightClosestSurface(Transform nodeTransform)
+    {
+        for (; ; )
+        {
+            int closest = GetClosestSurface(nodeTransform.position);
+
+            foreach (var (surfID, surf) in _surfaces)
+            {
+                //  TODO fix why this doesn't change color
+                var renderer = _surfRenderers[surfID];
+                MaterialPropertyBlock props = new MaterialPropertyBlock();
+
+                renderer.GetPropertyBlock(props);
+                props.SetColor("_BaseColor", (Color)(surfID == closest ? _highlightColor : defaultColor));
+                renderer.SetPropertyBlock(props);
+
+            }
+            yield return null;
         }
     }
 }

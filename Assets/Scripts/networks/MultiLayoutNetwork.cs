@@ -266,6 +266,14 @@ namespace VidiGraph
             }
         }
 
+        public void EndNodesMove(List<int> nodeIDs)
+        {
+            if (_curNodeMover != null)
+            {
+                StopCoroutine(_curNodeMover);
+            }
+        }
+
         public void SetNodeSizeEncoding(Func<VidiGraph.Node, float> func)
         {
             _networkContext.GetNodeSize = func;
