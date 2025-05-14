@@ -1,0 +1,288 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Neo4j.Driver.Simple</name>
+    </assembly>
+    <members>
+        <member name="T:Neo4j.Driver.DriverExtensions">
+            <summary>Provides extension methods on <see cref="T:Neo4j.Driver.IDriver"/> for acquiring synchronous session instances.</summary>
+        </member>
+        <member name="M:Neo4j.Driver.DriverExtensions.Session(Neo4j.Driver.IDriver)">
+            <summary>
+            Obtain a session which is designed to be used synchronously, which is built on top of the default asynchronous
+            <see cref="T:Neo4j.Driver.IAsyncSession"/> with default <see cref="T:Neo4j.Driver.SessionConfig"/>.
+            </summary>
+            <param name="driver">driver instance</param>
+            <returns>A simple session instance</returns>
+        </member>
+        <member name="M:Neo4j.Driver.DriverExtensions.Session(Neo4j.Driver.IDriver,System.Action{Neo4j.Driver.SessionConfigBuilder})">
+            <summary>
+            Obtain a session which is designed to be used synchronously, which is built on top of the default asynchronous
+            <see cref="T:Neo4j.Driver.IAsyncSession"/> with the customized <see cref="T:Neo4j.Driver.SessionConfig"/>.
+            </summary>
+            <param name="driver">driver instance</param>
+            <param name="action">
+            An action, provided with a <see cref="T:Neo4j.Driver.SessionConfigBuilder"/> instance, that should populate the
+            provided instance with desired session configurations <see cref="T:Neo4j.Driver.SessionConfig"/>.
+            </param>
+            <returns>A simple session instance</returns>
+        </member>
+        <member name="T:Neo4j.Driver.IQueryRunner">
+            <summary>Common interface for components that can execute Neo4j queries.</summary>
+            <remarks><see cref="T:Neo4j.Driver.IAsyncSession"/> and <see cref="T:Neo4j.Driver.IAsyncTransaction"/></remarks>
+        </member>
+        <member name="M:Neo4j.Driver.IQueryRunner.Run(System.String)">
+            <summary>
+            Run a query and return a result stream. This method accepts a String representing a Cypher query which will be
+            compiled into a query object that can be used to efficiently execute this query multiple times.
+            </summary>
+            <param name="query">A Cypher query.</param>
+            <returns>A stream of result values and associated metadata.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.IQueryRunner.Run(System.String,System.Object)">
+            <summary>Execute a query and return a result stream.</summary>
+            <param name="query">A Cypher query.</param>
+            <param name="parameters">A parameter dictionary which is made of prop.Name=prop.Value pairs would be created.</param>
+            <returns>A stream of result values and associated metadata.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.IQueryRunner.Run(System.String,System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            Run a query and return a result stream. This method accepts a String representing a Cypher query which will be
+            compiled into a query object that can be used to efficiently execute this query multiple times. This method optionally
+            accepts a set of parameters which will be injected into the query object query by Neo4j.
+            </summary>
+            <param name="query">A Cypher query.</param>
+            <param name="parameters">Input parameters for the query.</param>
+            <returns>A stream of result values and associated metadata.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.IQueryRunner.Run(Neo4j.Driver.Query)">
+            <summary>Execute a query and return a result stream.</summary>
+            <param name="query">A Cypher query, <see cref="T:Neo4j.Driver.Query"/>.</param>
+            <returns>A stream of result values and associated metadata.</returns>
+        </member>
+        <member name="T:Neo4j.Driver.IResult">
+            <summary>
+            Provides access to the result as an <see cref="T:System.Collections.Generic.IEnumerable`1"/> of <see cref="T:Neo4j.Driver.IRecord"/>s. The records in the
+            result is lazily retrieved and can be visited only once.
+            </summary>
+            <remarks> Calling <see cref="M:System.Linq.Enumerable.ToList``1(System.Collections.Generic.IEnumerable{``0})"/> will enumerate the entire stream.</remarks>
+        </member>
+        <member name="P:Neo4j.Driver.IResult.Keys">
+            <summary>Gets the keys in the result.</summary>
+        </member>
+        <member name="P:Neo4j.Driver.IResult.IsOpen">
+            <summary>
+            Get whether the underlying cursor is open to read records, a cursor will be considered open if
+            <see cref="M:Neo4j.Driver.IResult.Consume"/> has not been called.<br/> Attempting to read records from a closed cursor will throw
+            <see cref="T:Neo4j.Driver.ResultConsumedException"/>.<br/> Cursors can also be closed if its session is disposed or its session runs a
+            query.
+            </summary>
+        </member>
+        <member name="M:Neo4j.Driver.IResult.Peek">
+            <summary>Investigate the next upcoming record without changing the current position in the result.</summary>
+            <returns>The next record, or null if there is no next record.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.IResult.Consume">
+            <summary>
+            Consume the entire result, yielding a summary of it. Calling this method exhausts the result. If you want to
+            obtain the summary without discarding the records, use <see cref="M:System.Linq.Enumerable.ToList``1(System.Collections.Generic.IEnumerable{``0})"/> to buffer all
+            unconsumed records into memory instead.
+            </summary>
+            <returns>A summary for running the query.</returns>
+            <remarks>
+            This method could be called multiple times. If all records in the records stream are already consumed, then
+            this method will return the summary directly.
+            </remarks>
+        </member>
+        <member name="T:Neo4j.Driver.ISession">
+            <summary>
+            A live session with a Neo4j instance. Sessions serve two purposes. For one, they are an optimization. By
+            keeping state on the database side, we can avoid re-transmitting certain metadata over and over. Sessions also serve a
+            role in transaction isolation and ordering semantics. Neo4j requires "sticky sessions", meaning all requests within one
+            session must always go to the same Neo4j instance. AsyncSession objects are not thread safe, if you want to run
+            concurrent operations against the database, simply create multiple session objects.
+            </summary>
+        </member>
+        <member name="P:Neo4j.Driver.ISession.LastBookmarks">
+            <summary>
+            Gets the bookmark received following the last successfully completed <see cref="T:Neo4j.Driver.ITransaction"/>. If no
+            bookmark was received or if this transaction was rolled back, the bookmark value will not be changed.
+            </summary>
+        </member>
+        <member name="P:Neo4j.Driver.ISession.LastBookmark">
+            <summary>
+            Gets the bookmark received following the last successfully completed <see cref="T:Neo4j.Driver.ITransaction"/>. If no
+            bookmark was received or if this transaction was rolled back, the bookmark value will not be changed.
+            </summary>
+        </member>
+        <member name="P:Neo4j.Driver.ISession.SessionConfig">
+            <summary>Gets the session configuration back</summary>
+        </member>
+        <member name="M:Neo4j.Driver.ISession.BeginTransaction">
+            <summary>
+            Begin a new transaction in this session using server default transaction configurations. A session can have at
+            most one transaction running at a time, if you want to run multiple concurrent transactions, you should use multiple
+            concurrent sessions. All data operations in Neo4j are transactional. However, for convenience we provide a
+            <see cref="M:Neo4j.Driver.IQueryRunner.Run(Neo4j.Driver.Query)"/> method directly on this session interface as well. When you use that method, your
+            query automatically gets wrapped in a transaction. If you want to run multiple queries in the same transaction, you
+            should wrap them in a transaction using this method.
+            </summary>
+            <returns>A new transaction.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.ISession.BeginTransaction(System.Action{Neo4j.Driver.TransactionConfigBuilder})">
+            <summary>
+            Begin a new transaction with a specific <see cref="T:Neo4j.Driver.TransactionConfig"/> in this session. A session can have at
+            most one transaction running at a time, if you want to run multiple concurrent transactions, you should use multiple
+            concurrent sessions. All data operations in Neo4j are transactional. However, for convenience we provide a
+            <see cref="M:Neo4j.Driver.IQueryRunner.Run(Neo4j.Driver.Query)"/> method directly on this session interface as well. When you use that method, your
+            query automatically gets wrapped in a transaction. If you want to run multiple queries in the same transaction, you
+            should wrap them in a transaction using this method.
+            </summary>
+            <param name="action">
+            Given a <see cref="T:Neo4j.Driver.TransactionConfigBuilder"/>, defines how to set the configurations for the new
+            transaction. This configuration overrides server side default transaction configurations. See
+            <see cref="T:Neo4j.Driver.TransactionConfig"/>
+            </param>
+            <returns>A new transaction.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.ISession.ReadTransaction``1(System.Func{Neo4j.Driver.ITransaction,``0})">
+            <summary>Execute given unit of work in a  <see cref="F:Neo4j.Driver.AccessMode.Read"/> transaction.</summary>
+            <typeparam name="T">The return type of the given unit of work.</typeparam>
+            <param name="work">The <see cref="T:System.Func`1"/> to be applied to a new read transaction.</param>
+            <returns>A result as returned by the given unit of work.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.ISession.ReadTransaction``1(System.Func{Neo4j.Driver.ITransaction,``0},System.Action{Neo4j.Driver.TransactionConfigBuilder})">
+            <summary>
+            Execute given unit of work in a  <see cref="F:Neo4j.Driver.AccessMode.Read"/> transaction with a specific
+            <see cref="T:Neo4j.Driver.TransactionConfig"/>.
+            </summary>
+            <typeparam name="T">The return type of the given unit of work.</typeparam>
+            <param name="work">The <see cref="T:System.Func`1"/> to be applied to a new read transaction.</param>
+            <param name="action">
+            Given a <see cref="T:Neo4j.Driver.TransactionConfigBuilder"/>, defines how to set the configurations for the new
+            transaction. This configuration overrides server side default transaction configurations.
+            </param>
+            <returns>A result as returned by the given unit of work.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.ISession.WriteTransaction``1(System.Func{Neo4j.Driver.ITransaction,``0})">
+            <summary>Execute given unit of work in a  <see cref="F:Neo4j.Driver.AccessMode.Write"/> transaction.</summary>
+            <typeparam name="T">The return type of the given unit of work.</typeparam>
+            <param name="work">The <see cref="T:System.Func`1"/> to be applied to a new write transaction.</param>
+            <returns>A result as returned by the given unit of work.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.ISession.WriteTransaction``1(System.Func{Neo4j.Driver.ITransaction,``0},System.Action{Neo4j.Driver.TransactionConfigBuilder})">
+            <summary>
+            Execute given unit of work in a  <see cref="F:Neo4j.Driver.AccessMode.Write"/> transaction with a specific
+            <see cref="T:Neo4j.Driver.TransactionConfig"/>.
+            </summary>
+            <typeparam name="T">The return type of the given unit of work.</typeparam>
+            <param name="work">The <see cref="T:System.Func`1"/> to be applied to a new write transaction.</param>
+            <param name="action">
+            Given a <see cref="T:Neo4j.Driver.TransactionConfigBuilder"/>, defines how to set the configurations for the new
+            transaction. This configuration overrides server side default transaction configurations. See
+            <see cref="T:Neo4j.Driver.TransactionConfig"/>
+            </param>
+            <returns>A result as returned by the given unit of work.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.ISession.ExecuteRead``1(System.Func{Neo4j.Driver.IQueryRunner,``0})">
+            <summary>Execute given unit of work in a  <see cref="F:Neo4j.Driver.AccessMode.Read"/> managed transaction.</summary>
+            <typeparam name="T">The return type of the given unit of work.</typeparam>
+            <param name="work">The <see cref="T:System.Func`1"/> to be applied to a new read transaction.</param>
+            <returns>A result as returned by the given unit of work.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.ISession.ExecuteRead``1(System.Func{Neo4j.Driver.IQueryRunner,``0},System.Action{Neo4j.Driver.TransactionConfigBuilder})">
+            <summary>
+            Execute given unit of work in a  <see cref="F:Neo4j.Driver.AccessMode.Read"/> managed transaction with a specific
+            <see cref="T:Neo4j.Driver.TransactionConfig"/>.
+            </summary>
+            <typeparam name="T">The return type of the given unit of work.</typeparam>
+            <param name="work">The <see cref="T:System.Func`1"/> to be applied to a new read transaction.</param>
+            <param name="action">
+            Given a <see cref="T:Neo4j.Driver.TransactionConfigBuilder"/>, defines how to set the configurations for the new
+            transaction. This configuration overrides server side default transaction configurations.
+            </param>
+            <returns>A result as returned by the given unit of work.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.ISession.ExecuteWrite``1(System.Func{Neo4j.Driver.IQueryRunner,``0})">
+            <summary>Execute given unit of work in a  <see cref="F:Neo4j.Driver.AccessMode.Write"/> managed transaction.</summary>
+            <typeparam name="T">The return type of the given unit of work.</typeparam>
+            <param name="work">The <see cref="T:System.Func`1"/> to be applied to a new write transaction.</param>
+            <returns>A result as returned by the given unit of work.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.ISession.ExecuteWrite``1(System.Func{Neo4j.Driver.IQueryRunner,``0},System.Action{Neo4j.Driver.TransactionConfigBuilder})">
+            <summary>
+            Execute given unit of work in a  <see cref="F:Neo4j.Driver.AccessMode.Write"/> managed transaction with a specific
+            <see cref="T:Neo4j.Driver.TransactionConfig"/>.
+            </summary>
+            <typeparam name="T">The return type of the given unit of work.</typeparam>
+            <param name="work">The <see cref="T:System.Func`1"/> to be applied to a new write transaction.</param>
+            <param name="action">
+            Given a <see cref="T:Neo4j.Driver.TransactionConfigBuilder"/>, defines how to set the configurations for the new
+            transaction. This configuration overrides server side default transaction configurations. See
+            <see cref="T:Neo4j.Driver.TransactionConfig"/>
+            </param>
+            <returns>A result as returned by the given unit of work.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.ISession.Run(System.String,System.Action{Neo4j.Driver.TransactionConfigBuilder})">
+            <summary>
+            Run a query with the specific <see cref="T:Neo4j.Driver.TransactionConfig"/> and return a result stream. This method accepts
+            a String representing a Cypher query which will be compiled into a query object that can be used to efficiently execute
+            this query multiple times.
+            </summary>
+            <param name="query">A Cypher query.</param>
+            <param name="action">
+            Given a <see cref="T:Neo4j.Driver.TransactionConfigBuilder"/>, defines how to set the configurations for the new
+            transaction.
+            </param>
+            <returns>A stream of result values and associated metadata.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.ISession.Run(System.String,System.Collections.Generic.IDictionary{System.String,System.Object},System.Action{Neo4j.Driver.TransactionConfigBuilder})">
+            <summary>
+            Run a query with the specific <see cref="T:Neo4j.Driver.TransactionConfig"/> and return a result stream. This method accepts
+            a String representing a Cypher query which will be compiled into a query object that can be used to efficiently execute
+            this query multiple times. This method optionally accepts a set of parameters which will be injected into the query
+            object query by Neo4j.
+            </summary>
+            <param name="query">A Cypher query.</param>
+            <param name="parameters">Input parameters for the query.</param>
+            <param name="action">
+            Given a <see cref="T:Neo4j.Driver.TransactionConfigBuilder"/>, defines how to set the configurations for the new
+            transaction.
+            </param>
+            <returns>A stream of result values and associated metadata.</returns>
+        </member>
+        <member name="M:Neo4j.Driver.ISession.Run(Neo4j.Driver.Query,System.Action{Neo4j.Driver.TransactionConfigBuilder})">
+            <summary>Execute a query with the specific <see cref="T:Neo4j.Driver.TransactionConfig"/> and return a result stream.</summary>
+            <param name="query">A Cypher query, <see cref="T:Neo4j.Driver.Query"/>.</param>
+            <param name="action">
+            Given a <see cref="T:Neo4j.Driver.TransactionConfigBuilder"/>, defines how to set the configurations for the new
+            transaction.
+            </param>
+            <returns>A stream of result values and associated metadata.</returns>
+        </member>
+        <member name="T:Neo4j.Driver.ITransaction">
+            <summary>
+            Represents a transaction in the Neo4j database. This interface may seem surprising in that it does not have
+            explicit <c>Commit</c> or <c>Rollback</c> methods. It is designed to minimize the complexity of the code you need to
+            write to use transactions in a safe way, ensuring that transactions are properly rolled back even if there is an
+            exception while the transaction is running.
+            </summary>
+        </member>
+        <member name="P:Neo4j.Driver.ITransaction.TransactionConfig">
+            <summary>Gets the transaction configuration.</summary>
+        </member>
+        <member name="M:Neo4j.Driver.ITransaction.Commit">
+            <summary>
+            Mark this transaction as successful. You must call this method before calling
+            <see cref="M:System.IDisposable.Dispose"/> to have your transaction committed.
+            </summary>
+        </member>
+        <member name="M:Neo4j.Driver.ITransaction.Rollback">
+            <summary>
+            Mark this transaction as failed. Calling <see cref="M:System.IDisposable.Dispose"/> will roll back the transaction.
+            Marking a transaction as failed is irreversible and guarantees that subsequent calls to <see cref="M:Neo4j.Driver.ITransaction.Commit"/> will not
+            change it's status.
+            </summary>
+        </member>
+    </members>
+</doc>
