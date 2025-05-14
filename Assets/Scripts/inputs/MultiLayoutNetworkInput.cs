@@ -53,6 +53,7 @@ namespace VidiGraph
 
         int _framesSinceNodeUnhover = 10;
         int _framesSinceNodeGrab = 10;
+        int _framesSinceNodeUngrab = 10;
 
         int _framesSinceCommUnhover = 10;
         int _framesSinceCommGrab = 10;
@@ -144,6 +145,10 @@ namespace VidiGraph
             if (_framesSinceNodeGrab < 1000)
             {
                 _framesSinceNodeGrab += 1;
+            }
+            if (_framesSinceNodeUngrab < 1000)
+            {
+                _framesSinceNodeUngrab += 1;
             }
         }
 
@@ -323,6 +328,23 @@ namespace VidiGraph
             }
         }
 
+        void OnCommunityGrabEnter(Community community, SelectEnterEventArgs evt)
+        {
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                _manager.StartMLCommMove(community.ID);
+                _framesSinceCommGrab = 0;
+            }
+        }
+
+        void OnCommunityGrabExit(Community community, SelectExitEventArgs evt)
+        {
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                _manager.EndMLCommMove(community.ID);
+            }
+        }
+
         void OnNodeHoverEnter(Node node, HoverEnterEventArgs evt)
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
@@ -342,26 +364,11 @@ namespace VidiGraph
             }
         }
 
-        void OnCommunityGrabEnter(Community community, SelectEnterEventArgs evt)
-        {
-            if (evt.interactorObject.handedness == InteractorHandedness.Right)
-            {
-                _framesSinceCommGrab = 0;
-            }
-        }
-
-        void OnCommunityGrabExit(Community community, SelectExitEventArgs evt)
-        {
-            if (evt.interactorObject.handedness == InteractorHandedness.Right)
-            {
-            }
-        }
-
         void OnNodeGrabEnter(Node node, SelectEnterEventArgs evt)
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _manager.StartMLNodeMove(node.ID, evt.interactableObject.transform);
+                _manager.StartMLNodeMove(node.ID);
                 _framesSinceNodeGrab = 0;
             }
         }

@@ -92,6 +92,12 @@ namespace VidiGraph
         {
             return _nodeGameObjs[nodeID].transform;
         }
+
+        public override Transform GetCommTransform(int commID)
+        {
+            // nothing to implement
+            return transform;
+        }
     }
 
 }

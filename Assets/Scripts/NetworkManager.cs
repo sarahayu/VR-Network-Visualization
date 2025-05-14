@@ -116,11 +116,6 @@ namespace VidiGraph
             _multiLayoutNetwork.UpdateSelectedElements();
         }
 
-        public void StartMLNodeMove(int nodeID, Transform transform)
-        {
-            _multiLayoutNetwork.StartNodeMove(nodeID, transform);
-        }
-
         public void StartMLNodeMove(int nodeID)
         {
             _multiLayoutNetwork.StartNodeMove(nodeID, _multiLayoutNetwork.GetNodeTransform(nodeID));
@@ -139,7 +134,18 @@ namespace VidiGraph
 
         public void EndMLNodesMove(List<int> nodeIDs)
         {
-            _multiLayoutNetwork.EndNodesMove(nodeIDs);
+            _multiLayoutNetwork.EndNodesMove();
+
+        }
+
+        public void StartMLCommMove(int commID)
+        {
+            _multiLayoutNetwork.StartCommMove(commID, _multiLayoutNetwork.GetCommTransform(commID));
+        }
+
+        public void EndMLCommMove(int commID)
+        {
+            _multiLayoutNetwork.EndCommMove();
 
         }
 
@@ -214,6 +220,11 @@ namespace VidiGraph
         public Transform GetMLNodeTransform(int nodeID)
         {
             return _multiLayoutNetwork.GetNodeTransform(nodeID);
+        }
+
+        public Transform GetMLCommTransform(int commID)
+        {
+            return _multiLayoutNetwork.GetCommTransform(commID);
         }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 
@@ -12,6 +13,7 @@ namespace VidiGraph
         public abstract void Draw();
 
         public abstract Transform GetNodeTransform(int nodeID);
+        public abstract Transform GetCommTransform(int commID);
 
         // start events
 

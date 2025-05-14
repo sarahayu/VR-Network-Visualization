@@ -124,6 +124,8 @@ namespace VidiGraph
 
                 contextCommunity.Size = CommunityMathUtils.ComputeSize(community.Nodes, Nodes,
                     contextCommunity.MassCenter);
+
+                contextCommunity.Dirty = true;
             }
         }
 

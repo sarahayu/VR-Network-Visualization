@@ -62,6 +62,7 @@ namespace VidiGraph
         bool _isSphericalLayout;
         Coroutine _curAnim = null;
         Coroutine _curNodeMover = null;
+        Coroutine _curCommMover = null;
 
         void Awake()
         {
@@ -264,14 +265,43 @@ namespace VidiGraph
             {
                 StopCoroutine(_curNodeMover);
             }
+
+            _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+            _multiLayoutRenderer.UpdateRenderElements();
         }
 
-        public void EndNodesMove(List<int> nodeIDs)
+        public void EndNodesMove()
         {
             if (_curNodeMover != null)
             {
                 StopCoroutine(_curNodeMover);
             }
+
+            _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+            _multiLayoutRenderer.UpdateRenderElements();
+        }
+
+        public void StartCommMove(int commID, Transform toTrack)
+        {
+            if (_curCommMover != null)
+            {
+                StopCoroutine(_curCommMover);
+            }
+
+            var nodeIDs = _manager.NetworkGlobal.Communities[commID].Nodes.Select(n => n.ID).ToList();
+            var nodeTransforms = nodeIDs.Select(nid => GetNodeTransform(nid)).ToList();
+
+            _curCommMover = StartCoroutine(CRMoveComm(toTrack, nodeIDs, nodeTransforms));
+        }
+
+        public void EndCommMove()
+        {
+            if (_curCommMover != null)
+            {
+                StopCoroutine(_curCommMover);
+            }
+
+            lastCommPosition = Vector3.positiveInfinity;
         }
 
         public void SetNodeSizeEncoding(Func<VidiGraph.Node, float> func)
@@ -284,6 +314,11 @@ namespace VidiGraph
         public Transform GetNodeTransform(int nodeID)
         {
             return _multiLayoutRenderer.GetNodeTransform(nodeID);
+        }
+
+        public Transform GetCommTransform(int commID)
+        {
+            return _multiLayoutRenderer.GetCommTransform(commID);
         }
 
         void TransformNetwork(string layout, bool animated)
@@ -372,7 +407,48 @@ namespace VidiGraph
             {
                 _networkContext.Nodes[nodeID].Position = toTrack.position;
                 _networkContext.Nodes[nodeID].Dirty = true;
-                _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+                // _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+                _multiLayoutRenderer.UpdateRenderElements();
+                yield return null;
+            }
+
+        }
+
+        Vector3 lastCommPosition = Vector3.positiveInfinity;
+        Quaternion lastCommRotation = Quaternion.identity;
+
+        IEnumerator CRMoveComm(Transform comm, List<int> nodeIDs, List<Transform> toMove)
+        {
+            for (; ; )
+            {
+                var curPosition = comm.transform.position;
+                var curRotation = comm.transform.rotation;
+
+                if (float.IsFinite(lastCommPosition.x))
+                {
+                    var diff = curPosition - lastCommPosition;
+                    var diffRot = curRotation * Quaternion.Inverse(lastCommRotation);
+                    diffRot.ToAngleAxis(out var angle, out var axis);
+
+                    for (int i = 0; i < nodeIDs.Count; i++)
+                    {
+
+                        toMove[i].RotateAround(lastCommPosition, axis, angle);
+
+                        toMove[i].position += diff;
+                        _networkContext.Nodes[nodeIDs[i]].Position = toMove[i].position;
+                        _networkContext.Nodes[nodeIDs[i]].Dirty = true;
+                    }
+                }
+
+                print("------");
+                print(toMove[0].position.ToString());
+
+                lastCommPosition = curPosition;
+                lastCommRotation = curRotation;
+
+                // _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+
                 _multiLayoutRenderer.UpdateRenderElements();
                 yield return null;
             }
@@ -387,7 +463,10 @@ namespace VidiGraph
                     _networkContext.Nodes[nodeIDs[i]].Position = toTracks[i].position;
                     _networkContext.Nodes[nodeIDs[i]].Dirty = true;
                 }
-                _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+                print("=======");
+                print(_networkContext.Nodes[nodeIDs[0]].Position.ToString());
+                print(toTracks[0].position.ToString());
+                // _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
                 _multiLayoutRenderer.UpdateRenderElements();
                 yield return null;
             }

@@ -143,6 +143,12 @@ namespace VidiGraph
             return transform;
         }
 
+        public override Transform GetCommTransform(int commID)
+        {
+            // nothing to implement
+            return transform;
+        }
+
         void GenerateTerrainLowQuality(FlatMesh meshCalculator)
         {
             // make mesh from heightmap

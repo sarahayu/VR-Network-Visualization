@@ -90,6 +90,11 @@ namespace VidiGraph
             return _nodeGameObjs[nodeID].transform;
         }
 
+        public override Transform GetCommTransform(int commID)
+        {
+            return _communityGameObjs[commID].transform;
+        }
+
         void InitializeShaders()
         {
             _batchSplineMaterial = new Material(Shader.Find("Custom/Batch BSpline Unlit"));

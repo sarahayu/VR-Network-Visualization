@@ -51,6 +51,8 @@ public class SurfaceManager : MonoBehaviour
 
         _mlRenderer.OnNodeGrabEnter += OnNodeGrabEnter;
         _mlRenderer.OnNodeGrabExit += OnNodeGrabExit;
+        _mlRenderer.OnCommunityGrabEnter += OnCommunityGrabEnter;
+        _mlRenderer.OnCommunityGrabExit += OnCommunityGrabExit;
     }
 
     // return surface ID
@@ -115,6 +117,35 @@ public class SurfaceManager : MonoBehaviour
             _surfaceChildrenNodes[closest].Add(nodeID);
             _surfaceChildren[closest].Add(_manager.GetMLNodeTransform(nodeID));
             _nodeToSurf[nodeID] = closest;
+        }
+
+        return closest;
+    }
+    // return ID of closest surface
+    public int TryAttach(List<int> nodeIDs)
+    {
+        // check distance
+        // attach if distance less
+
+        var closest = GetClosestSurface(_manager.GetMLNodeTransform(nodeIDs[0]).position);
+
+        if (closest != -1)
+        {
+            foreach (var nodeID in nodeIDs)
+            {
+                if (_nodeToSurf.ContainsKey(nodeID))
+                {
+                    var parent = _nodeToSurf[nodeID];
+                    var indInList = _surfaceChildrenNodes[parent].IndexOf(nodeID);
+
+                    _surfaceChildren[parent].RemoveAt(indInList);
+                    _surfaceChildrenNodes[parent].RemoveAt(indInList);
+                }
+
+                _surfaceChildrenNodes[closest].Add(nodeID);
+                _surfaceChildren[closest].Add(_manager.GetMLNodeTransform(nodeID));
+                _nodeToSurf[nodeID] = closest;
+            }
         }
 
         return closest;
@@ -220,6 +251,29 @@ public class SurfaceManager : MonoBehaviour
             }
 
             _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLNodeTransform(node.ID)));
+        }
+    }
+
+    void OnCommunityGrabExit(Community community, SelectExitEventArgs evt)
+    {
+        if (evt.interactorObject.handedness == InteractorHandedness.Right)
+        {
+            StopCoroutine(_surfaceHighlighter);
+            TryAttach(community.Nodes.Select(n => n.ID).ToList());
+            UnhighlightSurfaces();
+        }
+    }
+
+    void OnCommunityGrabEnter(Community community, SelectEnterEventArgs evt)
+    {
+        if (evt.interactorObject.handedness == InteractorHandedness.Right)
+        {
+            if (_surfaceHighlighter != null)
+            {
+                StopCoroutine(_surfaceHighlighter);
+            }
+
+            _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLCommTransform(community.ID)));
         }
     }
 

@@ -66,6 +66,12 @@ namespace VidiGraph
             return transform;
         }
 
+        public override Transform GetCommTransform(int commID)
+        {
+            // nothing to implement
+            return transform;
+        }
+
         void CreateNodes()
         {
             foreach (var node in _networkData.Nodes)
