@@ -129,6 +129,28 @@ namespace VidiGraph
             }
         }
 
+        public void StoreNetworkContext(NetworkStorage storage)
+        {
+            var sess = storage.StartSession();
+
+            foreach (var (nodeID, node) in Nodes)
+            {
+                NeoDBConverterUtils.StoreNode(sess, node, nodeID);
+            }
+
+            foreach (var (linkID, link) in Links)
+            {
+                NeoDBConverterUtils.StoreLink(sess, link, linkID);
+            }
+
+            foreach (var (commID, community) in Communities)
+            {
+                NeoDBConverterUtils.StoreCommunity(sess, community, commID);
+            }
+
+            sess.Dispose();
+        }
+
         void SetDefaultEncodings(NetworkGlobal networkGlobal)
         {
             GetNodeSize = _ => 1f;

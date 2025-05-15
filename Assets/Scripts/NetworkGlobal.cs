@@ -289,6 +289,30 @@ namespace VidiGraph
             UpdateSelectedCommunities();
         }
 
+        public void StoreNetwork(NetworkStorage storage)
+        {
+            var sess = storage.StartSession();
+
+            foreach (var node in Nodes)
+            {
+                if (node.IsVirtualNode) continue;
+                NeoDBConverterUtils.StoreNode(sess, node);
+            }
+
+            foreach (var link in Links)
+            {
+                if (link.SourceNode.IsVirtualNode || link.TargetNode.IsVirtualNode) continue;
+                NeoDBConverterUtils.StoreLink(sess, link);
+            }
+
+            foreach (var community in Communities.Values)
+            {
+                NeoDBConverterUtils.StoreCommunity(sess, community);
+            }
+
+            sess.Dispose();
+        }
+
         void CommunitiesInit()
         {
             FindLinks4Communities();

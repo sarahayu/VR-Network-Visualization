@@ -21,6 +21,7 @@ namespace VidiGraph
 
 
         NetworkFilesLoader _fileLoader;
+        NetworkStorage _storage;
         public NetworkFilesLoader FileLoader { get { return _fileLoader; } }
 
         NetworkGlobal _networkGlobal;
@@ -38,6 +39,9 @@ namespace VidiGraph
         void Start()
         {
             Initialize();
+
+            _networkGlobal.StoreNetwork(_storage);
+            _multiLayoutNetwork.StoreNetworkContext(_storage);
         }
 
         void Update()
@@ -54,6 +58,8 @@ namespace VidiGraph
 
             _multiLayoutNetwork.Initialize();
             _handheldNetwork?.Initialize();
+
+            _storage = GameObject.Find("/Database").GetComponent<NetworkStorage>();
         }
 
         public void DrawPreview()

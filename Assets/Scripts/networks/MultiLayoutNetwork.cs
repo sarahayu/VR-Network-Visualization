@@ -321,6 +321,11 @@ namespace VidiGraph
             return _multiLayoutRenderer.GetCommTransform(commID);
         }
 
+        public void StoreNetworkContext(NetworkStorage storage)
+        {
+            _networkContext.StoreNetworkContext(storage);
+        }
+
         void TransformNetwork(string layout, bool animated)
         {
             if (animated)

@@ -19,23 +19,6 @@ public class NetworkStorage : MonoBehaviour
     void Start()
     {
         _driver = GraphDatabase.Driver(_uri, AuthTokens.Basic(_user, _password));
-
-        var message = "hello world";
-
-        using var session = _driver.Session();
-        var greeting = session.ExecuteWrite(
-            tx =>
-            {
-                var result = tx.Run(
-                    "CREATE (a:Greeting) " +
-                    "SET a.message = $message " +
-                    "RETURN a.message + ', from node ' + id(a)",
-                    new { message });
-
-                return result.Single()[0].As<string>();
-            });
-
-        print(greeting);
     }
 
     void OnApplicationQuit()
@@ -47,5 +30,10 @@ public class NetworkStorage : MonoBehaviour
     void Update()
     {
 
+    }
+
+    public ISession StartSession()
+    {
+        return _driver.Session();
     }
 }
