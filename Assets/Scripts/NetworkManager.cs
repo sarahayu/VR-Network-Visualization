@@ -40,8 +40,8 @@ namespace VidiGraph
         {
             Initialize();
 
-            _networkGlobal.StoreNetwork(_storage);
-            _multiLayoutNetwork.StoreNetworkContext(_storage);
+            _storage = GameObject.Find("/Database").GetComponent<NetworkStorage>();
+            NetworkManagerUtils.BulkInitNetwork(_storage, _networkGlobal, _multiLayoutNetwork.Context);
         }
 
         void Update()
@@ -59,7 +59,6 @@ namespace VidiGraph
             _multiLayoutNetwork.Initialize();
             _handheldNetwork?.Initialize();
 
-            _storage = GameObject.Find("/Database").GetComponent<NetworkStorage>();
         }
 
         public void DrawPreview()

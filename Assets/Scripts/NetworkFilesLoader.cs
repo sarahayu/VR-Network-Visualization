@@ -28,7 +28,6 @@ namespace VidiGraph
 
         public void LoadFiles()
         {
-            print($"loading dataset {DatasetName}");
             string clusterFile = $"{DatasetName}{ClusterSuffix}";
             string flatFile = $"{DatasetName}{FlatSuffix}";
             string sphericalFile = $"{DatasetName}{SphericalSuffix}";
@@ -45,6 +44,7 @@ namespace VidiGraph
             InitializeIdMap(SphericalLayout);
             InitializeIdMap(HairballLayout);
 
+            print($"Loaded dataset {DatasetName}.");
         }
 
         void InitializeIdMap(NetworkFileData network)
