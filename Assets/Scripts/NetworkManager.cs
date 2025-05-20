@@ -41,7 +41,7 @@ namespace VidiGraph
             Initialize();
 
             _storage = GameObject.Find("/Database").GetComponent<NetworkStorage>();
-            NetworkManagerUtils.BulkInitNetwork(_storage, _networkGlobal, _multiLayoutNetwork.Context);
+            _storage.InitialStore(_networkGlobal, _multiLayoutNetwork.Context);
         }
 
         void Update()
