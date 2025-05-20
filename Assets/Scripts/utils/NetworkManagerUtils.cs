@@ -14,6 +14,8 @@ namespace VidiGraph
         {
             DumpNetwork(networkGlobal, context, out var fc, out var fn, out var fn2n);
 
+            bool shutdown = false;
+
             try
             {
                 var sess = storage.StartSession();
@@ -111,30 +113,31 @@ namespace VidiGraph
             catch (ServiceUnavailableException e)
             {
                 Debug.LogError(e.Message);
-                Application.Quit();
 
-#if UNITY_EDITOR
-                EditorApplication.isPlaying = false;
-#elif UNITY_STANDALONE
-                Application.Quit();
-#endif
+                shutdown = true;
             }
             catch (ClientException)
             {
                 Debug.LogError("Could not load files to Neo4J database. Did you remove the setting `server.directories.import`?\n" +
                     "https://neo4j.com/docs/cypher-manual/current/clauses/load-csv/#_configuration_settings_for_file_urls");
-                Application.Quit();
 
-#if UNITY_EDITOR
-                EditorApplication.isPlaying = false;
-#elif UNITY_STANDALONE
-                Application.Quit();
-#endif
+                shutdown = true;
             }
+            finally
+            {
+                FileUtil.DeleteFileOrDirectory(fn);
+                FileUtil.DeleteFileOrDirectory(fc);
+                FileUtil.DeleteFileOrDirectory(fn2n);
 
-            FileUtil.DeleteFileOrDirectory(fn);
-            FileUtil.DeleteFileOrDirectory(fc);
-            FileUtil.DeleteFileOrDirectory(fn2n);
+                if (shutdown)
+                {
+#if UNITY_EDITOR
+                    EditorApplication.isPlaying = false;
+#elif UNITY_STANDALONE
+                    Application.Quit();
+#endif
+                }
+            }
         }
 
         static void DumpNetwork(NetworkGlobal networkGlobal, MultiLayoutContext context,
