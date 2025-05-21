@@ -61,7 +61,7 @@ namespace VidiGraph
                                 "SET c.selected = toBoolean(row.selected) " +
                                 "SET c.render_mass = toFloat(row.render_mass) " +
                                 "SET c.render_massCenter = row.render_massCenter " +
-                                "SET c.render_size = row.render_size " +
+                                "SET c.render_size = toFloat(row.render_size) " +
                                 "SET c.render_state = row.render_state " +
                             "} IN TRANSACTIONS OF 500 ROWS",
                             new

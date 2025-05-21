@@ -32,7 +32,7 @@ namespace VidiGraph
         public string color = null;
         public bool virtualNode;
         public int height;
-        public int ancIdx;
+        public int ancIdx = -1;     // -1 to signify no ancestor, possible with root node
         public int[] childIdx;
         public Vector3 _position3D;
         public float[] pos2D;

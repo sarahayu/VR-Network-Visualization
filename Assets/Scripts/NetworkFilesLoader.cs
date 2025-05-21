@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace VidiGraph
@@ -61,7 +62,11 @@ namespace VidiGraph
         {
             string filepath = $"{Application.streamingAssetsPath}/{filename}";
 
-            return JsonUtility.FromJson<T>(File.ReadAllText(filepath));
+            return JsonConvert.DeserializeObject<T>(File.ReadAllText(filepath), new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Ignore,
+                MissingMemberHandling = MissingMemberHandling.Ignore
+            });
         }
     }
 }

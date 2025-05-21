@@ -1,5 +1,7 @@
 # TODO
 
+- simple scaling
+- flat on surface
 - fix grab exit/hover exit bug
 - refactor surface
 - fix closest surface bug
