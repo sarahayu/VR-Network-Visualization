@@ -30,8 +30,6 @@ namespace VidiGraph
         public HashSet<int> SelectedNodes { get { return _networkGlobal.SelectedNodes; } }
         public HashSet<int> SelectedCommunities { get { return _networkGlobal.SelectedCommunities; } }
 
-
-
         void Awake()
         {
         }
@@ -40,8 +38,8 @@ namespace VidiGraph
         {
             Initialize();
 
-            _storage = GameObject.Find("/Database").GetComponent<NetworkStorage>();
-            _storage.InitialStore(_networkGlobal, _multiLayoutNetwork.Context);
+            _storage = GameObject.Find("/Database")?.GetComponent<NetworkStorage>();
+            _storage?.InitialStore(_networkGlobal, _multiLayoutNetwork.Context);
         }
 
         void Update()
@@ -230,6 +228,35 @@ namespace VidiGraph
         public Transform GetMLCommTransform(int commID)
         {
             return _multiLayoutNetwork.GetCommTransform(commID);
+        }
+        public void SetNodesSize(List<int> nodeIDs, float size)
+        {
+            _multiLayoutNetwork.SetNodesSize(nodeIDs, size);
+        }
+
+        public void SetNodesColor(List<int> nodeIDs, Color color)
+        {
+            _multiLayoutNetwork.SetNodesColor(nodeIDs, color);
+        }
+
+        public void SetLinksWidth(List<int> linkIDs, float width)
+        {
+            _multiLayoutNetwork.SetLinksWidth(linkIDs, width);
+        }
+
+        public void SetLinksColorStart(List<int> linkIDs, Color color)
+        {
+            _multiLayoutNetwork.SetLinksColorStart(linkIDs, color);
+        }
+
+        public void SetLinksColorEnd(List<int> linkIDs, Color color)
+        {
+            _multiLayoutNetwork.SetLinksColorEnd(linkIDs, color);
+        }
+
+        public void SetLinksAlpha(List<int> linkIDs, float alpha)
+        {
+            _multiLayoutNetwork.SetLinksAlpha(linkIDs, alpha);
         }
     }
 }

@@ -10,5 +10,8 @@ namespace VidiGraph
     public abstract class NetworkStorage : MonoBehaviour
     {
         public abstract void InitialStore(NetworkGlobal networkGlobal, MultiLayoutContext networkContext);
+
+        // will not un-dirty elements; that will happen in renderer
+        public abstract void UpdateStore(NetworkGlobal networkGlobal, MultiLayoutContext networkContext);
     }
 }

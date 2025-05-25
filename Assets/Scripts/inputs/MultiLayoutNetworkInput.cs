@@ -117,7 +117,17 @@ namespace VidiGraph
             else if (CheckSelectionActions()) { }
             else if (CommandPress.ReadWasPerformedThisFrame())
             {
-                _manager.SetMLNodeSizeEncoding(node => (float)node.Degree);
+                var nodeIDs1 = _manager.NetworkGlobal.RealNodes.GetRange(0, 10);
+                var nodeIDs2 = _manager.NetworkGlobal.RealNodes.GetRange(10, 10);
+                var linkIDs1 = _manager.NetworkGlobal.Links.GetRange(0, 10).Select(l => l.ID).ToList();
+                var linkIDs2 = _manager.NetworkGlobal.Links.GetRange(10, 10).Select(l => l.ID).ToList();
+
+                _manager.SetNodesSize(nodeIDs1, 2);
+                _manager.SetNodesColor(nodeIDs2, Color.green);
+                _manager.SetLinksWidth(linkIDs1, 0.5f);
+                _manager.SetLinksColorStart(linkIDs2, Color.blue);
+                _manager.SetLinksColorEnd(linkIDs1, Color.red);
+                _manager.SetLinksAlpha(linkIDs2, 1);
             }
 
             CheckNodeUnhover();

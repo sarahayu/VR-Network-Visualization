@@ -127,7 +127,7 @@ namespace VidiGraph
             {
                 var communityProps = _networkContext.Communities[communityID];
                 var commObj = CommunityRenderUtils.MakeCommunity(CommunityPrefab, transform,
-                    communityProps);
+                    community, communityProps);
 
                 _communityGameObjs[communityID] = commObj;
                 _commRenderers[communityID] = commObj.GetComponentInChildren<Renderer>();
@@ -201,7 +201,7 @@ namespace VidiGraph
                 if ((DrawVirtualNodes || !globalNode.IsVirtualNode) && needsUpdate)
                 {
                     NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[nodeID], globalNode, contextNode,
-                        _networkContext.ContextSettings.NodeScale, _nodeRenderers[nodeID]);
+                        _networkContext.ContextSettings.NodeScale, _networkContext.ContextSettings.NodeHighlightColor, _nodeRenderers[nodeID]);
                     globalNode.Dirty = contextNode.Dirty = false;
                 }
 
@@ -227,9 +227,8 @@ namespace VidiGraph
 
                 if (needsUpdate)
                 {
-                    Color color = globalComm.Selected ? _networkContext.ContextSettings.CommHighlightColor : new Color(0f, 0f, 0f, 0f);
-                    CommunityRenderUtils.UpdateCommunity(_communityGameObjs[communityID], contextComm, _commRenderers[communityID]);
-                    CommunityRenderUtils.SetCommunityColor(_communityGameObjs[communityID], color, _commRenderers[communityID]);
+                    CommunityRenderUtils.UpdateCommunity(_communityGameObjs[communityID], globalComm, contextComm,
+                        _networkContext.ContextSettings.CommHighlightColor, _commRenderers[communityID]);
                     globalComm.Dirty = contextComm.Dirty = false;
                 }
 

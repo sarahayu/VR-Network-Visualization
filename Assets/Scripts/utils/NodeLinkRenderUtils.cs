@@ -14,10 +14,11 @@ namespace VidiGraph
         {
             GameObject nodeObj = UnityEngine.Object.Instantiate(prefab, parent);
 
-            return UpdateNode(nodeObj, node, nodeProps, nodeScale);
+            // node won't be selected anyways so just set select color to transparent
+            return UpdateNode(nodeObj, node, nodeProps, nodeScale, Color.clear);
         }
         public static GameObject UpdateNode(GameObject nodeObj,
-            Node node, MultiLayoutContext.Node nodeProps, float nodeScale, Renderer renderer = null)
+            Node node, MultiLayoutContext.Node nodeProps, float nodeScale, Color selectColor, Renderer renderer = null)
         {
             nodeObj.transform.position = nodeProps.Position;
             nodeObj.transform.localScale = Vector3.one * nodeProps.Size * nodeScale;
@@ -28,7 +29,7 @@ namespace VidiGraph
             MaterialPropertyBlock props = new MaterialPropertyBlock();
 
             renderer.GetPropertyBlock(props);
-            props.SetColor("_Color", nodeProps.Color);
+            props.SetColor("_Color", node.Selected ? selectColor : nodeProps.Color);
             renderer.SetPropertyBlock(props);
 
             return nodeObj;

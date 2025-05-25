@@ -212,8 +212,14 @@ namespace VidiGraph
                 //     // spline.EndColorRGBA = _settings.LinkHighlightColor;
                 // }
 
+
+                if (link.SourceNode.Selected || link.TargetNode.Selected)
+                {
+                    spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkHighlightColor;
+                }
+
                 if (networkGlobal.HoveredNode?.ID == link.SourceNodeID || networkGlobal.HoveredNode?.ID == link.TargetNodeID
-                    || networkGlobal.HoveredCommunity?.ID == link.SourceNode.CommunityID || networkGlobal.HoveredCommunity?.ID == link.TargetNode.CommunityID)
+                        || networkGlobal.HoveredCommunity?.ID == link.SourceNode.CommunityID || networkGlobal.HoveredCommunity?.ID == link.TargetNode.CommunityID)
                 {
                     spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkHighlightColor;
                 }

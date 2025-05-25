@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -58,7 +59,7 @@ public class SurfaceManager : MonoBehaviour
     // return surface ID
     public int SpawnSurface(Vector3 position, Quaternion rotation)
     {
-        var surfObject = Object.Instantiate(_surfacePrefab, transform);
+        var surfObject = UnityEngine.Object.Instantiate(_surfacePrefab, transform);
 
         int id = GetNextID();
 
@@ -76,11 +77,17 @@ public class SurfaceManager : MonoBehaviour
         return id;
     }
 
+    public void SpawnSurface()
+    {
+        throw new NotImplementedException();
+    }
+
+
     public void DeleteSurface(int surfID)
     {
         if (_surfaces.ContainsKey(surfID))
         {
-            Object.Destroy(_surfaces[surfID]);
+            UnityEngine.Object.Destroy(_surfaces[surfID]);
 
             _surfaces.Remove(surfID);
             _surfRenderers.Remove(surfID);

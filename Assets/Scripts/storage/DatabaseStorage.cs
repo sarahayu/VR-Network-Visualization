@@ -34,9 +34,9 @@ namespace VidiGraph
             DatabaseStorageUtils.BulkInitNetwork(networkGlobal, networkContext, _driver, _convertWinPaths);
         }
 
-        public ISession StartSession()
+        public override void UpdateStore(NetworkGlobal networkGlobal, MultiLayoutContext networkContext)
         {
-            return _driver.Session();
+            throw new NotImplementedException();
         }
     }
 }

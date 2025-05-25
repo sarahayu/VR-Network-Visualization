@@ -321,6 +321,73 @@ namespace VidiGraph
             return _multiLayoutRenderer.GetCommTransform(commID);
         }
 
+        public void SetNodesSize(List<int> nodeIDs, float size)
+        {
+            foreach (var node in nodeIDs.Select(nid => _networkContext.Nodes[nid]))
+            {
+                node.Size = size;
+                node.Dirty = true;
+            }
+
+            _multiLayoutRenderer.UpdateRenderElements();
+        }
+
+        public void SetNodesColor(List<int> nodeIDs, Color color)
+        {
+            foreach (var node in nodeIDs.Select(nid => _networkContext.Nodes[nid]))
+            {
+                node.Color = color;
+                node.Dirty = true;
+            }
+
+            _multiLayoutRenderer.UpdateRenderElements();
+        }
+
+        public void SetLinksWidth(List<int> linkIDs, float width)
+        {
+            foreach (var link in linkIDs.Select(lid => _networkContext.Links[lid]))
+            {
+                link.Width = width;
+                link.Dirty = true;
+            }
+
+            _multiLayoutRenderer.UpdateRenderElements();
+        }
+
+        public void SetLinksColorStart(List<int> linkIDs, Color color)
+        {
+            foreach (var link in linkIDs.Select(lid => _networkContext.Links[lid]))
+            {
+                link.ColorStart = color;
+                link.Dirty = true;
+            }
+
+            _multiLayoutRenderer.UpdateRenderElements();
+        }
+
+        public void SetLinksColorEnd(List<int> linkIDs, Color color)
+        {
+            foreach (var link in linkIDs.Select(lid => _networkContext.Links[lid]))
+            {
+                link.ColorEnd = color;
+                link.Dirty = true;
+            }
+
+            _multiLayoutRenderer.UpdateRenderElements();
+        }
+
+        public void SetLinksAlpha(List<int> linkIDs, float alpha)
+        {
+            foreach (var link in linkIDs.Select(lid => _networkContext.Links[lid]))
+            {
+                link.Alpha = alpha;
+                link.Dirty = true;
+            }
+
+            _multiLayoutRenderer.UpdateRenderElements();
+        }
+
+
         void TransformNetwork(string layout, bool animated)
         {
             if (animated)
@@ -441,9 +508,6 @@ namespace VidiGraph
                     }
                 }
 
-                print("------");
-                print(toMove[0].position.ToString());
-
                 lastCommPosition = curPosition;
                 lastCommRotation = curRotation;
 
@@ -463,9 +527,7 @@ namespace VidiGraph
                     _networkContext.Nodes[nodeIDs[i]].Position = toTracks[i].position;
                     _networkContext.Nodes[nodeIDs[i]].Dirty = true;
                 }
-                print("=======");
-                print(_networkContext.Nodes[nodeIDs[0]].Position.ToString());
-                print(toTracks[0].position.ToString());
+
                 // _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
                 _multiLayoutRenderer.UpdateRenderElements();
                 yield return null;
