@@ -40,6 +40,8 @@ namespace VidiGraph
 
             _storage = GameObject.Find("/Database")?.GetComponent<NetworkStorage>();
             _storage?.InitialStore(_networkGlobal, _multiLayoutNetwork.Context);
+
+            _multiLayoutNetwork.SetStorageUpdateCallback(() => _storage?.UpdateStore(_networkGlobal, _multiLayoutNetwork.Context));
         }
 
         void Update()
@@ -83,11 +85,6 @@ namespace VidiGraph
             }
 
             return opts;
-        }
-
-        public void CycleCommunityFocus(int community, bool animated = true)
-        {
-            _multiLayoutNetwork.CycleCommunityFocus(community, animated);
         }
 
         public void ToggleBigNetworkSphericalAndHairball(bool animated = true)

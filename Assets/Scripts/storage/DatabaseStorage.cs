@@ -36,7 +36,7 @@ namespace VidiGraph
 
         public override void UpdateStore(NetworkGlobal networkGlobal, MultiLayoutContext networkContext)
         {
-            throw new NotImplementedException();
+            DatabaseStorageUtils.BulkUpdateNetwork(networkGlobal, networkContext, _driver, _convertWinPaths);
         }
     }
 }

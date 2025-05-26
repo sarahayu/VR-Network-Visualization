@@ -156,29 +156,6 @@ namespace VidiGraph
             _transformers["highlight"].Initialize(_manager.NetworkGlobal, _networkContext);
         }
 
-        public void CycleCommunityFocus(int community, bool animated = true)
-        {
-            // only focus community if we're in spherical layout
-            if (!_isSphericalLayout) return;
-
-            var nextState = CycleCommunityState(community);
-
-            switch (nextState)
-            {
-                case MultiLayoutContext.CommunityState.None:
-                    TransformNetwork("spherical", animated);
-                    break;
-                case MultiLayoutContext.CommunityState.Cluster:
-                    TransformNetwork("cluster", animated);
-                    break;
-                case MultiLayoutContext.CommunityState.Floor:
-                    TransformNetwork("floor", animated);
-                    break;
-                default:
-                    break;
-            }
-        }
-
         public void ToggleSphericalAndHairball(bool animated = true)
         {
             _isSphericalLayout = !_isSphericalLayout;
@@ -267,6 +244,7 @@ namespace VidiGraph
             }
 
             _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+            UpdateStorage();
             _multiLayoutRenderer.UpdateRenderElements();
         }
 
@@ -278,6 +256,7 @@ namespace VidiGraph
             }
 
             _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+            UpdateStorage();
             _multiLayoutRenderer.UpdateRenderElements();
         }
 
@@ -302,13 +281,13 @@ namespace VidiGraph
             }
 
             lastCommPosition = Vector3.positiveInfinity;
+            UpdateStorage();
         }
 
         public void SetNodeSizeEncoding(Func<VidiGraph.Node, float> func)
         {
             _networkContext.GetNodeSize = func;
             TransformNetwork("encoding", animated: false);
-
         }
 
         public Transform GetNodeTransform(int nodeID)
@@ -329,6 +308,7 @@ namespace VidiGraph
                 node.Dirty = true;
             }
 
+            UpdateStorage();
             _multiLayoutRenderer.UpdateRenderElements();
         }
 
@@ -340,6 +320,7 @@ namespace VidiGraph
                 node.Dirty = true;
             }
 
+            UpdateStorage();
             _multiLayoutRenderer.UpdateRenderElements();
         }
 
@@ -351,6 +332,7 @@ namespace VidiGraph
                 link.Dirty = true;
             }
 
+            UpdateStorage();
             _multiLayoutRenderer.UpdateRenderElements();
         }
 
@@ -362,6 +344,7 @@ namespace VidiGraph
                 link.Dirty = true;
             }
 
+            UpdateStorage();
             _multiLayoutRenderer.UpdateRenderElements();
         }
 
@@ -373,6 +356,7 @@ namespace VidiGraph
                 link.Dirty = true;
             }
 
+            UpdateStorage();
             _multiLayoutRenderer.UpdateRenderElements();
         }
 
@@ -384,6 +368,7 @@ namespace VidiGraph
                 link.Dirty = true;
             }
 
+            UpdateStorage();
             _multiLayoutRenderer.UpdateRenderElements();
         }
 
@@ -403,6 +388,7 @@ namespace VidiGraph
             {
                 _transformers[layout].ApplyTransformation();
                 _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+                UpdateStorage();
                 _multiLayoutRenderer.UpdateRenderElements();
             }
         }
@@ -410,43 +396,14 @@ namespace VidiGraph
         void TransformNetworkNoRender(string layout)
         {
             _transformers[layout].ApplyTransformation();
+            UpdateStorage();
             _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
-        }
-
-        MultiLayoutContext.CommunityState GetNextCommunityState(int community)
-        {
-            var curState = _networkContext.Communities[community].State;
-            return (MultiLayoutContext.CommunityState)((uint)(curState + 1) % (uint)MultiLayoutContext.CommunityState.NumStates);
         }
 
         void ClearCommunityState(int community)
         {
             _manager.NetworkGlobal.Communities[community].Focus = false;
             _networkContext.Communities[community].State = MultiLayoutContext.CommunityState.None;
-        }
-
-        MultiLayoutContext.CommunityState CycleCommunityState(int community)
-        {
-            var nextState = GetNextCommunityState(community);
-
-            if (nextState == MultiLayoutContext.CommunityState.Cluster)
-            {
-                _clusterLayoutTransformer.UpdateOnNextApply(community);
-            }
-            else if (nextState == MultiLayoutContext.CommunityState.Floor)
-            {
-                _floorLayoutTransformer.UpdateOnNextApply(community);
-            }
-            else
-            {
-                _sphericalLayoutTransformer.UpdateCommOnNextApply(community);
-            }
-
-            bool isCommFocused = nextState == MultiLayoutContext.CommunityState.Floor || nextState == MultiLayoutContext.CommunityState.Cluster;
-            _manager.NetworkGlobal.Communities[community].Focus = isCommFocused;
-            _networkContext.Communities[community].State = nextState;
-
-            return nextState;
         }
 
         IEnumerator CRAnimateLayout(string layout)
@@ -463,6 +420,7 @@ namespace VidiGraph
 
             interpolator.Interpolate(1f);
             _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+            UpdateStorage();
             _multiLayoutRenderer.UpdateRenderElements();
 
             _curAnim = null;
