@@ -373,6 +373,36 @@ namespace VidiGraph
         }
 
 
+        public void SetNodesPosition(List<int> nodeIDs, Vector3 position, bool updateStorage = true)
+        {
+            foreach (var node in nodeIDs.Select(nid => _networkContext.Nodes[nid]))
+            {
+                node.Position = position;
+                node.Dirty = true;
+            }
+
+            if (updateStorage) UpdateStorage();
+            _multiLayoutRenderer.UpdateRenderElements();
+        }
+
+        public void SetNodesPosition(List<int> nodeIDs, List<Vector3> positions, bool updateStorage = true)
+        {
+            var nodes = nodeIDs.Select(nid => _networkContext.Nodes[nid]).ToList();
+
+            for (int i = 0; i < nodeIDs.Count; i++)
+            {
+                var node = nodes[i];
+
+                node.Position = positions[i];
+                node.Dirty = true;
+            }
+
+            if (updateStorage) UpdateStorage();
+
+            _multiLayoutRenderer.UpdateRenderElements();
+        }
+
+
         void TransformNetwork(string layout, bool animated)
         {
             if (animated)
@@ -469,7 +499,7 @@ namespace VidiGraph
                 lastCommPosition = curPosition;
                 lastCommRotation = curRotation;
 
-                // _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+                _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
 
                 _multiLayoutRenderer.UpdateRenderElements();
                 yield return null;
@@ -486,7 +516,7 @@ namespace VidiGraph
                     _networkContext.Nodes[nodeIDs[i]].Dirty = true;
                 }
 
-                // _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
+                _networkContext.RecomputeGeometricProps(_manager.NetworkGlobal);
                 _multiLayoutRenderer.UpdateRenderElements();
                 yield return null;
             }

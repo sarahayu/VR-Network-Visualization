@@ -236,6 +236,16 @@ namespace VidiGraph
             _multiLayoutNetwork.SetNodesColor(nodeIDs, color);
         }
 
+        public void SetNodesPosition(List<int> nodeIDs, Vector3 position, bool updateStorage = true)
+        {
+            _multiLayoutNetwork.SetNodesPosition(nodeIDs, position, updateStorage);
+        }
+
+        public void SetNodesPosition(List<int> nodeIDs, List<Vector3> positions, bool updateStorage = true)
+        {
+            _multiLayoutNetwork.SetNodesPosition(nodeIDs, positions, updateStorage);
+        }
+
         public void SetLinksWidth(List<int> linkIDs, float width)
         {
             _multiLayoutNetwork.SetLinksWidth(linkIDs, width);

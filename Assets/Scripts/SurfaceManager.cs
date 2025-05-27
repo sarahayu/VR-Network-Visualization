@@ -42,6 +42,9 @@ public class SurfaceManager : MonoBehaviour
 
     Coroutine _surfaceHighlighter = null;
     Coroutine _surfaceMover = null;
+    Coroutine _attachAnimation = null;
+
+    Transform _userPos;
 
     // Start is called before the first frame update
     void Start()
@@ -49,9 +52,11 @@ public class SurfaceManager : MonoBehaviour
         _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
         _mlRenderer = GameObject.Find("/MultiLayout Network").GetComponentInChildren<NetworkRenderer>();
 
+        _userPos = GameObject.FindWithTag("MainCamera").transform;
 
-        _mlRenderer.OnNodeGrabEnter += OnNodeGrabEnter;
-        _mlRenderer.OnNodeGrabExit += OnNodeGrabExit;
+
+        // _mlRenderer.OnNodeGrabEnter += OnNodeGrabEnter;
+        // _mlRenderer.OnNodeGrabExit += OnNodeGrabExit;
         _mlRenderer.OnCommunityGrabEnter += OnCommunityGrabEnter;
         _mlRenderer.OnCommunityGrabExit += OnCommunityGrabExit;
     }
@@ -77,9 +82,10 @@ public class SurfaceManager : MonoBehaviour
         return id;
     }
 
-    public void SpawnSurface()
+    // spawn in front of main camera
+    public int SpawnSurface()
     {
-        throw new NotImplementedException();
+        return SpawnSurface(_userPos.position + _userPos.rotation * Vector3.forward, Quaternion.FromToRotation(Vector3.up, -_userPos.forward));
     }
 
 
@@ -110,24 +116,12 @@ public class SurfaceManager : MonoBehaviour
 
         var closest = GetClosestSurface(_manager.GetMLNodeTransform(nodeID).position);
 
-        if (closest != -1)
-        {
-            if (_nodeToSurf.ContainsKey(nodeID))
-            {
-                var parent = _nodeToSurf[nodeID];
-                var indInList = _surfaceChildrenNodes[parent].IndexOf(nodeID);
-
-                _surfaceChildren[parent].RemoveAt(indInList);
-                _surfaceChildrenNodes[parent].RemoveAt(indInList);
-            }
-
-            _surfaceChildrenNodes[closest].Add(nodeID);
-            _surfaceChildren[closest].Add(_manager.GetMLNodeTransform(nodeID));
-            _nodeToSurf[nodeID] = closest;
-        }
+        if (closest != -1) Attach(new List<int>() { nodeID }, closest);
+        else Detach(new List<int>() { nodeID });
 
         return closest;
     }
+
     // return ID of closest surface
     public int TryAttach(List<int> nodeIDs)
     {
@@ -136,26 +130,74 @@ public class SurfaceManager : MonoBehaviour
 
         var closest = GetClosestSurface(_manager.GetMLNodeTransform(nodeIDs[0]).position);
 
-        if (closest != -1)
-        {
-            foreach (var nodeID in nodeIDs)
-            {
-                if (_nodeToSurf.ContainsKey(nodeID))
-                {
-                    var parent = _nodeToSurf[nodeID];
-                    var indInList = _surfaceChildrenNodes[parent].IndexOf(nodeID);
-
-                    _surfaceChildren[parent].RemoveAt(indInList);
-                    _surfaceChildrenNodes[parent].RemoveAt(indInList);
-                }
-
-                _surfaceChildrenNodes[closest].Add(nodeID);
-                _surfaceChildren[closest].Add(_manager.GetMLNodeTransform(nodeID));
-                _nodeToSurf[nodeID] = closest;
-            }
-        }
+        if (closest != -1) Attach(nodeIDs, closest);
+        else Detach(nodeIDs);
 
         return closest;
+    }
+
+    public void Attach(List<int> nodeIDs, int surfID)
+    {
+        if (!_surfaceChildren.ContainsKey(surfID)) return;
+
+        Detach(nodeIDs);
+
+        foreach (var nodeID in nodeIDs)
+        {
+
+            _surfaceChildrenNodes[surfID].Add(nodeID);
+            _surfaceChildren[surfID].Add(_manager.GetMLNodeTransform(nodeID));
+            _nodeToSurf[nodeID] = surfID;
+        }
+
+        StartAttachAnim(nodeIDs, surfID);
+    }
+
+    public void Detach(List<int> nodeIDs)
+    {
+        foreach (var nodeID in nodeIDs)
+        {
+            if (_nodeToSurf.ContainsKey(nodeID))
+            {
+                var parent = _nodeToSurf[nodeID];
+                var indInList = _surfaceChildrenNodes[parent].IndexOf(nodeID);
+
+                _surfaceChildren[parent].RemoveAt(indInList);
+                _surfaceChildrenNodes[parent].RemoveAt(indInList);
+                _nodeToSurf.Remove(nodeID);
+            }
+        }
+    }
+
+    void StartAttachAnim(List<int> nodeIDs, int surfID)
+    {
+        if (_attachAnimation != null)
+        {
+            StopCoroutine(_attachAnimation);
+        }
+
+        var startPositions = nodeIDs.Select(nid => _manager.GetMLNodeTransform(nid).position).ToList();
+        var endPositions = CalcEndPositions(nodeIDs, surfID);
+
+        _attachAnimation = StartCoroutine(CRAnimateNodesAttach(nodeIDs, startPositions, endPositions));
+    }
+
+    List<Vector3> CalcEndPositions(List<int> nodeIDs, int surfID)
+    {
+        int commID = _manager.NetworkGlobal.Nodes[nodeIDs[0]].CommunityID;
+
+        var flatPos = nodeIDs.Select(nid => 0.5f * (_manager.FileLoader.FlatLayout.nodes[_manager.FileLoader.FlatLayout.idToIdx[nid]]._position3D + new Vector3(0, 1, 0))).ToList();
+
+        Vector3 planePoint = _surfaces[surfID].transform.position;
+        Vector3 normal = _surfaces[surfID].transform.up;
+
+        Vector3 commPos = _manager.GetMLCommTransform(commID).position;
+
+        Vector3 projCommPos = commPos - Vector3.Dot(normal, commPos - planePoint) * normal;
+
+        var newPos = flatPos.Select(pos => _surfaces[surfID].transform.rotation * pos + projCommPos);
+
+        return newPos.ToList();
     }
 
     int GetNextID()
@@ -225,7 +267,6 @@ public class SurfaceManager : MonoBehaviour
 
                 foreach (var tform in toMove)
                 {
-
                     tform.RotateAround(lastSurfPosition, axis, angle);
 
                     tform.position += diff;
@@ -320,5 +361,21 @@ public class SurfaceManager : MonoBehaviour
             }
             yield return null;
         }
+    }
+
+    IEnumerator CRAnimateNodesAttach(List<int> nodeIDs, List<Vector3> startPositions, List<Vector3> endPositions)
+    {
+        float dur = 1.0f;
+
+        yield return AnimationUtils.Lerp(dur, t =>
+        {
+            var positions = startPositions.Select((sp, i) => Vector3.Lerp(startPositions[i], endPositions[i], Mathf.SmoothStep(0f, 1f, t))).ToList();
+
+            _manager.SetNodesPosition(nodeIDs, positions, false);
+        });
+
+        _manager.SetNodesPosition(nodeIDs, endPositions, true);
+
+        _attachAnimation = null;
     }
 }

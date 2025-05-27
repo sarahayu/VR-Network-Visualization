@@ -38,7 +38,7 @@ public class SurfaceInput : MonoBehaviour
         if (_commandPress.ReadWasPerformedThisFrame())
         {
             if (_curHoveredSurface == -1)
-                _surfManager.SpawnSurface(_spawnOrigin.position + _spawnOrigin.rotation * surfSpawnOffset, _spawnOrigin.rotation);
+                _surfManager.SpawnSurface(_spawnOrigin.position + _spawnOrigin.rotation * surfSpawnOffset, Quaternion.FromToRotation(Vector3.up, -_spawnOrigin.forward));
             else
                 _surfManager.DeleteSurface(_curHoveredSurface);
         }

@@ -1,12 +1,11 @@
 # TODO
 
-- make nodes flat on surfaces
+- undo system
 - find out how to include props as anonymous types
 - way to generate lambda functions from criteria? e.g. create linear scale colorer from attribute name and color
 
 - fix grab exit/hover exit bug
 - refactor surface
-- fix closest surface bug
 - select groups using minimap
 
 ## Done
@@ -19,6 +18,8 @@
 - set nodes properties
     - like scaling to some constant
 - update store on attribute changes
+- make nodes flat on surfaces
+- fix closest surface bug
 
 ## Troubleshooting
 
