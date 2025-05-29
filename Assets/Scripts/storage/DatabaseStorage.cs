@@ -21,8 +21,17 @@ namespace VidiGraph
 
         void Start()
         {
-            _driver = GraphDatabase.Driver(_uri, AuthTokens.Basic(_user, _password), o => o.WithMaxTransactionRetryTime(TimeSpan.FromSeconds(5)));
+            _driver = GraphDatabase.Driver(
+                _uri,
+                AuthTokens.Basic(_user, _password),
+                o =>
+                {
+                    o.WithEncryptionLevel(EncryptionLevel.Encrypted);
+                    o.WithMaxTransactionRetryTime(TimeSpan.FromSeconds(5));
+                }
+            );
         }
+
 
         void OnApplicationQuit()
         {

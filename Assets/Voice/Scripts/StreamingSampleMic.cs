@@ -69,7 +69,6 @@ namespace Whisper.Samples
                 microphoneRecord.StopRecord();
             }
 
-            buttonText.text = microphoneRecord.IsRecording ? "Stop" : "Record";
         }
 
         private void OnRecordStop(AudioChunk recordedAudio)
