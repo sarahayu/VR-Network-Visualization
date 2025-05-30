@@ -8,374 +8,339 @@ using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
-using VidiGraph;
 
-public class SurfaceManager : MonoBehaviour
+namespace VidiGraph
 {
-    [SerializeField]
-    GameObject _surfacePrefab;
-    [SerializeField]
-    float _surfaceAttractionDist = 0.1f;
-    [SerializeField]
-    Color _highlightCol = Color.green;
-
-    Dictionary<int, GameObject> _surfaces = new Dictionary<int, GameObject>();
-    Dictionary<int, Renderer> _surfRenderers = new Dictionary<int, Renderer>();
-
-    public Dictionary<int, GameObject> Surfaces { get { return _surfaces; } }
-    Dictionary<int, List<Transform>> _surfaceChildren = new Dictionary<int, List<Transform>>();
-    Dictionary<int, List<int>> _surfaceChildrenNodes = new Dictionary<int, List<int>>();
-    Dictionary<int, int> _nodeToSurf = new Dictionary<int, int>();
-
-    public delegate void SurfaceHoverEnterEvent(int surfaceID, HoverEnterEventArgs evt);
-    public event SurfaceHoverEnterEvent OnSurfaceHoverEnter;
-    public delegate void SurfaceHoverExitEvent(int surfaceID, HoverExitEventArgs evt);
-    public event SurfaceHoverExitEvent OnSurfaceHoverExit;
-
-    int _curID = 0;
-
-    NetworkManager _manager;
-    NetworkRenderer _mlRenderer;
-
-    Vector3 lastSurfPosition = Vector3.positiveInfinity;
-    Quaternion lastSurfRotation = Quaternion.identity;
-
-    Coroutine _surfaceHighlighter = null;
-    Coroutine _surfaceMover = null;
-    Coroutine _attachAnimation = null;
-
-    Transform _userPos;
-
-    // Start is called before the first frame update
-    void Start()
+    public class SurfaceManager : MonoBehaviour
     {
-        _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-        _mlRenderer = GameObject.Find("/MultiLayout Network").GetComponentInChildren<NetworkRenderer>();
+        [SerializeField]
+        GameObject _surfacePrefab;
+        [SerializeField]
+        float _surfaceAttractionDist = 0.1f;
+        [SerializeField]
+        Color _highlightCol = Color.green;
 
-        _userPos = GameObject.FindWithTag("MainCamera").transform;
+        public Dictionary<int, GameObject> Surfaces { get { return _surfaces.Values.ToDictionary(si => si.ID, si => si.GameObject); } }
 
+        public delegate void SurfaceHoverEnterEvent(int surfaceID, HoverEnterEventArgs evt);
+        public event SurfaceHoverEnterEvent OnSurfaceHoverEnter;
+        public delegate void SurfaceHoverExitEvent(int surfaceID, HoverExitEventArgs evt);
+        public event SurfaceHoverExitEvent OnSurfaceHoverExit;
 
-        // _mlRenderer.OnNodeGrabEnter += OnNodeGrabEnter;
-        // _mlRenderer.OnNodeGrabExit += OnNodeGrabExit;
-        _mlRenderer.OnCommunityGrabEnter += OnCommunityGrabEnter;
-        _mlRenderer.OnCommunityGrabExit += OnCommunityGrabExit;
-    }
-
-    // return surface ID
-    public int SpawnSurface(Vector3 position, Quaternion rotation)
-    {
-        var surfObject = UnityEngine.Object.Instantiate(_surfacePrefab, transform);
-
-        int id = GetNextID();
-
-        surfObject.transform.SetPositionAndRotation(position, rotation);
-        TextMeshPro text = surfObject.GetComponentInChildren<TextMeshPro>();
-        text.SetText(id.ToString());
-
-        AddSurfaceInteraction(surfObject, id);
-
-        _surfaces[id] = surfObject;
-        _surfRenderers[id] = surfObject.GetNamedChild("Highlight").GetComponent<Renderer>();
-        _surfaceChildren[id] = new List<Transform>();
-        _surfaceChildrenNodes[id] = new List<int>();
-
-        return id;
-    }
-
-    // spawn in front of main camera
-    public int SpawnSurface()
-    {
-        return SpawnSurface(_userPos.position + _userPos.rotation * Vector3.forward, Quaternion.FromToRotation(Vector3.up, -_userPos.forward));
-    }
-
-
-    public void DeleteSurface(int surfID)
-    {
-        if (_surfaces.ContainsKey(surfID))
+        class Surface
         {
-            UnityEngine.Object.Destroy(_surfaces[surfID]);
-
-            _surfaces.Remove(surfID);
-            _surfRenderers.Remove(surfID);
-
-            foreach (var nodeID in _surfaceChildrenNodes[surfID])
-            {
-                _nodeToSurf.Remove(nodeID);
-            }
-
-            _surfaceChildren.Remove(surfID);
-            _surfaceChildrenNodes.Remove(surfID);
-        }
-    }
-
-    // return ID of closest surface
-    public int TryAttach(int nodeID)
-    {
-        // check distance
-        // attach if distance less
-
-        var closest = GetClosestSurface(_manager.GetMLNodeTransform(nodeID).position);
-
-        if (closest != -1) Attach(new List<int>() { nodeID }, closest);
-        else Detach(new List<int>() { nodeID });
-
-        return closest;
-    }
-
-    // return ID of closest surface
-    public int TryAttach(List<int> nodeIDs)
-    {
-        // check distance
-        // attach if distance less
-
-        var closest = GetClosestSurface(_manager.GetMLNodeTransform(nodeIDs[0]).position);
-
-        if (closest != -1) Attach(nodeIDs, closest);
-        else Detach(nodeIDs);
-
-        return closest;
-    }
-
-    public void Attach(List<int> nodeIDs, int surfID)
-    {
-        if (!_surfaceChildren.ContainsKey(surfID)) return;
-
-        Detach(nodeIDs);
-
-        foreach (var nodeID in nodeIDs)
-        {
-
-            _surfaceChildrenNodes[surfID].Add(nodeID);
-            _surfaceChildren[surfID].Add(_manager.GetMLNodeTransform(nodeID));
-            _nodeToSurf[nodeID] = surfID;
+            public int ID;
+            public GameObject GameObject;
+            public Renderer Renderer;
+            public Dictionary<int, Transform> Nodes = new Dictionary<int, Transform>();
         }
 
-        StartAttachAnim(nodeIDs, surfID);
-    }
+        Dictionary<int, Surface> _surfaces = new Dictionary<int, Surface>();
+        Dictionary<int, int> _nodeToSurf = new Dictionary<int, int>();
 
-    public void Detach(List<int> nodeIDs)
-    {
-        foreach (var nodeID in nodeIDs)
+        int _curID = 0;
+
+        NetworkManager _manager;
+        NetworkRenderer _mlRenderer;
+
+
+        Coroutine _surfaceHighlighter = null;
+        Coroutine _surfaceMover = null;
+        Coroutine _attachAnimation = null;
+
+        Transform _userPos;
+
+        // Start is called before the first frame update
+        void Start()
         {
-            if (_nodeToSurf.ContainsKey(nodeID))
-            {
-                var parent = _nodeToSurf[nodeID];
-                var indInList = _surfaceChildrenNodes[parent].IndexOf(nodeID);
+            _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
+            _mlRenderer = GameObject.Find("/MultiLayout Network").GetComponentInChildren<NetworkRenderer>();
 
-                _surfaceChildren[parent].RemoveAt(indInList);
-                _surfaceChildrenNodes[parent].RemoveAt(indInList);
-                _nodeToSurf.Remove(nodeID);
+            _userPos = GameObject.FindWithTag("MainCamera").transform;
+
+            // _mlRenderer.OnNodeGrabEnter += OnNodeGrabEnter;
+            // _mlRenderer.OnNodeGrabExit += OnNodeGrabExit;
+            _mlRenderer.OnCommunityGrabEnter += OnCommunityGrabEnter;
+            _mlRenderer.OnCommunityGrabExit += OnCommunityGrabExit;
+        }
+
+        // return surface ID
+        public int SpawnSurface(Vector3 position, Quaternion rotation)
+        {
+            var surfObject = UnityEngine.Object.Instantiate(_surfacePrefab, transform);
+
+            int id = GetNextID();
+
+            surfObject.transform.SetPositionAndRotation(position, rotation);
+            TextMeshPro text = surfObject.GetComponentInChildren<TextMeshPro>();
+            text.SetText(id.ToString());
+
+            AddSurfaceInteraction(surfObject, id);
+
+            var si = new Surface();
+
+            si.ID = id;
+            si.GameObject = surfObject;
+            si.Renderer = surfObject.GetNamedChild("Highlight").GetComponent<Renderer>();
+
+            _surfaces[id] = si;
+
+            return id;
+        }
+
+        // spawn in front of main camera
+        public int SpawnSurface()
+        {
+            return SpawnSurface(_userPos.position + _userPos.rotation * Vector3.forward, Quaternion.FromToRotation(Vector3.up, -_userPos.forward));
+        }
+
+
+        public void DeleteSurface(int surfID)
+        {
+            if (_surfaces.ContainsKey(surfID))
+            {
+                UnityEngine.Object.Destroy(_surfaces[surfID].GameObject);
+
+                foreach (var nodeID in _surfaces[surfID].Nodes.Keys) _nodeToSurf.Remove(nodeID);
+                _surfaces.Remove(surfID);
             }
         }
-    }
 
-    void StartAttachAnim(List<int> nodeIDs, int surfID)
-    {
-        if (_attachAnimation != null)
+        // return ID of closest surface
+        public int TryAttachNode(int nodeID)
         {
-            StopCoroutine(_attachAnimation);
+            // check distance
+            // attach if distance less than threshold
+
+            var closest = GetClosestSurface(_manager.GetMLNodeTransform(nodeID).position);
+
+            if (closest != -1) AttachNodes(new List<int>() { nodeID }, closest);
+            else DetachNodes(new List<int>() { nodeID });
+
+            return closest;
         }
 
-        var startPositions = nodeIDs.Select(nid => _manager.GetMLNodeTransform(nid).position).ToList();
-        var endPositions = CalcEndPositions(nodeIDs, surfID);
-
-        _attachAnimation = StartCoroutine(CRAnimateNodesAttach(nodeIDs, startPositions, endPositions));
-    }
-
-    List<Vector3> CalcEndPositions(List<int> nodeIDs, int surfID)
-    {
-        int commID = _manager.NetworkGlobal.Nodes[nodeIDs[0]].CommunityID;
-
-        var flatPos = nodeIDs.Select(nid => 0.5f * (_manager.FileLoader.FlatLayout.nodes[_manager.FileLoader.FlatLayout.idToIdx[nid]]._position3D + new Vector3(0, 1, 0))).ToList();
-
-        Vector3 planePoint = _surfaces[surfID].transform.position;
-        Vector3 normal = _surfaces[surfID].transform.up;
-
-        Vector3 commPos = _manager.GetMLCommTransform(commID).position;
-
-        Vector3 projCommPos = commPos - Vector3.Dot(normal, commPos - planePoint) * normal;
-
-        var newPos = flatPos.Select(pos => _surfaces[surfID].transform.rotation * pos + projCommPos);
-
-        return newPos.ToList();
-    }
-
-    int GetNextID()
-    {
-        return _curID++;
-    }
-
-    void AddSurfaceInteraction(GameObject gameObject, int id)
-    {
-        XRGrabInteractable xrInteractable = gameObject.GetComponent<XRGrabInteractable>();
-
-        xrInteractable.hoverEntered.AddListener(evt =>
+        // return ID of closest surface
+        public int TryAttachNodes(List<int> nodeIDs)
         {
-            OnSurfaceHoverEnter(id, evt);
-        });
+            // check distance
+            // attach if distance less than threshold
 
-        xrInteractable.hoverExited.AddListener(evt =>
-        {
-            OnSurfaceHoverExit(id, evt);
-        });
+            var closest = GetClosestSurface(_manager.GetMLNodeTransform(nodeIDs[0]).position);
 
-        xrInteractable.selectEntered.AddListener(evt =>
-        {
-            // start coroutine to change transforms
-            // start node moves
-            _surfaceMover = StartCoroutine(CRMoveSurfaceAndChildren(_surfaces[id].transform, _surfaceChildren[id]));
-            _manager.StartMLNodesMove(_surfaceChildrenNodes[id]);
-        });
+            if (closest != -1) AttachNodes(nodeIDs, closest);
+            else DetachNodes(nodeIDs);
 
-        xrInteractable.selectExited.AddListener(evt =>
-        {
-            // end coroutine to change transforms
-            // end node moves
-            StopCoroutine(_surfaceMover);
-            _manager.EndMLNodesMove(_surfaceChildrenNodes[id]);
-
-            lastSurfPosition = Vector3.positiveInfinity;
-        });
-    }
-
-    void UnhighlightSurfaces()
-    {
-        foreach (var (surfID, surf) in _surfaces)
-        {
-            var renderer = _surfRenderers[surfID];
-            MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-            renderer.GetPropertyBlock(props);
-            props.SetColor("_Color", Color.clear);
-            renderer.SetPropertyBlock(props);
-
+            return closest;
         }
-    }
 
-    IEnumerator CRMoveSurfaceAndChildren(Transform surf, List<Transform> toMove)
-    {
-        for (; ; )
+        public void AttachNodes(List<int> nodeIDs, int surfID)
         {
-            var curPosition = surf.transform.position;
-            var curRotation = surf.transform.rotation;
+            if (!_surfaces.ContainsKey(surfID)) return;
 
-            if (float.IsFinite(lastSurfPosition.x))
+            DetachNodes(nodeIDs);
+
+            foreach (var nodeID in nodeIDs)
             {
-                var diff = curPosition - lastSurfPosition;
-                var diffRot = curRotation * Quaternion.Inverse(lastSurfRotation);
-                diffRot.ToAngleAxis(out var angle, out var axis);
+                _surfaces[surfID].Nodes[nodeID] = _manager.GetMLNodeTransform(nodeID);
+                _nodeToSurf[nodeID] = surfID;
+            }
 
-                foreach (var tform in toMove)
+            StartAttachAnim(nodeIDs, surfID);
+        }
+
+        public void DetachNodes(List<int> nodeIDs)
+        {
+            foreach (var nodeID in nodeIDs)
+            {
+                if (_nodeToSurf.ContainsKey(nodeID))
                 {
-                    tform.RotateAround(lastSurfPosition, axis, angle);
+                    var parent = _nodeToSurf[nodeID];
 
-                    tform.position += diff;
+                    _surfaces[parent].Nodes.Remove(nodeID);
+                    _nodeToSurf.Remove(nodeID);
+                }
+            }
+        }
+
+        /*=============== start private methods ===================*/
+
+        void StartAttachAnim(List<int> nodeIDs, int surfID)
+        {
+            CoroutineUtils.StopIfRunning(this, _attachAnimation);
+
+            var startPositions = nodeIDs.Select(nid => _manager.GetMLNodeTransform(nid).position).ToList();
+            var endPositions = SurfaceManagerUtils.CalcProjected(surfID, nodeIDs, this, _manager);
+
+            _attachAnimation = StartCoroutine(CRAnimateNodesAttach(nodeIDs, startPositions, endPositions));
+        }
+
+        void AddSurfaceInteraction(GameObject gameObject, int id)
+        {
+            XRGrabInteractable xrInteractable = gameObject.GetComponent<XRGrabInteractable>();
+
+            xrInteractable.hoverEntered.AddListener(evt =>
+            {
+                OnSurfaceHoverEnter(id, evt);
+            });
+
+            xrInteractable.hoverExited.AddListener(evt =>
+            {
+                OnSurfaceHoverExit(id, evt);
+            });
+
+            xrInteractable.selectEntered.AddListener(evt =>
+            {
+                // start coroutine to change transforms
+                // start node moves
+                _surfaceMover = StartCoroutine(CRMoveSurfaceAndChildren(id));
+                _manager.StartMLNodesMove(_surfaces[id].Nodes.Keys.ToList());
+            });
+
+            xrInteractable.selectExited.AddListener(evt =>
+            {
+                // end coroutine to change transforms
+                // end node moves
+                StopCoroutine(_surfaceMover);
+                _manager.EndMLNodesMove(_surfaces[id].Nodes.Keys.ToList());
+            });
+        }
+
+        void UnhighlightSurfaces()
+        {
+            foreach (var surf in _surfaces.Values)
+            {
+                SurfaceManagerUtils.UnhighlightSurface(surf.Renderer);
+            }
+        }
+
+        void OnNodeGrabExit(Node node, SelectExitEventArgs evt)
+        {
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                CoroutineUtils.StopIfRunning(this, _surfaceHighlighter);
+                TryAttachNode(node.ID);
+                UnhighlightSurfaces();
+            }
+        }
+
+        void OnNodeGrabEnter(Node node, SelectEnterEventArgs evt)
+        {
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                CoroutineUtils.StopIfRunning(this, _surfaceHighlighter);
+                _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLNodeTransform(node.ID)));
+            }
+        }
+
+        void OnCommunityGrabExit(Community community, SelectExitEventArgs evt)
+        {
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                CoroutineUtils.StopIfRunning(this, _surfaceHighlighter);
+                TryAttachNodes(community.Nodes.Select(n => n.ID).ToList());
+                UnhighlightSurfaces();
+            }
+        }
+
+        void OnCommunityGrabEnter(Community community, SelectEnterEventArgs evt)
+        {
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                CoroutineUtils.StopIfRunning(this, _surfaceHighlighter);
+                _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLCommTransform(community.ID)));
+            }
+        }
+
+        int GetClosestSurface(Vector3 position)
+        {
+            int closest = -1;
+            float closestDist = float.PositiveInfinity;
+
+            foreach (var surf in _surfaces.Values)
+            {
+                float dist = Vector3.Distance(surf.GameObject.transform.position, position);
+
+                if (dist < closestDist && dist < _surfaceAttractionDist)
+                {
+                    closest = surf.ID;
+                    closestDist = dist;
                 }
             }
 
-            lastSurfPosition = curPosition;
-            lastSurfRotation = curRotation;
-            yield return null;
+            return closest;
         }
-    }
 
-    void OnNodeGrabExit(Node node, SelectExitEventArgs evt)
-    {
-        if (evt.interactorObject.handedness == InteractorHandedness.Right)
+        int GetNextID()
         {
-            StopCoroutine(_surfaceHighlighter);
-            TryAttach(node.ID);
-            UnhighlightSurfaces();
+            return _curID++;
         }
-    }
 
-    void OnNodeGrabEnter(Node node, SelectEnterEventArgs evt)
-    {
-        if (evt.interactorObject.handedness == InteractorHandedness.Right)
+        IEnumerator CRMoveSurfaceAndChildren(int surfID)
         {
-            if (_surfaceHighlighter != null)
+            Vector3 lastSurfPosition = Vector3.positiveInfinity;
+            Quaternion lastSurfRotation = Quaternion.identity;
+
+            var surfTransform = _surfaces[surfID].GameObject.transform;
+            var childrenTransform = _surfaces[surfID].Nodes.Keys.Select(nid => _manager.GetMLNodeTransform(nid)).ToList();
+
+            while (true)
             {
-                StopCoroutine(_surfaceHighlighter);
-            }
+                var curPosition = surfTransform.position;
+                var curRotation = surfTransform.rotation;
 
-            _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLNodeTransform(node.ID)));
-        }
-    }
+                if (float.IsFinite(lastSurfPosition.x))
+                {
+                    var diff = curPosition - lastSurfPosition;
+                    var diffRot = curRotation * Quaternion.Inverse(lastSurfRotation);
+                    diffRot.ToAngleAxis(out var angle, out var axis);
 
-    void OnCommunityGrabExit(Community community, SelectExitEventArgs evt)
-    {
-        if (evt.interactorObject.handedness == InteractorHandedness.Right)
-        {
-            StopCoroutine(_surfaceHighlighter);
-            TryAttach(community.Nodes.Select(n => n.ID).ToList());
-            UnhighlightSurfaces();
-        }
-    }
+                    foreach (var child in childrenTransform)
+                    {
+                        child.RotateAround(lastSurfPosition, axis, angle);
 
-    void OnCommunityGrabEnter(Community community, SelectEnterEventArgs evt)
-    {
-        if (evt.interactorObject.handedness == InteractorHandedness.Right)
-        {
-            if (_surfaceHighlighter != null)
-            {
-                StopCoroutine(_surfaceHighlighter);
-            }
+                        child.position += diff;
+                    }
+                }
 
-            _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLCommTransform(community.ID)));
-        }
-    }
-
-    int GetClosestSurface(Vector3 position)
-    {
-        int closest = -1;
-        float closestDist = float.PositiveInfinity;
-        foreach (var (surfID, surf) in _surfaces)
-        {
-            float dist = Vector3.Distance(surf.transform.position, position);
-
-            if (dist < closestDist && dist < _surfaceAttractionDist)
-            {
-                closest = surfID;
-                closestDist = dist;
+                lastSurfPosition = curPosition;
+                lastSurfRotation = curRotation;
+                yield return null;
             }
         }
 
-        return closest;
-    }
-
-    IEnumerator CRHighlightClosestSurface(Transform nodeTransform)
-    {
-        for (; ; )
+        IEnumerator CRHighlightClosestSurface(Transform nodeTransform)
         {
-            int closest = GetClosestSurface(nodeTransform.position);
-
-            foreach (var (surfID, surf) in _surfaces)
+            while (true)
             {
-                var renderer = _surfRenderers[surfID];
-                MaterialPropertyBlock props = new MaterialPropertyBlock();
+                int closest = GetClosestSurface(nodeTransform.position);
 
-                renderer.GetPropertyBlock(props);
-                props.SetColor("_Color", surfID == closest ? _highlightCol : Color.clear);
-                renderer.SetPropertyBlock(props);
+                foreach (var surf in _surfaces.Values)
+                {
+                    var renderer = surf.Renderer;
+                    if (surf.ID == closest) SurfaceManagerUtils.HighlightSurface(renderer, _highlightCol);
+                    else SurfaceManagerUtils.UnhighlightSurface(renderer);
 
+                }
+                yield return null;
             }
-            yield return null;
+        }
+
+        IEnumerator CRAnimateNodesAttach(List<int> nodeIDs, List<Vector3> startPositions, List<Vector3> endPositions)
+        {
+            float dur = 1.0f;
+
+            yield return AnimationUtils.Lerp(dur, t =>
+            {
+                var positions = startPositions.Select((sp, i) => Vector3.Lerp(startPositions[i], endPositions[i], Mathf.SmoothStep(0f, 1f, t))).ToList();
+
+                _manager.SetNodesPosition(nodeIDs, positions, updateStorage: false);
+            });
+
+            _manager.SetNodesPosition(nodeIDs, endPositions, updateStorage: true);
+
+            _attachAnimation = null;
         }
     }
 
-    IEnumerator CRAnimateNodesAttach(List<int> nodeIDs, List<Vector3> startPositions, List<Vector3> endPositions)
-    {
-        float dur = 1.0f;
-
-        yield return AnimationUtils.Lerp(dur, t =>
-        {
-            var positions = startPositions.Select((sp, i) => Vector3.Lerp(startPositions[i], endPositions[i], Mathf.SmoothStep(0f, 1f, t))).ToList();
-
-            _manager.SetNodesPosition(nodeIDs, positions, false);
-        });
-
-        _manager.SetNodesPosition(nodeIDs, endPositions, true);
-
-        _attachAnimation = null;
-    }
 }

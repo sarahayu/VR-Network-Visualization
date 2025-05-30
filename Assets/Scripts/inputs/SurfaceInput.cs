@@ -6,51 +6,58 @@ using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
-public class SurfaceInput : MonoBehaviour
+namespace VidiGraph
 {
-    public Vector3 surfSpawnOffset = Vector3.zero;
-
-    [SerializeField]
-    XRInputButtonReader _commandPress = new XRInputButtonReader("CommandPress");
-
-    [SerializeField]
-    Transform _spawnOrigin;
-
-    SurfaceManager _surfManager;
-
-    int _curHoveredSurface = -1;
-
-    void Start()
+    public class SurfaceInput : MonoBehaviour
     {
-        _surfManager = GetComponent<SurfaceManager>();
+        public Vector3 surfSpawnOffset = Vector3.zero;
 
-        _surfManager.OnSurfaceHoverEnter += RegisterHoveredSurface;
-        _surfManager.OnSurfaceHoverExit += RegisterUnhoveredSurface;
-    }
+        [SerializeField]
+        XRInputButtonReader _commandPress = new XRInputButtonReader("CommandPress");
 
-    void OnEnable()
-    {
-        _commandPress.EnableDirectActionIfModeUsed();
-    }
+        [SerializeField]
+        Transform _spawnOrigin;
 
-    void Update()
-    {
-        if (_commandPress.ReadWasPerformedThisFrame())
+        SurfaceManager _surfManager;
+
+        int _curHoveredSurface = -1;
+
+        void Start()
         {
-            if (_curHoveredSurface == -1)
-                _surfManager.SpawnSurface(_spawnOrigin.position + _spawnOrigin.rotation * surfSpawnOffset, Quaternion.FromToRotation(Vector3.up, -_spawnOrigin.forward));
-            else
-                _surfManager.DeleteSurface(_curHoveredSurface);
+            _surfManager = GetComponent<SurfaceManager>();
+
+            _surfManager.OnSurfaceHoverEnter += RegisterHoveredSurface;
+            _surfManager.OnSurfaceHoverExit += RegisterUnhoveredSurface;
         }
-    }
 
-    void RegisterHoveredSurface(int surfID, HoverEnterEventArgs evt)
-    {
-        _curHoveredSurface = surfID;
-    }
+        void OnEnable()
+        {
+            _commandPress.EnableDirectActionIfModeUsed();
+        }
 
-    void RegisterUnhoveredSurface(int surfID, HoverExitEventArgs evt)
-    {
-        _curHoveredSurface = -1;
+        void Update()
+        {
+            if (_commandPress.ReadWasPerformedThisFrame())
+            {
+                if (_curHoveredSurface == -1)
+                {
+                    SurfaceInputUtils.CalcPosAndRot(_spawnOrigin, surfSpawnOffset, out var position, out var rotation);
+                    _surfManager.SpawnSurface(position, rotation);
+
+                }
+                else
+                    _surfManager.DeleteSurface(_curHoveredSurface);
+            }
+        }
+
+        void RegisterHoveredSurface(int surfID, HoverEnterEventArgs evt)
+        {
+            _curHoveredSurface = surfID;
+        }
+
+        void RegisterUnhoveredSurface(int surfID, HoverExitEventArgs evt)
+        {
+            _curHoveredSurface = -1;
+        }
     }
 }

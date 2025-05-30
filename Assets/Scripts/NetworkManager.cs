@@ -30,10 +30,6 @@ namespace VidiGraph
         public HashSet<int> SelectedNodes { get { return _networkGlobal.SelectedNodes; } }
         public HashSet<int> SelectedCommunities { get { return _networkGlobal.SelectedCommunities; } }
 
-        void Awake()
-        {
-        }
-
         void Start()
         {
             Initialize();
@@ -42,10 +38,6 @@ namespace VidiGraph
             _storage?.InitialStore(_networkGlobal, _multiLayoutNetwork.Context);
 
             _multiLayoutNetwork.SetStorageUpdateCallback(() => _storage?.UpdateStore(_networkGlobal, _multiLayoutNetwork.Context));
-        }
-
-        void Update()
-        {
         }
 
         public void Initialize()
@@ -149,13 +141,13 @@ namespace VidiGraph
 
         }
 
-        public void HoverCommunity(int communityID)
+        public void HoverCommunity(int commID)
         {
-            _networkGlobal.HoveredCommunity = _networkGlobal.Communities[communityID];
+            _networkGlobal.HoveredCommunity = _networkGlobal.Communities[commID];
             _multiLayoutNetwork.UpdateRenderElements();
         }
 
-        public void UnhoverCommunity(int communityID)
+        public void UnhoverCommunity(int commID)
         {
             _networkGlobal.HoveredCommunity = null;
             _multiLayoutNetwork.UpdateRenderElements();
@@ -177,16 +169,6 @@ namespace VidiGraph
         {
             _networkGlobal.ClearSelectedItems();
             _multiLayoutNetwork.UpdateSelectedElements();
-
-        }
-
-        public void StartCommunityMove(int communityID, Transform transform)
-        {
-
-        }
-
-        public void EndCommunityMove(int communityID, Transform transform)
-        {
 
         }
 

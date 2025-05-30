@@ -51,12 +51,8 @@ namespace VidiGraph
 
         Vector3 _startMovePos = Vector3.positiveInfinity;
 
-        int _framesSinceNodeUnhover = 10;
-        int _framesSinceNodeGrab = 10;
-        int _framesSinceNodeUngrab = 10;
-
-        int _framesSinceCommUnhover = 10;
-        int _framesSinceCommGrab = 10;
+        HoverExitTimer _nodeUnhoverTimer = new HoverExitTimer();
+        HoverExitTimer _commUnhoverTimer = new HoverExitTimer();
 
         public override void Initialize()
         {
@@ -130,59 +126,16 @@ namespace VidiGraph
                 _manager.SetLinksAlpha(linkIDs2, 1);
             }
 
-            CheckNodeUnhover();
-            CheckCommUnhover();
-        }
-
-        void CheckNodeUnhover()
-        {
-            // unhover and grab detected within acceptable frame timespan. ignore unhover
-            if (_framesSinceNodeUnhover < 2 && _framesSinceNodeGrab < 2)
-            {
-                _framesSinceNodeUnhover = 1000;
-            }
-            // if sufficient time has passed unhovered, register it
-            else if (_framesSinceNodeUnhover == 1 && _hoveredNode != null)
+            if (_nodeUnhoverTimer.TickAndCheckHoverExit() && _hoveredNode != null)
             {
                 _manager.UnhoverNode(_hoveredNode.ID);
                 _hoveredNode = null;
             }
 
-            if (_framesSinceNodeUnhover < 1000)
-            {
-                _framesSinceNodeUnhover += 1;
-            }
-            if (_framesSinceNodeGrab < 1000)
-            {
-                _framesSinceNodeGrab += 1;
-            }
-            if (_framesSinceNodeUngrab < 1000)
-            {
-                _framesSinceNodeUngrab += 1;
-            }
-        }
-
-        private void CheckCommUnhover()
-        {
-            // unhover and grab detected within acceptable frame timespan. ignore unhover
-            if (_framesSinceCommUnhover < 2 && _framesSinceCommGrab < 2)
-            {
-                _framesSinceCommUnhover = 1000;
-            }
-            // if sufficient time has passed unhovered, register it
-            else if (_framesSinceCommUnhover == 1 && _hoveredCommunity != null)
+            if (_commUnhoverTimer.TickAndCheckHoverExit() && _hoveredCommunity != null)
             {
                 _manager.UnhoverCommunity(_hoveredCommunity.ID);
                 _hoveredCommunity = null;
-            }
-
-            if (_framesSinceCommUnhover < 1000)
-            {
-                _framesSinceCommUnhover += 1;
-            }
-            if (_framesSinceCommGrab < 1000)
-            {
-                _framesSinceCommGrab += 1;
             }
         }
 
@@ -334,7 +287,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _framesSinceCommUnhover = 0;
+                _commUnhoverTimer.DidHoverExit();
             }
         }
 
@@ -343,7 +296,7 @@ namespace VidiGraph
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 _manager.StartMLCommMove(community.ID);
-                _framesSinceCommGrab = 0;
+                _commUnhoverTimer.DidOtherInteraction();
             }
         }
 
@@ -370,7 +323,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _framesSinceNodeUnhover = 0;
+                _nodeUnhoverTimer.DidHoverExit();
             }
         }
 
@@ -379,7 +332,7 @@ namespace VidiGraph
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 _manager.StartMLNodeMove(node.ID);
-                _framesSinceNodeGrab = 0;
+                _nodeUnhoverTimer.DidOtherInteraction();
             }
         }
 

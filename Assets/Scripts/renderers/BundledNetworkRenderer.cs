@@ -33,9 +33,6 @@ namespace VidiGraph
         int _lastHoveredNode = -1;
         int _lastHoveredComm = -1;
 
-        // allow us to access what color nodes/links are supposed to be
-        MLEncodingTransformer _encoder;
-
         void Reset()
         {
             if (Application.isEditor)
@@ -58,14 +55,12 @@ namespace VidiGraph
 
             _networkGlobal = GameObject.Find("/Network Manager").GetComponent<NetworkGlobal>();
             _networkContext = (MultiLayoutContext)networkContext;
-            _encoder = transform.parent.parent.GetComponentInChildren<MLEncodingTransformer>();
 
             InitializeShaders();
 
             CreateNodes();
             CreateCommunities();
-            CreateLinks();
-
+            CreateMeshLinks();
             CreateGPULinks();
 
             UpdateRenderElements();
@@ -75,8 +70,7 @@ namespace VidiGraph
         {
             UpdateNodes();
             UpdateCommunities();
-            UpdateLinks();
-
+            UpdateMeshLinks();
             UpdateGPULinks();
         }
 
@@ -123,20 +117,20 @@ namespace VidiGraph
 
         void CreateCommunities()
         {
-            foreach (var (communityID, community) in _networkGlobal.Communities)
+            foreach (var (commID, community) in _networkGlobal.Communities)
             {
-                var communityProps = _networkContext.Communities[communityID];
+                var communityProps = _networkContext.Communities[commID];
                 var commObj = CommunityRenderUtils.MakeCommunity(CommunityPrefab, transform,
                     community, communityProps);
 
-                _communityGameObjs[communityID] = commObj;
-                _commRenderers[communityID] = commObj.GetComponentInChildren<Renderer>();
+                _communityGameObjs[commID] = commObj;
+                _commRenderers[commID] = commObj.GetComponentInChildren<Renderer>();
 
                 AddCommunityInteraction(commObj, community);
             }
         }
 
-        void CreateLinks()
+        void CreateMeshLinks()
         {
             if (DrawTreeStructure)
             {
@@ -154,7 +148,7 @@ namespace VidiGraph
         void CreateGPULinks()
         {
             ComputeControlPoints();
-            _shaderWrapper.PrepareBuffers(_networkGlobal, _networkContext, _controlPointsMap);
+            PrepareBuffers();
         }
 
         void ComputeControlPoints()
@@ -188,6 +182,11 @@ namespace VidiGraph
             }
         }
 
+        void PrepareBuffers()
+        {
+            _shaderWrapper.PrepareBuffers(_networkGlobal, _networkContext, _controlPointsMap);
+        }
+
         void UpdateNodes()
         {
             foreach (var nodeID in _networkContext.Nodes.Keys)
@@ -195,10 +194,7 @@ namespace VidiGraph
                 Node globalNode = _networkGlobal.Nodes[nodeID];
                 MultiLayoutContext.Node contextNode = _networkContext.Nodes[nodeID];
 
-                // update if global or context node is dirty, or it's been unhovered
-                bool needsUpdate = globalNode.Dirty || contextNode.Dirty || _lastHoveredNode == nodeID || _lastHoveredComm == globalNode.CommunityID;
-
-                if ((DrawVirtualNodes || !globalNode.IsVirtualNode) && needsUpdate)
+                if ((DrawVirtualNodes || !globalNode.IsVirtualNode) && NodeNeedsRenderUpdate(nodeID))
                 {
                     NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[nodeID], globalNode, contextNode,
                         _networkContext.ContextSettings.NodeScale, _networkContext.ContextSettings.NodeHighlightColor, _nodeRenderers[nodeID]);
@@ -217,25 +213,22 @@ namespace VidiGraph
 
         void UpdateCommunities()
         {
-            foreach (var communityID in _networkGlobal.Communities.Keys)
+            foreach (var commID in _networkGlobal.Communities.Keys)
             {
-                var globalComm = _networkGlobal.Communities[communityID];
-                var contextComm = _networkContext.Communities[communityID];
-
-                // update if global or context community is dirty, or it's been unhovered
-                bool needsUpdate = globalComm.Dirty || contextComm.Dirty || _lastHoveredComm == communityID;
-
-                if (needsUpdate)
+                if (CommNeedsRenderUpdate(commID))
                 {
-                    CommunityRenderUtils.UpdateCommunity(_communityGameObjs[communityID], globalComm, contextComm,
-                        _networkContext.ContextSettings.CommHighlightColor, _commRenderers[communityID]);
+                    Community globalComm = _networkGlobal.Communities[commID];
+                    MultiLayoutContext.Community contextComm = _networkContext.Communities[commID];
+
+                    CommunityRenderUtils.UpdateCommunity(_communityGameObjs[commID], globalComm, contextComm,
+                        _networkContext.ContextSettings.CommHighlightColor, _commRenderers[commID]);
                     globalComm.Dirty = contextComm.Dirty = false;
                 }
 
-                if (communityID == _networkGlobal.HoveredCommunity?.ID)
+                if (commID == _networkGlobal.HoveredCommunity?.ID)
                 {
                     var highlightCol = _networkContext.ContextSettings.CommHighlightColor;
-                    CommunityRenderUtils.SetCommunityColor(_communityGameObjs[communityID], highlightCol, _commRenderers[communityID]);
+                    CommunityRenderUtils.SetCommunityColor(_communityGameObjs[commID], highlightCol, _commRenderers[commID]);
                 }
 
 
@@ -244,7 +237,7 @@ namespace VidiGraph
             BookkeepHoverCommunity();
         }
 
-        void UpdateLinks()
+        void UpdateMeshLinks()
         {
             if (DrawTreeStructure)
             {
@@ -262,6 +255,24 @@ namespace VidiGraph
         {
             ComputeControlPoints();
             _shaderWrapper.UpdateBuffers(_networkGlobal, _networkContext, _controlPointsMap);
+        }
+
+        bool NodeNeedsRenderUpdate(int nodeID)
+        {
+            var globalNode = _networkGlobal.Nodes[nodeID];
+            var contextNode = _networkContext.Nodes[nodeID];
+
+            return globalNode.Dirty
+                || contextNode.Dirty
+                || _lastHoveredNode == nodeID
+                || _lastHoveredComm == globalNode.CommunityID;
+        }
+
+        bool CommNeedsRenderUpdate(int commID)
+        {
+            return _networkGlobal.Communities[commID].Dirty
+                || _networkContext.Communities[commID].Dirty
+                || _lastHoveredComm == commID;
         }
 
         void BookkeepHoverNode()
