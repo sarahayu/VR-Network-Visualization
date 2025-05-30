@@ -1,6 +1,9 @@
 # TODO
 
-- fix grab exit/hover exit bug
+- move control point calculation to a transformer
+    - keep bspline count constant
+- don't deselect on surface move
+- have position stack so we can restore positions after returning from hairball
 - move all selections at once?
 - billboard labels...
 
@@ -28,6 +31,9 @@
 - update store on attribute changes
 - make nodes flat on surfaces
 - fix closest surface bug
+- (IGNORE as not high priority: fixing it would unfix hovering over node immediately after unhovering another node. plus, highlights reset themselves quite easily) hover over community, then while still hovering quickly swipe over node in another community. node stays hovered
+- clean up stuff
+- fix grab exit/hover exit bug
 
 ## Troubleshooting
 

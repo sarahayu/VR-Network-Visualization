@@ -54,8 +54,6 @@ namespace VidiGraph
             }
 
             _nodesToUpdate.Clear();
-
-            // _networkContext.CurrentTransform.SetFromTransform(_sphericalTransform);
         }
 
         public override TransformInterpolator GetInterpolator()
@@ -68,7 +66,7 @@ namespace VidiGraph
             _nodesToUpdate.Add(nodeID);
         }
 
-        public void UpdateNodeOnNextApply(List<int> nodeIDs)
+        public void UpdateNodesOnNextApply(List<int> nodeIDs)
         {
             _nodesToUpdate.UnionWith(nodeIDs);
         }
@@ -90,7 +88,7 @@ namespace VidiGraph
             _nodesToUpdate.UnionWith(_networkGlobal.Communities[commID].Nodes.Select(n => n.ID));
         }
 
-        public void UpdateCommOnNextApply(List<int> commIDs)
+        public void UpdateCommsOnNextApply(List<int> commIDs)
         {
             foreach (var commID in commIDs) UpdateCommOnNextApply(commID);
         }

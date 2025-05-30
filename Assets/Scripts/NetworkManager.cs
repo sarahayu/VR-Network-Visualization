@@ -66,13 +66,13 @@ namespace VidiGraph
             if (SelectedNodes.Count > 0)
             {
                 opts.Add("Bring Node");
-                opts.Add("Return Node");
+                opts.Add("Reset Node");
             }
 
             if (SelectedCommunities.Count > 0)
             {
                 opts.Add("Bring Comm.");
-                opts.Add("Return Comm.");
+                opts.Add("Reset Comm.");
                 opts.Add("Project Comm. Floor");
             }
 
@@ -186,12 +186,12 @@ namespace VidiGraph
 
         public void BringMLNodes(List<int> nodeIDs)
         {
-            _multiLayoutNetwork.SetNodesBrought(nodeIDs, true);
+            _multiLayoutNetwork.BringNodes(nodeIDs);
         }
 
         public void ReturnMLNodes(List<int> nodeIDs)
         {
-            _multiLayoutNetwork.SetNodesBrought(nodeIDs, false);
+            _multiLayoutNetwork.ReturnNodes(nodeIDs);
         }
 
         public void SetMLNodeSizeEncoding(Func<VidiGraph.Node, float> func)

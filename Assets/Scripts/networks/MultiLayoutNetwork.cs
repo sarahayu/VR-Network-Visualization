@@ -81,7 +81,7 @@ namespace VidiGraph
             // apply initial transformations before first render so we don't get a weird jump
             TransformNetworkNoRender("encoding");
             _isSphericalLayout = true;
-            _sphericalLayoutTransformer.UpdateCommOnNextApply(_context.Communities.Keys.ToList());
+            _sphericalLayoutTransformer.UpdateCommsOnNextApply(_context.Communities.Keys.ToList());
             TransformNetworkNoRender("spherical");
 
             InitRenderer();
@@ -107,7 +107,7 @@ namespace VidiGraph
             {
                 foreach (var commID in _context.Communities.Keys)
                 {
-                    SetLayout(commID, "spherical");
+                    QueueLayoutChange(commID, "spherical");
                     ClearCommunityState(commID);
                 }
             }
@@ -131,14 +131,14 @@ namespace VidiGraph
                 _manager.NetworkGlobal.Communities[commID].Focus = isCommFocused;
                 _context.Communities[commID].State = MultiLayoutContext.StrToState(layout);
 
-                SetLayout(commID, layout);
+                QueueLayoutChange(commID, layout);
             }
 
             TransformNetwork(layout, animated: true);
 
         }
 
-        void SetLayout(int commID, string layout)
+        void QueueLayoutChange(int commID, string layout)
         {
             switch (layout)
             {
@@ -149,14 +149,18 @@ namespace VidiGraph
             }
         }
 
-        public void SetNodesBrought(List<int> nodeIDs, bool brought)
+        public void BringNodes(List<int> nodeIDs)
         {
-            foreach (var nodeID in nodeIDs)
-            {
-                _bringNodeTransformer.SetFocusNodeQueue(nodeID, brought);
-            }
+            _bringNodeTransformer.UpdateOnNextApply(nodeIDs);
 
             TransformNetwork("bringNode", animated: true);
+        }
+
+        public void ReturnNodes(List<int> nodeIDs)
+        {
+            _sphericalLayoutTransformer.UpdateNodesOnNextApply(nodeIDs);
+
+            TransformNetwork("spherical", animated: true);
         }
 
         public void StartNodeMove(int nodeID, Transform toTrack)

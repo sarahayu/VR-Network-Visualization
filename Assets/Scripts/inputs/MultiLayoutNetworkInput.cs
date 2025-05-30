@@ -51,8 +51,8 @@ namespace VidiGraph
 
         Vector3 _startMovePos = Vector3.positiveInfinity;
 
-        HoverExitTimer _nodeUnhoverTimer = new HoverExitTimer();
-        HoverExitTimer _commUnhoverTimer = new HoverExitTimer();
+        InteractionTimer _nodeHoverExit = new InteractionTimer();
+        InteractionTimer _commHoverExit = new InteractionTimer();
 
         public override void Initialize()
         {
@@ -126,13 +126,13 @@ namespace VidiGraph
                 _manager.SetLinksAlpha(linkIDs2, 1);
             }
 
-            if (_nodeUnhoverTimer.TickAndCheckHoverExit() && _hoveredNode != null)
+            if (_nodeHoverExit.TickAndCheckDidInteract() && _hoveredNode != null)
             {
                 _manager.UnhoverNode(_hoveredNode.ID);
                 _hoveredNode = null;
             }
 
-            if (_commUnhoverTimer.TickAndCheckHoverExit() && _hoveredCommunity != null)
+            if (_commHoverExit.TickAndCheckDidInteract() && _hoveredCommunity != null)
             {
                 _manager.UnhoverCommunity(_hoveredCommunity.ID);
                 _hoveredCommunity = null;
@@ -208,13 +208,13 @@ namespace VidiGraph
                     case "Bring Node":
                         _manager.BringMLNodes(_manager.SelectedNodes.ToList());
                         break;
-                    case "Return Node":
+                    case "Reset Node":
                         _manager.ReturnMLNodes(_manager.SelectedNodes.ToList());
                         break;
                     case "Bring Comm.":
                         _manager.SetMLLayout(_manager.SelectedCommunities.ToList(), "cluster");
                         break;
-                    case "Return Comm.":
+                    case "Reset Comm.":
                         _manager.SetMLLayout(_manager.SelectedCommunities.ToList(), "spherical");
                         break;
                     case "Project Comm. Floor":
@@ -280,6 +280,8 @@ namespace VidiGraph
             {
                 _manager.HoverCommunity(community.ID);
                 _hoveredCommunity = community;
+                _commHoverExit.DidCancel();
+                _nodeHoverExit.DidInteraction();
             }
         }
 
@@ -287,7 +289,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _commUnhoverTimer.DidHoverExit();
+                _commHoverExit.DidInteraction();
             }
         }
 
@@ -296,7 +298,7 @@ namespace VidiGraph
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 _manager.StartMLCommMove(community.ID);
-                _commUnhoverTimer.DidOtherInteraction();
+                _commHoverExit.DidCancel();
             }
         }
 
@@ -305,6 +307,7 @@ namespace VidiGraph
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 _manager.EndMLCommMove(community.ID);
+                _commHoverExit.DidInteraction();
             }
         }
 
@@ -316,6 +319,8 @@ namespace VidiGraph
                 _hoveredNode = node;
 
                 TooltipText.SetText($"{node.Label}\n{node.Degree}");
+                _nodeHoverExit.DidCancel();
+                _commHoverExit.DidInteraction();
             }
         }
 
@@ -323,7 +328,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _nodeUnhoverTimer.DidHoverExit();
+                _nodeHoverExit.DidInteraction();
             }
         }
 
@@ -332,7 +337,7 @@ namespace VidiGraph
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 _manager.StartMLNodeMove(node.ID);
-                _nodeUnhoverTimer.DidOtherInteraction();
+                _nodeHoverExit.DidCancel();
             }
         }
 
@@ -341,6 +346,7 @@ namespace VidiGraph
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 _manager.EndMLNodeMove(node.ID, evt.interactableObject.transform);
+                _nodeHoverExit.DidInteraction();
             }
         }
 

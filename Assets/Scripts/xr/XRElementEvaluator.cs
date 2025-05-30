@@ -13,8 +13,13 @@ using UnityEngine.XR.Interaction.Toolkit.Interactors;
 [Serializable]
 public class XRElementEvaluator : XRTargetEvaluator
 {
+    const float MAX_DISTANCE = 10f;
+
     protected override float CalculateNormalizedScore(IXRInteractor interactor, IXRInteractable target)
     {
-        return (float)target.transform.gameObject.layer / LayerMask.NameToLayer("MaxLayer");
+        float baseFloat = LayerMask.NameToLayer("MaxLayer");
+
+        return (float)target.transform.gameObject.layer / baseFloat
+            + (1 - Mathf.Clamp01(target.GetDistanceSqrToInteractor(interactor) / (MAX_DISTANCE * MAX_DISTANCE))) / (baseFloat * baseFloat);
     }
 }

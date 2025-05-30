@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -15,9 +16,7 @@ namespace VidiGraph
 
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
-        // use hashset to prevent duplicates
-        HashSet<int> _focusNodes = new HashSet<int>();
-        Dictionary<int, bool> _focusNodesToUpdate = new Dictionary<int, bool>();
+        HashSet<int> _nodesToUpdate = new HashSet<int>();
         TransformInfo _bringNodeTransform;
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
@@ -36,72 +35,29 @@ namespace VidiGraph
             var sphericalNodes = _fileLoader.SphericalLayout.nodes;
             var sphericalIdToIdx = _fileLoader.SphericalLayout.idToIdx;
 
-            foreach (var node in _networkGlobal.Nodes)
+            foreach (var nodeID in _nodesToUpdate)
             {
-                if (!_focusNodesToUpdate.ContainsKey(node.ID)) continue;
-
-                // move to closer position
-                if (_focusNodesToUpdate[node.ID])
-                {
-                    // TODO calculate at runtime
-                    var bringNodePos = sphericalNodes[sphericalIdToIdx[node.ID]]._position3D * 0.2f;
-                    _networkContext.Nodes[node.ID].Position = _bringNodeTransform.TransformPoint(new Vector3(bringNodePos.x, bringNodePos.y, bringNodePos.z));
-                    _networkContext.Nodes[node.ID].Dirty = true;
-
-                    _focusNodes.Add(node.ID);
-                }
-                // reset to original position
-                else
-                {
-                    var sphericalPos = sphericalNodes[sphericalIdToIdx[node.ID]]._position3D;
-                    _networkContext.Nodes[node.ID].Position = sphericalPos;
-                    _networkContext.Nodes[node.ID].Dirty = true;
-
-                    _focusNodes.Remove(node.ID);
-                }
-
-                _focusNodesToUpdate.Remove(node.ID);
+                var bringNodePos = sphericalNodes[sphericalIdToIdx[nodeID]]._position3D * 0.2f;
+                _networkContext.Nodes[nodeID].Position = _bringNodeTransform.TransformPoint(new Vector3(bringNodePos.x, bringNodePos.y, bringNodePos.z));
+                _networkContext.Nodes[nodeID].Dirty = true;
             }
 
-            // _networkContext.CurrentTransform.SetFromTransform(_bringNodeTransform);
+            _nodesToUpdate.Clear();
         }
 
         public override TransformInterpolator GetInterpolator()
         {
-            return new BringNodeInterpolator(_bringNodeTransform, _networkGlobal, _networkContext, _fileLoader, _focusNodes, _focusNodesToUpdate);
+            return new BringNodeInterpolator(_bringNodeTransform, _networkGlobal, _networkContext, _fileLoader, _nodesToUpdate);
         }
 
-        public void UnfocusAllNodes()
+        public void UpdateOnNextApply(int nodeID)
         {
-            foreach (var c in _focusNodes)
-            {
-                _focusNodesToUpdate[c] = false;
-            }
+            _nodesToUpdate.Add(nodeID);
         }
 
-        public void SetFocusNodeQueue(int nodeID, bool isFocused)
+        public void UpdateOnNextApply(List<int> nodeIDs)
         {
-            if (isFocused != _focusNodes.Contains(nodeID))
-            {
-                _focusNodesToUpdate[nodeID] = isFocused;
-            }
-        }
-
-        public void SetFocusNodeImm(int nodeID, bool isFocused)
-        {
-            if (isFocused)
-            {
-                _focusNodes.Add(nodeID);
-            }
-            else
-            {
-                _focusNodes.Remove(nodeID);
-            }
-
-            if (_focusNodesToUpdate.ContainsKey(nodeID))
-            {
-                _focusNodesToUpdate.Remove(nodeID);
-            }
+            _nodesToUpdate.UnionWith(nodeIDs);
         }
     }
 
@@ -112,38 +68,21 @@ namespace VidiGraph
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
         public BringNodeInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
-            NetworkFilesLoader fileLoader, HashSet<int> focusNodes, Dictionary<int, bool> focusNodesToUpdate)
+            NetworkFilesLoader fileLoader, HashSet<int> nodesToUpdate)
         {
             _networkContext = networkContext;
             var sphericalNodes = fileLoader.SphericalLayout.nodes;
             var sphericalIdToIdx = fileLoader.SphericalLayout.idToIdx;
 
-            foreach (var node in networkGlobal.Nodes)
+            foreach (var nodeID in nodesToUpdate)
             {
-                if (!focusNodesToUpdate.ContainsKey(node.ID)) continue;
-
-                // move to closer position
-                if (focusNodesToUpdate[node.ID])
-                {
-                    _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
-                    // TODO calculate at runtime
-                    var bringNodePos = sphericalNodes[sphericalIdToIdx[node.ID]]._position3D * 0.2f;
-                    _endPositions[node.ID] = endingContextTransform.TransformPoint(new Vector3(bringNodePos.x, bringNodePos.y, bringNodePos.z));
-
-                    focusNodes.Add(node.ID);
-                }
-                // reset to original position
-                else
-                {
-                    _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
-                    // TODO calculate at runtime
-                    _endPositions[node.ID] = sphericalNodes[sphericalIdToIdx[node.ID]]._position3D;
-
-                    focusNodes.Remove(node.ID);
-                }
-
-                focusNodesToUpdate.Remove(node.ID);
+                _startPositions[nodeID] = networkContext.Nodes[nodeID].Position;
+                // TODO calculate at runtime
+                var bringNodePos = sphericalNodes[sphericalIdToIdx[nodeID]]._position3D * 0.2f;
+                _endPositions[nodeID] = endingContextTransform.TransformPoint(new Vector3(bringNodePos.x, bringNodePos.y, bringNodePos.z));
             }
+
+            nodesToUpdate.Clear();
         }
 
         public override void Interpolate(float t)
