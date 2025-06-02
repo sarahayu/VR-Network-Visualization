@@ -116,8 +116,9 @@ namespace VidiGraph
 
                 shutdown = true;
             }
-            catch (ClientException)
+            catch (ClientException e)
             {
+                Debug.LogError(e.Message);
                 Debug.LogError("Could not load files to Neo4J database. Did you remove the setting `server.directories.import`?\n" +
                     "https://neo4j.com/docs/cypher-manual/current/clauses/load-csv/#_configuration_settings_for_file_urls");
 
@@ -225,8 +226,9 @@ namespace VidiGraph
 
                 shutdown = true;
             }
-            catch (ClientException)
+            catch (ClientException e)
             {
+                Debug.LogError(e.Message);
                 Debug.LogError("Could not load files to Neo4J database. Did you remove the setting `server.directories.import`?\n" +
                     "https://neo4j.com/docs/cypher-manual/current/clauses/load-csv/#_configuration_settings_for_file_urls");
 
