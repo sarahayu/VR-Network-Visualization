@@ -22,6 +22,8 @@ namespace VidiGraph
 
         public Dictionary<int, GameObject> Surfaces { get { return _surfaces.Values.ToDictionary(si => si.ID, si => si.GameObject); } }
 
+        public bool IsMovingSurface { get { return _surfaceMover != null; } }
+
         public delegate void SurfaceHoverEnterEvent(int surfaceID, HoverEnterEventArgs evt);
         public event SurfaceHoverEnterEvent OnSurfaceHoverEnter;
         public delegate void SurfaceHoverExitEvent(int surfaceID, HoverExitEventArgs evt);
@@ -202,6 +204,7 @@ namespace VidiGraph
                 // end coroutine to change transforms
                 // end node moves
                 StopCoroutine(_surfaceMover);
+                _surfaceMover = null;
                 _manager.EndMLNodesMove(_surfaces[id].Nodes.Keys.ToList());
             });
         }

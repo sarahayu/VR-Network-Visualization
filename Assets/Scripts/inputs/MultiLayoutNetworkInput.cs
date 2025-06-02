@@ -31,7 +31,8 @@ namespace VidiGraph
         [SerializeField]
         XRInputButtonReader CommandPress = new XRInputButtonReader("CommandPress");
 
-        NetworkManager _manager;
+        NetworkManager _networkManager;
+        SurfaceManager _surfaceManager;
 
         Community _hoveredCommunity = null;
         Node _hoveredNode = null;
@@ -53,10 +54,12 @@ namespace VidiGraph
 
         InteractionTimer _nodeHoverExit = new InteractionTimer();
         InteractionTimer _commHoverExit = new InteractionTimer();
+        bool _cancelUpcomingDeselection = false;
 
         public override void Initialize()
         {
-            _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
+            _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
+            _surfaceManager = GameObject.Find("/Surface Manager").GetComponent<SurfaceManager>();
 
             var renderer = GetComponentInChildren<NetworkRenderer>();
 
@@ -91,57 +94,68 @@ namespace VidiGraph
 
         void Update()
         {
+            if (_surfaceManager.IsMovingSurface)
+            {
+                _cancelUpcomingDeselection = true;
+            }
+
+
             if (RightGripPress.ReadWasCompletedThisFrame())
             {
-                if (_hoveredCommunity != null)
+                if (!_cancelUpcomingDeselection)
                 {
-                    _manager.ToggleSelectedCommunities(new List<int> { _hoveredCommunity.ID });
+                    if (_hoveredCommunity != null)
+                    {
+                        _networkManager.ToggleSelectedCommunities(new List<int> { _hoveredCommunity.ID });
+                    }
+                    else if (_hoveredNode != null)
+                    {
+                        _networkManager.ToggleSelectedNodes(new List<int> { _hoveredNode.ID });
+                    }
+                    else
+                    {
+                        _networkManager.ClearSelection();
+                    }
                 }
-                else if (_hoveredNode != null)
-                {
-                    _manager.ToggleSelectedNodes(new List<int> { _hoveredNode.ID });
-                }
-                else
-                {
-                    _manager.ClearSelection();
-                }
+
+                _cancelUpcomingDeselection = false;
             }
             else if (LeftGripPress.ReadWasPerformedThisFrame())
             {
-                _manager.ToggleBigNetworkSphericalAndHairball();
+                _networkManager.ToggleBigNetworkSphericalAndHairball();
             }
             else if (CheckSelectionActions()) { }
             else if (CommandPress.ReadWasPerformedThisFrame())
             {
-                var nodeIDs1 = _manager.NetworkGlobal.RealNodes.GetRange(0, 10);
-                var nodeIDs2 = _manager.NetworkGlobal.RealNodes.GetRange(10, 10);
-                var linkIDs1 = _manager.NetworkGlobal.Links.GetRange(0, 10).Select(l => l.ID).ToList();
-                var linkIDs2 = _manager.NetworkGlobal.Links.GetRange(10, 10).Select(l => l.ID).ToList();
+                var nodeIDs1 = _networkManager.NetworkGlobal.RealNodes.GetRange(0, 10);
+                var nodeIDs2 = _networkManager.NetworkGlobal.RealNodes.GetRange(10, 10);
+                var linkIDs1 = _networkManager.NetworkGlobal.Links.GetRange(0, 10).Select(l => l.ID).ToList();
+                var linkIDs2 = _networkManager.NetworkGlobal.Links.GetRange(10, 10).Select(l => l.ID).ToList();
 
-                _manager.SetNodesSize(nodeIDs1, 2);
-                _manager.SetNodesColor(nodeIDs2, Color.green);
-                _manager.SetLinksWidth(linkIDs1, 0.5f);
-                _manager.SetLinksColorStart(linkIDs2, Color.blue);
-                _manager.SetLinksColorEnd(linkIDs1, Color.red);
-                _manager.SetLinksAlpha(linkIDs2, 1);
+                _networkManager.SetNodesSize(nodeIDs1, 2);
+                _networkManager.SetNodesColor(nodeIDs2, Color.green);
+                _networkManager.SetLinksWidth(linkIDs1, 0.5f);
+                _networkManager.SetLinksColorStart(linkIDs2, Color.blue);
+                _networkManager.SetLinksColorEnd(linkIDs1, Color.red);
+                _networkManager.SetLinksAlpha(linkIDs2, 1);
             }
 
             if (_nodeHoverExit.TickAndCheckDidInteract() && _hoveredNode != null)
             {
-                _manager.UnhoverNode(_hoveredNode.ID);
+                _networkManager.UnhoverNode(_hoveredNode.ID);
                 _hoveredNode = null;
             }
 
             if (_commHoverExit.TickAndCheckDidInteract() && _hoveredCommunity != null)
             {
-                _manager.UnhoverCommunity(_hoveredCommunity.ID);
+                _networkManager.UnhoverCommunity(_hoveredCommunity.ID);
                 _hoveredCommunity = null;
             }
         }
 
         bool CheckSelectionActions()
         {
-            var curOpts = _manager.GetValidOptions();
+            var curOpts = _networkManager.GetValidOptions();
 
             if (!curOpts.SetEquals(LastOptions))
             {
@@ -206,19 +220,19 @@ namespace VidiGraph
                 switch (curOptnLabel)
                 {
                     case "Bring Node":
-                        _manager.BringMLNodes(_manager.SelectedNodes.ToList());
+                        _networkManager.BringMLNodes(_networkManager.SelectedNodes.ToList());
                         break;
                     case "Reset Node":
-                        _manager.ReturnMLNodes(_manager.SelectedNodes.ToList());
+                        _networkManager.ReturnMLNodes(_networkManager.SelectedNodes.ToList());
                         break;
                     case "Bring Comm.":
-                        _manager.SetMLLayout(_manager.SelectedCommunities.ToList(), "cluster");
+                        _networkManager.SetMLLayout(_networkManager.SelectedCommunities.ToList(), "cluster");
                         break;
                     case "Reset Comm.":
-                        _manager.SetMLLayout(_manager.SelectedCommunities.ToList(), "spherical");
+                        _networkManager.SetMLLayout(_networkManager.SelectedCommunities.ToList(), "spherical");
                         break;
                     case "Project Comm. Floor":
-                        _manager.SetMLLayout(_manager.SelectedCommunities.ToList(), "floor");
+                        _networkManager.SetMLLayout(_networkManager.SelectedCommunities.ToList(), "floor");
                         break;
                     default:
                         inputAction = false;
@@ -278,7 +292,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _manager.HoverCommunity(community.ID);
+                _networkManager.HoverCommunity(community.ID);
                 _hoveredCommunity = community;
                 _commHoverExit.DidCancel();
                 _nodeHoverExit.DidInteraction();
@@ -297,7 +311,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _manager.StartMLCommMove(community.ID);
+                _networkManager.StartMLCommMove(community.ID);
                 _commHoverExit.DidCancel();
             }
         }
@@ -306,7 +320,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _manager.EndMLCommMove(community.ID);
+                _networkManager.EndMLCommMove(community.ID);
                 _commHoverExit.DidInteraction();
             }
         }
@@ -315,7 +329,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _manager.HoverNode(node.ID);
+                _networkManager.HoverNode(node.ID);
                 _hoveredNode = node;
 
                 TooltipText.SetText($"{node.Label}\n{node.Degree}");
@@ -336,7 +350,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _manager.StartMLNodeMove(node.ID);
+                _networkManager.StartMLNodeMove(node.ID);
                 _nodeHoverExit.DidCancel();
             }
         }
@@ -345,7 +359,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _manager.EndMLNodeMove(node.ID, evt.interactableObject.transform);
+                _networkManager.EndMLNodeMove(node.ID, evt.interactableObject.transform);
                 _nodeHoverExit.DidInteraction();
             }
         }

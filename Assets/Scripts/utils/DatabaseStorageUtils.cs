@@ -217,7 +217,7 @@ namespace VidiGraph
 
                 sess.Dispose();
 
-                Debug.Log("Loaded to Neo4J database.");
+                Debug.Log("Updated to Neo4J database.");
             }
             catch (ServiceUnavailableException e)
             {

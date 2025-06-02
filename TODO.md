@@ -2,7 +2,6 @@
 
 - move control point calculation to a transformer
     - keep bspline count constant
-- don't deselect on surface move
 - have position stack so we can restore positions after returning from hairball
 - move all selections at once?
 - billboard labels...
@@ -34,6 +33,7 @@
 - (IGNORE as not high priority: fixing it would unfix hovering over node immediately after unhovering another node. plus, highlights reset themselves quite easily) hover over community, then while still hovering quickly swipe over node in another community. node stays hovered
 - clean up stuff
 - fix grab exit/hover exit bug
+- don't deselect on surface move
 
 ## Troubleshooting
 
