@@ -7,5 +7,5 @@ Oculus Rift
 
 https://huggingface.co/ggerganov/whisper.cpp/tree/main
 
-I'm using ggml-small.en-q8_0.bin
-Put the downloaded model under ```Assets/Voice/Whisper```, and modify the corresponding "Model Path" in Whisper's Gameobject under ```WhisperManager```
+I'm using ggml-small.en-q8_0.bin model.
+Put the downloaded model under ```Assets/Voice/Whisper```, and modify the corresponding "Model Path" in Whisper's Gameobject under ```WhisperManager```.

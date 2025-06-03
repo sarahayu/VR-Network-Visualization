@@ -29,13 +29,10 @@ namespace Whisper.Samples
 
         // Reference to the whisper stream
         private WhisperStream _stream;
-        // Timer for detecting pause
-        private float lastRecognizedTime = 0f;
+        private float whisperStartTime;
 
-        // Buffer to store what is currently being transcribed
-        private string currentBuffer = "";
 
-        // ====== 1) Classification Endpoint URL ======
+        // Classification server URL
         private string serverUrl = "http://localhost:5000/classify";
 
 
@@ -54,7 +51,6 @@ namespace Whisper.Samples
             microphoneRecord.OnRecordStop += OnRecordStop;
             button.onClick.AddListener(OnButtonPressed);
 
-
         }
 
         private void OnButtonPressed()
@@ -64,14 +60,13 @@ namespace Whisper.Samples
                 // Start listening
                 _stream.StartStream();
                 microphoneRecord.StartRecord();
+                whisperStartTime = Time.realtimeSinceStartup; // record start time
             }
             else
             {
                 // Stop listening
                 microphoneRecord.StopRecord();
             }
-
-            // buttonText.text = microphoneRecord.IsRecording ? "Stop" : "Record";
         }
 
         private void OnRecordStop(AudioChunk recordedAudio)
@@ -83,27 +78,8 @@ namespace Whisper.Samples
         /// Called whenever Whisper produces new recognized text.
         private void OnResult(string result)
         {
-            float currentTime = Time.time;
-
-            if (currentTime - lastRecognizedTime > 3.0f)
-            {
-                // More than 2 seconds passed → treat as new sentence
-                currentBuffer = result;
-            }
-            else
-            {
-                // Within 2 seconds → keep appending
-                currentBuffer += " " + result;
-            }
-
-            lastRecognizedTime = currentTime;
-
-            // Display current transcription
-            text.text = currentBuffer;
-            UiUtils.ScrollDown(scroll);
-
-            StartCoroutine(ClassifyUserCommand(currentBuffer));
-            currentBuffer = "";
+            float recognitionTime = Time.realtimeSinceStartup - whisperStartTime;
+            StartCoroutine(ClassifyUserCommand(result, recognitionTime));
         }
 
 
@@ -123,10 +99,11 @@ namespace Whisper.Samples
             // Debug.Log("Stream finished!");
         }
 
-        // ====== 3) Classification Logic ======
-        private IEnumerator ClassifyUserCommand(string recognizedText)
+        // Classification Main Function
+        private IEnumerator ClassifyUserCommand(string recognizedText, float whisperTime)
         {
-            Debug.Log("Recognized TEXT: " + recognizedText);
+            Debug.Log("Recognized text input: " + recognizedText);
+            Debug.Log($"Whisper took {whisperTime:F3} seconds to recognize.");
             ClassificationRequest requestBody = new ClassificationRequest { userText = recognizedText };
             string jsonBody = JsonUtility.ToJson(requestBody);
 
@@ -147,15 +124,34 @@ namespace Whisper.Samples
                 else
                 {
                     string responseJson = www.downloadHandler.text;
-                    // Debug.Log("GPT Response: " + responseJson);
 
+                    // Parse JSON
                     ClassificationResponse classification = JsonUtility.FromJson<ClassificationResponse>(responseJson);
 
-                    _databaseStorage.InteractStore(responseJson);
+                    // Show timing info for debugging
+                    if (classification.timings != null)
+                    {
+                        Debug.Log($"Timing - General Agent: {classification.timings.general_agent}s");
+                        Debug.Log($"Timing - Execute Agent: {classification.timings.execute_agent}s");
+                        Debug.Log($"Timing - Clarify Agent: {classification.timings.clarify_agent}s");
+                        Debug.Log($"Timing - Return Code: {classification.timings.return_code}s");
+                    }
+
+                    // Check if clarification is needed
+                    if (!string.IsNullOrEmpty(classification.clarify))
+                    {
+                        Debug.LogWarning("Clarification Needed: " + classification.clarify);
+                        // Add the voice for classification later
+                    }
+                    else
+                    {
+                        Debug.Log("Cypher Query: " + classification.query);
+                        _databaseStorage.InteractStore(classification.query);
+                    }
                 }
             }
-
         }
+
     }
 
 
@@ -175,6 +171,18 @@ public class ClassificationRequest
 public class ClassificationResponse
 {
     public string query;
+    public string clarify;
+    public Timing timings;
 }
+
+[System.Serializable]
+public class Timing
+{
+    public float general_agent;
+    public float clarify_agent;
+    public float execute_agent;
+    public float return_code;
+}
+
 
 

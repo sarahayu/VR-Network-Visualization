@@ -2,28 +2,57 @@ from flask import Flask, request, jsonify
 from langgraph.graph import StateGraph
 from typing import TypedDict
 
+import time
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 
 class AgentState(TypedDict):
     input: str
     code: str
+    timings: dict[str, float]
 
 app = Flask(__name__)
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 clarify_prompt = ChatPromptTemplate.from_template(
-    "The user input might be unclear. Ask a clarifying question so we can understand the user's intent better.\n\nUser input: {input}"
+    "The user input might be unclear. Ask a clarifying question so we can understand the user's intent better.\n\n User input: {input}"
 )
 
 cypher_prompt = ChatPromptTemplate.from_template(
-    "You are a Neo4j Cypher expert. Convert the user's request into a valid Cypher query. Only return the Cypher query, no explanations.\n\nRequest: {input}"
+    "You are a Neo4j Cypher expert. Convert the user's request into a valid Cypher query. \
+    We have DB schema as below for your usage: \
+    :Node,\
+    nodeId,\
+    label,\
+    degree,\
+    selected,\
+    render_size,\
+    render_pos,\
+    render_color\n\n\
+    Only return the Cypher query, no explanations.\n\n User Request: {input}"
 )
 
 ambiguity_prompt = ChatPromptTemplate.from_template(
-    "Decide whether the following user input is ambiguous for generating corresponding graph commands or not. Reply with only 'yes' if it is ambiguous and 'no' if it is clear.\n\nUser input: {input}"
+    "Decide whether the following user input is ambiguous for generating corresponding graph commands or not. \
+    Reply with only 'yes' if it is ambiguous and 'no' if it is clear.\n\n User input: {input}"
 )
 
+def timed_node(node_name):
+    def decorator(fn):
+        def wrapper(state: AgentState):
+            start = time.time()
+            result = fn(state)
+            end = time.time()
+
+            if "timings" not in state or state["timings"] is None:
+                state["timings"] = {}
+            state["timings"][node_name] = end - start
+            result["timings"] = state["timings"]
+            return result
+        return wrapper
+    return decorator
+
+@timed_node("general_agent")
 def general_agent(state: AgentState) -> dict:
     messages = ambiguity_prompt.format_messages(input=state["input"])
     judgment = llm(messages).content.strip().lower()
@@ -31,16 +60,19 @@ def general_agent(state: AgentState) -> dict:
         return {"input": state["input"], "next": "clarify_agent"}
     return {"input": state["input"], "next": "execute_agent"}
 
+@timed_node("clarify_agent")
 def clarify_agent(state: AgentState) -> dict:
     messages = clarify_prompt.format_messages(input=state["input"])
     clarification_question = llm(messages).content.strip()
     return {"input": clarification_question, "code": "", "next": "return_code"}
 
+@timed_node("execute_agent")
 def execute_agent(state: AgentState) -> dict:
     messages = cypher_prompt.format_messages(input=state["input"])
     cypher = llm(messages).content.strip()
     return {"input": state["input"], "code": cypher, "next": "return_code"}
 
+@timed_node("return_code")
 def return_code(state: AgentState) -> AgentState:
     return state
 
@@ -51,7 +83,6 @@ graph.add_node("execute_agent", execute_agent)
 graph.add_node("return_code", return_code)
 
 graph.set_entry_point("general_agent")
-
 graph.add_edge("general_agent", "clarify_agent")
 graph.add_edge("general_agent", "execute_agent")
 graph.add_edge("clarify_agent", "return_code")
@@ -63,9 +94,13 @@ langgraph_app = graph.compile()
 def classify():
     data = request.get_json()
     user_input = data.get("userText", "")
-    state = {"input": user_input, "code": ""}
+    state = {"input": user_input, "code": "", "timings": {}}
     result = langgraph_app.invoke(state)
-    return jsonify({"query": result.get("code", ""), "clarify": result.get("input", "")})
+    return jsonify({
+        "query": result.get("code", ""),
+        "clarify": result.get("input", ""),
+        "timings": result.get("timings", {})
+    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
