@@ -42,7 +42,24 @@ namespace VidiGraph
 
                 foreach (var link in _networkGlobal.NodeLinkMatrix[nodeID])
                 {
-                    _networkContext.Links[link.ID].BundlingStrength = _networkContext.ContextSettings.EdgeBundlingStrength;
+                    var linkContext = _networkContext.Links[link.ID];
+                    linkContext.BundlingStrength = _networkContext.ContextSettings.EdgeBundlingStrength;
+
+                    if (link.SourceNodeID == nodeID)
+                    {
+                        linkContext.BundleStart = true;
+                        if (_networkContext.Communities[link.TargetNode.CommunityID].State == MultiLayoutContext.CommunityState.None)
+                            linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
+                    }
+                    else
+                    {
+                        linkContext.BundleEnd = true;
+                        if (_networkContext.Communities[link.SourceNode.CommunityID].State == MultiLayoutContext.CommunityState.None)
+                            linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
+                    }
+
+                    link.Dirty = true;
+
                 }
             }
 
@@ -117,7 +134,23 @@ namespace VidiGraph
 
                 foreach (var link in networkGlobal.NodeLinkMatrix[nodeID])
                 {
-                    _networkContext.Links[link.ID].BundlingStrength = _networkContext.ContextSettings.EdgeBundlingStrength;
+                    var linkContext = _networkContext.Links[link.ID];
+                    linkContext.BundlingStrength = _networkContext.ContextSettings.EdgeBundlingStrength;
+
+                    if (link.SourceNodeID == nodeID)
+                    {
+                        linkContext.BundleStart = true;
+                        if (_networkContext.Communities[link.TargetNode.CommunityID].State == MultiLayoutContext.CommunityState.None)
+                            linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
+                    }
+                    else
+                    {
+                        linkContext.BundleEnd = true;
+                        if (_networkContext.Communities[link.SourceNode.CommunityID].State == MultiLayoutContext.CommunityState.None)
+                            linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
+                    }
+
+                    link.Dirty = true;
                 }
             }
 

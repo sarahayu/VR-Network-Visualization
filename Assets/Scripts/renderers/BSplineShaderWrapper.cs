@@ -36,7 +36,7 @@ namespace VidiGraph
             _contextSettings = contextSettings;
 
             // Configure the spline compute shader
-            // _batchComputeShader.SetVector("COLOR_HIGHLIGHT", _contextSettings.LinkHighlightColor);
+            // _batchComputeShader.SetVector("COLOR_HIGHLIGHT", _contextSettings.LinkSelectColor);
             // _batchComputeShader.SetVector("COLOR_FOCUS", _contextSettings.LinkFocusColor);
             // _batchComputeShader.SetFloat("COLOR_MINIMUM_ALPHA", _contextSettings.LinkMinimumAlpha);
             // _batchComputeShader.SetFloat("COLOR_NORMAL_ALPHA_FACTOR", _contextSettings.LinkNormalAlphaFactor);
@@ -206,21 +206,21 @@ namespace VidiGraph
                 // if (link.SourceNode == networkGlobal.HoveredNode || link.TargetNode == networkGlobal.HoveredNode)
                 // {
 
-                //     // spline.StartColorRGBA = _settings.LinkHighlightColor;
-                //     // spline.EndColorRGBA = _settings.LinkHighlightColor;
+                //     // spline.StartColorRGBA = _settings.LinkSelectColor;
+                //     // spline.EndColorRGBA = _settings.LinkSelectColor;
                 // }
-
-
-                if (link.SourceNode.Selected || link.TargetNode.Selected)
-                {
-                    spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkHighlightColor;
-                }
 
                 if (networkGlobal.HoveredNode?.ID == link.SourceNodeID || networkGlobal.HoveredNode?.ID == link.TargetNodeID
                         || networkGlobal.HoveredCommunity?.ID == link.SourceNode.CommunityID || networkGlobal.HoveredCommunity?.ID == link.TargetNode.CommunityID)
                 {
-                    spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkHighlightColor;
+                    spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkHoverColor;
                 }
+
+                if (link.SourceNode.Selected || link.TargetNode.Selected)
+                {
+                    spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkSelectColor;
+                }
+
 
                 int NumSegments = ControlPointCount + BSplineDegree - 2; //NumControlPoints + Degree - 2 (First/Last Point)
                 int OldNumSegments = (int)spline.NumSegments;

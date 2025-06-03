@@ -37,7 +37,7 @@ namespace VidiGraph
                     var selected = node.Selected;
 
                     // _networkContext.Nodes[nodeID].Color = selected
-                    //     ? _networkContext.ContextSettings.NodeHighlightColor
+                    //     ? _networkContext.ContextSettings.NodeSelectColor
                     //     : _networkContext.GetNodeColor(node);
 
                     _networkContext.Nodes[nodeID].Dirty = true;
@@ -45,13 +45,13 @@ namespace VidiGraph
                     foreach (var link in _networkGlobal.NodeLinkMatrix[nodeID])
                     {
                         // _networkContext.Links[link.ID].ColorStart = selected
-                        //     ? _networkContext.ContextSettings.LinkHighlightColor
+                        //     ? _networkContext.ContextSettings.LinkSelectColor
                         //     : _networkContext.GetLinkColorStart(link);
                         // _networkContext.Links[link.ID].ColorEnd = selected
-                        //     ? _networkContext.ContextSettings.LinkHighlightColor
+                        //     ? _networkContext.ContextSettings.LinkSelectColor
                         //     : _networkContext.GetLinkColorEnd(link);
                         // _networkContext.Links[link.ID].Alpha = selected
-                        //     ? _networkContext.ContextSettings.LinkHighlightColor.a
+                        //     ? _networkContext.ContextSettings.LinkSelectColor.a
                         //     : _networkContext.GetLinkAlpha(link);
                         _networkContext.Links[link.ID].Dirty = true;
                     }

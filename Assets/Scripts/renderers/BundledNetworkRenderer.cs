@@ -194,17 +194,28 @@ namespace VidiGraph
                 Node globalNode = _networkGlobal.Nodes[nodeID];
                 MultiLayoutContext.Node contextNode = _networkContext.Nodes[nodeID];
 
-                if ((DrawVirtualNodes || !globalNode.IsVirtualNode) && NodeNeedsRenderUpdate(nodeID))
+                if (DrawVirtualNodes || !globalNode.IsVirtualNode)
                 {
-                    NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[nodeID], globalNode, contextNode,
-                        _networkContext.ContextSettings.NodeScale, _networkContext.ContextSettings.NodeHighlightColor, _nodeRenderers[nodeID]);
-                    globalNode.Dirty = contextNode.Dirty = false;
-                }
+                    if ((nodeID == _networkGlobal.HoveredNode?.ID || globalNode.CommunityID == _networkGlobal.HoveredCommunity?.ID) && !globalNode.Selected)
+                    {
+                        var hoverCol = _networkContext.ContextSettings.NodeHoverColor;
+                        NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], hoverCol, _nodeRenderers[nodeID]);
+                    }
 
-                if (nodeID == _networkGlobal.HoveredNode?.ID || globalNode.CommunityID == _networkGlobal.HoveredCommunity?.ID)
-                {
-                    var highlightCol = _networkContext.ContextSettings.NodeHighlightColor;
-                    NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], highlightCol, _nodeRenderers[nodeID]);
+                    if (NodeNeedsRenderUpdate(nodeID))
+                    {
+                        NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[nodeID], globalNode, contextNode,
+                            _networkContext.ContextSettings.NodeScale, _nodeRenderers[nodeID]);
+
+                        if (nodeID == _networkGlobal.HoveredNode?.ID || globalNode.CommunityID == _networkGlobal.HoveredCommunity?.ID)
+                        {
+                            var hoverCol = _networkContext.ContextSettings.NodeHoverColor;
+                            NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], hoverCol, _nodeRenderers[nodeID]);
+                        }
+                        if (globalNode.Selected)
+                            NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], _networkContext.ContextSettings.NodeSelectColor, _nodeRenderers[nodeID]);
+                        globalNode.Dirty = contextNode.Dirty = false;
+                    }
                 }
             }
 
@@ -215,20 +226,29 @@ namespace VidiGraph
         {
             foreach (var commID in _networkGlobal.Communities.Keys)
             {
+
+                Community globalComm = _networkGlobal.Communities[commID];
+                if (commID == _networkGlobal.HoveredCommunity?.ID && !globalComm.Selected)
+                {
+                    var hoverCol = _networkContext.ContextSettings.CommHoverColor;
+                    CommunityRenderUtils.SetCommunityColor(_communityGameObjs[commID], hoverCol, _commRenderers[commID]);
+                }
+
                 if (CommNeedsRenderUpdate(commID))
                 {
-                    Community globalComm = _networkGlobal.Communities[commID];
                     MultiLayoutContext.Community contextComm = _networkContext.Communities[commID];
 
                     CommunityRenderUtils.UpdateCommunity(_communityGameObjs[commID], globalComm, contextComm,
-                        _networkContext.ContextSettings.CommHighlightColor, _commRenderers[commID]);
-                    globalComm.Dirty = contextComm.Dirty = false;
-                }
+                        _networkContext.ContextSettings.CommSelectColor, _commRenderers[commID]);
 
-                if (commID == _networkGlobal.HoveredCommunity?.ID)
-                {
-                    var highlightCol = _networkContext.ContextSettings.CommHighlightColor;
-                    CommunityRenderUtils.SetCommunityColor(_communityGameObjs[commID], highlightCol, _commRenderers[commID]);
+                    if (commID == _networkGlobal.HoveredCommunity?.ID)
+                    {
+                        var hoverCol = _networkContext.ContextSettings.CommHoverColor;
+                        CommunityRenderUtils.SetCommunityColor(_communityGameObjs[commID], hoverCol, _commRenderers[commID]);
+                    }
+                    if (globalComm.Selected)
+                        CommunityRenderUtils.SetCommunityColor(_communityGameObjs[commID], _networkContext.ContextSettings.CommSelectColor, _commRenderers[commID]);
+                    globalComm.Dirty = contextComm.Dirty = false;
                 }
 
 

@@ -43,11 +43,24 @@ namespace VidiGraph
                     var floorPos = floorNodes[floorIdToIdx[node.ID]]._position3D;
                     _networkContext.Nodes[node.ID].Position = _floorTransform.TransformPoint(new Vector3(floorPos.x, floorPos.y, floorPos.z));
                     _networkContext.Nodes[node.ID].Dirty = true;
+
+                    foreach (var link in _networkGlobal.NodeLinkMatrix[node.ID])
+                    {
+                        var linkContext = _networkContext.Links[link.ID];
+                        linkContext.BundlingStrength = _networkContext.ContextSettings.EdgeBundlingStrength;
+                        linkContext.Alpha = _networkContext.ContextSettings.LinkContext2FocusAlphaFactor;
+
+                        if (link.SourceNodeID == node.ID) linkContext.BundleStart = false;
+                        else linkContext.BundleEnd = false;
+                        link.Dirty = true;
+                    }
                 }
 
                 foreach (var link in _networkGlobal.Communities[commID].InnerLinks)
                 {
                     _networkContext.Links[link.ID].BundlingStrength = 0f;
+                    _networkContext.Links[link.ID].Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
+                    link.Dirty = true;
                 }
             }
 
@@ -97,11 +110,25 @@ namespace VidiGraph
 
                     _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
                     _endPositions[node.ID] = endingContextTransform.TransformPoint(new Vector3(floorPos.x, floorPos.y, floorPos.z));
+                    _networkContext.Nodes[node.ID].Dirty = true;
+
+                    foreach (var link in networkGlobal.NodeLinkMatrix[node.ID])
+                    {
+                        var linkContext = _networkContext.Links[link.ID];
+                        linkContext.BundlingStrength = _networkContext.ContextSettings.EdgeBundlingStrength;
+                        linkContext.Alpha = _networkContext.ContextSettings.LinkContext2FocusAlphaFactor;
+
+                        if (link.SourceNodeID == node.ID) linkContext.BundleStart = false;
+                        else linkContext.BundleEnd = false;
+                        link.Dirty = true;
+                    }
                 }
 
                 foreach (var link in networkGlobal.Communities[commID].InnerLinks)
                 {
                     _networkContext.Links[link.ID].BundlingStrength = 0f;
+                    _networkContext.Links[link.ID].Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
+                    link.Dirty = true;
                 }
             }
 

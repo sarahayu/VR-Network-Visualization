@@ -18,10 +18,12 @@ namespace VidiGraph
             [Range(0.0f, 1.0f)]
             public float EdgeBundlingStrength = 0.8f;
 
-            public Color CommHighlightColor;
-            public Color NodeHighlightColor;
-            public Color LinkHighlightColor;
-            public Color LinkFocusColor;
+            public Color CommSelectColor;
+            public Color NodeSelectColor;
+            public Color LinkSelectColor;
+            public Color CommHoverColor;
+            public Color NodeHoverColor;
+            public Color LinkHoverColor;
 
             [Range(0.0f, 0.1f)]
             public float LinkMinimumAlpha = 0.01f;
@@ -128,7 +130,6 @@ namespace VidiGraph
             foreach (var commID in commIDs)
             {
                 bool isCommFocused = layout == "floor" || layout == "cluster";
-                _manager.NetworkGlobal.Communities[commID].Focus = isCommFocused;
                 _context.Communities[commID].State = MultiLayoutContext.StrToState(layout);
 
                 QueueLayoutChange(commID, layout);
@@ -347,10 +348,12 @@ namespace VidiGraph
             _context.ContextSettings.NodeScale = BaseSettings.NodeScale;
             _context.ContextSettings.LinkWidth = BaseSettings.LinkWidth;
             _context.ContextSettings.EdgeBundlingStrength = BaseSettings.EdgeBundlingStrength;
-            _context.ContextSettings.CommHighlightColor = BaseSettings.CommHighlightColor;
-            _context.ContextSettings.NodeHighlightColor = BaseSettings.NodeHighlightColor;
-            _context.ContextSettings.LinkHighlightColor = BaseSettings.LinkHighlightColor;
-            _context.ContextSettings.LinkFocusColor = BaseSettings.LinkFocusColor;
+            _context.ContextSettings.CommSelectColor = BaseSettings.CommSelectColor;
+            _context.ContextSettings.NodeSelectColor = BaseSettings.NodeSelectColor;
+            _context.ContextSettings.LinkSelectColor = BaseSettings.LinkSelectColor;
+            _context.ContextSettings.CommHoverColor = BaseSettings.CommHoverColor;
+            _context.ContextSettings.NodeHoverColor = BaseSettings.NodeHoverColor;
+            _context.ContextSettings.LinkHoverColor = BaseSettings.LinkHoverColor;
             _context.ContextSettings.LinkMinimumAlpha = BaseSettings.LinkMinimumAlpha;
             _context.ContextSettings.LinkNormalAlphaFactor = BaseSettings.LinkNormalAlphaFactor;
             _context.ContextSettings.LinkContextAlphaFactor = BaseSettings.LinkContextAlphaFactor;
@@ -415,7 +418,6 @@ namespace VidiGraph
 
         void ClearCommunityState(int community)
         {
-            _manager.NetworkGlobal.Communities[community].Focus = false;
             _context.Communities[community].State = MultiLayoutContext.CommunityState.None;
         }
 

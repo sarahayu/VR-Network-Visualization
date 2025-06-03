@@ -18,10 +18,12 @@ namespace VidiGraph
             public float LinkWidth = 0.0025f;
             public float EdgeBundlingStrength = 0.8f;
 
-            public Color NodeHighlightColor;
-            public Color CommHighlightColor;
-            public Color LinkHighlightColor;
-            public Color LinkFocusColor;
+            public Color NodeSelectColor;
+            public Color CommSelectColor;
+            public Color LinkSelectColor;
+            public Color NodeHoverColor;
+            public Color CommHoverColor;
+            public Color LinkHoverColor;
 
             public float LinkMinimumAlpha = 0.01f;
             public float LinkNormalAlphaFactor = 0.05f;

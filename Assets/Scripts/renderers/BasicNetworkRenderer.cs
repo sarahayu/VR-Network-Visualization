@@ -119,7 +119,7 @@ namespace VidiGraph
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
                     var nodeProps = _networkProperties.Nodes[node.ID];
-                    NodeLinkRenderUtils.UpdateNode(NodePrefab, node, nodeProps, NodeScale, Color.clear);
+                    NodeLinkRenderUtils.UpdateNode(NodePrefab, node, nodeProps, NodeScale);
                 }
             }
         }
