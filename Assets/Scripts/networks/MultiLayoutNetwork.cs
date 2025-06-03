@@ -179,13 +179,21 @@ namespace VidiGraph
         public void EndNodeMove(int nodeID)
         {
             CoroutineUtils.StopIfRunning(this, _curNodeMover);
-            UpdateNetwork();
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: true,
+                updateRenderElements: true
+            );
         }
 
         public void EndNodesMove()
         {
             CoroutineUtils.StopIfRunning(this, _curNodeMover);
-            UpdateNetwork();
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: true,
+                updateRenderElements: true
+            );
         }
 
         public void StartCommMove(int commID, Transform toTrack)
@@ -201,7 +209,11 @@ namespace VidiGraph
         public void EndCommMove()
         {
             CoroutineUtils.StopIfRunning(this, _curCommMover);
-            UpdateNetwork();
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: true,
+                updateRenderElements: true
+            );
         }
 
         public void SetNodeSizeEncoding(Func<VidiGraph.Node, float> func)
@@ -220,7 +232,7 @@ namespace VidiGraph
             return _renderer.GetCommTransform(commID);
         }
 
-        public void SetNodesSize(List<int> nodeIDs, float size)
+        public void SetNodesSize(List<int> nodeIDs, float size, bool updateStorage, bool updateRenderElements)
         {
             foreach (var node in nodeIDs.Select(nid => _context.Nodes[nid]))
             {
@@ -228,10 +240,14 @@ namespace VidiGraph
                 node.Dirty = true;
             }
 
-            UpdateNetwork();
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: updateStorage,
+                updateRenderElements: updateRenderElements
+            );
         }
 
-        public void SetNodesColor(List<int> nodeIDs, Color color)
+        public void SetNodesColor(List<int> nodeIDs, Color color, bool updateStorage, bool updateRenderElements)
         {
             foreach (var node in nodeIDs.Select(nid => _context.Nodes[nid]))
             {
@@ -239,10 +255,14 @@ namespace VidiGraph
                 node.Dirty = true;
             }
 
-            UpdateNetwork();
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: updateStorage,
+                updateRenderElements: updateRenderElements
+            );
         }
 
-        public void SetLinksWidth(List<int> linkIDs, float width)
+        public void SetLinksWidth(List<int> linkIDs, float width, bool updateStorage, bool updateRenderElements)
         {
             foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
             {
@@ -250,10 +270,14 @@ namespace VidiGraph
                 link.Dirty = true;
             }
 
-            UpdateNetwork();
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: updateStorage,
+                updateRenderElements: updateRenderElements
+            );
         }
 
-        public void SetLinksColorStart(List<int> linkIDs, Color color)
+        public void SetLinksColorStart(List<int> linkIDs, Color color, bool updateStorage, bool updateRenderElements)
         {
             foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
             {
@@ -261,10 +285,14 @@ namespace VidiGraph
                 link.Dirty = true;
             }
 
-            UpdateNetwork();
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: updateStorage,
+                updateRenderElements: updateRenderElements
+            );
         }
 
-        public void SetLinksColorEnd(List<int> linkIDs, Color color)
+        public void SetLinksColorEnd(List<int> linkIDs, Color color, bool updateStorage, bool updateRenderElements)
         {
             foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
             {
@@ -272,10 +300,14 @@ namespace VidiGraph
                 link.Dirty = true;
             }
 
-            UpdateNetwork();
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: updateStorage,
+                updateRenderElements: updateRenderElements
+            );
         }
 
-        public void SetLinksAlpha(List<int> linkIDs, float alpha)
+        public void SetLinksAlpha(List<int> linkIDs, float alpha, bool updateStorage, bool updateRenderElements)
         {
             foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
             {
@@ -283,11 +315,60 @@ namespace VidiGraph
                 link.Dirty = true;
             }
 
-            UpdateNetwork();
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: updateStorage,
+                updateRenderElements: updateRenderElements
+            );
+        }
+
+        public void SetLinksBundlingStrength(List<int> linkIDs, float bundlingStrength, bool updateStorage, bool updateRenderElements)
+        {
+            foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
+            {
+                link.BundlingStrength = bundlingStrength;
+                link.Dirty = true;
+            }
+
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: updateStorage,
+                updateRenderElements: updateRenderElements
+            );
+        }
+
+        public void SetLinksBundleStart(List<int> linkIDs, bool bundleStart, bool updateStorage, bool updateRenderElements)
+        {
+            foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
+            {
+                link.BundleStart = bundleStart;
+                link.Dirty = true;
+            }
+
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: updateStorage,
+                updateRenderElements: updateRenderElements
+            );
+        }
+
+        public void SetLinksBundleEnd(List<int> linkIDs, bool bundleEnd, bool updateStorage, bool updateRenderElements)
+        {
+            foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
+            {
+                link.BundleEnd = bundleEnd;
+                link.Dirty = true;
+            }
+
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: updateStorage,
+                updateRenderElements: updateRenderElements
+            );
         }
 
 
-        public void SetNodesPosition(List<int> nodeIDs, Vector3 position, bool updateStorage = true)
+        public void SetNodesPosition(List<int> nodeIDs, Vector3 position, bool updateStorage, bool updateRenderElements)
         {
             foreach (var node in nodeIDs.Select(nid => _context.Nodes[nid]))
             {
@@ -295,10 +376,14 @@ namespace VidiGraph
                 node.Dirty = true;
             }
 
-            UpdateNetwork(updateStorage);
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: updateStorage,
+                updateRenderElements: updateRenderElements
+            );
         }
 
-        public void SetNodesPosition(List<int> nodeIDs, List<Vector3> positions, bool updateStorage = true)
+        public void SetNodesPosition(List<int> nodeIDs, List<Vector3> positions, bool updateStorage, bool updateRenderElements)
         {
             var nodes = nodeIDs.Select(nid => _context.Nodes[nid]).ToList();
 
@@ -310,7 +395,11 @@ namespace VidiGraph
                 node.Dirty = true;
             }
 
-            UpdateNetwork(updateStorage);
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: updateStorage,
+                updateRenderElements: updateRenderElements
+            );
         }
 
         /*=============== start private methods ===================*/
@@ -390,22 +479,32 @@ namespace VidiGraph
         }
 
 
-        void TransformNetwork(string layout, bool animated = true, bool updateStorage = true)
+        void TransformNetwork(string layout, bool animated = true)
         {
             if (animated)
             {
                 if (CoroutineUtils.StopIfRunning(this, _curAnim))
                 {
                     // update network since we cancelled coroutine prematurely
-                    UpdateNetwork();
+
+                    UpdateNetwork(
+                        updateCommunityProps: true,
+                        updateStorage: false,
+                        updateRenderElements: true
+                    );
                 }
 
-                _curAnim = StartCoroutine(CRAnimateLayout(layout, updateStorageOnEnd: updateStorage));
+                _curAnim = StartCoroutine(CRAnimateLayout(layout));
             }
             else
             {
                 _transformers[layout]?.ApplyTransformation();
-                UpdateNetwork(updateStorage);
+
+                UpdateNetwork(
+                    updateCommunityProps: true,
+                    updateStorage: true,
+                    updateRenderElements: true
+                );
             }
         }
 
@@ -421,7 +520,7 @@ namespace VidiGraph
             _context.Communities[community].State = MultiLayoutContext.CommunityState.None;
         }
 
-        IEnumerator CRAnimateLayout(string layout, bool updateStorageOnEnd = true)
+        IEnumerator CRAnimateLayout(string layout)
         {
             float dur = 1.0f;
             var interpolator = _transformers[layout]?.GetInterpolator();
@@ -433,12 +532,21 @@ namespace VidiGraph
                 interpolator.Interpolate(t);
                 // update network without updating the storage for performance reasons
                 // only update storage at the end
-                UpdateNetwork(updateStorage: false);
+
+                UpdateNetwork(
+                    updateCommunityProps: true,
+                    updateStorage: false,
+                    updateRenderElements: true
+                );
             });
 
             interpolator.Interpolate(1f);
 
-            UpdateNetwork(updateStorage: updateStorageOnEnd);
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: true,
+                updateRenderElements: true
+            );
 
             _curAnim = null;
         }
@@ -450,7 +558,11 @@ namespace VidiGraph
                 _context.Nodes[nodeID].Position = toTrack.position;
                 _context.Nodes[nodeID].Dirty = true;
 
-                UpdateNetwork(updateStorage: false);
+                UpdateNetwork(
+                    updateCommunityProps: true,
+                    updateStorage: false,
+                    updateRenderElements: true
+                );
 
                 yield return null;
             }
@@ -468,7 +580,12 @@ namespace VidiGraph
                 }
 
                 // update network without updating the storage for performance reasons
-                UpdateNetwork(updateStorage: false);
+
+                UpdateNetwork(
+                    updateCommunityProps: true,
+                    updateStorage: false,
+                    updateRenderElements: true
+                );
 
                 yield return null;
             }
@@ -504,17 +621,21 @@ namespace VidiGraph
                 lastCommRotation = curRotation;
 
                 // update network without updating the storage for performance reasons
-                UpdateNetwork(updateStorage: false);
+                UpdateNetwork(
+                    updateCommunityProps: true,
+                    updateStorage: false,
+                    updateRenderElements: true
+                );
 
                 yield return null;
             }
         }
 
-        void UpdateNetwork(bool updateStorage = true, bool updateCommunityProps = true)
+        void UpdateNetwork(bool updateCommunityProps, bool updateStorage, bool updateRenderElements)
         {
             if (updateCommunityProps) UpdateCommunityProps();
             if (updateStorage) UpdateStorage();
-            UpdateRenderElements();
+            if (updateRenderElements) UpdateRenderElements();
         }
 
         void UpdateCommunityProps()

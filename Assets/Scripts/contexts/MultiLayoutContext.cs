@@ -74,6 +74,7 @@ namespace VidiGraph
             None,
             Cluster,
             Floor,
+            Other,
             NumStates,
         }
 
@@ -159,12 +160,9 @@ namespace VidiGraph
                     return CommunityState.Cluster;
                 case "floor":
                     return CommunityState.Floor;
+                default:
+                    return CommunityState.Other;
             }
-
-            Debug.Assert(true);
-
-            // unreachable
-            return CommunityState.None;
         }
     }
 }

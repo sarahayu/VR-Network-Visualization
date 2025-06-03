@@ -196,7 +196,7 @@ namespace VidiGraph
 
                 if (DrawVirtualNodes || !globalNode.IsVirtualNode)
                 {
-                    if ((nodeID == _networkGlobal.HoveredNode?.ID || globalNode.CommunityID == _networkGlobal.HoveredCommunity?.ID) && !globalNode.Selected)
+                    if ((nodeID == _networkGlobal.HoveredNode?.ID) && !globalNode.Selected)
                     {
                         var hoverCol = _networkContext.ContextSettings.NodeHoverColor;
                         NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], hoverCol, _nodeRenderers[nodeID]);
@@ -207,7 +207,7 @@ namespace VidiGraph
                         NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[nodeID], globalNode, contextNode,
                             _networkContext.ContextSettings.NodeScale, _nodeRenderers[nodeID]);
 
-                        if (nodeID == _networkGlobal.HoveredNode?.ID || globalNode.CommunityID == _networkGlobal.HoveredCommunity?.ID)
+                        if (nodeID == _networkGlobal.HoveredNode?.ID)
                         {
                             var hoverCol = _networkContext.ContextSettings.NodeHoverColor;
                             NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], hoverCol, _nodeRenderers[nodeID]);

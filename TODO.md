@@ -1,5 +1,9 @@
 # TODO
 
+-  hover over community, then while still hovering quickly swipe over node in another community. node stays hovered
+    - deprecated: (IGNORE as not high priority: fixing it would unfix hovering over node immediately after unhovering another node. plus, highlights reset themselves quite easily)
+    - update: GOTTA FIX
+- when splatting to surface, account for random nodes that are not part of same community
 - move control point calculation to a transformer
     - keep bspline count constant
 - have position stack so we can restore positions after returning from hairball
@@ -30,10 +34,13 @@
 - update store on attribute changes
 - make nodes flat on surfaces
 - fix closest surface bug
-- (IGNORE as not high priority: fixing it would unfix hovering over node immediately after unhovering another node. plus, highlights reset themselves quite easily) hover over community, then while still hovering quickly swipe over node in another community. node stays hovered
 - clean up stuff
 - fix grab exit/hover exit bug
 - don't deselect on surface move
+- change link behaviour when splatting
+
+## Ignore
+- move node moving animation to mln
 
 ## Troubleshooting
 

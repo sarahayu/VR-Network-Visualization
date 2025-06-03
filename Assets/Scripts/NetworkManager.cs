@@ -30,6 +30,9 @@ namespace VidiGraph
         public HashSet<int> SelectedNodes { get { return _networkGlobal.SelectedNodes; } }
         public HashSet<int> SelectedCommunities { get { return _networkGlobal.SelectedCommunities; } }
 
+        bool _updatingStorage = true;
+        bool _updatingRenderElements = true;
+
         void Start()
         {
             Initialize();
@@ -77,6 +80,28 @@ namespace VidiGraph
             }
 
             return opts;
+        }
+
+        public void PauseStorageUpdate()
+        {
+            _updatingStorage = false;
+        }
+
+        public void UnpauseStorageUpdate()
+        {
+            _updatingStorage = true;
+            _multiLayoutNetwork.UpdateStorage();
+        }
+
+        public void PauseRenderUpdate()
+        {
+            _updatingRenderElements = false;
+        }
+
+        public void UnpauseRenderUpdate()
+        {
+            _updatingRenderElements = true;
+            _multiLayoutNetwork.UpdateRenderElements();
         }
 
         public void ToggleBigNetworkSphericalAndHairball(bool animated = true)
@@ -210,42 +235,57 @@ namespace VidiGraph
         }
         public void SetNodesSize(List<int> nodeIDs, float size)
         {
-            _multiLayoutNetwork.SetNodesSize(nodeIDs, size);
+            _multiLayoutNetwork.SetNodesSize(nodeIDs, size, _updatingStorage, _updatingRenderElements);
         }
 
         public void SetNodesColor(List<int> nodeIDs, Color color)
         {
-            _multiLayoutNetwork.SetNodesColor(nodeIDs, color);
+            _multiLayoutNetwork.SetNodesColor(nodeIDs, color, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetNodesPosition(List<int> nodeIDs, Vector3 position, bool updateStorage = true)
+        public void SetNodesPosition(List<int> nodeIDs, Vector3 position)
         {
-            _multiLayoutNetwork.SetNodesPosition(nodeIDs, position, updateStorage);
+            _multiLayoutNetwork.SetNodesPosition(nodeIDs, position, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetNodesPosition(List<int> nodeIDs, List<Vector3> positions, bool updateStorage = true)
+        public void SetNodesPosition(List<int> nodeIDs, List<Vector3> positions)
         {
-            _multiLayoutNetwork.SetNodesPosition(nodeIDs, positions, updateStorage);
+            _multiLayoutNetwork.SetNodesPosition(nodeIDs, positions, _updatingStorage, _updatingRenderElements);
         }
 
         public void SetLinksWidth(List<int> linkIDs, float width)
         {
-            _multiLayoutNetwork.SetLinksWidth(linkIDs, width);
+            _multiLayoutNetwork.SetLinksWidth(linkIDs, width, _updatingStorage, _updatingRenderElements);
         }
 
         public void SetLinksColorStart(List<int> linkIDs, Color color)
         {
-            _multiLayoutNetwork.SetLinksColorStart(linkIDs, color);
+            _multiLayoutNetwork.SetLinksColorStart(linkIDs, color, _updatingStorage, _updatingRenderElements);
         }
 
         public void SetLinksColorEnd(List<int> linkIDs, Color color)
         {
-            _multiLayoutNetwork.SetLinksColorEnd(linkIDs, color);
+            _multiLayoutNetwork.SetLinksColorEnd(linkIDs, color, _updatingStorage, _updatingRenderElements);
         }
 
         public void SetLinksAlpha(List<int> linkIDs, float alpha)
         {
-            _multiLayoutNetwork.SetLinksAlpha(linkIDs, alpha);
+            _multiLayoutNetwork.SetLinksAlpha(linkIDs, alpha, _updatingStorage, _updatingRenderElements);
+        }
+
+        public void SetLinksBundlingStrength(List<int> linkIDs, float bundlingStrength)
+        {
+            _multiLayoutNetwork.SetLinksBundlingStrength(linkIDs, bundlingStrength, _updatingStorage, _updatingRenderElements);
+        }
+
+        public void SetLinksBundleStart(List<int> linkIDs, bool bundleStart)
+        {
+            _multiLayoutNetwork.SetLinksBundleStart(linkIDs, bundleStart, _updatingStorage, _updatingRenderElements);
+        }
+
+        public void SetLinksBundleEnd(List<int> linkIDs, bool bundleEnd)
+        {
+            _multiLayoutNetwork.SetLinksBundleEnd(linkIDs, bundleEnd, _updatingStorage, _updatingRenderElements);
         }
     }
 }

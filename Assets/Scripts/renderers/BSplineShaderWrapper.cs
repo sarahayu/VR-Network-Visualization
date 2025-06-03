@@ -210,8 +210,7 @@ namespace VidiGraph
                 //     // spline.EndColorRGBA = _settings.LinkSelectColor;
                 // }
 
-                if (networkGlobal.HoveredNode?.ID == link.SourceNodeID || networkGlobal.HoveredNode?.ID == link.TargetNodeID
-                        || networkGlobal.HoveredCommunity?.ID == link.SourceNode.CommunityID || networkGlobal.HoveredCommunity?.ID == link.TargetNode.CommunityID)
+                if (networkGlobal.HoveredNode?.ID == link.SourceNodeID || networkGlobal.HoveredNode?.ID == link.TargetNodeID)
                 {
                     spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkHoverColor;
                 }

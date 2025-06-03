@@ -45,6 +45,8 @@ namespace VidiGraph
         NetworkManager _manager;
         NetworkRenderer _mlRenderer;
 
+        MultiLayoutNetwork.Settings _mlSettings;
+
 
         Coroutine _surfaceHighlighter = null;
         Coroutine _surfaceMover = null;
@@ -57,6 +59,7 @@ namespace VidiGraph
         {
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _mlRenderer = GameObject.Find("/MultiLayout Network").GetComponentInChildren<NetworkRenderer>();
+            _mlSettings = GameObject.Find("/MultiLayout Network").GetComponent<MultiLayoutNetwork>().BaseSettings;
 
             _userPos = GameObject.FindWithTag("MainCamera").transform;
 
@@ -128,7 +131,8 @@ namespace VidiGraph
             // check distance
             // attach if distance less than threshold
 
-            var closest = GetClosestSurface(_manager.GetMLNodeTransform(nodeIDs[0]).position);
+            // TODO use midpoint of points instead
+            var closest = GetClosestSurface(_manager.GetMLCommTransform(_manager.NetworkGlobal.Nodes[nodeIDs[0]].CommunityID).position);
 
             if (closest != -1) AttachNodes(nodeIDs, closest);
             else DetachNodes(nodeIDs);
@@ -147,6 +151,20 @@ namespace VidiGraph
                 _surfaces[surfID].Nodes[nodeID] = _manager.GetMLNodeTransform(nodeID);
                 _nodeToSurf[nodeID] = surfID;
             }
+
+            _manager.PauseStorageUpdate();
+            _manager.PauseRenderUpdate();
+
+            GetInterAndOuterLinks(_surfaces[surfID].Nodes.Keys.ToList(), out var interLinks, out var outerLinks, out var isStartOuterLinks);
+            _manager.SetLinksBundlingStrength(interLinks, 0f);
+            _manager.SetLinksBundleStart(outerLinks.Where((_, idx) => isStartOuterLinks[idx]).ToList(), false);
+            _manager.SetLinksBundleEnd(outerLinks.Where((_, idx) => !isStartOuterLinks[idx]).ToList(), false);
+
+            _manager.SetLinksAlpha(interLinks, _mlSettings.LinkNormalAlphaFactor);
+            _manager.SetLinksAlpha(outerLinks, _mlSettings.LinkContext2FocusAlphaFactor);
+
+            _manager.UnpauseRenderUpdate();
+            // don't unpause storage update, it'll be updated at the end of animation
 
             StartAttachAnim(nodeIDs, surfID);
         }
@@ -333,16 +351,61 @@ namespace VidiGraph
         {
             float dur = 1.0f;
 
+            _manager.PauseStorageUpdate();
+
             yield return AnimationUtils.Lerp(dur, t =>
             {
                 var positions = startPositions.Select((sp, i) => Vector3.Lerp(startPositions[i], endPositions[i], Mathf.SmoothStep(0f, 1f, t))).ToList();
 
-                _manager.SetNodesPosition(nodeIDs, positions, updateStorage: false);
+                _manager.SetNodesPosition(nodeIDs, positions);
             });
 
-            _manager.SetNodesPosition(nodeIDs, endPositions, updateStorage: true);
+            _manager.SetNodesPosition(nodeIDs, endPositions);
+
+            _manager.UnpauseStorageUpdate();
 
             _attachAnimation = null;
+        }
+
+        void GetInterAndOuterLinks(List<int> nodeIDs, out List<int> interLinks, out List<int> outerLinks, out List<bool> isStartOuterLinks)
+        {
+            interLinks = new List<int>();
+            outerLinks = new List<int>();
+            isStartOuterLinks = new List<bool>();
+
+            foreach (var nodeID in nodeIDs)
+            {
+                foreach (var link in _manager.NetworkGlobal.NodeLinkMatrix[nodeID])
+                {
+                    // check other node of this link
+                    if (nodeID == link.SourceNodeID)
+                    {
+                        // check targetnode of link
+                        if (nodeIDs.Contains(link.TargetNodeID))
+                        {
+                            interLinks.Add(link.ID);
+                        }
+                        else
+                        {
+                            outerLinks.Add(link.ID);
+                            isStartOuterLinks.Add(true);
+                        }
+                    }
+                    else
+                    {
+                        // check sourcenode of link
+                        if (nodeIDs.Contains(link.SourceNodeID))
+                        {
+                            interLinks.Add(link.ID);
+                        }
+                        else
+                        {
+                            outerLinks.Add(link.ID);
+                            isStartOuterLinks.Add(false);
+                        }
+                    }
+                }
+            }
         }
     }
 
