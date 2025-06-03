@@ -5,12 +5,16 @@ from typing import TypedDict
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 
+from IPython.display import Image, display
+
+
+
 class AgentState(TypedDict):
     input: str
     code: str
 
 app = Flask(__name__)
-llm = ChatOpenAI(model="gpt-4", temperature=0)
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 clarify_prompt = ChatPromptTemplate.from_template(
     "The user input might be unclear. Ask a clarifying question so we can understand the user's intent better.\n\nUser input: {input}"
@@ -68,4 +72,8 @@ def classify():
     return jsonify({"query": result.get("code", ""), "clarify": result.get("input", "")})
 
 if __name__ == "__main__":
+    try:
+        display(Image(graph.get_graph().draw_mermaid_png()))
+    except Exception:
+        pass
     app.run(host="0.0.0.0", port=5000)
