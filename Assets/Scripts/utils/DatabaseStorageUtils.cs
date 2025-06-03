@@ -344,5 +344,19 @@ namespace VidiGraph
 
             return fullpath;
         }
+
+        public static void ExecuteCommand(string command, IDriver driver, bool convertWinPaths = true)
+        {
+            try
+            {
+                var session = driver.Session();
+                session.Run(command);
+                Debug.Log($"Command executed successfully: {command}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Execution Error: {e.Message}");
+            }
+        }
     }
 }

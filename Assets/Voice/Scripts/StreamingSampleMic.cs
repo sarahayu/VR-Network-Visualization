@@ -4,6 +4,7 @@ using UnityEngine.Networking;
 using System.Collections;
 using System.Text;
 using Whisper.Utils;
+
 using VidiGraph;
 
 namespace Whisper.Samples
@@ -17,6 +18,7 @@ namespace Whisper.Samples
         public WhisperManager whisper;
         public MicrophoneRecord microphoneRecord;
         public NetworkManager _networkManager;
+        public DatabaseStorage _databaseStorage;
         public Query _query;
 
         [Header("UI")]
@@ -69,7 +71,7 @@ namespace Whisper.Samples
                 microphoneRecord.StopRecord();
             }
 
-            buttonText.text = microphoneRecord.IsRecording ? "Stop" : "Record";
+            // buttonText.text = microphoneRecord.IsRecording ? "Stop" : "Record";
         }
 
         private void OnRecordStop(AudioChunk recordedAudio)
@@ -78,9 +80,7 @@ namespace Whisper.Samples
             buttonText.text = "Record";
         }
 
-        /// <summary>
         /// Called whenever Whisper produces new recognized text.
-        /// </summary>
         private void OnResult(string result)
         {
             float currentTime = Time.time;
@@ -147,42 +147,34 @@ namespace Whisper.Samples
                 else
                 {
                     string responseJson = www.downloadHandler.text;
-                    Debug.Log("GPT Response: " + responseJson);
+                    // Debug.Log("GPT Response: " + responseJson);
 
                     ClassificationResponse classification = JsonUtility.FromJson<ClassificationResponse>(responseJson);
 
-                    if (classification != null && !string.IsNullOrEmpty(classification.query))
-                    {
-                        _query.ExecuteQuery(classification.query);
-                        currentBuffer = "";
-                    }
-                    else
-                    {
-                        Debug.LogWarning("Invalid or empty query received.");
-                    }
+                    _databaseStorage.InteractStore(responseJson);
                 }
-
             }
+
         }
-
-
-
     }
 
-
-
-    // Classes for JSON serialization/deserialization
-    [System.Serializable]
-    public class ClassificationRequest
-    {
-        public string userText;
-    }
-
-    [System.Serializable]
-    public class ClassificationResponse
-    {
-        public string query;
-    }
 
 
 }
+
+
+
+// Classes for JSON serialization/deserialization
+[System.Serializable]
+public class ClassificationRequest
+{
+    public string userText;
+}
+
+[System.Serializable]
+public class ClassificationResponse
+{
+    public string query;
+}
+
+
