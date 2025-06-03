@@ -47,6 +47,9 @@ namespace VidiGraph
             public Color ColorEnd;
             public float Alpha = 1f;
 
+            public bool BundleStart = false;
+            public bool BundleEnd = false;
+
             // detect if link needs to be rerendered
             public bool Dirty = false;
         }

@@ -17,8 +17,8 @@ namespace VidiGraph
 
             var sCenter = networkProperties.Communities[sourceNode.CommunityID].MassCenter;
             var tCenter = networkProperties.Communities[targetNode.CommunityID].MassCenter;
-            var sFocus = networkData.Communities[sourceNode.CommunityID].Focus;
-            var tFocus = networkData.Communities[targetNode.CommunityID].Focus;
+            var sFocus = networkProperties.Links[link.ID].BundleStart;
+            var tFocus = networkProperties.Links[link.ID].BundleEnd;
 
             // Between focus and context
             if (sFocus && !tFocus)

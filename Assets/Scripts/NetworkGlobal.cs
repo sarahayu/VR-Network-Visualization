@@ -136,11 +136,6 @@ namespace VidiGraph
             CommunitiesInit();
         }
 
-        public List<Community> HighlightedCommunities()
-        {
-            return (from comms in _communities.Values where comms.Focus == true select comms).ToList();
-        }
-
         public void SetSelectedNodes(List<int> nodeIDs, bool selected)
         {
             if (selected)

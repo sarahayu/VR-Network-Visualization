@@ -147,8 +147,6 @@ namespace VidiGraph
 
             int splineIdx = 0;
 
-            bool anyCommunitiesFocused = networkGlobal.HighlightedCommunities().Count > 0;
-
             foreach (var link in networkGlobal.Links)
             {
                 link.Dirty = false;

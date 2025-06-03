@@ -17,7 +17,6 @@ namespace VidiGraph
         // target : link number
         public Dictionary<int, int> AggregateLinks = new Dictionary<int, int>();
 
-        public bool Focus = false;
         public Color Color;
 
         // detect if community needs to be rerendered
