@@ -9,7 +9,10 @@ namespace VidiGraph
 {
     public class BringNodeTransformer : NetworkContextTransformer
     {
-        public Transform BringNodePosition;
+        [SerializeField]
+        float _targetSpread = 2f;
+        [SerializeField]
+        float _offset = 0.2f;
 
         NetworkGlobal _networkGlobal;
         MultiLayoutContext _networkContext;
@@ -17,7 +20,8 @@ namespace VidiGraph
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
         HashSet<int> _nodesToUpdate = new HashSet<int>();
-        TransformInfo _bringNodeTransform;
+
+        Transform _camera;
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
@@ -26,19 +30,18 @@ namespace VidiGraph
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
             _fileLoader = manager.FileLoader;
-            _bringNodeTransform = new TransformInfo(BringNodePosition);
+
+            _camera = GameObject.FindWithTag("MainCamera").transform;
         }
 
         public override void ApplyTransformation()
         {
-            // TODO calculate at runtime
-            var sphericalNodes = _fileLoader.SphericalLayout.nodes;
-            var sphericalIdToIdx = _fileLoader.SphericalLayout.idToIdx;
+            var focalPoint = BringNodeUtils.GetFocalPoint(_camera, _targetSpread);
 
             foreach (var nodeID in _nodesToUpdate)
             {
-                var bringNodePos = sphericalNodes[sphericalIdToIdx[nodeID]]._position3D * 0.2f;
-                _networkContext.Nodes[nodeID].Position = _bringNodeTransform.TransformPoint(new Vector3(bringNodePos.x, bringNodePos.y, bringNodePos.z));
+                var nodePos = _networkContext.Nodes[nodeID].Position;
+                _networkContext.Nodes[nodeID].Position = BringNodeUtils.GetDestinationPoint(focalPoint, nodePos, _targetSpread, _offset);
                 _networkContext.Nodes[nodeID].Dirty = true;
             }
 
@@ -47,7 +50,9 @@ namespace VidiGraph
 
         public override TransformInterpolator GetInterpolator()
         {
-            return new BringNodeInterpolator(_bringNodeTransform, _networkGlobal, _networkContext, _fileLoader, _nodesToUpdate);
+            var playerPos = _camera.position;
+            var focalPoint = playerPos - _camera.forward * _targetSpread;
+            return new BringNodeInterpolator(_networkGlobal, _networkContext, _fileLoader, _nodesToUpdate, focalPoint, _targetSpread, _offset);
         }
 
         public void UpdateOnNextApply(int nodeID)
@@ -67,19 +72,16 @@ namespace VidiGraph
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
-        public BringNodeInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
-            NetworkFilesLoader fileLoader, HashSet<int> nodesToUpdate)
+        public BringNodeInterpolator(NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
+            NetworkFilesLoader fileLoader, HashSet<int> nodesToUpdate, Vector3 focalPoint, float targetSpread, float offset)
         {
             _networkContext = networkContext;
-            var sphericalNodes = fileLoader.SphericalLayout.nodes;
-            var sphericalIdToIdx = fileLoader.SphericalLayout.idToIdx;
 
             foreach (var nodeID in nodesToUpdate)
             {
-                _startPositions[nodeID] = networkContext.Nodes[nodeID].Position;
-                // TODO calculate at runtime
-                var bringNodePos = sphericalNodes[sphericalIdToIdx[nodeID]]._position3D * 0.2f;
-                _endPositions[nodeID] = endingContextTransform.TransformPoint(new Vector3(bringNodePos.x, bringNodePos.y, bringNodePos.z));
+                var nodePos = _networkContext.Nodes[nodeID].Position;
+                var bringNodePos = BringNodeUtils.GetDestinationPoint(focalPoint, nodePos, targetSpread, offset);
+                _endPositions[nodeID] = bringNodePos;
             }
 
             nodesToUpdate.Clear();
