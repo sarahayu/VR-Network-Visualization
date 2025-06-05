@@ -62,6 +62,14 @@ namespace VidiGraph
                     Links[CommunityMathUtils.IDsToLinkKey(c1, c2)] = new Link();
                 }
             }
+
+            if (Links.Count > 100)
+            {
+                var delEntries = Links.Keys.OrderBy(x => UnityEngine.Random.value).ToList().GetRange(100, Links.Keys.Count - 100);
+
+                foreach (var l in delEntries) Links.Remove(l);
+            }
+
         }
 
         public void RecomputeProps(NetworkGlobal networkGlobal)
@@ -72,13 +80,19 @@ namespace VidiGraph
                 CommunityNodes[community.ID].Size = community.Nodes.Count;
             }
 
+            foreach (var link in Links.Values) link.Weight = 0;
+
             foreach (var link in networkGlobal.Links)
             {
                 int c1 = link.SourceNode.CommunityID;
                 int c2 = link.TargetNode.CommunityID;
 
                 if (c1 != c2)
-                    Links[CommunityMathUtils.IDsToLinkKey(c1, c2)].Weight += 1;
+                {
+                    var key = CommunityMathUtils.IDsToLinkKey(c1, c2);
+                    if (Links.ContainsKey(key))
+                        Links[key].Weight += 1;
+                }
             }
         }
 
