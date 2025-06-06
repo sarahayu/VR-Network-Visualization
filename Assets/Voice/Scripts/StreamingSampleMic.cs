@@ -30,6 +30,7 @@ namespace Whisper.Samples
         // Reference to the whisper stream
         private WhisperStream _stream;
         private float whisperStartTime;
+        private float whisper_currentTime;
 
 
         // Classification server URL
@@ -60,7 +61,7 @@ namespace Whisper.Samples
                 // Start listening
                 _stream.StartStream();
                 microphoneRecord.StartRecord();
-                whisperStartTime = Time.realtimeSinceStartup; // record start time
+                whisperStartTime = Time.time; // record start time
             }
             else
             {
@@ -78,8 +79,7 @@ namespace Whisper.Samples
         /// Called whenever Whisper produces new recognized text.
         private void OnResult(string result)
         {
-            float recognitionTime = Time.realtimeSinceStartup - whisperStartTime;
-            StartCoroutine(ClassifyUserCommand(result, recognitionTime));
+            // Debug.Log($"Result: {result}");
         }
 
 
@@ -92,6 +92,10 @@ namespace Whisper.Samples
         private void OnSegmentFinished(WhisperResult segment)
         {
             // Debug.Log($"Segment finished: {segment.Result}");
+            float recognitionTime = Time.time - whisperStartTime;
+            whisperStartTime = Time.time;
+            StartCoroutine(ClassifyUserCommand(segment.Result, recognitionTime));
+            // reset start time for next recording
         }
 
         private void OnFinished(string finalResult)
