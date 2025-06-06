@@ -26,6 +26,7 @@ namespace VidiGraph
         public static void ResetRandomColor()
         {
             index = 0;
+            Random.InitState(42);
         }
     }
 }
