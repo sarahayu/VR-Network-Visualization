@@ -10,6 +10,7 @@ namespace VidiGraph
         public int ID { get; set; }
         public string Label { get; set; }
         public bool IsVirtualNode { get; set; }
+        public int IdxProcessed { get; set; }
 
         public int CommunityID { get; set; } = -1;
         public string Color { get; set; }

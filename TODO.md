@@ -16,7 +16,6 @@
 - move nodes back on surface deletion
 - when using voice, attach cluster not based on cluster pos
 - replicate cluster/node
-- find out how to include props as anonymous types
 - way to generate lambda functions from criteria? e.g. create linear scale colorer from attribute name and color
 
 - refactor surface
@@ -38,6 +37,8 @@
 - fix grab exit/hover exit bug
 - don't deselect on surface move
 - change link behaviour when splatting
+- improve bring node
+- find out how to include props as anonymous types
 
 ## Ignore
 - move node moving animation to mln

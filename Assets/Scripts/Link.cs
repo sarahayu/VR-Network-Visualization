@@ -12,6 +12,7 @@ namespace VidiGraph
         // TODO remove
         public int SourceNodeID;
         public int TargetNodeID;
+        public int IdxProcessed;
 
         public Node SourceNode;
         public Node TargetNode;

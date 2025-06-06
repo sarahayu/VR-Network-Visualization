@@ -2,6 +2,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using Neo4j.Driver;
 using UnityEditor;
 using UnityEngine;
@@ -10,9 +12,9 @@ namespace VidiGraph
 {
     public class DatabaseStorageUtils
     {
-        public static void BulkInitNetwork(NetworkGlobal networkGlobal, MultiLayoutContext context, IDriver driver, bool convertWinPaths)
+        public static void BulkInitNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal, MultiLayoutContext context, IDriver driver, bool convertWinPaths)
         {
-            DumpNetwork(networkGlobal, context, out var fc, out var fn, out var fn2n);
+            DumpNetwork(networkFile, networkGlobal, context, out var fc, out var fn, out var fn2n);
 
             bool shutdown = false;
 
@@ -79,6 +81,7 @@ namespace VidiGraph
                                 "SET n.render_size = toFloat(row.render_size) " +
                                 "SET n.render_pos = row.render_pos " +
                                 "SET n.render_color = row.render_color " +
+                                ToQuery("n", networkFile.nodes[0].props) +
                                 "WITH * " +
                                 "MATCH (c:Community { commId: toInteger(row.commId) }) " +
                                 "MERGE (n)-[:PART_OF]->(c) " +
@@ -100,6 +103,7 @@ namespace VidiGraph
                                 "SET l.render_colorStart = row.render_colorStart " +
                                 "SET l.render_colorEnd = row.render_colorEnd " +
                                 "SET l.render_alpha = toFloat(row.render_alpha) " +
+                                ToQuery("l", networkFile.links[0].props) +
                             "} IN TRANSACTIONS OF 500 ROWS",
                             new
                             {
@@ -126,9 +130,9 @@ namespace VidiGraph
             }
             finally
             {
-                FileUtil.DeleteFileOrDirectory(fn);
-                FileUtil.DeleteFileOrDirectory(fc);
-                FileUtil.DeleteFileOrDirectory(fn2n);
+                // FileUtil.DeleteFileOrDirectory(fn);
+                // FileUtil.DeleteFileOrDirectory(fc);
+                // FileUtil.DeleteFileOrDirectory(fn2n);
 
                 if (shutdown)
                 {
@@ -152,7 +156,7 @@ namespace VidiGraph
                 _fn2n = FileUtil.GetUniqueTempPathInProject();
             }
 
-            DumpNetwork(networkGlobal, context, _fc, _fn, _fn2n, true);
+            DumpNetwork(null, networkGlobal, context, _fc, _fn, _fn2n, true);
 
             bool shutdown = false;
 
@@ -247,34 +251,50 @@ namespace VidiGraph
             }
         }
 
-        static void DumpNetwork(NetworkGlobal networkGlobal, MultiLayoutContext context,
+        static void DumpNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal, MultiLayoutContext context,
             out string commFile, out string nodeFile, out string nodeToNodeFile, bool onlyDirty = false)
         {
             commFile = FileUtil.GetUniqueTempPathInProject();
             nodeFile = FileUtil.GetUniqueTempPathInProject();
             nodeToNodeFile = FileUtil.GetUniqueTempPathInProject();
 
-            DumpNetwork(networkGlobal, context, commFile, nodeFile, nodeToNodeFile, onlyDirty);
+            DumpNetwork(networkFile, networkGlobal, context, commFile, nodeFile, nodeToNodeFile, onlyDirty);
         }
 
-        static void DumpNetwork(NetworkGlobal networkGlobal, MultiLayoutContext context,
+        static void DumpNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal, MultiLayoutContext context,
             string commFile, string nodeFile, string nodeToNodeFile, bool onlyDirty = false)
         {
-
             using (StreamWriter cFile = new StreamWriter(commFile, append: false),
                                     nFile = new StreamWriter(nodeFile, append: false),
                                     n2nFile = new StreamWriter(nodeToNodeFile, append: false))
             {
+                bool dumpProps = networkFile != null;
+
                 cFile.WriteLine("commId;selected;render_mass;render_massCenter;render_size;render_state");
-                nFile.WriteLine("nodeId;label;degree;selected;commId;render_size;render_pos;render_color");
-                n2nFile.WriteLine("linkId;sourceNodeId;targetNodeId;selected;render_bundlingStrength;render_width;render_colorStart;render_colorEnd;render_alpha");
+
+                string nodeHeaders = "nodeId;label;degree;selected;commId;render_size;render_pos;render_color";
+                string linkHeaders = "linkId;sourceNodeId;targetNodeId;selected;render_bundlingStrength;render_width;render_colorStart;render_colorEnd;render_alpha";
+
+                IEnumerable<string> nodeProps = null;
+                IEnumerable<string> linkProps = null;
+
+                if (dumpProps)
+                {
+                    nodeProps = GetHeaders(networkFile.nodes[0].props);
+                    linkProps = GetHeaders(networkFile.links[0].props);
+
+                    nodeHeaders += ";" + string.Join(";", nodeProps);
+                    linkHeaders += ";" + string.Join(";", linkProps);
+                }
+
+                nFile.WriteLine(nodeHeaders);
+                n2nFile.WriteLine(linkHeaders);
 
                 foreach (var (commID, commGlobal) in networkGlobal.Communities)
                 {
                     var commContext = context.Communities[commID];
 
                     if (onlyDirty && !commGlobal.Dirty && !commContext.Dirty) continue;
-
 
                     var commId = commID;
                     var selected = commGlobal.Selected;
@@ -303,7 +323,15 @@ namespace VidiGraph
                     var render_pos = nodeContext.Position.ToString();
                     var render_color = nodeContext.Color.ToString();
 
-                    nFile.WriteLine($"{nodeId};{label};{degree};{selected};{commId};{render_size};{render_pos};{render_color}");
+                    string values = $"{nodeId};{label};{degree};{selected};{commId};{render_size};{render_pos};{render_color}";
+                    if (dumpProps)
+                    {
+                        var props = AsDictionary(networkFile.nodes[nodeGlobal.IdxProcessed].props);
+
+                        values += ";" + string.Join(";", nodeProps.Select(p => props[p].ToString()));
+                    }
+
+                    nFile.WriteLine(values);
                 }
 
                 foreach (var linkGlobal in networkGlobal.Links)
@@ -324,7 +352,15 @@ namespace VidiGraph
                     var render_colorEnd = linkContext.ColorEnd;
                     var render_alpha = linkContext.Alpha;
 
-                    n2nFile.WriteLine($"{linkId};{sourceNodeId};{targetNodeId};{selected};{render_bundlingStrength};{render_width};{render_colorStart};{render_colorEnd};{render_alpha}");
+                    string values = $"{linkId};{sourceNodeId};{targetNodeId};{selected};{render_bundlingStrength};{render_width};{render_colorStart};{render_colorEnd};{render_alpha}";
+                    if (dumpProps)
+                    {
+                        var props = AsDictionary(networkFile.links[linkGlobal.IdxProcessed].props);
+
+                        values += ";" + string.Join(";", linkProps.Select(p => props[p].ToString()));
+                    }
+
+                    n2nFile.WriteLine(values);
                 }
             }
         }
@@ -346,5 +382,55 @@ namespace VidiGraph
 
             return fullpath;
         }
+
+        // https://stackoverflow.com/a/4944547
+        static IDictionary<string, object> AsDictionary(object source, BindingFlags bindingAttr = BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance)
+        {
+            return source.GetType().GetProperties(bindingAttr).ToDictionary
+            (
+                propInfo => propInfo.Name,
+                propInfo => propInfo.GetValue(source, null)
+            );
+        }
+
+        static IEnumerable<string> GetHeaders(object props)
+        {
+            return AsDictionary(props).Keys;
+        }
+
+        static string ToQuery(string varname, object obj)
+        {
+            var keys = GetHeaders(obj);
+
+            string query = "";
+
+            foreach (var key in keys)
+            {
+                query += $"SET {varname}.{key} = row.{key} ";
+            }
+
+            return query;
+        }
+
+        ////////////////// start specialized functions for BullyProps ////////////////////
+
+        static string ToQuery(string varname, BullyProps.Node obj)
+        {
+            string query = "" +
+                $"SET {varname}.type = row.type " +
+                $"SET {varname}.grade = toInteger(row.grade) " +
+                $"SET {varname}.bully_victim_ratio = toFloat(row.bully_victim_ratio) ";
+
+            return query;
+        }
+        static string ToQuery(string varname, BullyProps.Link obj)
+        {
+            string query = "" +
+                $"SET {varname}.type = row.type ";
+
+            return query;
+        }
+
+        ////////////////// end specialized functions for BullyProps ////////////////////
     }
 }

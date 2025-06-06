@@ -29,9 +29,9 @@ namespace VidiGraph
             _driver?.Dispose();
         }
 
-        public override void InitialStore(NetworkGlobal networkGlobal, MultiLayoutContext networkContext)
+        public override void InitialStore(NetworkFileData networkFile, NetworkGlobal networkGlobal, MultiLayoutContext networkContext)
         {
-            DatabaseStorageUtils.BulkInitNetwork(networkGlobal, networkContext, _driver, _convertWinPaths);
+            DatabaseStorageUtils.BulkInitNetwork(networkFile, networkGlobal, networkContext, _driver, _convertWinPaths);
         }
 
         public override void UpdateStore(NetworkGlobal networkGlobal, MultiLayoutContext networkContext)

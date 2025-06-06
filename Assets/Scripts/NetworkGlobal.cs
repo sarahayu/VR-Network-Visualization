@@ -72,6 +72,8 @@ namespace VidiGraph
             {
                 var node = LoadFileUtils.NodeFromFileData(fileNodes[i]);
 
+                node.IdxProcessed = i;
+
                 // Initialize the node-link matrix
                 _nodeLinkMatrix.Add(node.ID, new List<Link>());
 
@@ -114,6 +116,7 @@ namespace VidiGraph
 
                 link.SourceNode = _nodes[link.SourceNodeID];
                 link.TargetNode = _nodes[link.TargetNodeID];
+                link.IdxProcessed = i;
 
                 // Build Node-Link Matrix
                 _nodeLinkMatrix[link.SourceNodeID].Add(link);
