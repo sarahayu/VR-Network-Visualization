@@ -130,9 +130,9 @@ namespace VidiGraph
             }
             finally
             {
-                // FileUtil.DeleteFileOrDirectory(fn);
-                // FileUtil.DeleteFileOrDirectory(fc);
-                // FileUtil.DeleteFileOrDirectory(fn2n);
+                FileUtil.DeleteFileOrDirectory(fn);
+                FileUtil.DeleteFileOrDirectory(fc);
+                FileUtil.DeleteFileOrDirectory(fn2n);
 
                 if (shutdown)
                 {
