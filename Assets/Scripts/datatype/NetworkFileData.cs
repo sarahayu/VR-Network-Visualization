@@ -10,11 +10,9 @@ using UnityEngine;
 
 namespace VidiGraph
 {
-    using NodePropType = BullyProps.Node;
-    using LinkPropType = BullyProps.Link;
+    using Props = FriendProps;
 
-    // using NodePropType = EmptyProp;
-    // using LinkPropType = EmptyProp;
+    // using Props = DefaultProps;
 
     [Serializable]
     public class NetworkFileData
@@ -26,6 +24,8 @@ namespace VidiGraph
 
         // use for reverse search into nodes array, this data is not found in the file but will be initialized later
         public Dictionary<int, int> idToIdx;
+
+
     }
 
     [Serializable]
@@ -43,7 +43,7 @@ namespace VidiGraph
         public float[] pos2D;
         public float[] pos3D;
 
-        public NodePropType props = new NodePropType();
+        public Props.Node props = new Props.Node();
     }
 
     [Serializable]
@@ -54,12 +54,6 @@ namespace VidiGraph
         public int sourceIdx;
         public int targetIdx;
 
-        public LinkPropType props = new LinkPropType();
-    }
-
-    [Serializable]
-    public class EmptyProp
-    {
-
+        public Props.Link props = new Props.Link();
     }
 }

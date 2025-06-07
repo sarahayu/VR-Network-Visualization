@@ -411,7 +411,7 @@ namespace VidiGraph
 
         void InitContext()
         {
-            _context.SetFromGlobal(_manager.NetworkGlobal);
+            _context.SetFromGlobal(_manager.NetworkGlobal, _manager.FileLoader.SphericalLayout);
             SetContextSettings();
         }
 

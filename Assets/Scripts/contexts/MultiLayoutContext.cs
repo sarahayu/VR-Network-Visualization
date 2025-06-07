@@ -96,7 +96,7 @@ namespace VidiGraph
             // expose constructor
         }
 
-        public void SetFromGlobal(NetworkGlobal networkGlobal)
+        public void SetFromGlobal(NetworkGlobal networkGlobal, NetworkFileData networkFile)
         {
             Nodes.Clear();
             Links.Clear();
@@ -116,7 +116,8 @@ namespace VidiGraph
             {
                 Communities[community.ID] = new Community();
             }
-            SetDefaultEncodings(networkGlobal);
+
+            SetDefaultEncodings(networkGlobal, networkFile);
         }
 
         public void RecomputeGeometricProps(NetworkGlobal networkGlobal)
@@ -135,13 +136,38 @@ namespace VidiGraph
             }
         }
 
-        void SetDefaultEncodings(NetworkGlobal networkGlobal)
+        void SetDefaultEncodings(NetworkGlobal networkGlobal, NetworkFileData networkFile)
         {
-            GetNodeSize = _ => 1f;
-            GetNodeColor = node => GetColor(networkGlobal.Nodes[node.ID].CommunityID, networkGlobal.Communities);
+            // // Bully data
+            // GetNodeSize = _ => 1f;
+            // GetNodeColor = node => GetColor(networkGlobal.Nodes[node.ID].CommunityID, networkGlobal.Communities);
+            // GetLinkWidth = _ => ContextSettings.LinkWidth;
+            // GetLinkColorStart = link => GetColor(link.SourceNode.CommunityID, networkGlobal.Communities);
+            // GetLinkColorEnd = link => GetColor(link.TargetNode.CommunityID, networkGlobal.Communities);
+            // GetLinkAlpha = _ => ContextSettings.LinkNormalAlphaFactor;
+
+            var linkColor = new Color(1f, 1f, 1f, 0.2f);
+
+            // Friend data
+            GetNodeSize = node => (float)Math.Log10(node.Degree * 100) * 3;
+            GetNodeColor = node =>
+            {
+                var fileNode = networkFile.nodes[networkFile.idToIdx[node.ID]];
+
+                var drinker = fileNode.props.drinker;
+                var smoker = fileNode.props.smoker;
+
+                if (drinker == true && smoker == true) return Color.magenta;
+                if (drinker == true) return Color.red;
+                if (smoker == true) return Color.blue;
+
+                if (drinker == null || smoker == null) return Color.gray;
+
+                return Color.white;
+            };
             GetLinkWidth = _ => ContextSettings.LinkWidth;
-            GetLinkColorStart = link => GetColor(link.SourceNode.CommunityID, networkGlobal.Communities);
-            GetLinkColorEnd = link => GetColor(link.TargetNode.CommunityID, networkGlobal.Communities);
+            GetLinkColorStart = _ => linkColor;
+            GetLinkColorEnd = _ => linkColor;
             GetLinkAlpha = _ => ContextSettings.LinkNormalAlphaFactor;
         }
 
