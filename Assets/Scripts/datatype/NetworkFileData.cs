@@ -10,6 +10,7 @@ using UnityEngine;
 
 namespace VidiGraph
 {
+    // using Props = BullyProps;
     using Props = FriendProps;
 
     // using Props = DefaultProps;

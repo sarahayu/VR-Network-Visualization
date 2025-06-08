@@ -149,22 +149,29 @@ namespace VidiGraph
             var linkColor = new Color(1f, 1f, 1f, 0.2f);
 
             // Friend data
-            GetNodeSize = node => (float)Math.Log10(node.Degree * 100) * 3;
+            GetNodeSize = node => (float)Math.Log10(node.Degree * 100) * 2.5f + 0.5f;
+            // GetNodeColor = node =>
+            // {
+            //     var fileNode = networkFile.nodes[networkFile.idToIdx[node.ID]];
+
+            //     var drinker = fileNode.props.drinker;
+            //     var smoker = fileNode.props.smoker;
+
+            //     if (drinker == true && smoker == true) return Color.magenta;
+            //     if (drinker == true) return Color.red;
+            //     if (smoker == true) return Color.blue;
+
+            //     if (drinker == null || smoker == null) return Color.gray;
+
+            //     return Color.white;
+            // };
+
             GetNodeColor = node =>
             {
                 var fileNode = networkFile.nodes[networkFile.idToIdx[node.ID]];
-
-                var drinker = fileNode.props.drinker;
-                var smoker = fileNode.props.smoker;
-
-                if (drinker == true && smoker == true) return Color.magenta;
-                if (drinker == true) return Color.red;
-                if (smoker == true) return Color.blue;
-
-                if (drinker == null || smoker == null) return Color.gray;
-
-                return Color.white;
+                return fileNode.props.gpa == null ? Color.gray : Color.Lerp(Color.white, Color.green, Mathf.Pow((float)fileNode.props.gpa / 4f, 2));
             };
+
             GetLinkWidth = _ => ContextSettings.LinkWidth;
             GetLinkColorStart = _ => linkColor;
             GetLinkColorEnd = _ => linkColor;
