@@ -15,34 +15,31 @@ namespace VidiGraph
 {
     public class NetworkGlobal : MonoBehaviour
     {
-        int _rootNodeID;
-
-        // TODO change to maps... KISS
-        NodeCollection _nodes = new NodeCollection();
         public NodeCollection Nodes { get { return _nodes; } }
-        List<Link> _links = new List<Link>();
         public List<Link> Links { get { return _links; } }
-        Dictionary<int, Community> _communities = new Dictionary<int, Community>();
         public Dictionary<int, Community> Communities { get { return _communities; } }
-
-        List<Link> _treeLinks = new List<Link>();
         public List<Link> TreeLinks { get { return _treeLinks; } }
-        List<int> _realNodeIDs = new List<int>();
         public List<int> RealNodes { get { return _realNodeIDs; } }
-        List<int> _virtualNodeIDs = new List<int>();
         public List<int> VirtualNodes { get { return _virtualNodeIDs; } }
-        Dictionary<int, List<Link>> _nodeLinkMatrix
-             = new Dictionary<int, List<Link>>();
-
         public Dictionary<int, List<Link>> NodeLinkMatrix { get { return _nodeLinkMatrix; } }
-
         public Node HoveredNode = null;
         public Community HoveredCommunity = null;
-        HashSet<int> _selectedNodes = new HashSet<int>();
         public HashSet<int> SelectedNodes { get { return _selectedNodes; } }
-
-        HashSet<int> _selectedComms = new HashSet<int>();
         public HashSet<int> SelectedCommunities { get { return _selectedComms; } }
+
+        int _rootNodeID;
+        // TODO change to maps... KISS
+        NodeCollection _nodes = new NodeCollection();
+        List<Link> _links = new List<Link>();
+        Dictionary<int, Community> _communities = new Dictionary<int, Community>();
+
+        List<Link> _treeLinks = new List<Link>();
+        List<int> _realNodeIDs = new List<int>();
+        List<int> _virtualNodeIDs = new List<int>();
+        Dictionary<int, List<Link>> _nodeLinkMatrix
+             = new Dictionary<int, List<Link>>();
+        HashSet<int> _selectedNodes = new HashSet<int>();
+        HashSet<int> _selectedComms = new HashSet<int>();
 
         void Reset()
         {
@@ -87,23 +84,7 @@ namespace VidiGraph
             }
 
             // Got the order list of all the ancestor of every node (sy: I guess to walk up the ancestor nodes?)
-            // TODO turn into function
-            foreach (var node in _nodes)
-            {
-                if (node.ID == _rootNodeID)
-                {
-                    continue;
-                }
-
-                var ancNode = node.AncID;
-                node.AncIDsOrderList.Add(ancNode);
-
-                while (ancNode != _rootNodeID)
-                {
-                    ancNode = _nodes[ancNode].AncID;
-                    node.AncIDsOrderList.Add(ancNode);
-                }
-            }
+            foreach (var node in _nodes) InitAncNodes(node);
 
             // 1. Build Node-Link Matrix
             // 2. calculate the degree
@@ -135,11 +116,25 @@ namespace VidiGraph
             }
 
             BuildTreeLinks(_rootNodeID);
-            TagCommunities();
-            CommunitiesInit();
+            CreateCommunities();
+            ComputeCommunityElems();
         }
 
-        public void SetSelectedNodes(List<int> nodeIDs, bool selected)
+        void InitAncNodes(Node node)
+        {
+            if (node.ID == _rootNodeID) return;
+
+            var ancNode = node.AncID;
+            node.AncIDsOrderList.Add(ancNode);
+
+            while (ancNode != _rootNodeID)
+            {
+                ancNode = _nodes[ancNode].AncID;
+                node.AncIDsOrderList.Add(ancNode);
+            }
+        }
+
+        public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool selected)
         {
             if (selected)
             {
@@ -173,7 +168,7 @@ namespace VidiGraph
             UpdateSelectedCommunities();
         }
 
-        public void ToggleSelectedNodes(List<int> nodeIDs)
+        public void ToggleSelectedNodes(IEnumerable<int> nodeIDs)
         {
             foreach (var nodeID in nodeIDs)
             {
@@ -198,7 +193,7 @@ namespace VidiGraph
             UpdateSelectedCommunities();
         }
 
-        public void SetSelectedCommunities(List<int> commIDs, bool selected)
+        public void SetSelectedCommunities(IEnumerable<int> commIDs, bool selected)
         {
             if (selected)
             {
@@ -230,7 +225,7 @@ namespace VidiGraph
             UpdateSelectedCommunities();
         }
 
-        public void ToggleSelectedCommunities(List<int> commIDs)
+        public void ToggleSelectedCommunities(IEnumerable<int> commIDs)
         {
             var oldSelectedNodes = new HashSet<int>(_selectedNodes);
 
@@ -289,12 +284,15 @@ namespace VidiGraph
             UpdateSelectedCommunities();
         }
 
-        void CommunitiesInit()
+        /*=============== start private methods ===================*/
+
+        void ComputeCommunityElems()
         {
-            FindLinks4Communities();
-            FindNodesInCommunities();
+            FindCommunityLinks();
+            FindCommunityNodes();
         }
-        void FindLinks4Communities()
+
+        void FindCommunityLinks()
         {
             foreach (var link in _links)
             {
@@ -322,20 +320,19 @@ namespace VidiGraph
             }
         }
 
-        void FindNodesInCommunities()
+        void FindCommunityNodes()
         {
             foreach (var node in _nodes)
             {
                 if (!node.IsVirtualNode)
                 {
+                    if (node.CommunityID == -1) Debug.Log(node.ID);
                     _communities[node.CommunityID].Nodes.Add(node);
                 }
             }
         }
 
-        /*
-         * combine links with the same source community and the same target community
-         */
+        // combine links with the same source community and the same target community
         void CombineLinks(Community community)
         {
             foreach (var link in community.OuterLinks)
@@ -354,12 +351,12 @@ namespace VidiGraph
             }
         }
 
-        // label communities
-        void TagCommunities()
+        void CreateCommunities()
         {
-            // TODO change from DFS to BFS for simplicity
             var nodeStack = new Stack<int>();
             nodeStack.Push(_rootNodeID);
+
+            var nodesLeft = _nodes.NodeArray.Select(n => n.ID).ToHashSet();
 
             int communityID = 0;
             while (nodeStack.Count != 0)
@@ -368,22 +365,24 @@ namespace VidiGraph
 
                 if (IsCommunity(curNode))
                 {
-                    TagCommunity(curNode, communityID++);
+                    CreateCommunity(curNode, communityID++);
 
-                    foreach (var childID in curNode.ChildIDs)
-                    {
-                        if (_nodes[childID].IsVirtualNode)
-                            nodeStack.Push(childID);
-                    }
+                    Debug.Log(curNode.ID);
+
+                    nodesLeft.ExceptWith(curNode.ChildIDs.Where(nid => !_nodes[nid].IsVirtualNode));
+
+                    nodeStack.Concat(curNode.ChildIDs.Where(cid => _nodes[cid].IsVirtualNode));
                 }
                 else
                 {
-                    foreach (var childID in curNode.ChildIDs)
-                    {
-                        nodeStack.Push(childID);
-                    }
+                    nodeStack.Concat(curNode.ChildIDs);
                 }
 
+            }
+
+            foreach (var left in nodesLeft)
+            {
+                // Debug.Log(left);
             }
 
         }
@@ -394,24 +393,24 @@ namespace VidiGraph
             return node.ChildIDs.Count() != 0 && node.ChildIDs.Any(c => !_nodes[c].IsVirtualNode);
         }
 
-        void TagCommunity(Node node, int clusterIdx)
+        void CreateCommunity(Node node, int commID)
         {
             Debug.Assert(node.IsVirtualNode);
 
             var community = new Community
             {
                 RootNodeID = node.ID,
-                ID = clusterIdx,
+                ID = commID,
                 Color = HighContrastColors.GenerateRandomColor(),
                 Dirty = true
             };
 
-            _communities.Add(clusterIdx, community);
+            _communities.Add(commID, community);
 
             foreach (var childIdx in node.ChildIDs)
             {
                 if (!_nodes[childIdx].IsVirtualNode)
-                    _nodes[childIdx].CommunityID = clusterIdx;
+                    _nodes[childIdx].CommunityID = commID;
             }
         }
 

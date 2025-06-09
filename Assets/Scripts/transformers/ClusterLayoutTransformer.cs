@@ -32,7 +32,6 @@ namespace VidiGraph
         {
             // TODO calculate at runtime
             var clusterNodes = _fileLoader.ClusterLayout.nodes;
-            var clusterIdToIdx = _fileLoader.ClusterLayout.idToIdx;
 
             foreach (var commID in _commsToUpdate)
             {
@@ -40,7 +39,7 @@ namespace VidiGraph
 
                 foreach (var node in _networkGlobal.Communities[commID].Nodes)
                 {
-                    var clusterPos = clusterNodes[clusterIdToIdx[node.ID]]._position3D;
+                    var clusterPos = clusterNodes[node.IdxProcessed]._position3D;
                     _networkContext.Nodes[node.ID].Position = _clusterTransform.TransformPoint(new Vector3(clusterPos.x, clusterPos.y, clusterPos.z));
                     _networkContext.Nodes[node.ID].Dirty = true;
 
@@ -96,8 +95,6 @@ namespace VidiGraph
             _networkContext = networkContext;
 
             var clusterNodes = fileLoader.ClusterLayout.nodes;
-            var clusterIdToIdx = fileLoader.ClusterLayout.idToIdx;
-
 
             foreach (var commID in toUpdate)
             {
@@ -105,7 +102,7 @@ namespace VidiGraph
 
                 foreach (var node in networkGlobal.Communities[commID].Nodes)
                 {
-                    var clusterPos = clusterNodes[clusterIdToIdx[node.ID]]._position3D;
+                    var clusterPos = clusterNodes[node.IdxProcessed]._position3D;
 
                     _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
                     _endPositions[node.ID] = endingContextTransform.TransformPoint(new Vector3(clusterPos.x, clusterPos.y, clusterPos.z));

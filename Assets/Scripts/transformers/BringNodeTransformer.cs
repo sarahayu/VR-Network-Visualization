@@ -60,7 +60,7 @@ namespace VidiGraph
             _nodesToUpdate.Add(nodeID);
         }
 
-        public void UpdateOnNextApply(List<int> nodeIDs)
+        public void UpdateOnNextApply(IEnumerable<int> nodeIDs)
         {
             _nodesToUpdate.UnionWith(nodeIDs);
         }

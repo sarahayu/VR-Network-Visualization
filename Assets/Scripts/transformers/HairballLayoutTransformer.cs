@@ -27,18 +27,21 @@ namespace VidiGraph
 
         public override void ApplyTransformation()
         {
+            var hairballNodes = _fileLoader.HairballLayout.nodes;
+
             // TODO calculate at runtime
-            foreach (var node in _fileLoader.HairballLayout.nodes)
+            foreach (var node in _networkGlobal.Nodes)
             {
-                if (node.virtualNode) continue;
-                _networkContext.Nodes[node.idx].Position = _hairballTransform.TransformPoint(node._position3D);
-                _networkContext.Nodes[node.idx].Dirty = true;
+                if (node.IsVirtualNode) continue;
+
+                _networkContext.Nodes[node.ID].Position = _hairballTransform.TransformPoint(hairballNodes[node.IdxProcessed]._position3D);
+                _networkContext.Nodes[node.ID].Dirty = true;
             }
 
-            foreach (var link in _networkContext.Links.Values)
+            foreach (var link in _networkGlobal.Links)
             {
-                link.BundlingStrength = 0f;
-                link.Dirty = true;
+                _networkContext.Links[link.ID].BundlingStrength = 0f;
+                _networkContext.Links[link.ID].Dirty = true;
             }
 
             // just mark all communities as dirty
@@ -68,21 +71,20 @@ namespace VidiGraph
             _networkContext = networkContext;
 
             var hairballNodes = fileLoader.HairballLayout.nodes;
-            var idToIdx = fileLoader.HairballLayout.idToIdx;
 
-
-            foreach (var node in fileLoader.HairballLayout.nodes)
+            foreach (var node in networkGlobal.Nodes)
             {
-                if (node.virtualNode) continue;
+                if (node.IsVirtualNode) continue;
 
-                _startPositions[node.idx] = networkContext.Nodes[node.idx].Position;
+                _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
                 // TODO calculate at runtime
-                _endPositions[node.idx] = endingContextTransform.TransformPoint(hairballNodes[idToIdx[node.idx]]._position3D);
+                _endPositions[node.ID] = endingContextTransform.TransformPoint(hairballNodes[node.IdxProcessed]._position3D);
             }
 
-            foreach (var link in _networkContext.Links.Values)
+            foreach (var link in networkGlobal.Links)
             {
-                link.BundlingStrength = 0f;
+                networkContext.Links[link.ID].BundlingStrength = 0f;
+                networkContext.Links[link.ID].Dirty = true;
             }
 
             // just mark all communities as dirty

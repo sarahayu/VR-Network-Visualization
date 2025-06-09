@@ -126,13 +126,13 @@ namespace VidiGraph
         }
 
         // return ID of closest surface
-        public int TryAttachNodes(List<int> nodeIDs)
+        public int TryAttachNodes(IEnumerable<int> nodeIDs)
         {
             // check distance
             // attach if distance less than threshold
 
             // TODO use midpoint of points instead
-            var closest = GetClosestSurface(_manager.GetMLCommTransform(_manager.NetworkGlobal.Nodes[nodeIDs[0]].CommunityID).position);
+            var closest = GetClosestSurface(_manager.GetMLCommTransform(_manager.NetworkGlobal.Nodes[nodeIDs.First()].CommunityID).position);
 
             if (closest != -1) AttachNodes(nodeIDs, closest);
             else DetachNodes(nodeIDs);
@@ -140,7 +140,7 @@ namespace VidiGraph
             return closest;
         }
 
-        public void AttachNodes(List<int> nodeIDs, int surfID)
+        public void AttachNodes(IEnumerable<int> nodeIDs, int surfID)
         {
             if (!_surfaces.ContainsKey(surfID)) return;
 
@@ -155,10 +155,10 @@ namespace VidiGraph
             _manager.PauseStorageUpdate();
             _manager.PauseRenderUpdate();
 
-            GetInterAndOuterLinks(_surfaces[surfID].Nodes.Keys.ToList(), out var interLinks, out var outerLinks, out var isStartOuterLinks);
+            GetInterAndOuterLinks(_surfaces[surfID].Nodes.Keys, out var interLinks, out var outerLinks, out var isStartOuterLinks);
             _manager.SetLinksBundlingStrength(interLinks, 0f);
-            _manager.SetLinksBundleStart(outerLinks.Where((_, idx) => isStartOuterLinks[idx]).ToList(), false);
-            _manager.SetLinksBundleEnd(outerLinks.Where((_, idx) => !isStartOuterLinks[idx]).ToList(), false);
+            _manager.SetLinksBundleStart(outerLinks.Where((_, idx) => isStartOuterLinks[idx]), false);
+            _manager.SetLinksBundleEnd(outerLinks.Where((_, idx) => !isStartOuterLinks[idx]), false);
 
             _manager.SetLinksAlpha(interLinks, _mlSettings.LinkNormalAlphaFactor);
             _manager.SetLinksAlpha(outerLinks, _mlSettings.LinkContext2FocusAlphaFactor);
@@ -169,7 +169,7 @@ namespace VidiGraph
             StartAttachAnim(nodeIDs, surfID);
         }
 
-        public void DetachNodes(List<int> nodeIDs)
+        public void DetachNodes(IEnumerable<int> nodeIDs)
         {
             foreach (var nodeID in nodeIDs)
             {
@@ -185,12 +185,12 @@ namespace VidiGraph
 
         /*=============== start private methods ===================*/
 
-        void StartAttachAnim(List<int> nodeIDs, int surfID)
+        void StartAttachAnim(IEnumerable<int> nodeIDs, int surfID)
         {
             CoroutineUtils.StopIfRunning(this, _attachAnimation);
 
-            var startPositions = nodeIDs.Select(nid => _manager.GetMLNodeTransform(nid).position).ToList();
-            var endPositions = SurfaceManagerUtils.CalcProjected(surfID, nodeIDs, this, _manager);
+            var startPositions = nodeIDs.Select(nid => _manager.GetMLNodeTransform(nid).position);
+            var endPositions = SurfaceManagerUtils.CalcProjected(surfID, nodeIDs.Select(nid => _manager.NetworkGlobal.Nodes[nid]), this, _manager);
 
             _attachAnimation = StartCoroutine(CRAnimateNodesAttach(nodeIDs, startPositions, endPositions));
         }
@@ -214,7 +214,7 @@ namespace VidiGraph
                 // start coroutine to change transforms
                 // start node moves
                 _surfaceMover = StartCoroutine(CRMoveSurfaceAndChildren(id));
-                _manager.StartMLNodesMove(_surfaces[id].Nodes.Keys.ToList());
+                _manager.StartMLNodesMove(_surfaces[id].Nodes.Keys);
             });
 
             xrInteractable.selectExited.AddListener(evt =>
@@ -223,7 +223,7 @@ namespace VidiGraph
                 // end node moves
                 StopCoroutine(_surfaceMover);
                 _surfaceMover = null;
-                _manager.EndMLNodesMove(_surfaces[id].Nodes.Keys.ToList());
+                _manager.EndMLNodesMove(_surfaces[id].Nodes.Keys);
             });
         }
 
@@ -259,7 +259,7 @@ namespace VidiGraph
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 CoroutineUtils.StopIfRunning(this, _surfaceHighlighter);
-                TryAttachNodes(community.Nodes.Select(n => n.ID).ToList());
+                TryAttachNodes(community.Nodes.Select(n => n.ID));
                 UnhighlightSurfaces();
             }
         }
@@ -303,7 +303,7 @@ namespace VidiGraph
             Quaternion lastSurfRotation = Quaternion.identity;
 
             var surfTransform = _surfaces[surfID].GameObject.transform;
-            var childrenTransform = _surfaces[surfID].Nodes.Keys.Select(nid => _manager.GetMLNodeTransform(nid)).ToList();
+            var childrenTransform = _surfaces[surfID].Nodes.Keys.Select(nid => _manager.GetMLNodeTransform(nid));
 
             while (true)
             {
@@ -347,7 +347,7 @@ namespace VidiGraph
             }
         }
 
-        IEnumerator CRAnimateNodesAttach(List<int> nodeIDs, List<Vector3> startPositions, List<Vector3> endPositions)
+        IEnumerator CRAnimateNodesAttach(IEnumerable<int> nodeIDs, IEnumerable<Vector3> startPositions, IEnumerable<Vector3> endPositions)
         {
             float dur = 1.0f;
 
@@ -355,7 +355,8 @@ namespace VidiGraph
 
             yield return AnimationUtils.Lerp(dur, t =>
             {
-                var positions = startPositions.Select((sp, i) => Vector3.Lerp(startPositions[i], endPositions[i], Mathf.SmoothStep(0f, 1f, t))).ToList();
+                var positions = startPositions.Zip(endPositions, Tuple.Create)
+                    .Select((se, i) => Vector3.Lerp(se.Item1, se.Item2, Mathf.SmoothStep(0f, 1f, t)));
 
                 _manager.SetNodesPosition(nodeIDs, positions);
             });
@@ -367,7 +368,7 @@ namespace VidiGraph
             _attachAnimation = null;
         }
 
-        void GetInterAndOuterLinks(List<int> nodeIDs, out List<int> interLinks, out List<int> outerLinks, out List<bool> isStartOuterLinks)
+        void GetInterAndOuterLinks(IEnumerable<int> nodeIDs, out List<int> interLinks, out List<int> outerLinks, out List<bool> isStartOuterLinks)
         {
             interLinks = new List<int>();
             outerLinks = new List<int>();

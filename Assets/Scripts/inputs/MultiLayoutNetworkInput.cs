@@ -138,8 +138,8 @@ namespace VidiGraph
             {
                 var nodeIDs1 = _networkManager.NetworkGlobal.RealNodes.GetRange(0, 10);
                 var nodeIDs2 = _networkManager.NetworkGlobal.RealNodes.GetRange(10, 10);
-                var linkIDs1 = _networkManager.NetworkGlobal.Links.GetRange(0, 10).Select(l => l.ID).ToList();
-                var linkIDs2 = _networkManager.NetworkGlobal.Links.GetRange(10, 10).Select(l => l.ID).ToList();
+                var linkIDs1 = _networkManager.NetworkGlobal.Links.GetRange(0, 10).Select(l => l.ID);
+                var linkIDs2 = _networkManager.NetworkGlobal.Links.GetRange(10, 10).Select(l => l.ID);
 
                 _networkManager.SetNodesSize(nodeIDs1, 2);
                 _networkManager.SetNodesColor(nodeIDs2, Color.green);
@@ -229,19 +229,19 @@ namespace VidiGraph
                 switch (curOptnLabel)
                 {
                     case "Bring Node":
-                        _networkManager.BringMLNodes(_networkManager.SelectedNodes.ToList());
+                        _networkManager.BringMLNodes(_networkManager.SelectedNodes);
                         break;
                     case "Reset Node":
-                        _networkManager.ReturnMLNodes(_networkManager.SelectedNodes.ToList());
+                        _networkManager.ReturnMLNodes(_networkManager.SelectedNodes);
                         break;
                     case "Bring Comm.":
-                        _networkManager.SetMLLayout(_networkManager.SelectedCommunities.ToList(), "cluster");
+                        _networkManager.SetMLLayout(_networkManager.SelectedCommunities, "cluster");
                         break;
                     case "Reset Comm.":
-                        _networkManager.SetMLLayout(_networkManager.SelectedCommunities.ToList(), "spherical");
+                        _networkManager.SetMLLayout(_networkManager.SelectedCommunities, "spherical");
                         break;
                     case "Project Comm. Floor":
-                        _networkManager.SetMLLayout(_networkManager.SelectedCommunities.ToList(), "floor");
+                        _networkManager.SetMLLayout(_networkManager.SelectedCommunities, "floor");
                         break;
                     default:
                         inputAction = false;
@@ -336,7 +336,7 @@ namespace VidiGraph
 
         string[] GetPropsStr(Node node, int split)
         {
-            var file = _networkManager.FileLoader.SphericalLayout;
+            var filenodes = _networkManager.FileLoader.SphericalLayout.nodes;
 
             Dictionary<string, object> labelAndID = new Dictionary<string, object>()
             {
@@ -344,7 +344,7 @@ namespace VidiGraph
                 {"id", node.ID},
             };
 
-            var props = labelAndID.Concat(ObjectUtils.AsDictionary(file.nodes[file.idToIdx[node.ID]].props)).ToDictionary(k => k.Key, k => k.Value);
+            var props = labelAndID.Concat(ObjectUtils.AsDictionary(filenodes[node.IdxProcessed].props)).ToDictionary(k => k.Key, k => k.Value);
 
             int counter = 0;
 

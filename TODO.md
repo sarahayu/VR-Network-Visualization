@@ -3,6 +3,8 @@
 -  hover over community, then while still hovering quickly swipe over node in another community. node stays hovered
     - deprecated: (IGNORE as not high priority: fixing it would unfix hovering over node immediately after unhovering another node. plus, highlights reset themselves quite easily)
     - update: GOTTA FIX
+- general code cleanup
+- lean button opts
 - when splatting to surface, account for random nodes that are not part of same community
 - move control point calculation to a transformer
     - keep bspline count constant

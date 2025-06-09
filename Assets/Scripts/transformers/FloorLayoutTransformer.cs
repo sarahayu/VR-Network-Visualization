@@ -32,7 +32,6 @@ namespace VidiGraph
         {
             // TODO calculate at runtime
             var floorNodes = _fileLoader.FlatLayout.nodes;
-            var floorIdToIdx = _fileLoader.FlatLayout.idToIdx;
 
             foreach (var commID in _commsToUpdate)
             {
@@ -40,7 +39,7 @@ namespace VidiGraph
 
                 foreach (var node in _networkGlobal.Communities[commID].Nodes)
                 {
-                    var floorPos = floorNodes[floorIdToIdx[node.ID]]._position3D;
+                    var floorPos = floorNodes[node.IdxProcessed]._position3D;
                     _networkContext.Nodes[node.ID].Position = _floorTransform.TransformPoint(new Vector3(floorPos.x, floorPos.y, floorPos.z));
                     _networkContext.Nodes[node.ID].Dirty = true;
 
@@ -79,7 +78,7 @@ namespace VidiGraph
             _commsToUpdate.Add(commID);
         }
 
-        public void UpdateOnNextApply(List<int> commIDs)
+        public void UpdateOnNextApply(IEnumerable<int> commIDs)
         {
             _commsToUpdate.UnionWith(commIDs);
         }
@@ -97,8 +96,6 @@ namespace VidiGraph
             _networkContext = networkContext;
 
             var floorNodes = fileLoader.FlatLayout.nodes;
-            var floorIdToIdx = fileLoader.FlatLayout.idToIdx;
-
 
             foreach (var commID in toUpdate)
             {
@@ -106,7 +103,7 @@ namespace VidiGraph
 
                 foreach (var node in networkGlobal.Communities[commID].Nodes)
                 {
-                    var floorPos = floorNodes[floorIdToIdx[node.ID]]._position3D;
+                    var floorPos = floorNodes[node.IdxProcessed]._position3D;
 
                     _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
                     _endPositions[node.ID] = endingContextTransform.TransformPoint(new Vector3(floorPos.x, floorPos.y, floorPos.z));

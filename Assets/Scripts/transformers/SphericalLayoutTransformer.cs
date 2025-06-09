@@ -32,13 +32,16 @@ namespace VidiGraph
         {
             // TODO calculate at runtime
             var sphericalNodes = _fileLoader.SphericalLayout.nodes;
-            var sphericalIdToIdx = _fileLoader.SphericalLayout.idToIdx;
 
             foreach (var nodeID in _nodesToUpdate)
             {
-                var sphericalPos = sphericalNodes[sphericalIdToIdx[nodeID]]._position3D;
-                _networkContext.Nodes[nodeID].Position = _sphericalTransform.TransformPoint(new Vector3(sphericalPos.x, sphericalPos.y, sphericalPos.z));
-                _networkContext.Nodes[nodeID].Dirty = true;
+                var nodeGlobal = _networkGlobal.Nodes[nodeID];
+                var nodeContext = _networkContext.Nodes[nodeID];
+
+                var sphericalPos = sphericalNodes[nodeGlobal.IdxProcessed]._position3D;
+
+                nodeContext.Position = _sphericalTransform.TransformPoint(sphericalPos);
+                nodeContext.Dirty = true;
 
                 foreach (var link in _networkGlobal.NodeLinkMatrix[nodeID])
                 {
@@ -83,7 +86,7 @@ namespace VidiGraph
             _nodesToUpdate.Add(nodeID);
         }
 
-        public void UpdateNodesOnNextApply(List<int> nodeIDs)
+        public void UpdateNodesOnNextApply(IEnumerable<int> nodeIDs)
         {
             _nodesToUpdate.UnionWith(nodeIDs);
         }
@@ -105,7 +108,7 @@ namespace VidiGraph
             _nodesToUpdate.UnionWith(_networkGlobal.Communities[commID].Nodes.Select(n => n.ID));
         }
 
-        public void UpdateCommsOnNextApply(List<int> commIDs)
+        public void UpdateCommsOnNextApply(IEnumerable<int> commIDs)
         {
             foreach (var commID in commIDs) UpdateCommOnNextApply(commID);
         }
@@ -123,14 +126,16 @@ namespace VidiGraph
             _networkContext = networkContext;
             // TODO calculate at runtime
             var sphericalNodes = fileLoader.SphericalLayout.nodes;
-            var sphericalIdToIdx = fileLoader.SphericalLayout.idToIdx;
 
             foreach (var nodeID in nodesToUpdate)
             {
-                var sphericalPos = sphericalNodes[sphericalIdToIdx[nodeID]]._position3D;
+                var nodeGlobal = networkGlobal.Nodes[nodeID];
+                var nodeContext = networkContext.Nodes[nodeID];
+
+                var sphericalPos = sphericalNodes[nodeGlobal.IdxProcessed]._position3D;
 
                 _startPositions[nodeID] = networkContext.Nodes[nodeID].Position;
-                _endPositions[nodeID] = endingContextTransform.TransformPoint(new Vector3(sphericalPos.x, sphericalPos.y, sphericalPos.z));
+                _endPositions[nodeID] = endingContextTransform.TransformPoint(sphericalPos);
 
                 foreach (var link in networkGlobal.NodeLinkMatrix[nodeID])
                 {

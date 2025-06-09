@@ -22,11 +22,6 @@ namespace VidiGraph
         public int rootIdx;
         public NodeFileData[] nodes;
         public LinkFileData[] links;
-
-        // use for reverse search into nodes array, this data is not found in the file but will be initialized later
-        public Dictionary<int, int> idToIdx;
-
-
     }
 
     [Serializable]

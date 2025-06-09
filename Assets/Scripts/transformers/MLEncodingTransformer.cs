@@ -27,28 +27,26 @@ namespace VidiGraph
 
         public override void ApplyTransformation()
         {
-            foreach (var nodeID in _networkContext.Nodes.Keys)
+            foreach (var node in _networkGlobal.Nodes)
             {
-                Node globalNode = _networkGlobal.Nodes[nodeID];
-                MultiLayoutContext.Node contextNode = _networkContext.Nodes[nodeID];
+                var nodeContext = _networkContext.Nodes[node.ID];
 
-                contextNode.Size = _networkContext.GetNodeSize(globalNode);
-                contextNode.Color = _networkContext.GetNodeColor(globalNode);
+                nodeContext.Size = _networkContext.GetNodeSize(node);
+                nodeContext.Color = _networkContext.GetNodeColor(node);
 
-                contextNode.Dirty = true;
+                nodeContext.Dirty = true;
             }
 
-            foreach (var linkID in _networkContext.Links.Keys)
+            foreach (var link in _networkGlobal.Links)
             {
-                Link globalLink = _networkGlobal.Links[linkID];
-                MultiLayoutContext.Link contextLink = _networkContext.Links[linkID];
+                var linkContext = _networkContext.Links[link.ID];
 
-                contextLink.Width = _networkContext.GetLinkWidth(globalLink);
-                contextLink.ColorStart = _networkContext.GetLinkColorStart(globalLink);
-                contextLink.ColorEnd = _networkContext.GetLinkColorEnd(globalLink);
-                contextLink.Alpha = _networkContext.GetLinkAlpha(globalLink);
+                linkContext.Width = _networkContext.GetLinkWidth(link);
+                linkContext.ColorStart = _networkContext.GetLinkColorStart(link);
+                linkContext.ColorEnd = _networkContext.GetLinkColorEnd(link);
+                linkContext.Alpha = _networkContext.GetLinkAlpha(link);
 
-                contextLink.Dirty = true;
+                linkContext.Dirty = true;
             }
         }
 

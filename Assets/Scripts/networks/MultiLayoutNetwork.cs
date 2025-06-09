@@ -83,7 +83,7 @@ namespace VidiGraph
             // apply initial transformations before first render so we don't get a weird jump
             TransformNetworkNoRender("encoding");
             _isSphericalLayout = true;
-            _sphericalLayoutTransformer.UpdateCommsOnNextApply(_context.Communities.Keys.ToList());
+            _sphericalLayoutTransformer.UpdateCommsOnNextApply(_context.Communities.Keys);
             TransformNetworkNoRender("spherical");
 
             InitRenderer();
@@ -125,11 +125,10 @@ namespace VidiGraph
         }
 
         // layout = [spherical, cluster, floor]
-        public void SetLayout(List<int> commIDs, string layout)
+        public void SetLayout(IEnumerable<int> commIDs, string layout)
         {
             foreach (var commID in commIDs)
             {
-                bool isCommFocused = layout == "floor" || layout == "cluster";
                 _context.Communities[commID].State = MultiLayoutContext.StrToState(layout);
 
                 QueueLayoutChange(commID, layout);
@@ -150,30 +149,30 @@ namespace VidiGraph
             }
         }
 
-        public void BringNodes(List<int> nodeIDs)
+        public void BringNodes(IEnumerable<int> nodeIDs)
         {
             _bringNodeTransformer.UpdateOnNextApply(nodeIDs);
 
             TransformNetwork("bringNode", animated: true);
         }
 
-        public void ReturnNodes(List<int> nodeIDs)
+        public void ReturnNodes(IEnumerable<int> nodeIDs)
         {
             _sphericalLayoutTransformer.UpdateNodesOnNextApply(nodeIDs);
 
             TransformNetwork("spherical", animated: true);
         }
 
-        public void StartNodeMove(int nodeID, Transform toTrack)
+        public void StartNodeMove(int nodeID)
         {
             CoroutineUtils.StopIfRunning(this, _curNodeMover);
-            _curNodeMover = StartCoroutine(CRMoveNode(nodeID, toTrack));
+            _curNodeMover = StartCoroutine(CRMoveNode(nodeID, GetNodeTransform(nodeID)));
         }
 
-        public void StartNodesMove(List<int> nodeIDs, List<Transform> toTracks)
+        public void StartNodesMove(IEnumerable<int> nodeIDs)
         {
             CoroutineUtils.StopIfRunning(this, _curNodeMover);
-            _curNodeMover = StartCoroutine(CRMoveNodes(nodeIDs, toTracks));
+            _curNodeMover = StartCoroutine(CRMoveNodes(nodeIDs, nodeIDs.Select(nid => GetNodeTransform(nid))));
         }
 
         public void EndNodeMove(int nodeID)
@@ -196,14 +195,14 @@ namespace VidiGraph
             );
         }
 
-        public void StartCommMove(int commID, Transform toTrack)
+        public void StartCommMove(int commID)
         {
             CoroutineUtils.StopIfRunning(this, _curCommMover);
 
-            var nodeIDs = _manager.NetworkGlobal.Communities[commID].Nodes.Select(n => n.ID).ToList();
-            var nodeTransforms = nodeIDs.Select(nid => GetNodeTransform(nid)).ToList();
+            var nodeIDs = _manager.NetworkGlobal.Communities[commID].Nodes.Select(n => n.ID);
+            var nodeTransforms = nodeIDs.Select(nid => GetNodeTransform(nid));
 
-            _curCommMover = StartCoroutine(CRMoveComm(toTrack, nodeIDs, nodeTransforms));
+            _curCommMover = StartCoroutine(CRMoveComm(GetCommTransform(commID), nodeIDs, nodeTransforms));
         }
 
         public void EndCommMove()
@@ -216,12 +215,6 @@ namespace VidiGraph
             );
         }
 
-        public void SetNodeSizeEncoding(Func<VidiGraph.Node, float> func)
-        {
-            _context.GetNodeSize = func;
-            TransformNetwork("encoding", animated: false);
-        }
-
         public Transform GetNodeTransform(int nodeID)
         {
             return _renderer.GetNodeTransform(nodeID);
@@ -232,7 +225,7 @@ namespace VidiGraph
             return _renderer.GetCommTransform(commID);
         }
 
-        public void SetNodesSize(List<int> nodeIDs, float size, bool updateStorage, bool updateRenderElements)
+        public void SetNodesSize(IEnumerable<int> nodeIDs, float size, bool updateStorage, bool updateRenderElements)
         {
             foreach (var node in nodeIDs.Select(nid => _context.Nodes[nid]))
             {
@@ -247,7 +240,7 @@ namespace VidiGraph
             );
         }
 
-        public void SetNodesColor(List<int> nodeIDs, Color color, bool updateStorage, bool updateRenderElements)
+        public void SetNodesColor(IEnumerable<int> nodeIDs, Color color, bool updateStorage, bool updateRenderElements)
         {
             foreach (var node in nodeIDs.Select(nid => _context.Nodes[nid]))
             {
@@ -262,7 +255,7 @@ namespace VidiGraph
             );
         }
 
-        public void SetLinksWidth(List<int> linkIDs, float width, bool updateStorage, bool updateRenderElements)
+        public void SetLinksWidth(IEnumerable<int> linkIDs, float width, bool updateStorage, bool updateRenderElements)
         {
             foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
             {
@@ -277,7 +270,7 @@ namespace VidiGraph
             );
         }
 
-        public void SetLinksColorStart(List<int> linkIDs, Color color, bool updateStorage, bool updateRenderElements)
+        public void SetLinksColorStart(IEnumerable<int> linkIDs, Color color, bool updateStorage, bool updateRenderElements)
         {
             foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
             {
@@ -292,7 +285,7 @@ namespace VidiGraph
             );
         }
 
-        public void SetLinksColorEnd(List<int> linkIDs, Color color, bool updateStorage, bool updateRenderElements)
+        public void SetLinksColorEnd(IEnumerable<int> linkIDs, Color color, bool updateStorage, bool updateRenderElements)
         {
             foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
             {
@@ -307,7 +300,7 @@ namespace VidiGraph
             );
         }
 
-        public void SetLinksAlpha(List<int> linkIDs, float alpha, bool updateStorage, bool updateRenderElements)
+        public void SetLinksAlpha(IEnumerable<int> linkIDs, float alpha, bool updateStorage, bool updateRenderElements)
         {
             foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
             {
@@ -322,7 +315,7 @@ namespace VidiGraph
             );
         }
 
-        public void SetLinksBundlingStrength(List<int> linkIDs, float bundlingStrength, bool updateStorage, bool updateRenderElements)
+        public void SetLinksBundlingStrength(IEnumerable<int> linkIDs, float bundlingStrength, bool updateStorage, bool updateRenderElements)
         {
             foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
             {
@@ -337,7 +330,7 @@ namespace VidiGraph
             );
         }
 
-        public void SetLinksBundleStart(List<int> linkIDs, bool bundleStart, bool updateStorage, bool updateRenderElements)
+        public void SetLinksBundleStart(IEnumerable<int> linkIDs, bool bundleStart, bool updateStorage, bool updateRenderElements)
         {
             foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
             {
@@ -352,7 +345,7 @@ namespace VidiGraph
             );
         }
 
-        public void SetLinksBundleEnd(List<int> linkIDs, bool bundleEnd, bool updateStorage, bool updateRenderElements)
+        public void SetLinksBundleEnd(IEnumerable<int> linkIDs, bool bundleEnd, bool updateStorage, bool updateRenderElements)
         {
             foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
             {
@@ -368,7 +361,7 @@ namespace VidiGraph
         }
 
 
-        public void SetNodesPosition(List<int> nodeIDs, Vector3 position, bool updateStorage, bool updateRenderElements)
+        public void SetNodesPosition(IEnumerable<int> nodeIDs, Vector3 position, bool updateStorage, bool updateRenderElements)
         {
             foreach (var node in nodeIDs.Select(nid => _context.Nodes[nid]))
             {
@@ -383,15 +376,11 @@ namespace VidiGraph
             );
         }
 
-        public void SetNodesPosition(List<int> nodeIDs, List<Vector3> positions, bool updateStorage, bool updateRenderElements)
+        public void SetNodesPosition(IEnumerable<int> nodeIDs, IEnumerable<Vector3> positions, bool updateStorage, bool updateRenderElements)
         {
-            var nodes = nodeIDs.Select(nid => _context.Nodes[nid]).ToList();
-
-            for (int i = 0; i < nodeIDs.Count; i++)
+            foreach (var (node, position) in nodeIDs.Select(nid => _context.Nodes[nid]).Zip(positions, Tuple.Create))
             {
-                var node = nodes[i];
-
-                node.Position = positions[i];
+                node.Position = position;
                 node.Dirty = true;
             }
 
@@ -569,14 +558,14 @@ namespace VidiGraph
 
         }
 
-        IEnumerator CRMoveNodes(List<int> nodeIDs, List<Transform> toTracks)
+        IEnumerator CRMoveNodes(IEnumerable<int> nodeIDs, IEnumerable<Transform> toTracks)
         {
             while (true)
             {
-                for (int i = 0; i < nodeIDs.Count; i++)
+                foreach (var (nodeID, toTrack) in nodeIDs.Zip(toTracks, Tuple.Create))
                 {
-                    _context.Nodes[nodeIDs[i]].Position = toTracks[i].position;
-                    _context.Nodes[nodeIDs[i]].Dirty = true;
+                    _context.Nodes[nodeID].Position = toTrack.position;
+                    _context.Nodes[nodeID].Dirty = true;
                 }
 
                 // update network without updating the storage for performance reasons
@@ -591,7 +580,7 @@ namespace VidiGraph
             }
         }
 
-        IEnumerator CRMoveComm(Transform comm, List<int> nodeIDs, List<Transform> toMove)
+        IEnumerator CRMoveComm(Transform comm, IEnumerable<int> nodeIDs, IEnumerable<Transform> toMoves)
         {
             Vector3 lastCommPosition = Vector3.positiveInfinity;
             Quaternion lastCommRotation = Quaternion.identity;
@@ -607,13 +596,13 @@ namespace VidiGraph
                     var diffRot = curRotation * Quaternion.Inverse(lastCommRotation);
                     diffRot.ToAngleAxis(out var angle, out var axis);
 
-                    for (int i = 0; i < nodeIDs.Count; i++)
+                    foreach (var (nodeID, toMove) in nodeIDs.Zip(toMoves, Tuple.Create))
                     {
-                        toMove[i].RotateAround(lastCommPosition, axis, angle);
+                        toMove.RotateAround(lastCommPosition, axis, angle);
 
-                        toMove[i].position += diff;
-                        _context.Nodes[nodeIDs[i]].Position = toMove[i].position;
-                        _context.Nodes[nodeIDs[i]].Dirty = true;
+                        toMove.position += diff;
+                        _context.Nodes[nodeID].Position = toMove.position;
+                        _context.Nodes[nodeID].Dirty = true;
                     }
                 }
 

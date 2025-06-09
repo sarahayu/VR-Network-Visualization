@@ -19,17 +19,14 @@ namespace VidiGraph
         [SerializeField]
         HandheldNetwork _handheldNetwork;
 
-
-        NetworkFilesLoader _fileLoader;
-        NetworkStorage _storage;
         public NetworkFilesLoader FileLoader { get { return _fileLoader; } }
-
-        NetworkGlobal _networkGlobal;
         public NetworkGlobal NetworkGlobal { get { return _networkGlobal; } }
-
         public HashSet<int> SelectedNodes { get { return _networkGlobal.SelectedNodes; } }
         public HashSet<int> SelectedCommunities { get { return _networkGlobal.SelectedCommunities; } }
 
+        NetworkFilesLoader _fileLoader;
+        NetworkStorage _storage;
+        NetworkGlobal _networkGlobal;
         bool _updatingStorage = true;
         bool _updatingRenderElements = true;
 
@@ -121,13 +118,13 @@ namespace VidiGraph
             _multiLayoutNetwork.UpdateRenderElements();
         }
 
-        public void SetSelectedNodes(List<int> nodeIDs, bool selected)
+        public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool selected)
         {
             _networkGlobal.SetSelectedNodes(nodeIDs, selected);
             _multiLayoutNetwork.UpdateSelectedElements();
         }
 
-        public void ToggleSelectedNodes(List<int> nodeIDs)
+        public void ToggleSelectedNodes(IEnumerable<int> nodeIDs)
         {
             _networkGlobal.ToggleSelectedNodes(nodeIDs);
             _multiLayoutNetwork.UpdateSelectedElements();
@@ -135,29 +132,27 @@ namespace VidiGraph
 
         public void StartMLNodeMove(int nodeID)
         {
-            _multiLayoutNetwork.StartNodeMove(nodeID, _multiLayoutNetwork.GetNodeTransform(nodeID));
+            _multiLayoutNetwork.StartNodeMove(nodeID);
         }
 
-        public void StartMLNodesMove(List<int> nodeIDs)
+        public void StartMLNodesMove(IEnumerable<int> nodeIDs)
         {
-            _multiLayoutNetwork.StartNodesMove(nodeIDs, nodeIDs.Select(id => _multiLayoutNetwork.GetNodeTransform(id)).ToList());
+            _multiLayoutNetwork.StartNodesMove(nodeIDs);
         }
 
         public void EndMLNodeMove(int nodeID, Transform transform)
         {
             _multiLayoutNetwork.EndNodeMove(nodeID);
-
         }
 
-        public void EndMLNodesMove(List<int> nodeIDs)
+        public void EndMLNodesMove(IEnumerable<int> nodeIDs)
         {
             _multiLayoutNetwork.EndNodesMove();
-
         }
 
         public void StartMLCommMove(int commID)
         {
-            _multiLayoutNetwork.StartCommMove(commID, _multiLayoutNetwork.GetCommTransform(commID));
+            _multiLayoutNetwork.StartCommMove(commID);
         }
 
         public void EndMLCommMove(int commID)
@@ -178,13 +173,13 @@ namespace VidiGraph
             _multiLayoutNetwork.UpdateRenderElements();
         }
 
-        public void SetSelectedCommunities(List<int> commIDs, bool selected)
+        public void SetSelectedCommunities(IEnumerable<int> commIDs, bool selected)
         {
             _networkGlobal.SetSelectedCommunities(commIDs, selected);
             _multiLayoutNetwork.UpdateSelectedElements();
         }
 
-        public void ToggleSelectedCommunities(List<int> commIDs)
+        public void ToggleSelectedCommunities(IEnumerable<int> commIDs)
         {
             _networkGlobal.ToggleSelectedCommunities(commIDs);
             _multiLayoutNetwork.UpdateSelectedElements();
@@ -198,7 +193,7 @@ namespace VidiGraph
         }
 
         // layout = [spherical, cluster, floor]
-        public void SetMLLayout(List<int> commIDs, string layout)
+        public void SetMLLayout(IEnumerable<int> commIDs, string layout)
         {
             _multiLayoutNetwork.SetLayout(commIDs, layout);
         }
@@ -206,22 +201,17 @@ namespace VidiGraph
         // layout = [spherical, cluster, floor]
         public void SetMLLayout(int commID, string layout)
         {
-            _multiLayoutNetwork.SetLayout(new List<int> { commID }, layout);
+            _multiLayoutNetwork.SetLayout(new int[] { commID }, layout);
         }
 
-        public void BringMLNodes(List<int> nodeIDs)
+        public void BringMLNodes(IEnumerable<int> nodeIDs)
         {
             _multiLayoutNetwork.BringNodes(nodeIDs);
         }
 
-        public void ReturnMLNodes(List<int> nodeIDs)
+        public void ReturnMLNodes(IEnumerable<int> nodeIDs)
         {
             _multiLayoutNetwork.ReturnNodes(nodeIDs);
-        }
-
-        public void SetMLNodeSizeEncoding(Func<VidiGraph.Node, float> func)
-        {
-            _multiLayoutNetwork.SetNodeSizeEncoding(func);
         }
 
         public Transform GetMLNodeTransform(int nodeID)
@@ -233,57 +223,57 @@ namespace VidiGraph
         {
             return _multiLayoutNetwork.GetCommTransform(commID);
         }
-        public void SetNodesSize(List<int> nodeIDs, float size)
+        public void SetNodesSize(IEnumerable<int> nodeIDs, float size)
         {
             _multiLayoutNetwork.SetNodesSize(nodeIDs, size, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetNodesColor(List<int> nodeIDs, Color color)
+        public void SetNodesColor(IEnumerable<int> nodeIDs, Color color)
         {
             _multiLayoutNetwork.SetNodesColor(nodeIDs, color, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetNodesPosition(List<int> nodeIDs, Vector3 position)
+        public void SetNodesPosition(IEnumerable<int> nodeIDs, Vector3 position)
         {
             _multiLayoutNetwork.SetNodesPosition(nodeIDs, position, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetNodesPosition(List<int> nodeIDs, List<Vector3> positions)
+        public void SetNodesPosition(IEnumerable<int> nodeIDs, IEnumerable<Vector3> positions)
         {
             _multiLayoutNetwork.SetNodesPosition(nodeIDs, positions, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetLinksWidth(List<int> linkIDs, float width)
+        public void SetLinksWidth(IEnumerable<int> linkIDs, float width)
         {
             _multiLayoutNetwork.SetLinksWidth(linkIDs, width, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetLinksColorStart(List<int> linkIDs, Color color)
+        public void SetLinksColorStart(IEnumerable<int> linkIDs, Color color)
         {
             _multiLayoutNetwork.SetLinksColorStart(linkIDs, color, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetLinksColorEnd(List<int> linkIDs, Color color)
+        public void SetLinksColorEnd(IEnumerable<int> linkIDs, Color color)
         {
             _multiLayoutNetwork.SetLinksColorEnd(linkIDs, color, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetLinksAlpha(List<int> linkIDs, float alpha)
+        public void SetLinksAlpha(IEnumerable<int> linkIDs, float alpha)
         {
             _multiLayoutNetwork.SetLinksAlpha(linkIDs, alpha, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetLinksBundlingStrength(List<int> linkIDs, float bundlingStrength)
+        public void SetLinksBundlingStrength(IEnumerable<int> linkIDs, float bundlingStrength)
         {
             _multiLayoutNetwork.SetLinksBundlingStrength(linkIDs, bundlingStrength, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetLinksBundleStart(List<int> linkIDs, bool bundleStart)
+        public void SetLinksBundleStart(IEnumerable<int> linkIDs, bool bundleStart)
         {
             _multiLayoutNetwork.SetLinksBundleStart(linkIDs, bundleStart, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetLinksBundleEnd(List<int> linkIDs, bool bundleEnd)
+        public void SetLinksBundleEnd(IEnumerable<int> linkIDs, bool bundleEnd)
         {
             _multiLayoutNetwork.SetLinksBundleEnd(linkIDs, bundleEnd, _updatingStorage, _updatingRenderElements);
         }

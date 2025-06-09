@@ -168,7 +168,7 @@ namespace VidiGraph
 
             GetNodeColor = node =>
             {
-                var fileNode = networkFile.nodes[networkFile.idToIdx[node.ID]];
+                var fileNode = networkFile.nodes[node.IdxProcessed];
                 return fileNode.props.gpa == null ? Color.gray : Color.Lerp(Color.white, Color.green, Mathf.Pow((float)fileNode.props.gpa / 4f, 2));
             };
 

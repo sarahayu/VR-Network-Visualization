@@ -7,19 +7,18 @@ namespace VidiGraph
 {
     public static class SurfaceManagerUtils
     {
-        public static List<Vector3> CalcProjected(int surfaceID, List<int> nodeIDs, SurfaceManager surfaceManager, NetworkManager networkManager)
+        public static List<Vector3> CalcProjected(int surfaceID, IEnumerable<Node> nodes, SurfaceManager surfaceManager, NetworkManager networkManager)
         {
             var surface = surfaceManager.Surfaces[surfaceID].gameObject.transform;
-            var flatNodes = networkManager.FileLoader.FlatLayout;
-            var flatPos = nodeIDs.Select(nid => 0.5f * (flatNodes.nodes[flatNodes.idToIdx[nid]]._position3D + Vector3.up)).ToList();
+            var flatNodes = networkManager.FileLoader.FlatLayout.nodes;
 
             var projecteds = new List<Vector3>();
 
-            foreach (var nodeID in nodeIDs)
+            foreach (var node in nodes)
             {
-                int commID = networkManager.NetworkGlobal.Nodes[nodeID].CommunityID;
+                int commID = networkManager.NetworkGlobal.Nodes[node.ID].CommunityID;
 
-                var pos2D = flatNodes.nodes[flatNodes.idToIdx[nodeID]]._position3D + Vector3.up;
+                var pos2D = flatNodes[node.IdxProcessed]._position3D + Vector3.up;
                 var currentCommPos = networkManager.GetMLCommTransform(commID).position;
 
                 projecteds.Add(CalcProjected(currentCommPos, surface, pos2D));

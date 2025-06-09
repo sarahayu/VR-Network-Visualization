@@ -41,23 +41,7 @@ namespace VidiGraph
             HairballLayout = Decode<NetworkFileData>(hairballFile);
             ClusterLayout = Decode<NetworkFileData>(clusterFile);
 
-            InitializeIdMap(SphericalLayout);
-            InitializeIdMap(ClusterLayout);
-            InitializeIdMap(FlatLayout);
-            InitializeIdMap(SphericalLayout);
-            InitializeIdMap(HairballLayout);
-
             print($"Loaded dataset {DatasetName}.");
-        }
-
-        void InitializeIdMap(NetworkFileData network)
-        {
-            network.idToIdx = new Dictionary<int, int>();
-
-            for (int i = 0; i < network.nodes.Count(); i++)
-            {
-                network.idToIdx[network.nodes[i].idx] = i;
-            }
         }
 
         W Decode<W>(string filename)
