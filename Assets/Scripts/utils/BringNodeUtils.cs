@@ -10,6 +10,10 @@ namespace VidiGraph
         {
             return trans.position - trans.forward * spread;
         }
+        public static Vector3 GetFocalPoint(Vector3 from, Vector3 to, float spread)
+        {
+            return from - Vector3.Normalize(to - from) * spread;
+        }
 
         public static Vector3 GetDestinationPoint(Vector3 focalPoint, Vector3 startPos, float spread, float offset)
         {

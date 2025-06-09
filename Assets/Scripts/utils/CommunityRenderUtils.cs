@@ -21,7 +21,7 @@ namespace VidiGraph
             MultiLayoutContext.Community commProps, Color selectColor, Renderer renderer = null)
         {
             commObj.transform.localPosition = commProps.MassCenter;
-            commObj.transform.localScale = Vector3.one;
+            commObj.transform.localScale = Vector3.one * (float)commProps.Size * 2;
 
             if (!renderer)
                 renderer = commObj.GetComponentInChildren<Renderer>();

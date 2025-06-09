@@ -36,11 +36,11 @@ namespace VidiGraph
 
         public override void ApplyTransformation()
         {
-            var focalPoint = BringNodeUtils.GetFocalPoint(_camera, _targetSpread);
 
             foreach (var nodeID in _nodesToUpdate)
             {
                 var nodePos = _networkContext.Nodes[nodeID].Position;
+                var focalPoint = BringNodeUtils.GetFocalPoint(_camera.position + _camera.forward * _offset, nodePos, _targetSpread);
                 _networkContext.Nodes[nodeID].Position = BringNodeUtils.GetDestinationPoint(focalPoint, nodePos, _targetSpread, _offset);
                 _networkContext.Nodes[nodeID].Dirty = true;
             }
@@ -52,7 +52,7 @@ namespace VidiGraph
         {
             var playerPos = _camera.position;
             var focalPoint = playerPos - _camera.forward * _targetSpread;
-            return new BringNodeInterpolator(_networkGlobal, _networkContext, _fileLoader, _nodesToUpdate, focalPoint, _targetSpread, _offset);
+            return new BringNodeInterpolator(_networkGlobal, _networkContext, _fileLoader, _nodesToUpdate, _camera, _targetSpread, _offset);
         }
 
         public void UpdateOnNextApply(int nodeID)
@@ -73,14 +73,16 @@ namespace VidiGraph
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
         public BringNodeInterpolator(NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
-            NetworkFilesLoader fileLoader, HashSet<int> nodesToUpdate, Vector3 focalPoint, float targetSpread, float offset)
+            NetworkFilesLoader fileLoader, HashSet<int> nodesToUpdate, Transform camera, float targetSpread, float offset)
         {
             _networkContext = networkContext;
 
             foreach (var nodeID in nodesToUpdate)
             {
                 var nodePos = _networkContext.Nodes[nodeID].Position;
+                var focalPoint = BringNodeUtils.GetFocalPoint(camera.position + camera.forward * offset, nodePos, targetSpread);
                 var bringNodePos = BringNodeUtils.GetDestinationPoint(focalPoint, nodePos, targetSpread, offset);
+                _startPositions[nodeID] = nodePos;
                 _endPositions[nodeID] = bringNodePos;
             }
 
