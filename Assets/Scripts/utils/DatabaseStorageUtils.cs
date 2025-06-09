@@ -326,7 +326,7 @@ namespace VidiGraph
                     string values = $"{nodeId};{label};{degree};{selected};{commId};{render_size};{render_pos};{render_color}";
                     if (dumpProps)
                     {
-                        var props = AsDictionary(networkFile.nodes[nodeGlobal.IdxProcessed].props);
+                        var props = ObjectUtils.AsDictionary(networkFile.nodes[nodeGlobal.IdxProcessed].props);
 
                         values += ";" + string.Join(";", nodeProps.Select(p => props[p].ToString()));
                     }
@@ -355,7 +355,7 @@ namespace VidiGraph
                     string values = $"{linkId};{sourceNodeId};{targetNodeId};{selected};{render_bundlingStrength};{render_width};{render_colorStart};{render_colorEnd};{render_alpha}";
                     if (dumpProps)
                     {
-                        var props = AsDictionary(networkFile.links[linkGlobal.IdxProcessed].props);
+                        var props = ObjectUtils.AsDictionary(networkFile.links[linkGlobal.IdxProcessed].props);
 
                         values += ";" + string.Join(";", linkProps.Select(p => props[p].ToString()));
                     }
@@ -383,19 +383,9 @@ namespace VidiGraph
             return fullpath;
         }
 
-        // https://stackoverflow.com/a/4944547
-        static IDictionary<string, object> AsDictionary(object source, BindingFlags bindingAttr = BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance)
-        {
-            return source.GetType().GetProperties(bindingAttr).ToDictionary
-            (
-                propInfo => propInfo.Name,
-                propInfo => propInfo.GetValue(source, null)
-            );
-        }
-
         static IEnumerable<string> GetHeaders(object props)
         {
-            return AsDictionary(props).Keys;
+            return ObjectUtils.AsDictionary(props).Keys;
         }
 
         static string ToQuery(string varname, object obj)
@@ -432,5 +422,26 @@ namespace VidiGraph
         }
 
         ////////////////// end specialized functions for BullyProps ////////////////////
+
+        ////////////////// start specialized functions for FriendProps ////////////////////
+
+        static string ToQuery(string varname, FriendProps.Node obj)
+        {
+            string query = "" +
+                $"SET {varname}.smoker = toBoolean(row.smoker) " +
+                $"SET {varname}.drinker = toBoolean(row.drinker) " +
+                $"SET {varname}.gpa = toFloat(row.gpa) " +
+                $"SET {varname}.grade = toInteger(row.grade)";
+
+            return query;
+        }
+        static string ToQuery(string varname, FriendProps.Link obj)
+        {
+            string query = "";
+
+            return query;
+        }
+
+        ////////////////// end specialized functions for FriendProps ////////////////////
     }
 }

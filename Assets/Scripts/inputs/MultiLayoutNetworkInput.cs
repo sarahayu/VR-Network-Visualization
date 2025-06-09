@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Runtime.InteropServices;
 using TMPro;
+using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit;
@@ -37,7 +38,8 @@ namespace VidiGraph
         Community _hoveredCommunity = null;
         Node _hoveredNode = null;
 
-        public TextMeshProUGUI TooltipText;
+        [SerializeField]
+        GameObject _tooltip;
         public Transform ButtonsTransform;
         public GameObject OptionPrefab;
 
@@ -56,10 +58,17 @@ namespace VidiGraph
         InteractionTimer _commHoverExit = new InteractionTimer();
         bool _cancelUpcomingDeselection = false;
 
+        TextMeshProUGUI _infoCol1;
+        TextMeshProUGUI _infoCol2;
+
         public override void Initialize()
         {
             _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _surfaceManager = GameObject.Find("/Surface Manager").GetComponent<SurfaceManager>();
+
+            _tooltip.SetActive(false);
+            _infoCol1 = _tooltip.GetNamedChild("NodeInfo_1").GetComponent<TextMeshProUGUI>();
+            _infoCol2 = _tooltip.GetNamedChild("NodeInfo_2").GetComponent<TextMeshProUGUI>();
 
             var renderer = GetComponentInChildren<NetworkRenderer>();
 
@@ -325,6 +334,25 @@ namespace VidiGraph
             }
         }
 
+        string[] GetPropsStr(Node node, int split)
+        {
+            var file = _networkManager.FileLoader.SphericalLayout;
+            var props = ObjectUtils.AsDictionary(file.nodes[file.idToIdx[node.ID]].props);
+
+            int counter = 0;
+
+            var splitProps = props.GroupBy(_ => counter++ % split).Select(d => d.ToDictionary(e => e.Key, e => e.Value));
+
+            return splitProps.Select(splitProp =>
+                splitProp.Aggregate("", (propStr, propPair) =>
+                {
+                    return propStr += "<b><size=70%>" + propPair.Key + "</size></b>\n"
+                        + (propPair.Value ?? "<i>no info</i>") + "\n"
+                        + "<size=50%> </size>\n";
+                })
+            ).ToArray();
+        }
+
         void OnNodeHoverEnter(Node node, HoverEnterEventArgs evt)
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
@@ -332,7 +360,15 @@ namespace VidiGraph
                 _networkManager.HoverNode(node.ID);
                 _hoveredNode = node;
 
-                TooltipText.SetText($"{node.Label}\n{node.Degree}");
+                _tooltip.SetActive(true);
+
+                var halves = GetPropsStr(node, 2);
+
+                _infoCol1.SetText(halves.Length >= 1 ? halves[0] : "");
+                _infoCol2.SetText(halves.Length >= 2 ? halves[1] : "");
+
+
+
                 _nodeHoverExit.DidCancel();
                 _commHoverExit.DidInteraction();
             }
@@ -342,6 +378,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
+                _tooltip.SetActive(false);
                 _nodeHoverExit.DidInteraction();
             }
         }
