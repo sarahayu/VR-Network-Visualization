@@ -327,8 +327,7 @@ namespace VidiGraph
                     if (dumpProps)
                     {
                         var props = ObjectUtils.AsDictionary(networkFile.nodes[nodeGlobal.IdxProcessed].props);
-
-                        values += ";" + string.Join(";", nodeProps.Select(p => props[p].ToString()));
+                        values += ";" + string.Join(";", nodeProps.Select(p => (props[p] ?? "").ToString()));
                     }
 
                     nFile.WriteLine(values);
@@ -357,7 +356,7 @@ namespace VidiGraph
                     {
                         var props = ObjectUtils.AsDictionary(networkFile.links[linkGlobal.IdxProcessed].props);
 
-                        values += ";" + string.Join(";", linkProps.Select(p => props[p].ToString()));
+                        values += ";" + string.Join(";", linkProps.Select(p => (props[p] ?? "").ToString()));
                     }
 
                     n2nFile.WriteLine(values);

@@ -337,7 +337,14 @@ namespace VidiGraph
         string[] GetPropsStr(Node node, int split)
         {
             var file = _networkManager.FileLoader.SphericalLayout;
-            var props = ObjectUtils.AsDictionary(file.nodes[file.idToIdx[node.ID]].props);
+
+            Dictionary<string, object> labelAndID = new Dictionary<string, object>()
+            {
+                {"label", node.Label},
+                {"id", node.ID},
+            };
+
+            var props = labelAndID.Concat(ObjectUtils.AsDictionary(file.nodes[file.idToIdx[node.ID]].props)).ToDictionary(k => k.Key, k => k.Value);
 
             int counter = 0;
 
