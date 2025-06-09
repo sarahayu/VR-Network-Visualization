@@ -1,6 +1,5 @@
 # TODO
 
-- fix priority select
 -  hover over community, then while still hovering quickly swipe over node in another community. node stays hovered
     - deprecated: (IGNORE as not high priority: fixing it would unfix hovering over node immediately after unhovering another node. plus, highlights reset themselves quite easily)
     - update: GOTTA FIX
@@ -44,6 +43,7 @@
 
 ## Ignore
 - move node moving animation to mln
+- fix priority select: probably there's a max to hovered items, and further items just don't get registered. solution: minimize number of possible hoverables, in this case, shrinkwrapping cluster size
 
 ## Troubleshooting
 
