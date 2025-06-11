@@ -4,7 +4,6 @@
     - deprecated: (IGNORE as not high priority: fixing it would unfix hovering over node immediately after unhovering another node. plus, highlights reset themselves quite easily)
     - update: GOTTA FIX
 - general code cleanup
-- lean button opts
 - when splatting to surface, account for random nodes that are not part of same community
 - move control point calculation to a transformer
     - keep bspline count constant
@@ -42,6 +41,8 @@
 - improve bring node
 - find out how to include props as anonymous types
 - tooltip
+- lean button opts
+- straighten lines between focused communities
 
 ## Ignore
 - move node moving animation to mln

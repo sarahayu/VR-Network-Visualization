@@ -47,24 +47,35 @@ namespace VidiGraph
                     {
                         var linkContext = _networkContext.Links[link.ID];
                         linkContext.Alpha = _networkContext.ContextSettings.LinkContext2FocusAlphaFactor;
-                        if (link.SourceNodeID == node.ID) linkContext.BundleStart = false;
-                        else linkContext.BundleEnd = false;
+
+                        if (link.SourceNodeID == node.ID)
+                        {
+                            linkContext.BundleStart = false;
+
+                            if (_networkContext.Communities[link.TargetNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
+                            {
+                                linkContext.BundlingStrength = 0f;
+                                linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
+                            }
+                        }
+                        else
+                        {
+                            linkContext.BundleEnd = false;
+
+                            if (_networkContext.Communities[link.TargetNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
+                            {
+                                linkContext.BundlingStrength = 0f;
+                                linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
+                            }
+                        }
+
                         link.Dirty = true;
                     }
 
                 }
-
-                foreach (var link in _networkGlobal.Communities[commID].InnerLinks)
-                {
-                    _networkContext.Links[link.ID].BundlingStrength = 0f;
-                    _networkContext.Links[link.ID].Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
-                    link.Dirty = true;
-                }
             }
 
             _commsToUpdate.Clear();
-
-            // _networkContext.CurrentTransform.SetFromTransform(_clusterTransform);
         }
 
         public override TransformInterpolator GetInterpolator()
@@ -112,17 +123,30 @@ namespace VidiGraph
                     {
                         var linkContext = _networkContext.Links[link.ID];
                         linkContext.Alpha = _networkContext.ContextSettings.LinkContext2FocusAlphaFactor;
-                        if (link.SourceNodeID == node.ID) linkContext.BundleStart = false;
-                        else linkContext.BundleEnd = false;
+
+                        if (link.SourceNodeID == node.ID)
+                        {
+                            linkContext.BundleStart = false;
+
+                            if (_networkContext.Communities[link.TargetNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
+                            {
+                                linkContext.BundlingStrength = 0f;
+                                linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
+                            }
+                        }
+                        else
+                        {
+                            linkContext.BundleEnd = false;
+
+                            if (_networkContext.Communities[link.TargetNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
+                            {
+                                linkContext.BundlingStrength = 0f;
+                                linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
+                            }
+                        }
+
                         link.Dirty = true;
                     }
-                }
-
-                foreach (var link in networkGlobal.Communities[commID].InnerLinks)
-                {
-                    _networkContext.Links[link.ID].BundlingStrength = 0f;
-                    _networkContext.Links[link.ID].Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
-                    link.Dirty = true;
                 }
             }
 
