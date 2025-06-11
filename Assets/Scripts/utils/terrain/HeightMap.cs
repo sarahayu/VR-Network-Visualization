@@ -13,6 +13,9 @@ namespace VidiGraph
 {
     public class HeightMap
     {
+        public int MaxLinkWeight { get { return _maxLinkWeight; } }
+        public int MaxNodeSize { get { return _maxNodeSize; } }
+
         float _falloffDistance;
         AnimationCurve _falloffShapeFunc;
         AnimationCurve _peakHeightFunc;

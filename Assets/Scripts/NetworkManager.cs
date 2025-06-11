@@ -122,12 +122,14 @@ namespace VidiGraph
         {
             _networkGlobal.SetSelectedNodes(nodeIDs, selected);
             _multiLayoutNetwork.UpdateSelectedElements();
+            _handheldNetwork.UpdateRenderElements();
         }
 
         public void ToggleSelectedNodes(IEnumerable<int> nodeIDs)
         {
             _networkGlobal.ToggleSelectedNodes(nodeIDs);
             _multiLayoutNetwork.UpdateSelectedElements();
+            _handheldNetwork.UpdateRenderElements();
         }
 
         public void StartMLNodeMove(int nodeID)
@@ -177,18 +179,21 @@ namespace VidiGraph
         {
             _networkGlobal.SetSelectedCommunities(commIDs, selected);
             _multiLayoutNetwork.UpdateSelectedElements();
+            _handheldNetwork.UpdateRenderElements();
         }
 
         public void ToggleSelectedCommunities(IEnumerable<int> commIDs)
         {
             _networkGlobal.ToggleSelectedCommunities(commIDs);
             _multiLayoutNetwork.UpdateSelectedElements();
+            _handheldNetwork.UpdateRenderElements();
         }
 
         public void ClearSelection()
         {
             _networkGlobal.ClearSelectedItems();
             _multiLayoutNetwork.UpdateSelectedElements();
+            _handheldNetwork.UpdateRenderElements();
 
         }
 

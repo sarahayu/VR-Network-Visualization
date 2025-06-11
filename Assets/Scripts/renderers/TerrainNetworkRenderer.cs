@@ -35,9 +35,13 @@ namespace VidiGraph
 
         [SerializeField]
         float _curvatureRadius = 100f;
+        [SerializeField]
+        GameObject _communityPointPrefab;
+        [SerializeField]
+        float _communityPointSize = 0.1f;
 
-        Dictionary<int, GameObject> _nodeGameObjs = new Dictionary<int, GameObject>();
-        Dictionary<Tuple<int, int>, GameObject> _linkGameObjs = new Dictionary<Tuple<int, int>, GameObject>();
+        Dictionary<int, GameObject> _commSpheres = new Dictionary<int, GameObject>();
+        Dictionary<int, Renderer> _commSphereRends = new Dictionary<int, Renderer>();
         NetworkGlobal _networkGlobal;
         MinimapContext _networkContext;
         HeightMap _heightMap;
@@ -64,8 +68,8 @@ namespace VidiGraph
                 GameObjectUtils.ChildrenDestroy(NetworkTransform);
             }
 
-            _nodeGameObjs.Clear();
-            _linkGameObjs.Clear();
+            _commSpheres.Clear();
+            _commSphereRends.Clear();
             _lineTex = null;
             _heightTex = null;
             _normalTex = null;
@@ -125,11 +129,31 @@ namespace VidiGraph
 
             // mMaterial.SetTexture("_SelectionTex", _selectionTex);
 
+
+            foreach (var (communityID, community) in _networkContext.CommunityNodes)
+            {
+
+                GameObject nodeObj = UnityEngine.Object.Instantiate(_communityPointPrefab, NetworkTransform);
+                nodeObj.transform.localPosition = new Vector3(
+                    community.Position.x,
+                    _peakHeightFunc.Evaluate((float)community.Size / _heightMap.MaxNodeSize)
+                        * _meshHeight * _meshSize,
+                    community.Position.y);
+                nodeObj.transform.localScale = Vector3.one * _communityPointSize;
+                nodeObj.SetActive(false);
+
+                _commSpheres[communityID] = nodeObj;
+            }
+
         }
 
         public override void UpdateRenderElements()
         {
-            // do nothing
+            foreach (var (communityID, community) in _networkGlobal.Communities)
+            {
+                if (community.Selected) _commSpheres[communityID].SetActive(true);
+                else _commSpheres[communityID].SetActive(false);
+            }
         }
 
         public override void Draw()

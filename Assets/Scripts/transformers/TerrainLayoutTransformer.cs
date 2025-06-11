@@ -44,7 +44,7 @@ namespace VidiGraph
 
                 _networkContext.CommunityNodes[community.ID].Position = center;
                 _networkContext.CommunityNodes[community.ID].Size = community.Nodes.Count;
-                _networkContext.CommunityNodes[community.ID].Color = Color.white;
+                _networkContext.CommunityNodes[community.ID].Color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
 
                 if (center.x < min.x || min == Vector3.zero)
                 {
