@@ -40,8 +40,7 @@ namespace VidiGraph
             foreach (var nodeID in _nodesToUpdate)
             {
                 var nodePos = _networkContext.Nodes[nodeID].Position;
-                var focalPoint = BringNodeUtils.GetFocalPoint(_camera.position + _camera.forward * _offset, nodePos, _targetSpread);
-                _networkContext.Nodes[nodeID].Position = BringNodeUtils.GetDestinationPoint(focalPoint, nodePos, _targetSpread, _offset);
+                _networkContext.Nodes[nodeID].Position = BringNodeUtils.GetDestinationPoint(nodePos, _camera, _targetSpread, _offset);
                 _networkContext.Nodes[nodeID].Dirty = true;
             }
 
@@ -50,8 +49,6 @@ namespace VidiGraph
 
         public override TransformInterpolator GetInterpolator()
         {
-            var playerPos = _camera.position;
-            var focalPoint = playerPos - _camera.forward * _targetSpread;
             return new BringNodeInterpolator(_networkGlobal, _networkContext, _fileLoader, _nodesToUpdate, _camera, _targetSpread, _offset);
         }
 
@@ -80,8 +77,7 @@ namespace VidiGraph
             foreach (var nodeID in nodesToUpdate)
             {
                 var nodePos = _networkContext.Nodes[nodeID].Position;
-                var focalPoint = BringNodeUtils.GetFocalPoint(camera.position + camera.forward * offset, nodePos, targetSpread);
-                var bringNodePos = BringNodeUtils.GetDestinationPoint(focalPoint, nodePos, targetSpread, offset);
+                var bringNodePos = BringNodeUtils.GetDestinationPoint(nodePos, camera, targetSpread, offset);
                 _startPositions[nodeID] = nodePos;
                 _endPositions[nodeID] = bringNodePos;
             }

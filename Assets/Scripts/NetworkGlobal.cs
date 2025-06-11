@@ -326,7 +326,11 @@ namespace VidiGraph
             {
                 if (!node.IsVirtualNode)
                 {
-                    if (node.CommunityID == -1) Debug.Log(node.ID);
+                    if (node.CommunityID == -1)
+                    {
+                        Debug.Log(node.ID);
+                        Debug.Log(string.Join(";", node.AncIDsOrderList));
+                    }
                     _communities[node.CommunityID].Nodes.Add(node);
                 }
             }
@@ -356,8 +360,6 @@ namespace VidiGraph
             var nodeStack = new Stack<int>();
             nodeStack.Push(_rootNodeID);
 
-            var nodesLeft = _nodes.NodeArray.Select(n => n.ID).ToHashSet();
-
             int communityID = 0;
             while (nodeStack.Count != 0)
             {
@@ -367,24 +369,14 @@ namespace VidiGraph
                 {
                     CreateCommunity(curNode, communityID++);
 
-                    Debug.Log(curNode.ID);
-
-                    nodesLeft.ExceptWith(curNode.ChildIDs.Where(nid => !_nodes[nid].IsVirtualNode));
-
-                    nodeStack.Concat(curNode.ChildIDs.Where(cid => _nodes[cid].IsVirtualNode));
+                    foreach (var cid in curNode.ChildIDs.Where(cid => _nodes[cid].IsVirtualNode)) nodeStack.Push(cid);
                 }
                 else
                 {
-                    nodeStack.Concat(curNode.ChildIDs);
+                    foreach (var cid in curNode.ChildIDs) nodeStack.Push(cid);
                 }
 
             }
-
-            foreach (var left in nodesLeft)
-            {
-                // Debug.Log(left);
-            }
-
         }
 
         bool IsCommunity(Node node)

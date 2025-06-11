@@ -44,7 +44,7 @@ namespace VidiGraph
 
                 _networkContext.CommunityNodes[community.ID].Position = center;
                 _networkContext.CommunityNodes[community.ID].Size = community.Nodes.Count;
-                _networkContext.CommunityNodes[community.ID].Color = community.Color;
+                _networkContext.CommunityNodes[community.ID].Color = Color.white;
 
                 if (center.x < min.x || min == Vector3.zero)
                 {
@@ -72,7 +72,7 @@ namespace VidiGraph
             double centerX = (min.x + max.x) / 2;
             double centerY = (min.y + max.y) / 2;
 
-            float buf = 0.5f;
+            float buf = 0.1f;
 
             double halfSideLen = Math.Max(width / 2, height / 2) * (1 + buf);
 
@@ -88,10 +88,17 @@ namespace VidiGraph
                 pos.x /= (float)halfSideLen;
                 pos.y /= (float)halfSideLen;
 
-                community.Position = pos;
-            }
+                var angle = Mathf.Atan(pos.y / pos.x);
+                var squareRad = Mathf.Abs(
+                    Mathf.Abs(pos.x) > Mathf.Abs(pos.y)
+                    ? 1f / Mathf.Cos(angle)
+                    : 1f / Mathf.Sin(angle)
+                );
+                var posRad = Vector3.Magnitude(pos);
+                var finalPos = Vector3.Normalize(pos) * posRad / squareRad;
 
-            // _networkContext.CurrentTransform.SetFromTransform(_terrainTransform);
+                community.Position = finalPos;
+            }
         }
 
         public override TransformInterpolator GetInterpolator()
