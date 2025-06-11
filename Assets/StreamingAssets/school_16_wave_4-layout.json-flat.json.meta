@@ -1,5 +1,9 @@
 fileFormatVersion: 2
+<<<<<<<< HEAD:Assets/StreamingAssets/school_16_wave_4-layout.json-flat.json.meta
 guid: 6f1fd1ac755cea14ab9cfbc09dfc63d5
+========
+guid: f14940d518804c44c9a2fbd7e1a72df7
+>>>>>>>> origin/qqai:Assets/Voice/PythonScripts/langgraph_server.py.meta
 DefaultImporter:
   externalObjects: {}
   userData: 

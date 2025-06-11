@@ -4,6 +4,7 @@ using UnityEngine.Networking;
 using System.Collections;
 using System.Text;
 using Whisper.Utils;
+
 using VidiGraph;
 
 namespace Whisper.Samples
@@ -17,6 +18,8 @@ namespace Whisper.Samples
         public WhisperManager whisper;
         public MicrophoneRecord microphoneRecord;
         public NetworkManager _networkManager;
+        public DatabaseStorage _databaseStorage;
+        public LoadingIcon loadingIcon;
         public Query _query;
 
         [Header("UI")]
@@ -27,13 +30,11 @@ namespace Whisper.Samples
 
         // Reference to the whisper stream
         private WhisperStream _stream;
-        // Timer for detecting pause
-        private float lastRecognizedTime = 0f;
+        private float whisperStartTime;
+        private float whisper_currentTime;
 
-        // Buffer to store what is currently being transcribed
-        private string currentBuffer = "";
 
-        // ====== 1) Classification Endpoint URL ======
+        // Classification server URL
         private string serverUrl = "http://localhost:5000/classify";
 
 
@@ -52,7 +53,6 @@ namespace Whisper.Samples
             microphoneRecord.OnRecordStop += OnRecordStop;
             button.onClick.AddListener(OnButtonPressed);
 
-
         }
 
         private void OnButtonPressed()
@@ -62,13 +62,13 @@ namespace Whisper.Samples
                 // Start listening
                 _stream.StartStream();
                 microphoneRecord.StartRecord();
+                whisperStartTime = Time.time; // record start time
             }
             else
             {
                 // Stop listening
                 microphoneRecord.StopRecord();
             }
-
         }
 
         private void OnRecordStop(AudioChunk recordedAudio)
@@ -77,32 +77,10 @@ namespace Whisper.Samples
             buttonText.text = "Record";
         }
 
-        /// <summary>
         /// Called whenever Whisper produces new recognized text.
-        /// </summary>
         private void OnResult(string result)
         {
-            float currentTime = Time.time;
-
-            if (currentTime - lastRecognizedTime > 3.0f)
-            {
-                // More than 2 seconds passed → treat as new sentence
-                currentBuffer = result;
-            }
-            else
-            {
-                // Within 2 seconds → keep appending
-                currentBuffer += " " + result;
-            }
-
-            lastRecognizedTime = currentTime;
-
-            // Display current transcription
-            text.text = currentBuffer;
-            UiUtils.ScrollDown(scroll);
-
-            StartCoroutine(ClassifyUserCommand(currentBuffer));
-            currentBuffer = "";
+            // Debug.Log($"Result: {result}");
         }
 
 
@@ -115,6 +93,10 @@ namespace Whisper.Samples
         private void OnSegmentFinished(WhisperResult segment)
         {
             // Debug.Log($"Segment finished: {segment.Result}");
+            float recognitionTime = Time.time - whisperStartTime;
+            whisperStartTime = Time.time;
+            StartCoroutine(ClassifyUserCommand(segment.Result, recognitionTime));
+            // reset start time for next recording
         }
 
         private void OnFinished(string finalResult)
@@ -122,10 +104,12 @@ namespace Whisper.Samples
             // Debug.Log("Stream finished!");
         }
 
-        // ====== 3) Classification Logic ======
-        private IEnumerator ClassifyUserCommand(string recognizedText)
+        // Classification Main Function
+        private IEnumerator ClassifyUserCommand(string recognizedText, float whisperTime)
         {
-            Debug.Log("Recognized TEXT: " + recognizedText);
+            loadingIcon.SetLoading(true);
+            Debug.Log("Recognized text input: " + recognizedText);
+            // Debug.Log($"Whisper took {whisperTime:F3} seconds to recognize.");
             ClassificationRequest requestBody = new ClassificationRequest { userText = recognizedText };
             string jsonBody = JsonUtility.ToJson(requestBody);
 
@@ -146,42 +130,66 @@ namespace Whisper.Samples
                 else
                 {
                     string responseJson = www.downloadHandler.text;
-                    Debug.Log("GPT Response: " + responseJson);
 
+                    // Parse JSON
                     ClassificationResponse classification = JsonUtility.FromJson<ClassificationResponse>(responseJson);
 
-                    if (classification != null && !string.IsNullOrEmpty(classification.query))
+                    // Show timing info for debugging
+                    if (classification.timings != null)
                     {
-                        _query.ExecuteQuery(classification.query);
-                        currentBuffer = "";
+                        Debug.Log($"Timing - General Agent: {classification.timings.general_agent}s");
+                        Debug.Log($"Timing - Execute Agent: {classification.timings.execute_agent}s");
+                        Debug.Log($"Timing - Clarify Agent: {classification.timings.clarify_agent}s");
+                        Debug.Log($"Timing - Return Code: {classification.timings.return_code}s");
+                    }
+
+                    // Check if clarification is needed
+                    if (!string.IsNullOrEmpty(classification.clarify))
+                    {
+                        Debug.LogWarning("Clarification Needed: " + classification.clarify);
+                        // Add the voice for classification later
                     }
                     else
                     {
-                        Debug.LogWarning("Invalid or empty query received.");
+                        Debug.Log("Cypher Query: " + classification.query);
+                        _databaseStorage.InteractStore(classification.query);
+                        loadingIcon.SetLoading(false);
                     }
                 }
-
             }
         }
 
-
-
     }
 
-
-
-    // Classes for JSON serialization/deserialization
-    [System.Serializable]
-    public class ClassificationRequest
-    {
-        public string userText;
-    }
-
-    [System.Serializable]
-    public class ClassificationResponse
-    {
-        public string query;
-    }
 
 
 }
+
+
+
+// Classes for JSON serialization/deserialization
+[System.Serializable]
+public class ClassificationRequest
+{
+    public string userText;
+}
+
+[System.Serializable]
+public class ClassificationResponse
+{
+    public string query;
+    public string clarify;
+    public Timing timings;
+}
+
+[System.Serializable]
+public class Timing
+{
+    public float general_agent;
+    public float clarify_agent;
+    public float execute_agent;
+    public float return_code;
+}
+
+
+
