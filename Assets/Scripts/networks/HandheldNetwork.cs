@@ -42,7 +42,7 @@ namespace VidiGraph
 
         public override void UpdateRenderElements()
         {
-            // TODO implement
+            _renderer.UpdateRenderElements();
         }
 
         public override void DrawPreview()

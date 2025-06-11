@@ -231,14 +231,11 @@ namespace VidiGraph
                     case "Bring Node":
                         _networkManager.BringMLNodes(_networkManager.SelectedNodes);
                         break;
-                    case "Reset Node":
+                    case "Reset Node(s)":
                         _networkManager.ReturnMLNodes(_networkManager.SelectedNodes);
                         break;
-                    case "Bring Comm.":
+                    case "Focus Comm.":
                         _networkManager.SetMLLayout(_networkManager.SelectedCommunities, "cluster");
-                        break;
-                    case "Reset Comm.":
-                        _networkManager.SetMLLayout(_networkManager.SelectedCommunities, "spherical");
                         break;
                     case "Project Comm. Floor":
                         _networkManager.SetMLLayout(_networkManager.SelectedCommunities, "floor");

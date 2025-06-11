@@ -66,13 +66,12 @@ namespace VidiGraph
             if (SelectedNodes.Count > 0)
             {
                 opts.Add("Bring Node");
-                opts.Add("Reset Node");
+                opts.Add("Reset Node(s)");
             }
 
             if (SelectedCommunities.Count > 0)
             {
-                opts.Add("Bring Comm.");
-                opts.Add("Reset Comm.");
+                opts.Add("Focus Comm.");
                 opts.Add("Project Comm. Floor");
             }
 

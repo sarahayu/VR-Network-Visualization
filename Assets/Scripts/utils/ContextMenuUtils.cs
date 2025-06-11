@@ -15,6 +15,7 @@ namespace VidiGraph
             GameObject optionObj = UnityEngine.Object.Instantiate(prefab, transform);
 
             optionObj.transform.Rotate(Vector3.up, angle);
+            optionObj.transform.Rotate(Vector3.right, -45);
             optionObj.GetComponentInChildren<TextMeshProUGUI>().SetText(text);
 
             return optionObj;

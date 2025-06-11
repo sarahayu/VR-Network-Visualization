@@ -18,7 +18,7 @@ namespace VidiGraph
             {
                 int commID = networkManager.NetworkGlobal.Nodes[node.ID].CommunityID;
 
-                var pos2D = flatNodes[node.IdxProcessed]._position3D + Vector3.up;
+                var pos2D = flatNodes[node.IdxProcessed]._position3D;
                 var currentCommPos = networkManager.GetMLCommTransform(commID).position;
 
                 projecteds.Add(CalcProjected(currentCommPos, surface, pos2D));
