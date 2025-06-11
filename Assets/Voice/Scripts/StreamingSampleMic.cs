@@ -19,6 +19,7 @@ namespace Whisper.Samples
         public MicrophoneRecord microphoneRecord;
         public NetworkManager _networkManager;
         public DatabaseStorage _databaseStorage;
+        public LoadingIcon loadingIcon;
         public Query _query;
 
         [Header("UI")]
@@ -106,8 +107,9 @@ namespace Whisper.Samples
         // Classification Main Function
         private IEnumerator ClassifyUserCommand(string recognizedText, float whisperTime)
         {
+            loadingIcon.SetLoading(true);
             Debug.Log("Recognized text input: " + recognizedText);
-            Debug.Log($"Whisper took {whisperTime:F3} seconds to recognize.");
+            // Debug.Log($"Whisper took {whisperTime:F3} seconds to recognize.");
             ClassificationRequest requestBody = new ClassificationRequest { userText = recognizedText };
             string jsonBody = JsonUtility.ToJson(requestBody);
 
@@ -151,6 +153,7 @@ namespace Whisper.Samples
                     {
                         Debug.Log("Cypher Query: " + classification.query);
                         _databaseStorage.InteractStore(classification.query);
+                        loadingIcon.SetLoading(false);
                     }
                 }
             }

@@ -8,10 +8,17 @@ from langchain.prompts import ChatPromptTemplate
 from utils import print_colored
 
 
+def override(_: str | None, new: str) -> str:
+    return new
+
+def merge_dicts(old: dict[str, float] | None, new: dict[str, float]) -> dict[str, float]:
+    return {**(old or {}), **new}
+
 class AgentState(TypedDict):
-    input: Annotated[str, "input"]
-    code: str
-    timings: dict[str, float]
+    input: Annotated[str, override]
+    code: Annotated[str, override]
+    timings: Annotated[dict[str, float], merge_dicts]
+
 
 
 app = Flask(__name__)
