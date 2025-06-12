@@ -18,6 +18,7 @@ class AgentState(TypedDict):
     input: Annotated[str, override]
     code: Annotated[str, override]
     timings: Annotated[dict[str, float], merge_dicts]
+    judgment: Annotated[str, override]
 
 
 
@@ -77,10 +78,7 @@ def general_agent(state: AgentState) -> dict:
     messages = ambiguity_prompt.format_messages(input=state["input"])
     judgment = llm(messages).content.strip().lower()
     print_colored(f"Judgment on ambiguity: {judgment}", 'blue')
-    if judgment.startswith("yes"):
-        return {"input": state["input"], "__next__": "clarify_agent"}
-    else:
-        return {"input": state["input"], "__next__": "execute_agent"}
+    return {"input": state["input"], "judgment": judgment}
 
 @timed_node("clarify_agent")
 def clarify_agent(state: AgentState) -> dict:
@@ -94,13 +92,18 @@ def execute_agent(state: AgentState) -> dict:
     messages = cypher_prompt.format_messages(input=state["input"])
     cypher = llm(messages).content.strip()
     print_colored(f"Generated Cypher query: {cypher}", 'green')
-    return {"input": state["input"], "code": cypher, "__next__": "return_code"}
+    return {"input": "", "code": cypher, "__next__": "return_code"}
 
 @timed_node("return_code")
 def return_code(state: AgentState) -> AgentState:
     print_colored(f"Returning code: {state['code']}", 'magenta')
     return state
 
+def decide_clarify(state: AgentState) -> str:
+    if state['judgment'].startswith("yes"):
+        return "clarify_agent"
+    else:
+        return "execute_agent"
 
 graph = StateGraph(state_schema=AgentState)
 graph.add_node("general_agent", general_agent)
@@ -109,8 +112,7 @@ graph.add_node("execute_agent", execute_agent)
 graph.add_node("return_code", return_code)
 
 graph.set_entry_point("general_agent")
-graph.add_edge("general_agent", "clarify_agent")
-graph.add_edge("general_agent", "execute_agent")
+graph.add_conditional_edges("general_agent", decide_clarify)
 graph.add_edge("clarify_agent", "return_code")
 graph.add_edge("execute_agent", "return_code")
 
@@ -126,6 +128,7 @@ def classify():
         result = langgraph_app.invoke(state)
         print_colored(f"Result from langgraph: {result}", 'green')
         return jsonify({
+            "type": "select",
             "query": result.get("code", ""),
             "clarify": result.get("input", ""),
             "timings": result.get("timings", {})
