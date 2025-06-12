@@ -39,9 +39,9 @@ namespace VidiGraph
             DatabaseStorageUtils.BulkUpdateNetwork(networkGlobal, networkContext, _driver, _convertWinPaths);
         }
 
-        public void InteractStore(string command)
+        public IEnumerable<Node> GetNodesFromStore(NetworkGlobal networkGlobal, string command)
         {
-            DatabaseStorageUtils.ExecuteCommand(command, _driver, _convertWinPaths);
+            return DatabaseStorageUtils.GetNodesFromStore(networkGlobal, command, _driver, _convertWinPaths);
         }
     }
 }

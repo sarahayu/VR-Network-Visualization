@@ -162,7 +162,7 @@ namespace VidiGraph
             }
         }
 
-        bool CheckSelectionActions()
+        public bool CheckSelectionActions()
         {
             var curOpts = _networkManager.GetValidOptions();
 

@@ -17,6 +17,8 @@ namespace VidiGraph
         [SerializeField]
         MultiLayoutNetwork _multiLayoutNetwork;
         [SerializeField]
+        MultiLayoutNetworkInput _multiLayoutNetworkInput;
+        [SerializeField]
         HandheldNetwork _handheldNetwork;
 
         public NetworkFilesLoader FileLoader { get { return _fileLoader; } }
@@ -122,6 +124,7 @@ namespace VidiGraph
             _networkGlobal.SetSelectedNodes(nodeIDs, selected);
             _multiLayoutNetwork.UpdateSelectedElements();
             _handheldNetwork.UpdateRenderElements();
+            _multiLayoutNetworkInput.CheckSelectionActions();
         }
 
         public void ToggleSelectedNodes(IEnumerable<int> nodeIDs)
@@ -129,6 +132,7 @@ namespace VidiGraph
             _networkGlobal.ToggleSelectedNodes(nodeIDs);
             _multiLayoutNetwork.UpdateSelectedElements();
             _handheldNetwork.UpdateRenderElements();
+            _multiLayoutNetworkInput.CheckSelectionActions();
         }
 
         public void StartMLNodeMove(int nodeID)
@@ -179,6 +183,7 @@ namespace VidiGraph
             _networkGlobal.SetSelectedCommunities(commIDs, selected);
             _multiLayoutNetwork.UpdateSelectedElements();
             _handheldNetwork.UpdateRenderElements();
+            _multiLayoutNetworkInput.CheckSelectionActions();
         }
 
         public void ToggleSelectedCommunities(IEnumerable<int> commIDs)
@@ -186,6 +191,7 @@ namespace VidiGraph
             _networkGlobal.ToggleSelectedCommunities(commIDs);
             _multiLayoutNetwork.UpdateSelectedElements();
             _handheldNetwork.UpdateRenderElements();
+            _multiLayoutNetworkInput.CheckSelectionActions();
         }
 
         public void ClearSelection()
@@ -193,6 +199,7 @@ namespace VidiGraph
             _networkGlobal.ClearSelectedItems();
             _multiLayoutNetwork.UpdateSelectedElements();
             _handheldNetwork.UpdateRenderElements();
+            _multiLayoutNetworkInput.CheckSelectionActions();
 
         }
 

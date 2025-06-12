@@ -6,6 +6,7 @@ using System.Text;
 using Whisper.Utils;
 
 using VidiGraph;
+using System.Linq;
 
 namespace Whisper.Samples
 {
@@ -151,8 +152,13 @@ namespace Whisper.Samples
                     }
                     else
                     {
-                        Debug.Log("Cypher Query: " + classification.query);
-                        _databaseStorage.InteractStore(classification.query);
+                        var query = classification.query.Substring(10, classification.query.Length - 13);
+                        Debug.Log("Cypher Query: " + query);
+                        var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
+
+                        _networkManager.SetSelectedNodes(nodes.Select(n => n.ID), true);
+
+
                         loadingIcon.SetLoading(false);
                     }
                 }
