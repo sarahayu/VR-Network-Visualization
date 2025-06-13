@@ -1,5 +1,9 @@
 # TODO
 
+- move multiple selections
+- attaching nodes, average pos?
+
+
 -  hover over community, then while still hovering quickly swipe over node in another community. node stays hovered
     - deprecated: (IGNORE as not high priority: fixing it would unfix hovering over node immediately after unhovering another node. plus, highlights reset themselves quite easily)
     - update: GOTTA FIX
@@ -43,6 +47,10 @@
 - tooltip
 - lean button opts
 - straighten lines between focused communities
+- high contrast
+- bigger font
+- bigger surface
+- bring back attach nodes
 
 ## Ignore
 - move node moving animation to mln

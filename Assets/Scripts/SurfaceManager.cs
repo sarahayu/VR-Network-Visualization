@@ -64,8 +64,8 @@ namespace VidiGraph
 
             _userPos = GameObject.FindWithTag("MainCamera").transform;
 
-            // _mlRenderer.OnNodeGrabEnter += OnNodeGrabEnter;
-            // _mlRenderer.OnNodeGrabExit += OnNodeGrabExit;
+            _mlRenderer.OnNodeGrabEnter += OnNodeGrabEnter;
+            _mlRenderer.OnNodeGrabExit += OnNodeGrabExit;
             _mlRenderer.OnCommunityGrabEnter += OnCommunityGrabEnter;
             _mlRenderer.OnCommunityGrabExit += OnCommunityGrabExit;
         }
