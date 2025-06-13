@@ -51,7 +51,7 @@ namespace VidiGraph
 
         static Vector3 CalcProjected(Vector3 point, Transform surface, Vector3 pos2D)
         {
-            Vector3 planePoint = surface.position;
+            Vector3 planePoint = surface.position + surface.up * 0.001f;
             Vector3 normal = surface.up;
 
             Vector3 projCommPos = point - Vector3.Dot(normal, point - planePoint) * normal;

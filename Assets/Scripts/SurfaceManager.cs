@@ -38,6 +38,7 @@ namespace VidiGraph
         }
 
         Dictionary<int, Surface> _surfaces = new Dictionary<int, Surface>();
+        Dictionary<int, Collider> _colliders = new Dictionary<int, Collider>();
         Dictionary<int, int> _nodeToSurf = new Dictionary<int, int>();
 
         int _curID = 0;
@@ -83,12 +84,14 @@ namespace VidiGraph
             AddSurfaceInteraction(surfObject, id);
 
             var si = new Surface();
+            var highlighter = surfObject.GetNamedChild("Highlight");
 
             si.ID = id;
             si.GameObject = surfObject;
-            si.Renderer = surfObject.GetNamedChild("Highlight").GetComponent<Renderer>();
+            si.Renderer = highlighter.GetComponent<Renderer>();
 
             _surfaces[id] = si;
+            _colliders[id] = highlighter.GetComponent<Collider>();
 
             return id;
         }
@@ -108,6 +111,7 @@ namespace VidiGraph
 
                 foreach (var nodeID in _surfaces[surfID].Nodes.Keys) _nodeToSurf.Remove(nodeID);
                 _surfaces.Remove(surfID);
+                _colliders.Remove(surfID);
             }
         }
 
@@ -280,7 +284,8 @@ namespace VidiGraph
 
             foreach (var surf in _surfaces.Values)
             {
-                float dist = Vector3.Distance(surf.GameObject.transform.position, position);
+                var posOnCollider = _colliders[surf.ID].ClosestPointOnBounds(position);
+                float dist = Vector3.Distance(posOnCollider, position);
 
                 if (dist < closestDist && dist < _surfaceAttractionDist)
                 {

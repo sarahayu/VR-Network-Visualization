@@ -17,7 +17,7 @@ Shader "Custom/Selectable Surface"
             "Queue"="Transparent"
             "RenderType"="Transparent"
         }
-        ZWrite Off
+        ZWrite On
         Blend SrcAlpha OneMinusSrcAlpha
         LOD 200
 
