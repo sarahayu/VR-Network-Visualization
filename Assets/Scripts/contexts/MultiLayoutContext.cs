@@ -136,6 +136,19 @@ namespace VidiGraph
             }
         }
 
+        public void RecomputeGeometricPropsNoSize(NetworkGlobal networkGlobal)
+        {
+            foreach (var community in networkGlobal.Communities.Values)
+            {
+                var contextCommunity = Communities[community.ID];
+
+                CommunityMathUtils.ComputeMassProperties(community.Nodes, Nodes,
+                    out contextCommunity.Mass, out contextCommunity.MassCenter);
+
+                contextCommunity.Dirty = true;
+            }
+        }
+
         void SetDefaultEncodings(NetworkGlobal networkGlobal, NetworkFileData networkFile)
         {
             // // Bully data
@@ -150,27 +163,27 @@ namespace VidiGraph
 
             // Friend data
             GetNodeSize = node => (float)Math.Log10(node.Degree * 100) * 2.5f + 0.5f;
-            // GetNodeColor = node =>
-            // {
-            //     var fileNode = networkFile.nodes[networkFile.idToIdx[node.ID]];
-
-            //     var drinker = fileNode.props.drinker;
-            //     var smoker = fileNode.props.smoker;
-
-            //     if (drinker == true && smoker == true) return Color.magenta;
-            //     if (drinker == true) return Color.red;
-            //     if (smoker == true) return Color.blue;
-
-            //     if (drinker == null || smoker == null) return Color.gray;
-
-            //     return Color.white;
-            // };
-
             GetNodeColor = node =>
             {
                 var fileNode = networkFile.nodes[node.IdxProcessed];
-                return fileNode.props.gpa == null ? Color.gray : Color.Lerp(Color.white, Color.green, Mathf.Pow((float)fileNode.props.gpa / 4f, 2));
+
+                var drinker = fileNode.props.drinker;
+                var smoker = fileNode.props.smoker;
+
+                if (drinker == true && smoker == true) return Color.magenta;
+                if (drinker == true) return Color.red;
+                if (smoker == true) return Color.blue;
+
+                if (drinker == null || smoker == null) return Color.gray;
+
+                return Color.white;
             };
+
+            // GetNodeColor = node =>
+            // {
+            //     var fileNode = networkFile.nodes[node.IdxProcessed];
+            //     return fileNode.props.gpa == null ? Color.gray : Color.Lerp(Color.white, Color.green, Mathf.Pow((float)fileNode.props.gpa / 4f, 2));
+            // };
 
             GetLinkWidth = _ => ContextSettings.LinkWidth;
             GetLinkColorStart = _ => linkColor;

@@ -40,7 +40,11 @@ cypher_prompt = ChatPromptTemplate.from_template(
     selected, (bool)\
     render_size, (float)\
     render_pos, (string)\
-    render_color (string) \n\n\
+    render_color (string)\
+    smoker, (bool)\
+    drinker, (bool)\
+    gpa (float)\
+    grade (int) \n\n\
     Only return the Cypher query, no explanations.\n\nUser Request: {input}"
 )
 

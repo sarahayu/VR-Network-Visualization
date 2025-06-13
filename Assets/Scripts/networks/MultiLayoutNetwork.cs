@@ -85,6 +85,7 @@ namespace VidiGraph
             _isSphericalLayout = true;
             _sphericalLayoutTransformer.UpdateCommsOnNextApply(_context.Communities.Keys);
             TransformNetworkNoRender("spherical");
+            UpdateCommunityProps();
 
             InitRenderer();
         }
@@ -114,7 +115,7 @@ namespace VidiGraph
                 }
             }
 
-            TransformNetwork(layout, animated);
+            TransformNetwork(layout, animated, UpdateCommunityProps);
 
             _isSphericalLayout = newIsSphericalLayout;
         }
@@ -178,16 +179,20 @@ namespace VidiGraph
         public void EndNodeMove(int nodeID)
         {
             CoroutineUtils.StopIfRunning(this, _curNodeMover);
+            UpdateCommunityPropsNoSize();
             UpdateNetwork(
                 updateCommunityProps: true,
                 updateStorage: true,
                 updateRenderElements: true
             );
+
+
         }
 
         public void EndNodesMove()
         {
             CoroutineUtils.StopIfRunning(this, _curNodeMover);
+            UpdateCommunityPropsNoSize();
             UpdateNetwork(
                 updateCommunityProps: true,
                 updateStorage: true,
@@ -208,6 +213,7 @@ namespace VidiGraph
         public void EndCommMove()
         {
             CoroutineUtils.StopIfRunning(this, _curCommMover);
+            UpdateCommunityPropsNoSize();
             UpdateNetwork(
                 updateCommunityProps: true,
                 updateStorage: true,
@@ -467,8 +473,7 @@ namespace VidiGraph
             _transformers["highlight"].Initialize(_manager.NetworkGlobal, _context);
         }
 
-
-        void TransformNetwork(string layout, bool animated = true)
+        void TransformNetwork(string layout, bool animated = true, Action cb = null)
         {
             if (animated)
             {
@@ -483,7 +488,7 @@ namespace VidiGraph
                     );
                 }
 
-                _curAnim = StartCoroutine(CRAnimateLayout(layout));
+                _curAnim = StartCoroutine(CRAnimateLayout(layout, cb));
             }
             else
             {
@@ -509,7 +514,7 @@ namespace VidiGraph
             _context.Communities[community].State = MultiLayoutContext.CommunityState.None;
         }
 
-        IEnumerator CRAnimateLayout(string layout)
+        IEnumerator CRAnimateLayout(string layout, Action cb)
         {
             float dur = 1.0f;
             var interpolator = _transformers[layout]?.GetInterpolator();
@@ -538,6 +543,8 @@ namespace VidiGraph
             );
 
             _curAnim = null;
+
+            cb?.Invoke();
         }
 
         IEnumerator CRMoveNode(int nodeID, Transform toTrack)
@@ -622,7 +629,7 @@ namespace VidiGraph
 
         void UpdateNetwork(bool updateCommunityProps, bool updateStorage, bool updateRenderElements)
         {
-            if (updateCommunityProps) UpdateCommunityProps();
+            // if (updateCommunityProps) UpdateCommunityProps();
             if (updateStorage) UpdateStorage();
             if (updateRenderElements) UpdateRenderElements();
         }
@@ -630,6 +637,11 @@ namespace VidiGraph
         void UpdateCommunityProps()
         {
             _context.RecomputeGeometricProps(_manager.NetworkGlobal);
+        }
+
+        void UpdateCommunityPropsNoSize()
+        {
+            _context.RecomputeGeometricPropsNoSize(_manager.NetworkGlobal);
         }
     }
 }

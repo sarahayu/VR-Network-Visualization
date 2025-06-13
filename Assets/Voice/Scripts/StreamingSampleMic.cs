@@ -7,6 +7,7 @@ using Whisper.Utils;
 
 using VidiGraph;
 using System.Linq;
+using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
 
 namespace Whisper.Samples
 {
@@ -25,6 +26,10 @@ namespace Whisper.Samples
 
         [Header("UI")]
         public Button button;
+        [SerializeField]
+        XRInputButtonReader CommandPress = new XRInputButtonReader("CommandPress");
+        [SerializeField]
+        Renderer Indicator;
         public Text buttonText;
         public Text text;
         public ScrollRect scroll;
@@ -43,7 +48,7 @@ namespace Whisper.Samples
         {
             // Create a whisper stream from the microphone
             _stream = await whisper.CreateStream(microphoneRecord);
-            OnButtonPressed();
+            // OnButtonPressed();
 
             // Subscribe to events
             _stream.OnResultUpdated += OnResult;
@@ -53,6 +58,41 @@ namespace Whisper.Samples
 
             microphoneRecord.OnRecordStop += OnRecordStop;
             button.onClick.AddListener(OnButtonPressed);
+
+
+            CommandPress.EnableDirectActionIfModeUsed();
+
+        }
+
+        void Update()
+        {
+            if (CommandPress.ReadWasPerformedThisFrame())
+            {
+                Debug.Log("calling on button press");
+                // Start listening
+                _stream.StartStream();
+                microphoneRecord.StartRecord();
+                whisperStartTime = Time.time; // record start time
+
+
+                MaterialPropertyBlock props = new MaterialPropertyBlock();
+
+                Indicator.GetPropertyBlock(props);
+                props.SetColor("_Color", ColorUtils.StringToColor("#FF8F00"));
+                Indicator.SetPropertyBlock(props);
+            }
+            if (CommandPress.ReadWasCompletedThisFrame())
+            {
+                Debug.Log("calling on button release");
+                // Stop listening
+                microphoneRecord.StopRecord();
+
+                MaterialPropertyBlock props = new MaterialPropertyBlock();
+
+                Indicator.GetPropertyBlock(props);
+                props.SetColor("_Color", ColorUtils.StringToColor("#C0C0C0"));
+                Indicator.SetPropertyBlock(props);
+            }
 
         }
 

@@ -1,5 +1,8 @@
 # TODO
 
+- encode using voice, start figuring out:
+    - way to generate lambda functions from criteria? e.g. create linear scale colorer from attribute name and color
+- parse all waves into one
 - move multiple selections
 - attaching nodes, average pos?
 
@@ -21,7 +24,7 @@
 - move nodes back on surface deletion
 - when using voice, attach cluster not based on cluster pos
 - replicate cluster/node
-- way to generate lambda functions from criteria? e.g. create linear scale colorer from attribute name and color
+
 
 - refactor surface
 - select groups using minimap
