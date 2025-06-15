@@ -53,6 +53,8 @@ namespace VidiGraph
             _multiLayoutNetwork.Initialize();
             _handheldNetwork?.Initialize();
 
+            _multiLayoutNetwork.SetNodeColorEncoding("gpa", Color.green.ToString(), 0f, 3f);
+
         }
 
         public void DrawPreview()
@@ -294,8 +296,9 @@ namespace VidiGraph
             return _multiLayoutNetwork.SetNodeColorEncoding(prop, color, min, max);
         }
 
-        public void SetMLNodeColorEncoding(string prop, Dictionary<string, string> valueToColor)
+        public bool SetMLNodeColorEncoding(string prop, Dictionary<string, string> valueToColor)
         {
+            return _multiLayoutNetwork.SetNodeColorEncoding(prop, valueToColor);
 
         }
     }

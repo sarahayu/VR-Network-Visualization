@@ -45,6 +45,7 @@ namespace VidiGraph
         NetworkRenderer _renderer;
 
         MultiLayoutContext _context = new MultiLayoutContext();
+        MultiLayoutContextUtils _contextUtils;
 
         Dictionary<string, NetworkContextTransformer> _transformers = new Dictionary<string, NetworkContextTransformer>();
 
@@ -68,6 +69,7 @@ namespace VidiGraph
         Coroutine _curNodeMover = null;
         Coroutine _curCommMover = null;
 
+
         void Update()
         {
             Draw();
@@ -80,6 +82,10 @@ namespace VidiGraph
             InitContext();
             InitInput();
             InitTransformers();
+            InitPropCaches();
+
+            SetNodeColorEncoding("gpa", "#00FF00", 0f, 3f);
+            SetNodeSizeEncoding("Degree", 0f, 0.1f);
 
             // apply initial transformations before first render so we don't get a weird jump
             TransformNetworkNoRender("encoding");
@@ -396,22 +402,78 @@ namespace VidiGraph
 
         public bool SetNodeColorEncoding(string prop, string color, float min = 0f, float max = 1f)
         {
-            try
-            {
-                var p = _manager.FileLoader.SphericalLayout.nodes.First().props.propMap[prop].As<float>();
-            }
-            catch (InvalidCastException e)
-            {
-                Debug.LogError($"Could not cast property {prop} to a number type: {e.Message}");
-                return false;
-            }
+            if (!_contextUtils.TryCastNodeProp<float?>(prop)) return false;
 
             _context.GetNodeColor = node =>
             {
-                var propVal = _manager.FileLoader.SphericalLayout.nodes[node.IdxProcessed].props.propMap[prop].As<float>();
-                var t = propVal / (max - min) + min;
-                return Color.Lerp(Color.black, ColorUtils.StringToColor(color), t);
+                var propVal = _contextUtils.CastNodeProp<float?>(node.ID, prop);
+
+                if (propVal == null) return Color.gray;
+
+                var t = (float)propVal / (max - min) + min;
+                return Color.Lerp(Color.white, ColorUtils.StringToColor(color), t);
             };
+
+            return true;
+        }
+
+        public bool SetNodeColorEncoding(string prop, Dictionary<string, string> valueToColor)
+        {
+            if (!_contextUtils.TryCastNodeProp<string>(prop)) return false;
+
+            var valueToColorObj = valueToColor.ToDictionary(vc => vc.Key, vc => ColorUtils.StringToColor(vc.Value));
+
+            _context.GetNodeColor = node => _contextUtils.GetNodeProp(node.ID, prop,
+                valueToColorObj, Color.gray);
+
+            return true;
+        }
+
+        public bool SetNodeColorEncoding(string prop, Dictionary<bool?, string> valueToColor)
+        {
+            if (!_contextUtils.TryCastNodeProp<bool?>(prop)) return false;
+
+            var valueToColorObj = valueToColor.ToDictionary(vc => vc.Key, vc => ColorUtils.StringToColor(vc.Value));
+
+            _context.GetNodeColor = node => _contextUtils.GetNodeProp(node.ID, prop,
+                valueToColorObj, Color.gray);
+
+            return true;
+        }
+
+        public bool SetNodeSizeEncoding(string prop, float min = 0f, float max = 1f)
+        {
+            if (!_contextUtils.TryCastNodeProp<float?>(prop)) return false;
+
+            _context.GetNodeSize = node =>
+            {
+                var propVal = _contextUtils.CastNodeProp<float?>(node.ID, prop);
+
+                if (propVal == null) return 0.01f;
+
+                var t = (float)propVal / (max - min) + min;
+                return t * 3;
+            };
+
+            return true;
+        }
+
+        public bool SetNodeSizeEncoding(string prop, Dictionary<string, float> valueToSize)
+        {
+            if (!_contextUtils.TryCastNodeProp<float?>(prop)) return false;
+
+            _context.GetNodeSize = node => _contextUtils.GetNodeProp(node.ID, prop,
+                valueToSize, 0.01f);
+
+            return true;
+        }
+
+        public bool SetNodeSizeEncoding(string prop, Dictionary<bool?, float> valueToSize)
+        {
+            if (!_contextUtils.TryCastNodeProp<bool?>(prop)) return false;
+
+            _context.GetNodeSize = node => _contextUtils.GetNodeProp(node.ID, prop,
+                valueToSize, 0.01f);
 
             return true;
         }
@@ -427,6 +489,7 @@ namespace VidiGraph
         {
             _context.SetFromGlobal(_manager.NetworkGlobal, _manager.FileLoader.SphericalLayout);
             SetContextSettings();
+            _contextUtils = new MultiLayoutContextUtils(_context, _manager);
         }
 
         void InitInput()
@@ -490,6 +553,10 @@ namespace VidiGraph
 
             _transformers["highlight"] = GetComponentInChildren<HighlightTransformer>();
             _transformers["highlight"].Initialize(_manager.NetworkGlobal, _context);
+        }
+
+        void InitPropCaches()
+        {
         }
 
         void TransformNetwork(string layout, bool animated = true, Action cb = null)

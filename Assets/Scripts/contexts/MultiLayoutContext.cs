@@ -33,40 +33,40 @@ namespace VidiGraph
 
         public class Node
         {
-            public float Size = 1f;
-            public Vector3 Position = Vector3.zero;
-            public Color Color;
+            public float Size { get; set; } = 1f;
+            public Vector3 Position { get; set; } = Vector3.zero;
+            public Color Color { get; set; }
 
             // detect if node needs to be rerendered
-            public bool Dirty = false;
+            public bool Dirty { get; set; } = false;
         }
 
         public class Link
         {
-            public float BundlingStrength = 0f;
-            public float Width = 1f;
-            public Color ColorStart;
-            public Color ColorEnd;
-            public float Alpha = 1f;
+            public float BundlingStrength { get; set; } = 0f;
+            public float Width { get; set; } = 1f;
+            public Color ColorStart { get; set; }
+            public Color ColorEnd { get; set; }
+            public float Alpha { get; set; } = 1f;
 
-            public bool BundleStart = false;
-            public bool BundleEnd = false;
+            public bool BundleStart { get; set; } = false;
+            public bool BundleEnd { get; set; } = false;
 
             // detect if link needs to be rerendered
-            public bool Dirty = false;
+            public bool Dirty { get; set; } = false;
         }
 
         public class Community
         {
 
-            public double Mass;
-            public Vector3 MassCenter;
-            public double Size;
+            public double Mass { get; set; }
+            public Vector3 MassCenter { get; set; }
+            public double Size { get; set; }
 
-            public CommunityState State = CommunityState.None;
+            public CommunityState State { get; set; } = CommunityState.None;
 
             // detect if link needs to be rerendered
-            public bool Dirty = false;
+            public bool Dirty { get; set; } = false;
         }
 
         public enum CommunityState
@@ -127,23 +127,13 @@ namespace VidiGraph
                 var contextCommunity = Communities[community.ID];
 
                 CommunityMathUtils.ComputeMassProperties(community.Nodes, Nodes,
-                    out contextCommunity.Mass, out contextCommunity.MassCenter);
+                    out var mass, out var massCenter);
+
+                contextCommunity.Mass = mass;
+                contextCommunity.MassCenter = massCenter;
 
                 contextCommunity.Size = CommunityMathUtils.ComputeSize(community.Nodes, Nodes,
                     contextCommunity.MassCenter);
-
-                contextCommunity.Dirty = true;
-            }
-        }
-
-        public void RecomputeGeometricPropsNoSize(NetworkGlobal networkGlobal)
-        {
-            foreach (var community in networkGlobal.Communities.Values)
-            {
-                var contextCommunity = Communities[community.ID];
-
-                CommunityMathUtils.ComputeMassProperties(community.Nodes, Nodes,
-                    out contextCommunity.Mass, out contextCommunity.MassCenter);
 
                 contextCommunity.Dirty = true;
             }
@@ -159,25 +149,25 @@ namespace VidiGraph
             // GetLinkColorEnd = link => GetColor(link.TargetNode.CommunityID, networkGlobal.Communities);
             // GetLinkAlpha = _ => ContextSettings.LinkNormalAlphaFactor;
 
-            var linkColor = new Color(1f, 1f, 1f, 0.2f);
+            // var linkColor = new Color(1f, 1f, 1f, 0.2f);
 
-            // Friend data
-            GetNodeSize = node => (float)Math.Log10(node.Degree * 100) * 2.5f + 0.5f;
-            GetNodeColor = node =>
-            {
-                var fileNode = networkFile.nodes[node.IdxProcessed];
+            // // Friend data
+            // GetNodeSize = node => (float)Math.Log10(node.Degree * 100) * 2.5f + 0.5f;
+            // GetNodeColor = node =>
+            // {
+            //     var fileNode = networkFile.nodes[node.IdxProcessed];
 
-                var drinker = fileNode.props.drinker;
-                var smoker = fileNode.props.smoker;
+            //     var drinker = fileNode.props.drinker;
+            //     var smoker = fileNode.props.smoker;
 
-                if (drinker == true && smoker == true) return Color.magenta;
-                if (drinker == true) return Color.red;
-                if (smoker == true) return Color.blue;
+            //     if (drinker == true && smoker == true) return Color.magenta;
+            //     if (drinker == true) return Color.red;
+            //     if (smoker == true) return Color.blue;
 
-                if (drinker == null || smoker == null) return Color.gray;
+            //     if (drinker == null || smoker == null) return Color.gray;
 
-                return Color.white;
-            };
+            //     return Color.white;
+            // };
 
             // GetNodeColor = node =>
             // {
@@ -185,9 +175,17 @@ namespace VidiGraph
             //     return fileNode.props.gpa == null ? Color.gray : Color.Lerp(Color.white, Color.green, Mathf.Pow((float)fileNode.props.gpa / 4f, 2));
             // };
 
+            // GetLinkWidth = _ => ContextSettings.LinkWidth;
+            // GetLinkColorStart = _ => linkColor;
+            // GetLinkColorEnd = _ => linkColor;
+            // GetLinkAlpha = _ => ContextSettings.LinkNormalAlphaFactor;
+
+
+            GetNodeSize = _ => 1f;
+            GetNodeColor = _ => Color.gray;
             GetLinkWidth = _ => ContextSettings.LinkWidth;
-            GetLinkColorStart = _ => linkColor;
-            GetLinkColorEnd = _ => linkColor;
+            GetLinkColorStart = _ => Color.white;
+            GetLinkColorEnd = _ => Color.white;
             GetLinkAlpha = _ => ContextSettings.LinkNormalAlphaFactor;
         }
 
