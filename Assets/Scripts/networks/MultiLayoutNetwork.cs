@@ -85,7 +85,6 @@ namespace VidiGraph
             _isSphericalLayout = true;
             _sphericalLayoutTransformer.UpdateCommsOnNextApply(_context.Communities.Keys);
             TransformNetworkNoRender("spherical");
-            UpdateCommunityProps();
 
             InitRenderer();
         }
@@ -115,7 +114,7 @@ namespace VidiGraph
                 }
             }
 
-            TransformNetwork(layout, animated, UpdateCommunityProps);
+            TransformNetwork(layout, animated);
 
             _isSphericalLayout = newIsSphericalLayout;
         }
@@ -179,7 +178,6 @@ namespace VidiGraph
         public void EndNodeMove(int nodeID)
         {
             CoroutineUtils.StopIfRunning(this, _curNodeMover);
-            UpdateCommunityPropsNoSize();
             UpdateNetwork(
                 updateCommunityProps: true,
                 updateStorage: true,
@@ -192,7 +190,6 @@ namespace VidiGraph
         public void EndNodesMove()
         {
             CoroutineUtils.StopIfRunning(this, _curNodeMover);
-            UpdateCommunityPropsNoSize();
             UpdateNetwork(
                 updateCommunityProps: true,
                 updateStorage: true,
@@ -213,7 +210,6 @@ namespace VidiGraph
         public void EndCommMove()
         {
             CoroutineUtils.StopIfRunning(this, _curCommMover);
-            UpdateCommunityPropsNoSize();
             UpdateNetwork(
                 updateCommunityProps: true,
                 updateStorage: true,
@@ -629,7 +625,7 @@ namespace VidiGraph
 
         void UpdateNetwork(bool updateCommunityProps, bool updateStorage, bool updateRenderElements)
         {
-            // if (updateCommunityProps) UpdateCommunityProps();
+            if (updateCommunityProps) UpdateCommunityProps();
             if (updateStorage) UpdateStorage();
             if (updateRenderElements) UpdateRenderElements();
         }
@@ -637,11 +633,6 @@ namespace VidiGraph
         void UpdateCommunityProps()
         {
             _context.RecomputeGeometricProps(_manager.NetworkGlobal);
-        }
-
-        void UpdateCommunityPropsNoSize()
-        {
-            _context.RecomputeGeometricPropsNoSize(_manager.NetworkGlobal);
         }
     }
 }
