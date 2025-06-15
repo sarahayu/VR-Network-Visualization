@@ -14,6 +14,8 @@ namespace VidiGraph
             public bool? drinker { get; set; } = null;
             public float? gpa { get; set; } = null;
             public int? grade { get; set; } = null;
+
+            public Dictionary<string, object> propMap = new Dictionary<string, object>();
         }
 
         [Serializable]

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Neo4j.Driver;
 using UnityEngine;
 
 namespace VidiGraph
@@ -391,6 +392,28 @@ namespace VidiGraph
                 updateStorage: updateStorage,
                 updateRenderElements: updateRenderElements
             );
+        }
+
+        public bool SetNodeColorEncoding(string prop, string color, float min = 0f, float max = 1f)
+        {
+            try
+            {
+                var p = _manager.FileLoader.SphericalLayout.nodes.First().props.propMap[prop].As<float>();
+            }
+            catch (InvalidCastException e)
+            {
+                Debug.LogError($"Could not cast property {prop} to a number type: {e.Message}");
+                return false;
+            }
+
+            _context.GetNodeColor = node =>
+            {
+                var propVal = _manager.FileLoader.SphericalLayout.nodes[node.IdxProcessed].props.propMap[prop].As<float>();
+                var t = propVal / (max - min) + min;
+                return Color.Lerp(Color.black, ColorUtils.StringToColor(color), t);
+            };
+
+            return true;
         }
 
         /*=============== start private methods ===================*/

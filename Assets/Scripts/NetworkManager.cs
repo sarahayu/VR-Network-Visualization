@@ -288,5 +288,15 @@ namespace VidiGraph
         {
             _multiLayoutNetwork.SetLinksBundleEnd(linkIDs, bundleEnd, _updatingStorage, _updatingRenderElements);
         }
+
+        public bool SetMLNodeColorEncoding(string prop, string color, float min = 0f, float max = 1f)
+        {
+            return _multiLayoutNetwork.SetNodeColorEncoding(prop, color, min, max);
+        }
+
+        public void SetMLNodeColorEncoding(string prop, Dictionary<string, string> valueToColor)
+        {
+
+        }
     }
 }
