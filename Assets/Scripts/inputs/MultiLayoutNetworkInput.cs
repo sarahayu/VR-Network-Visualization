@@ -141,12 +141,12 @@ namespace VidiGraph
                 var linkIDs1 = _networkManager.NetworkGlobal.Links.GetRange(0, 10).Select(l => l.ID);
                 var linkIDs2 = _networkManager.NetworkGlobal.Links.GetRange(10, 10).Select(l => l.ID);
 
-                _networkManager.SetNodesSize(nodeIDs1, 2);
-                _networkManager.SetNodesColor(nodeIDs2, Color.green);
-                _networkManager.SetLinksWidth(linkIDs1, 0.5f);
-                _networkManager.SetLinksColorStart(linkIDs2, Color.blue);
-                _networkManager.SetLinksColorEnd(linkIDs1, Color.red);
-                _networkManager.SetLinksAlpha(linkIDs2, 1);
+                _networkManager.SetNodesSize(nodeIDs1, 4);
+                _networkManager.SetNodesColor(nodeIDs2, Color.red);
+                _networkManager.SetLinksWidth(linkIDs1, 3f);
+                _networkManager.SetLinksColorStart(linkIDs2, Color.magenta);
+                _networkManager.SetLinksColorEnd(linkIDs1, Color.yellow);
+                _networkManager.SetLinksAlpha(linkIDs2, 0.4f);
             }
 
             if (_nodeHoverExit.TickAndCheckDidInteract() && _hoveredNode != null)

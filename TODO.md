@@ -1,5 +1,6 @@
 # TODO
 
+- optimize reflection: https://stackoverflow.com/questions/7999652/best-way-to-cache-a-reflection-property-getter-setter
 - encode using voice, start figuring out:
     - way to generate lambda functions from criteria? e.g. create linear scale colorer from attribute name and color
 - parse all waves into one
@@ -54,6 +55,7 @@
 - bigger font
 - bigger surface
 - bring back attach nodes
+- mic latency
 
 ## Ignore
 - move node moving animation to mln

@@ -63,6 +63,9 @@ namespace VidiGraph
         // keep a reference to encoding to change encoding
         MLEncodingTransformer _encodingTransformer;
 
+        // keep a reference to edit to change network properties
+        MLEditTransformer _editTransformer;
+
         bool _isSphericalLayout;
 
         Coroutine _curAnim = null;
@@ -82,7 +85,6 @@ namespace VidiGraph
             InitContext();
             InitInput();
             InitTransformers();
-            InitPropCaches();
 
             SetNodeColorEncoding("gpa", "#00FF00", 0f, 3f);
             SetNodeSizeEncoding("Degree", 0f, 0.1f);
@@ -236,168 +238,80 @@ namespace VidiGraph
 
         public void SetNodesSize(IEnumerable<int> nodeIDs, float size, bool updateStorage, bool updateRenderElements)
         {
-            foreach (var node in nodeIDs.Select(nid => _context.Nodes[nid]))
-            {
-                node.Size = size;
-                node.Dirty = true;
-            }
-
-            UpdateNetwork(
-                updateCommunityProps: true,
-                updateStorage: updateStorage,
-                updateRenderElements: updateRenderElements
-            );
+            _editTransformer.SetNodesSize(nodeIDs, size);
+            TransformNetwork("edit", animated: false,
+                updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
         public void SetNodesColor(IEnumerable<int> nodeIDs, Color color, bool updateStorage, bool updateRenderElements)
         {
-            foreach (var node in nodeIDs.Select(nid => _context.Nodes[nid]))
-            {
-                node.Color = color;
-                node.Dirty = true;
-            }
-
-            UpdateNetwork(
-                updateCommunityProps: true,
-                updateStorage: updateStorage,
-                updateRenderElements: updateRenderElements
-            );
+            _editTransformer.SetNodesColor(nodeIDs, color);
+            TransformNetwork("edit", animated: false,
+                updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
         public void SetLinksWidth(IEnumerable<int> linkIDs, float width, bool updateStorage, bool updateRenderElements)
         {
-            foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
-            {
-                link.Width = width;
-                link.Dirty = true;
-            }
-
-            UpdateNetwork(
-                updateCommunityProps: true,
-                updateStorage: updateStorage,
-                updateRenderElements: updateRenderElements
-            );
+            _editTransformer.SetLinksWidth(linkIDs, width);
+            TransformNetwork("edit", animated: false,
+                updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
         public void SetLinksColorStart(IEnumerable<int> linkIDs, Color color, bool updateStorage, bool updateRenderElements)
         {
-            foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
-            {
-                link.ColorStart = color;
-                link.Dirty = true;
-            }
-
-            UpdateNetwork(
-                updateCommunityProps: true,
-                updateStorage: updateStorage,
-                updateRenderElements: updateRenderElements
-            );
+            _editTransformer.SetLinksColorStart(linkIDs, color);
+            TransformNetwork("edit", animated: false,
+                updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
         public void SetLinksColorEnd(IEnumerable<int> linkIDs, Color color, bool updateStorage, bool updateRenderElements)
         {
-            foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
-            {
-                link.ColorEnd = color;
-                link.Dirty = true;
-            }
-
-            UpdateNetwork(
-                updateCommunityProps: true,
-                updateStorage: updateStorage,
-                updateRenderElements: updateRenderElements
-            );
+            _editTransformer.SetLinksColorEnd(linkIDs, color);
+            TransformNetwork("edit", animated: false,
+                updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
         public void SetLinksAlpha(IEnumerable<int> linkIDs, float alpha, bool updateStorage, bool updateRenderElements)
         {
-            foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
-            {
-                link.Alpha = alpha;
-                link.Dirty = true;
-            }
-
-            UpdateNetwork(
-                updateCommunityProps: true,
-                updateStorage: updateStorage,
-                updateRenderElements: updateRenderElements
-            );
+            _editTransformer.SetLinksAlpha(linkIDs, alpha);
+            TransformNetwork("edit", animated: false,
+                updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
         public void SetLinksBundlingStrength(IEnumerable<int> linkIDs, float bundlingStrength, bool updateStorage, bool updateRenderElements)
         {
-            foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
-            {
-                link.BundlingStrength = bundlingStrength;
-                link.Dirty = true;
-            }
-
-            UpdateNetwork(
-                updateCommunityProps: true,
-                updateStorage: updateStorage,
-                updateRenderElements: updateRenderElements
-            );
+            _editTransformer.SetLinksBundlingStrength(linkIDs, bundlingStrength);
+            TransformNetwork("edit", animated: false,
+                updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
         public void SetLinksBundleStart(IEnumerable<int> linkIDs, bool bundleStart, bool updateStorage, bool updateRenderElements)
         {
-            foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
-            {
-                link.BundleStart = bundleStart;
-                link.Dirty = true;
-            }
-
-            UpdateNetwork(
-                updateCommunityProps: true,
-                updateStorage: updateStorage,
-                updateRenderElements: updateRenderElements
-            );
+            _editTransformer.SetLinksBundleStart(linkIDs, bundleStart);
+            TransformNetwork("edit", animated: false,
+                updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
         public void SetLinksBundleEnd(IEnumerable<int> linkIDs, bool bundleEnd, bool updateStorage, bool updateRenderElements)
         {
-            foreach (var link in linkIDs.Select(lid => _context.Links[lid]))
-            {
-                link.BundleEnd = bundleEnd;
-                link.Dirty = true;
-            }
-
-            UpdateNetwork(
-                updateCommunityProps: true,
-                updateStorage: updateStorage,
-                updateRenderElements: updateRenderElements
-            );
+            _editTransformer.SetLinksBundleEnd(linkIDs, bundleEnd);
+            TransformNetwork("edit", animated: false,
+                updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
 
         public void SetNodesPosition(IEnumerable<int> nodeIDs, Vector3 position, bool updateStorage, bool updateRenderElements)
         {
-            foreach (var node in nodeIDs.Select(nid => _context.Nodes[nid]))
-            {
-                node.Position = position;
-                node.Dirty = true;
-            }
-
-            UpdateNetwork(
-                updateCommunityProps: true,
-                updateStorage: updateStorage,
-                updateRenderElements: updateRenderElements
-            );
+            _editTransformer.SetNodesPosition(nodeIDs, position);
+            TransformNetwork("edit", animated: false,
+                updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
         public void SetNodesPosition(IEnumerable<int> nodeIDs, IEnumerable<Vector3> positions, bool updateStorage, bool updateRenderElements)
         {
-            foreach (var (node, position) in nodeIDs.Select(nid => _context.Nodes[nid]).Zip(positions, Tuple.Create))
-            {
-                node.Position = position;
-                node.Dirty = true;
-            }
-
-            UpdateNetwork(
-                updateCommunityProps: true,
-                updateStorage: updateStorage,
-                updateRenderElements: updateRenderElements
-            );
+            _editTransformer.SetNodesPosition(nodeIDs, positions);
+            TransformNetwork("edit", animated: false,
+                updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
         public bool SetNodeColorEncoding(string prop, string color, float min = 0f, float max = 1f)
@@ -551,15 +465,16 @@ namespace VidiGraph
             _transformers["encoding"] = _encodingTransformer;
             _transformers["encoding"].Initialize(_manager.NetworkGlobal, _context);
 
+            _editTransformer = GetComponentInChildren<MLEditTransformer>();
+            _transformers["edit"] = _editTransformer;
+            _transformers["edit"].Initialize(_manager.NetworkGlobal, _context);
+
             _transformers["highlight"] = GetComponentInChildren<HighlightTransformer>();
             _transformers["highlight"].Initialize(_manager.NetworkGlobal, _context);
         }
 
-        void InitPropCaches()
-        {
-        }
-
-        void TransformNetwork(string layout, bool animated = true, Action cb = null)
+        void TransformNetwork(string transformer, bool animated = true, Action onFinished = null,
+            bool updateCommunityProps = true, bool updateStorage = false, bool updateRenderElements = true)
         {
             if (animated)
             {
@@ -574,19 +489,25 @@ namespace VidiGraph
                     );
                 }
 
-                _curAnim = StartCoroutine(CRAnimateLayout(layout, cb));
+                _curAnim = StartCoroutine(CRAnimateTransformation(
+                    transformer: transformer,
+                    onFinished: onFinished,
+                    updateCommunityProps: updateCommunityProps,
+                    updateStorage: updateStorage,
+                    updateRenderElements: updateRenderElements
+                ));
             }
             else
             {
-                _transformers[layout]?.ApplyTransformation();
+                _transformers[transformer]?.ApplyTransformation();
 
                 UpdateNetwork(
-                    updateCommunityProps: true,
-                    updateStorage: true,
-                    updateRenderElements: true
+                    updateCommunityProps: updateCommunityProps,
+                    updateStorage: updateStorage,
+                    updateRenderElements: updateRenderElements
                 );
 
-                cb?.Invoke();
+                onFinished?.Invoke();
             }
         }
 
@@ -608,10 +529,11 @@ namespace VidiGraph
             _context.Communities[community].State = MultiLayoutContext.CommunityState.None;
         }
 
-        IEnumerator CRAnimateLayout(string layout, Action cb)
+        IEnumerator CRAnimateTransformation(string transformer, Action onFinished = null,
+            bool updateCommunityProps = true, bool updateStorage = false, bool updateRenderElements = true)
         {
             float dur = 1.0f;
-            var interpolator = _transformers[layout]?.GetInterpolator();
+            var interpolator = _transformers[transformer]?.GetInterpolator();
 
             if (interpolator == null) yield return null;
 
@@ -622,23 +544,23 @@ namespace VidiGraph
                 // only update storage at the end
 
                 UpdateNetwork(
-                    updateCommunityProps: true,
+                    updateCommunityProps: updateCommunityProps,
                     updateStorage: false,
-                    updateRenderElements: true
+                    updateRenderElements: updateRenderElements
                 );
             });
 
             interpolator.Interpolate(1f);
 
             UpdateNetwork(
-                updateCommunityProps: true,
-                updateStorage: true,
-                updateRenderElements: true
+                updateCommunityProps: updateCommunityProps,
+                updateStorage: updateStorage,
+                updateRenderElements: updateRenderElements
             );
 
             _curAnim = null;
 
-            cb?.Invoke();
+            onFinished?.Invoke();
         }
 
         IEnumerator CRMoveNode(int nodeID, Transform toTrack)

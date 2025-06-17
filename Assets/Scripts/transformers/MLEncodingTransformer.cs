@@ -9,12 +9,8 @@ namespace VidiGraph
 {
     public class MLEncodingTransformer : NetworkContextTransformer
     {
-        public Transform MlEncodingPosition;
-
         NetworkGlobal _networkGlobal;
         MultiLayoutContext _networkContext;
-
-        TransformInfo _mlEncodingTransform;
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
@@ -22,7 +18,6 @@ namespace VidiGraph
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
-            _mlEncodingTransform = new TransformInfo(MlEncodingPosition);
         }
 
         public override void ApplyTransformation()
