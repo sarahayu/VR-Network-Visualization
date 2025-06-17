@@ -585,14 +585,22 @@ namespace VidiGraph
                     updateStorage: true,
                     updateRenderElements: true
                 );
+
+                cb?.Invoke();
             }
         }
 
-        void TransformNetworkNoRender(string layout, bool updateStorage = true)
+        void TransformNetworkNoRender(string layout, Action cb = null)
         {
             _transformers[layout].ApplyTransformation();
-            UpdateCommunityProps();
-            if (updateStorage) UpdateStorage();
+
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: true,
+                updateRenderElements: false
+            );
+
+            cb?.Invoke();
         }
 
         void ClearCommunityState(int community)

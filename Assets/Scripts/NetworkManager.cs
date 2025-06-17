@@ -53,7 +53,6 @@ namespace VidiGraph
             _multiLayoutNetwork.Initialize();
             _handheldNetwork?.Initialize();
 
-            _multiLayoutNetwork.SetNodeColorEncoding("gpa", Color.green.ToString(), 0f, 3f);
 
         }
 
