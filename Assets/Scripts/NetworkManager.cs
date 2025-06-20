@@ -233,211 +233,199 @@ namespace VidiGraph
         {
             return _multiLayoutNetwork.GetCommTransform(commID);
         }
-        public void SetNodesSize(IEnumerable<int> nodeIDs, float size)
+
+        public void SetMLNodesSize(IEnumerable<int> nodeIDs, float size)
         {
             _multiLayoutNetwork.SetNodesSize(nodeIDs, size, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetNodesColor(IEnumerable<int> nodeIDs, Color color)
+        public void SetMLNodesColor(IEnumerable<int> nodeIDs, Color color)
         {
             _multiLayoutNetwork.SetNodesColor(nodeIDs, color, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetNodesPosition(IEnumerable<int> nodeIDs, Vector3 position)
+        public void SetMLNodesPosition(IEnumerable<int> nodeIDs, Vector3 position)
         {
             _multiLayoutNetwork.SetNodesPosition(nodeIDs, position, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetNodesPosition(IEnumerable<int> nodeIDs, IEnumerable<Vector3> positions)
+        public void SetMLNodesPosition(IEnumerable<int> nodeIDs, IEnumerable<Vector3> positions)
         {
             _multiLayoutNetwork.SetNodesPosition(nodeIDs, positions, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetLinksWidth(IEnumerable<int> linkIDs, float width)
+        public void SetMLLinksWidth(IEnumerable<int> linkIDs, float width)
         {
             _multiLayoutNetwork.SetLinksWidth(linkIDs, width, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetLinksColorStart(IEnumerable<int> linkIDs, Color color)
+        public void SetMLLinksColorStart(IEnumerable<int> linkIDs, Color color)
         {
             _multiLayoutNetwork.SetLinksColorStart(linkIDs, color, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetLinksColorEnd(IEnumerable<int> linkIDs, Color color)
+        public void SetMLLinksColorEnd(IEnumerable<int> linkIDs, Color color)
         {
             _multiLayoutNetwork.SetLinksColorEnd(linkIDs, color, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetLinksAlpha(IEnumerable<int> linkIDs, float alpha)
+        public void SetMLLinksAlpha(IEnumerable<int> linkIDs, float alpha)
         {
             _multiLayoutNetwork.SetLinksAlpha(linkIDs, alpha, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetLinksBundlingStrength(IEnumerable<int> linkIDs, float bundlingStrength)
+        public void SetMLLinksBundlingStrength(IEnumerable<int> linkIDs, float bundlingStrength)
         {
             _multiLayoutNetwork.SetLinksBundlingStrength(linkIDs, bundlingStrength, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetLinksBundleStart(IEnumerable<int> linkIDs, bool bundleStart)
+        public void SetMLLinksBundleStart(IEnumerable<int> linkIDs, bool bundleStart)
         {
             _multiLayoutNetwork.SetLinksBundleStart(linkIDs, bundleStart, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetLinksBundleEnd(IEnumerable<int> linkIDs, bool bundleEnd)
+        public void SetMLLinksBundleEnd(IEnumerable<int> linkIDs, bool bundleEnd)
         {
             _multiLayoutNetwork.SetLinksBundleEnd(linkIDs, bundleEnd, _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetMLNodeColorEncoding(string prop, float min = 0f, float max = 1f, string color = "#00FF00" /* green */)
-        {
-            return _multiLayoutNetwork.SetNodeColorEncoding(prop, min, max, color,
-                _updatingStorage, _updatingRenderElements);
-        }
-
-        public bool SetMLNodeColorEncoding(string prop, Dictionary<string, string> valueToColor)
-        {
-            return _multiLayoutNetwork.SetNodeColorEncoding(prop, valueToColor,
-                _updatingStorage, _updatingRenderElements);
-
-        }
-
-        public bool SetNodeColorEncoding(string prop, Dictionary<bool?, string> valueToColor)
+        public bool SetMLNodeColorEncoding(string prop, Dictionary<bool?, string> valueToColor)
         {
             return _multiLayoutNetwork.SetNodeColorEncoding(prop, valueToColor,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetNodeSizeEncoding(string prop, float min = 0f, float max = 1f)
+        public bool SetMLNodeSizeEncoding(string prop, float min = 0f, float max = 1f)
         {
             return _multiLayoutNetwork.SetNodeSizeEncoding(prop, min, max,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetNodeSizeEncoding(string prop, Dictionary<string, float> valueToSize)
+        public bool SetMLNodeSizeEncoding(string prop, Dictionary<string, float> valueToSize)
         {
             return _multiLayoutNetwork.SetNodeSizeEncoding(prop, valueToSize,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetNodeSizeEncoding(string prop, Dictionary<bool?, float> valueToSize)
+        public bool SetMLNodeSizeEncoding(string prop, Dictionary<bool?, float> valueToSize)
         {
             return _multiLayoutNetwork.SetNodeSizeEncoding(prop, valueToSize,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetLinkWidthEncoding(string prop, float min = 0f, float max = 1f)
+        public bool SetMLLinkWidthEncoding(string prop, float min = 0f, float max = 1f)
         {
             return _multiLayoutNetwork.SetLinkWidthEncoding(prop, min, max,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetLinkWidthEncoding(string prop, Dictionary<string, float> valueToWidth)
+        public bool SetMLLinkWidthEncoding(string prop, Dictionary<string, float> valueToWidth)
         {
             return _multiLayoutNetwork.SetLinkWidthEncoding(prop, valueToWidth,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetLinkWidthEncoding(string prop, Dictionary<bool?, float> valueToWidth)
+        public bool SetMLLinkWidthEncoding(string prop, Dictionary<bool?, float> valueToWidth)
         {
             return _multiLayoutNetwork.SetLinkWidthEncoding(prop, valueToWidth,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetLinkBundlingStrengthEncoding(string prop, float min = 0f, float max = 1f)
+        public bool SetMLLinkBundlingStrengthEncoding(string prop, float min = 0f, float max = 1f)
         {
             return _multiLayoutNetwork.SetLinkBundlingStrengthEncoding(prop, min, max,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetLinkBundlingStrengthEncoding(string prop, Dictionary<string, float> valueToBundlingStrength)
+        public bool SetMLLinkBundlingStrengthEncoding(string prop, Dictionary<string, float> valueToBundlingStrength)
         {
             return _multiLayoutNetwork.SetLinkBundlingStrengthEncoding(prop, valueToBundlingStrength,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetLinkBundlingStrengthEncoding(string prop, Dictionary<bool?, float> valueToBundlingStrength)
+        public bool SetMLLinkBundlingStrengthEncoding(string prop, Dictionary<bool?, float> valueToBundlingStrength)
         {
             return _multiLayoutNetwork.SetLinkBundlingStrengthEncoding(prop, valueToBundlingStrength,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetLinkColorStartEncoding(string prop, float min = 0f, float max = 1f, string colorStart = "#FFFFFF" /* white */)
+        public bool SetMLLinkColorStartEncoding(string prop, float min = 0f, float max = 1f, string colorStart = "#FFFFFF" /* white */)
         {
             return _multiLayoutNetwork.SetLinkColorStartEncoding(prop, min, max, colorStart,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetLinkColorStartEncoding(string prop, Dictionary<string, string> valueToColorStart)
+        public bool SetMLLinkColorStartEncoding(string prop, Dictionary<string, string> valueToColorStart)
         {
             return _multiLayoutNetwork.SetLinkColorStartEncoding(prop, valueToColorStart,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetLinkColorStartEncoding(string prop, Dictionary<bool?, string> valueToColorStart)
+        public bool SetMLLinkColorStartEncoding(string prop, Dictionary<bool?, string> valueToColorStart)
         {
             return _multiLayoutNetwork.SetLinkColorStartEncoding(prop, valueToColorStart,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetLinkColorEndEncoding(string prop, float min = 0f, float max = 1f, string colorEnd = "#FFFFFF" /* white */)
+        public bool SetMLLinkColorEndEncoding(string prop, float min = 0f, float max = 1f, string colorEnd = "#FFFFFF" /* white */)
         {
             return _multiLayoutNetwork.SetLinkColorEndEncoding(prop, min, max, colorEnd,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetLinkColorEndEncoding(string prop, Dictionary<string, string> valueToColorEnd)
+        public bool SetMLLinkColorEndEncoding(string prop, Dictionary<string, string> valueToColorEnd)
         {
             return _multiLayoutNetwork.SetLinkColorEndEncoding(prop, valueToColorEnd,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetLinkColorEndEncoding(string prop, Dictionary<bool?, string> valueToColorEnd)
+        public bool SetMLLinkColorEndEncoding(string prop, Dictionary<bool?, string> valueToColorEnd)
         {
             return _multiLayoutNetwork.SetLinkColorEndEncoding(prop, valueToColorEnd,
                 _updatingStorage, _updatingRenderElements);
         }
 
         // TODO untested
-        public bool SetLinkBundleStartEncoding(string prop, Dictionary<string, bool> valueToDoBundle)
+        public bool SetMLLinkBundleStartEncoding(string prop, Dictionary<string, bool> valueToDoBundle)
         {
             return _multiLayoutNetwork.SetLinkBundleStartEncoding(prop, valueToDoBundle,
                 _updatingStorage, _updatingRenderElements);
         }
 
         // TODO untested
-        public bool SetLinkBundleStartEncoding(string prop, Dictionary<bool?, bool> valueToDoBundle)
+        public bool SetMLLinkBundleStartEncoding(string prop, Dictionary<bool?, bool> valueToDoBundle)
         {
             return _multiLayoutNetwork.SetLinkBundleStartEncoding(prop, valueToDoBundle,
                 _updatingStorage, _updatingRenderElements);
         }
 
         // TODO untested
-        public bool SetLinkBundleEndEncoding(string prop, Dictionary<string, bool> valueToDoBundle)
+        public bool SetMLLinkBundleEndEncoding(string prop, Dictionary<string, bool> valueToDoBundle)
         {
             return _multiLayoutNetwork.SetLinkBundleEndEncoding(prop, valueToDoBundle,
                 _updatingStorage, _updatingRenderElements);
         }
 
         // TODO untested
-        public bool SetLinkBundleEndEncoding(string prop, Dictionary<bool?, bool> valueToDoBundle)
+        public bool SetMLLinkBundleEndEncoding(string prop, Dictionary<bool?, bool> valueToDoBundle)
         {
             return _multiLayoutNetwork.SetLinkBundleEndEncoding(prop, valueToDoBundle,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetLinkAlphaEncoding(string prop, float min = 0f, float max = 1f)
+        public bool SetMLLinkAlphaEncoding(string prop, float min = 0f, float max = 1f)
         {
             return _multiLayoutNetwork.SetLinkAlphaEncoding(prop, min, max,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetLinkAlphaEncoding(string prop, Dictionary<string, float> valueToAlpha)
+        public bool SetMLLinkAlphaEncoding(string prop, Dictionary<string, float> valueToAlpha)
         {
             return _multiLayoutNetwork.SetLinkAlphaEncoding(prop, valueToAlpha,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetLinkAlphaEncoding(string prop, Dictionary<bool?, float> valueToAlpha)
+        public bool SetMLLinkAlphaEncoding(string prop, Dictionary<bool?, float> valueToAlpha)
         {
             return _multiLayoutNetwork.SetLinkAlphaEncoding(prop, valueToAlpha,
                 _updatingStorage, _updatingRenderElements);
