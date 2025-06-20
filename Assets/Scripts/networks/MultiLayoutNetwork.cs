@@ -45,7 +45,6 @@ namespace VidiGraph
         NetworkRenderer _renderer;
 
         MultiLayoutContext _context = new MultiLayoutContext();
-        MultiLayoutContextUtils _contextUtils;
 
         Dictionary<string, NetworkContextTransformer> _transformers = new Dictionary<string, NetworkContextTransformer>();
 
@@ -86,9 +85,6 @@ namespace VidiGraph
             InitInput();
             InitTransformers();
 
-            SetNodeColorEncoding("gpa", "#00FF00", 0f, 3f);
-            SetNodeSizeEncoding("Degree", 0f, 0.1f);
-
             // apply initial transformations before first render so we don't get a weird jump
             TransformNetworkNoRender("encoding");
             _isSphericalLayout = true;
@@ -96,6 +92,22 @@ namespace VidiGraph
             TransformNetworkNoRender("spherical");
 
             InitRenderer();
+
+            // SetNodeSizeEncoding("Degree", 0f, 0.1f, false, false);
+            // // SetNodeColorEncoding("gpa", 0f, 3f, "#0000FF", false, false);
+            // SetNodeColorEncoding("smoker", new Dictionary<bool?, string>()
+            // {
+            //     {true, "#00FF00"},
+            //     {false, "#FF0000"},
+            //     // {null, "#0000FF"},
+            // }, false, false);
+            // // SetLinkWidthEncoding("ID", 0f, 100f, false, false);
+            // // SetLinkBundlingStrengthEncoding("ID", 100f, 0f, false, false);
+            // // SetLinkColorStartEncoding("SourceNodeID", 0f, 100f, "#FF00FF", false, false);
+            // // SetLinkColorEndEncoding("TargetNodeID", 0f, 100f, "#00FFFF", false, false);
+            // SetLinkAlphaEncoding("ID", 0f, 300f, false, false);
+
+            // UpdateRenderElements();
         }
 
         public override void UpdateRenderElements()
@@ -314,82 +326,304 @@ namespace VidiGraph
                 updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
-        public bool SetNodeColorEncoding(string prop, string color, float min = 0f, float max = 1f)
+        public bool SetNodeColorEncoding(string prop, float min, float max, string color,
+            bool updateStorage, bool updateRenderElements)
         {
-            if (!_contextUtils.TryCastNodeProp<float?>(prop)) return false;
+            var success = _encodingTransformer.SetNodeColorEncoding(prop, min, max, color);
 
-            _context.GetNodeColor = node =>
-            {
-                var propVal = _contextUtils.CastNodeProp<float?>(node.ID, prop);
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
 
-                if (propVal == null) return Color.gray;
-
-                var t = (float)propVal / (max - min) + min;
-                return Color.Lerp(Color.white, ColorUtils.StringToColor(color), t);
-            };
-
-            return true;
+            return success;
         }
 
-        public bool SetNodeColorEncoding(string prop, Dictionary<string, string> valueToColor)
+        public bool SetNodeColorEncoding(string prop, Dictionary<string, string> valueToColor,
+            bool updateStorage, bool updateRenderElements)
         {
-            if (!_contextUtils.TryCastNodeProp<string>(prop)) return false;
+            var success = _encodingTransformer.SetNodeColorEncoding(prop, valueToColor);
 
-            var valueToColorObj = valueToColor.ToDictionary(vc => vc.Key, vc => ColorUtils.StringToColor(vc.Value));
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
 
-            _context.GetNodeColor = node => _contextUtils.GetNodeProp(node.ID, prop,
-                valueToColorObj, Color.gray);
-
-            return true;
+            return success;
         }
 
-        public bool SetNodeColorEncoding(string prop, Dictionary<bool?, string> valueToColor)
+        public bool SetNodeColorEncoding(string prop, Dictionary<bool?, string> valueToColor,
+            bool updateStorage, bool updateRenderElements)
         {
-            if (!_contextUtils.TryCastNodeProp<bool?>(prop)) return false;
+            var success = _encodingTransformer.SetNodeColorEncoding(prop, valueToColor);
 
-            var valueToColorObj = valueToColor.ToDictionary(vc => vc.Key, vc => ColorUtils.StringToColor(vc.Value));
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
 
-            _context.GetNodeColor = node => _contextUtils.GetNodeProp(node.ID, prop,
-                valueToColorObj, Color.gray);
-
-            return true;
+            return success;
         }
 
-        public bool SetNodeSizeEncoding(string prop, float min = 0f, float max = 1f)
+        public bool SetNodeSizeEncoding(string prop, float min, float max,
+            bool updateStorage, bool updateRenderElements)
         {
-            if (!_contextUtils.TryCastNodeProp<float?>(prop)) return false;
+            var success = _encodingTransformer.SetNodeSizeEncoding(prop, min, max);
 
-            _context.GetNodeSize = node =>
-            {
-                var propVal = _contextUtils.CastNodeProp<float?>(node.ID, prop);
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
 
-                if (propVal == null) return 0.01f;
-
-                var t = (float)propVal / (max - min) + min;
-                return t * 3;
-            };
-
-            return true;
+            return success;
         }
 
-        public bool SetNodeSizeEncoding(string prop, Dictionary<string, float> valueToSize)
+        public bool SetNodeSizeEncoding(string prop, Dictionary<string, float> valueToSize,
+            bool updateStorage, bool updateRenderElements)
         {
-            if (!_contextUtils.TryCastNodeProp<float?>(prop)) return false;
+            var success = _encodingTransformer.SetNodeSizeEncoding(prop, valueToSize);
 
-            _context.GetNodeSize = node => _contextUtils.GetNodeProp(node.ID, prop,
-                valueToSize, 0.01f);
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
 
-            return true;
+            return success;
         }
 
-        public bool SetNodeSizeEncoding(string prop, Dictionary<bool?, float> valueToSize)
+        public bool SetNodeSizeEncoding(string prop, Dictionary<bool?, float> valueToSize,
+            bool updateStorage, bool updateRenderElements)
         {
-            if (!_contextUtils.TryCastNodeProp<bool?>(prop)) return false;
+            var success = _encodingTransformer.SetNodeSizeEncoding(prop, valueToSize);
 
-            _context.GetNodeSize = node => _contextUtils.GetNodeProp(node.ID, prop,
-                valueToSize, 0.01f);
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
 
-            return true;
+            return success;
+        }
+
+        public bool SetLinkWidthEncoding(string prop, float min, float max,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkWidthEncoding(prop, min, max);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkWidthEncoding(string prop, Dictionary<string, float> valueToWidth,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkWidthEncoding(prop, valueToWidth);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkWidthEncoding(string prop, Dictionary<bool?, float> valueToWidth,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkWidthEncoding(prop, valueToWidth);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkBundlingStrengthEncoding(string prop, float min, float max,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkBundlingStrengthEncoding(prop, min, max);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkBundlingStrengthEncoding(string prop, Dictionary<string, float> valueToBundlingStrength,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkBundlingStrengthEncoding(prop, valueToBundlingStrength);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkBundlingStrengthEncoding(string prop, Dictionary<bool?, float> valueToBundlingStrength,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkBundlingStrengthEncoding(prop, valueToBundlingStrength);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkColorStartEncoding(string prop, float min, float max, string colorStart,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkColorStartEncoding(prop, min, max, colorStart);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkColorStartEncoding(string prop, Dictionary<string, string> valueToColorStart,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkColorStartEncoding(prop, valueToColorStart);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkColorStartEncoding(string prop, Dictionary<bool?, string> valueToColorStart,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkColorStartEncoding(prop, valueToColorStart);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkColorEndEncoding(string prop, float min, float max, string colorEnd,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkColorEndEncoding(prop, min, max, colorEnd);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkColorEndEncoding(string prop, Dictionary<string, string> valueToColorEnd,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkColorEndEncoding(prop, valueToColorEnd);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkColorEndEncoding(string prop, Dictionary<bool?, string> valueToColorEnd,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkColorEndEncoding(prop, valueToColorEnd);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkBundleStartEncoding(string prop, Dictionary<string, bool> valueToDoBundle,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkBundleStartEncoding(prop, valueToDoBundle);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkBundleStartEncoding(string prop, Dictionary<bool?, bool> valueToDoBundle,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkBundleStartEncoding(prop, valueToDoBundle);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkBundleEndEncoding(string prop, Dictionary<string, bool> valueToDoBundle,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkBundleEndEncoding(prop, valueToDoBundle);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkBundleEndEncoding(string prop, Dictionary<bool?, bool> valueToDoBundle,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkBundleEndEncoding(prop, valueToDoBundle);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkAlphaEncoding(string prop, float min, float max,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkAlphaEncoding(prop, min, max);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkAlphaEncoding(string prop, Dictionary<string, float> valueToAlpha,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkAlphaEncoding(prop, valueToAlpha);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
+        }
+
+        public bool SetLinkAlphaEncoding(string prop, Dictionary<bool?, float> valueToAlpha,
+            bool updateStorage, bool updateRenderElements)
+        {
+            var success = _encodingTransformer.SetLinkAlphaEncoding(prop, valueToAlpha);
+
+            if (success)
+                TransformNetwork("encoding", animated: false,
+                    updateStorage: updateStorage, updateRenderElements: updateRenderElements);
+
+            return success;
         }
 
         /*=============== start private methods ===================*/
@@ -403,7 +637,6 @@ namespace VidiGraph
         {
             _context.SetFromGlobal(_manager.NetworkGlobal, _manager.FileLoader.SphericalLayout);
             SetContextSettings();
-            _contextUtils = new MultiLayoutContextUtils(_context, _manager);
         }
 
         void InitInput()

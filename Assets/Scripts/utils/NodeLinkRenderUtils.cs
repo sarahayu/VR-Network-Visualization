@@ -21,7 +21,7 @@ namespace VidiGraph
             Node node, MultiLayoutContext.Node nodeProps, float nodeScale, Renderer renderer = null)
         {
             nodeObj.transform.position = nodeProps.Position;
-            nodeObj.transform.localScale = Vector3.one * nodeProps.Size * nodeScale;
+            nodeObj.transform.localScale = Vector3.one * nodeProps.Size;
 
             if (!renderer)
                 renderer = nodeObj.GetComponentInChildren<Renderer>();

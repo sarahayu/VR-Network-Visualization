@@ -87,8 +87,11 @@ namespace VidiGraph
         public Func<VidiGraph.Node, float> GetNodeSize = null;
         public Func<VidiGraph.Node, Color> GetNodeColor = null;
         public Func<VidiGraph.Link, float> GetLinkWidth = null;
+        public Func<VidiGraph.Link, float> GetLinkBundlingStrength = null;
         public Func<VidiGraph.Link, Color> GetLinkColorStart = null;
         public Func<VidiGraph.Link, Color> GetLinkColorEnd = null;
+        public Func<VidiGraph.Link, bool> GetLinkBundleStart = null;
+        public Func<VidiGraph.Link, bool> GetLinkBundleEnd = null;
         public Func<VidiGraph.Link, float> GetLinkAlpha = null;
 
         public MultiLayoutContext()
@@ -181,11 +184,14 @@ namespace VidiGraph
             // GetLinkAlpha = _ => ContextSettings.LinkNormalAlphaFactor;
 
 
-            GetNodeSize = _ => 1f;
+            GetNodeSize = _ => ContextSettings.NodeScale;
             GetNodeColor = _ => Color.gray;
             GetLinkWidth = _ => ContextSettings.LinkWidth;
+            GetLinkBundlingStrength = _ => ContextSettings.EdgeBundlingStrength;
             GetLinkColorStart = _ => Color.white;
             GetLinkColorEnd = _ => Color.white;
+            GetLinkBundleStart = _ => true;
+            GetLinkBundleEnd = _ => true;
             GetLinkAlpha = _ => ContextSettings.LinkNormalAlphaFactor;
         }
 

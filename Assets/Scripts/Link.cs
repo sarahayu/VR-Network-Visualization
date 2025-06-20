@@ -7,12 +7,12 @@ namespace VidiGraph
 {
     public class Link
     {
-        public bool IsSpline = true;
-        public int ID;
+        public bool IsSpline { get; set; } = true;
+        public int ID { get; set; }
         // TODO remove
-        public int SourceNodeID;
-        public int TargetNodeID;
-        public int IdxProcessed;
+        public int SourceNodeID { get; set; }
+        public int TargetNodeID { get; set; }
+        public int IdxProcessed { get; set; }
 
         public Node SourceNode;
         public Node TargetNode;

@@ -52,8 +52,6 @@ namespace VidiGraph
 
             _multiLayoutNetwork.Initialize();
             _handheldNetwork?.Initialize();
-
-
         }
 
         public void DrawPreview()
@@ -290,15 +288,160 @@ namespace VidiGraph
             _multiLayoutNetwork.SetLinksBundleEnd(linkIDs, bundleEnd, _updatingStorage, _updatingRenderElements);
         }
 
-        public bool SetMLNodeColorEncoding(string prop, string color, float min = 0f, float max = 1f)
+        public bool SetMLNodeColorEncoding(string prop, float min = 0f, float max = 1f, string color = "#00FF00" /* green */)
         {
-            return _multiLayoutNetwork.SetNodeColorEncoding(prop, color, min, max);
+            return _multiLayoutNetwork.SetNodeColorEncoding(prop, min, max, color,
+                _updatingStorage, _updatingRenderElements);
         }
 
         public bool SetMLNodeColorEncoding(string prop, Dictionary<string, string> valueToColor)
         {
-            return _multiLayoutNetwork.SetNodeColorEncoding(prop, valueToColor);
+            return _multiLayoutNetwork.SetNodeColorEncoding(prop, valueToColor,
+                _updatingStorage, _updatingRenderElements);
 
         }
+
+        public bool SetNodeColorEncoding(string prop, Dictionary<bool?, string> valueToColor)
+        {
+            return _multiLayoutNetwork.SetNodeColorEncoding(prop, valueToColor,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetNodeSizeEncoding(string prop, float min = 0f, float max = 1f)
+        {
+            return _multiLayoutNetwork.SetNodeSizeEncoding(prop, min, max,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetNodeSizeEncoding(string prop, Dictionary<string, float> valueToSize)
+        {
+            return _multiLayoutNetwork.SetNodeSizeEncoding(prop, valueToSize,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetNodeSizeEncoding(string prop, Dictionary<bool?, float> valueToSize)
+        {
+            return _multiLayoutNetwork.SetNodeSizeEncoding(prop, valueToSize,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetLinkWidthEncoding(string prop, float min = 0f, float max = 1f)
+        {
+            return _multiLayoutNetwork.SetLinkWidthEncoding(prop, min, max,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetLinkWidthEncoding(string prop, Dictionary<string, float> valueToWidth)
+        {
+            return _multiLayoutNetwork.SetLinkWidthEncoding(prop, valueToWidth,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetLinkWidthEncoding(string prop, Dictionary<bool?, float> valueToWidth)
+        {
+            return _multiLayoutNetwork.SetLinkWidthEncoding(prop, valueToWidth,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetLinkBundlingStrengthEncoding(string prop, float min = 0f, float max = 1f)
+        {
+            return _multiLayoutNetwork.SetLinkBundlingStrengthEncoding(prop, min, max,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetLinkBundlingStrengthEncoding(string prop, Dictionary<string, float> valueToBundlingStrength)
+        {
+            return _multiLayoutNetwork.SetLinkBundlingStrengthEncoding(prop, valueToBundlingStrength,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetLinkBundlingStrengthEncoding(string prop, Dictionary<bool?, float> valueToBundlingStrength)
+        {
+            return _multiLayoutNetwork.SetLinkBundlingStrengthEncoding(prop, valueToBundlingStrength,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetLinkColorStartEncoding(string prop, float min = 0f, float max = 1f, string colorStart = "#FFFFFF" /* white */)
+        {
+            return _multiLayoutNetwork.SetLinkColorStartEncoding(prop, min, max, colorStart,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetLinkColorStartEncoding(string prop, Dictionary<string, string> valueToColorStart)
+        {
+            return _multiLayoutNetwork.SetLinkColorStartEncoding(prop, valueToColorStart,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetLinkColorStartEncoding(string prop, Dictionary<bool?, string> valueToColorStart)
+        {
+            return _multiLayoutNetwork.SetLinkColorStartEncoding(prop, valueToColorStart,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetLinkColorEndEncoding(string prop, float min = 0f, float max = 1f, string colorEnd = "#FFFFFF" /* white */)
+        {
+            return _multiLayoutNetwork.SetLinkColorEndEncoding(prop, min, max, colorEnd,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetLinkColorEndEncoding(string prop, Dictionary<string, string> valueToColorEnd)
+        {
+            return _multiLayoutNetwork.SetLinkColorEndEncoding(prop, valueToColorEnd,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetLinkColorEndEncoding(string prop, Dictionary<bool?, string> valueToColorEnd)
+        {
+            return _multiLayoutNetwork.SetLinkColorEndEncoding(prop, valueToColorEnd,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        // TODO untested
+        public bool SetLinkBundleStartEncoding(string prop, Dictionary<string, bool> valueToDoBundle)
+        {
+            return _multiLayoutNetwork.SetLinkBundleStartEncoding(prop, valueToDoBundle,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        // TODO untested
+        public bool SetLinkBundleStartEncoding(string prop, Dictionary<bool?, bool> valueToDoBundle)
+        {
+            return _multiLayoutNetwork.SetLinkBundleStartEncoding(prop, valueToDoBundle,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        // TODO untested
+        public bool SetLinkBundleEndEncoding(string prop, Dictionary<string, bool> valueToDoBundle)
+        {
+            return _multiLayoutNetwork.SetLinkBundleEndEncoding(prop, valueToDoBundle,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        // TODO untested
+        public bool SetLinkBundleEndEncoding(string prop, Dictionary<bool?, bool> valueToDoBundle)
+        {
+            return _multiLayoutNetwork.SetLinkBundleEndEncoding(prop, valueToDoBundle,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetLinkAlphaEncoding(string prop, float min = 0f, float max = 1f)
+        {
+            return _multiLayoutNetwork.SetLinkAlphaEncoding(prop, min, max,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetLinkAlphaEncoding(string prop, Dictionary<string, float> valueToAlpha)
+        {
+            return _multiLayoutNetwork.SetLinkAlphaEncoding(prop, valueToAlpha,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetLinkAlphaEncoding(string prop, Dictionary<bool?, float> valueToAlpha)
+        {
+            return _multiLayoutNetwork.SetLinkAlphaEncoding(prop, valueToAlpha,
+                _updatingStorage, _updatingRenderElements);
+        }
+
     }
 }
