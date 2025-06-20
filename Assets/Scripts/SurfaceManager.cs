@@ -160,12 +160,12 @@ namespace VidiGraph
             _manager.PauseRenderUpdate();
 
             GetInterAndOuterLinks(_surfaces[surfID].Nodes.Keys, out var interLinks, out var outerLinks, out var isStartOuterLinks);
-            _manager.SetLinksBundlingStrength(interLinks, 0f);
-            _manager.SetLinksBundleStart(outerLinks.Where((_, idx) => isStartOuterLinks[idx]), false);
-            _manager.SetLinksBundleEnd(outerLinks.Where((_, idx) => !isStartOuterLinks[idx]), false);
+            _manager.SetMLLinksBundlingStrength(interLinks, 0f);
+            _manager.SetMLLinksBundleStart(outerLinks.Where((_, idx) => isStartOuterLinks[idx]), false);
+            _manager.SetMLLinksBundleEnd(outerLinks.Where((_, idx) => !isStartOuterLinks[idx]), false);
 
-            _manager.SetLinksAlpha(interLinks, _mlSettings.LinkNormalAlphaFactor);
-            _manager.SetLinksAlpha(outerLinks, _mlSettings.LinkContext2FocusAlphaFactor);
+            _manager.SetMLLinksAlpha(interLinks, _mlSettings.LinkNormalAlphaFactor);
+            _manager.SetMLLinksAlpha(outerLinks, _mlSettings.LinkContext2FocusAlphaFactor);
 
             _manager.UnpauseRenderUpdate();
             // don't unpause storage update, it'll be updated at the end of animation
@@ -363,10 +363,10 @@ namespace VidiGraph
                 var positions = startPositions.Zip(endPositions, Tuple.Create)
                     .Select((se, i) => Vector3.Lerp(se.Item1, se.Item2, Mathf.SmoothStep(0f, 1f, t)));
 
-                _manager.SetNodesPosition(nodeIDs, positions);
+                _manager.SetMLNodesPosition(nodeIDs, positions);
             });
 
-            _manager.SetNodesPosition(nodeIDs, endPositions);
+            _manager.SetMLNodesPosition(nodeIDs, endPositions);
 
             _manager.UnpauseStorageUpdate();
 
