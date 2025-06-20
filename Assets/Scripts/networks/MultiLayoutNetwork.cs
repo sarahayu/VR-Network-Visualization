@@ -92,22 +92,6 @@ namespace VidiGraph
             TransformNetworkNoRender("spherical");
 
             InitRenderer();
-
-            // SetNodeSizeEncoding("Degree", 0f, 0.1f, false, false);
-            // // SetNodeColorEncoding("gpa", 0f, 3f, "#0000FF", false, false);
-            // SetNodeColorEncoding("smoker", new Dictionary<bool?, string>()
-            // {
-            //     {true, "#00FF00"},
-            //     {false, "#FF0000"},
-            //     // {null, "#0000FF"},
-            // }, false, false);
-            // // SetLinkWidthEncoding("ID", 0f, 100f, false, false);
-            // // SetLinkBundlingStrengthEncoding("ID", 100f, 0f, false, false);
-            // // SetLinkColorStartEncoding("SourceNodeID", 0f, 100f, "#FF00FF", false, false);
-            // // SetLinkColorEndEncoding("TargetNodeID", 0f, 100f, "#00FFFF", false, false);
-            // SetLinkAlphaEncoding("ID", 0f, 300f, false, false);
-
-            // UpdateRenderElements();
         }
 
         public override void UpdateRenderElements()
