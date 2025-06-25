@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
@@ -61,6 +62,26 @@ namespace VidiGraph
         TextMeshProUGUI _infoCol1;
         TextMeshProUGUI _infoCol2;
 
+        Coroutine _unhoverNodeCR = null;
+        Coroutine _unhoverCommCR = null;
+
+        enum ActionState
+        {
+            HoverNode,
+            UnhoverNode,
+            GrabNode,
+            UngrabNode,
+            HoverComm,
+            UnhoverComm,
+            GrabComm,
+            UngrabComm,
+            None,
+        }
+
+        ActionState _lastState = ActionState.None;
+
+        Coroutine _clickWindowCR = null;
+
         public override void Initialize()
         {
             _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
@@ -109,7 +130,27 @@ namespace VidiGraph
             else if (CheckSelectionActions()) { }
             else if (RunExperimentalCommand()) { }
 
-            CheckForUnhover();
+            if (IsUnhoverNode(_lastState) && _hoveredNode != null)
+            {
+                _networkManager.UnhoverNode(_hoveredNode.ID);
+                _hoveredNode = null;
+            }
+
+            if (IsUnhoverComm(_lastState) && _hoveredCommunity != null)
+            {
+                _networkManager.UnhoverCommunity(_hoveredCommunity.ID);
+                _hoveredCommunity = null;
+            }
+        }
+
+        static bool IsUnhoverNode(ActionState state)
+        {
+            return state == ActionState.UnhoverNode || state == ActionState.HoverComm;
+        }
+
+        static bool IsUnhoverComm(ActionState state)
+        {
+            return state == ActionState.UnhoverComm || state == ActionState.HoverNode;
         }
 
         public bool CheckSelectionActions()
@@ -212,15 +253,7 @@ namespace VidiGraph
 
             if (!_cancelUpcomingDeselection)
             {
-                if (_hoveredCommunity != null)
-                {
-                    _networkManager.ToggleSelectedCommunities(new List<int> { _hoveredCommunity.ID });
-                }
-                else if (_hoveredNode != null)
-                {
-                    _networkManager.ToggleSelectedNodes(new List<int> { _hoveredNode.ID });
-                }
-                else
+                if (_hoveredCommunity == null && _hoveredNode == null)
                 {
                     _networkManager.ClearSelection();
                 }
@@ -326,10 +359,17 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _networkManager.HoverCommunity(community.ID);
-                _hoveredCommunity = community;
-                _commHoverExit.DidCancel();
-                _nodeHoverExit.DidInteraction();
+                CoroutineUtils.StopIfRunning(this, _unhoverCommCR);
+                _unhoverCommCR = null;
+
+                if (_lastState == ActionState.None || _lastState == ActionState.UnhoverComm || _lastState == ActionState.UnhoverNode)
+                {
+
+                    _lastState = ActionState.HoverComm;
+
+                    _networkManager.HoverCommunity(community.ID);
+                    _hoveredCommunity = community;
+                }
             }
         }
 
@@ -337,7 +377,10 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _commHoverExit.DidInteraction();
+                if (_lastState == ActionState.HoverComm || _lastState == ActionState.UngrabComm)
+                {
+                    _lastState = ActionState.UnhoverComm;
+                }
             }
         }
 
@@ -345,8 +388,14 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _networkManager.StartMLCommMove(community.ID);
-                _commHoverExit.DidCancel();
+                if (_lastState == ActionState.HoverComm || _lastState == ActionState.UngrabComm)
+                {
+                    _lastState = ActionState.GrabComm;
+
+                    _networkManager.StartMLCommMove(community.ID);
+                    _clickWindowCR = StartCoroutine(CRSelectionWindow());
+                }
+
             }
         }
 
@@ -354,8 +403,23 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _networkManager.EndMLCommMove(community.ID);
-                _commHoverExit.DidInteraction();
+                if (_lastState == ActionState.GrabComm)
+                {
+                    _lastState = ActionState.UngrabComm;
+
+                    _networkManager.EndMLCommMove(community.ID);
+
+                    if (_clickWindowCR != null)
+                    {
+                        _networkManager.ToggleSelectedCommunities(new List<int> { _hoveredCommunity.ID });
+
+                        CoroutineUtils.StopIfRunning(this, _clickWindowCR);
+                        _clickWindowCR = null;
+                    }
+
+                    CoroutineUtils.StopIfRunning(this, _unhoverCommCR);
+                    _unhoverCommCR = StartCoroutine(CRDelayUnhoverComm());
+                }
             }
         }
 
@@ -363,20 +427,23 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _networkManager.HoverNode(node.ID);
-                _hoveredNode = node;
+                CoroutineUtils.StopIfRunning(this, _unhoverNodeCR);
+                _unhoverNodeCR = null;
 
-                _tooltip.SetActive(true);
+                if (_lastState == ActionState.None || _lastState == ActionState.UnhoverNode || _lastState == ActionState.UnhoverComm)
+                {
+                    _lastState = ActionState.HoverNode;
 
-                var halves = GetPropsStr(node, 2);
+                    _networkManager.HoverNode(node.ID);
+                    _hoveredNode = node;
 
-                _infoCol1.SetText(halves.Length >= 1 ? halves[0] : "");
-                _infoCol2.SetText(halves.Length >= 2 ? halves[1] : "");
+                    _tooltip.SetActive(true);
 
+                    var halves = GetPropsStr(node, 2);
 
-
-                _nodeHoverExit.DidCancel();
-                _commHoverExit.DidInteraction();
+                    _infoCol1.SetText(halves.Length >= 1 ? halves[0] : "");
+                    _infoCol2.SetText(halves.Length >= 2 ? halves[1] : "");
+                }
             }
         }
 
@@ -384,8 +451,12 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _tooltip.SetActive(false);
-                _nodeHoverExit.DidInteraction();
+                if (_lastState == ActionState.HoverNode || _lastState == ActionState.UngrabNode)
+                {
+                    _lastState = ActionState.UnhoverNode;
+
+                    _tooltip.SetActive(false);
+                }
             }
         }
 
@@ -393,8 +464,13 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _networkManager.StartMLNodeMove(node.ID);
-                _nodeHoverExit.DidCancel();
+                if (_lastState == ActionState.HoverNode || _lastState == ActionState.UngrabNode)
+                {
+                    _lastState = ActionState.GrabNode;
+
+                    _networkManager.StartMLNodeMove(node.ID);
+                    _clickWindowCR = StartCoroutine(CRSelectionWindow());
+                }
             }
         }
 
@@ -402,9 +478,57 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                _networkManager.EndMLNodeMove(node.ID, evt.interactableObject.transform);
-                _nodeHoverExit.DidInteraction();
+                if (_lastState == ActionState.GrabNode)
+                {
+                    _lastState = ActionState.UngrabNode;
+
+                    _networkManager.EndMLNodeMove(node.ID, evt.interactableObject.transform);
+
+
+                    if (_clickWindowCR != null)
+                    {
+                        _networkManager.ToggleSelectedNodes(new List<int> { _hoveredNode.ID });
+
+                        CoroutineUtils.StopIfRunning(this, _clickWindowCR);
+                        _clickWindowCR = null;
+                    }
+
+                    CoroutineUtils.StopIfRunning(this, _unhoverNodeCR);
+                    _unhoverNodeCR = StartCoroutine(CRDelayUnhoverNode());
+                }
             }
+        }
+
+        // sometimes controller moves too fast and we ungrab outside of node,
+        // resulting in the unhover not registering due to an invalid state change.
+        // account for this by manually unhovering if no re-hovering event is
+        // detected after ungrab
+        IEnumerator CRDelayUnhoverNode()
+        {
+            yield return new WaitForSeconds(0.1f);
+
+            _lastState = ActionState.UnhoverNode;
+            _tooltip.SetActive(false);
+
+            _unhoverNodeCR = null;
+        }
+
+        // same thing as above, but with community
+        IEnumerator CRDelayUnhoverComm()
+        {
+            yield return new WaitForSeconds(0.1f);
+
+            _lastState = ActionState.UnhoverComm;
+
+            _unhoverCommCR = null;
+        }
+
+        // simple way to detect if we did a click instead of drag
+        IEnumerator CRSelectionWindow()
+        {
+            yield return new WaitForSeconds(0.25f);
+
+            _clickWindowCR = null;
         }
     }
 

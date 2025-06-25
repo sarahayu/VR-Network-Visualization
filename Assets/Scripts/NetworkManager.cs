@@ -289,6 +289,18 @@ namespace VidiGraph
             _multiLayoutNetwork.SetLinksBundleEnd(linkIDs, bundleEnd, _updatingStorage, _updatingRenderElements);
         }
 
+        public bool SetMLNodeColorEncoding(string prop, float min = 0f, float max = 1f, string color = "#0000FF" /* blue */)
+        {
+            return _multiLayoutNetwork.SetNodeColorEncoding(prop, min, max, color,
+                _updatingStorage, _updatingRenderElements);
+        }
+
+        public bool SetMLNodeColorEncoding(string prop, Dictionary<string, string> valueToColor)
+        {
+            return _multiLayoutNetwork.SetNodeColorEncoding(prop, valueToColor,
+                _updatingStorage, _updatingRenderElements);
+        }
+
         public bool SetMLNodeColorEncoding(string prop, Dictionary<bool?, string> valueToColor)
         {
             return _multiLayoutNetwork.SetNodeColorEncoding(prop, valueToColor,
