@@ -89,7 +89,7 @@ namespace VidiGraph
             var newAttr = new UpdatedAttr
             {
                 attr = Attr.Size,
-                valFloat = size,
+                valFloat = size * _networkContext.ContextSettings.NodeScale,
             };
 
             foreach (var nodeUpdate in nodeIDs.Select(nid => GetUpdates(_nodeUpdates, nid))) nodeUpdate.Add(newAttr);
@@ -111,7 +111,7 @@ namespace VidiGraph
             var newAttr = new UpdatedAttr
             {
                 attr = Attr.Width,
-                valFloat = width
+                valFloat = width * _networkContext.ContextSettings.LinkWidth
             };
 
             foreach (var linkUpdate in linkIDs.Select(nid => GetUpdates(_linkUpdates, nid))) linkUpdate.Add(newAttr);
@@ -144,7 +144,7 @@ namespace VidiGraph
             var newAttr = new UpdatedAttr
             {
                 attr = Attr.Alpha,
-                valFloat = alpha
+                valFloat = alpha * _networkContext.ContextSettings.LinkNormalAlphaFactor
             };
 
             foreach (var linkUpdate in linkIDs.Select(nid => GetUpdates(_linkUpdates, nid))) linkUpdate.Add(newAttr);
@@ -155,7 +155,7 @@ namespace VidiGraph
             var newAttr = new UpdatedAttr
             {
                 attr = Attr.BundlingStrength,
-                valFloat = bundlingStrength
+                valFloat = bundlingStrength * _networkContext.ContextSettings.EdgeBundlingStrength
             };
 
             foreach (var linkUpdate in linkIDs.Select(nid => GetUpdates(_linkUpdates, nid))) linkUpdate.Add(newAttr);
