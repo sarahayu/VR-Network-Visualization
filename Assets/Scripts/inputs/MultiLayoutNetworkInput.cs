@@ -79,6 +79,7 @@ namespace VidiGraph
         ActionState _lastState = ActionState.None;
 
         Coroutine _clickWindowCR = null;
+        Coroutine _dupeListenerCR = null;
 
         public override void Initialize()
         {
@@ -453,6 +454,8 @@ namespace VidiGraph
 
                     _networkManager.StartMLNodeMove(node.ID);
                     _clickWindowCR = StartCoroutine(CRSelectionWindow());
+
+                    _dupeListenerCR = StartCoroutine(CRDupeListen(evt.interactableObject.transform));
                 }
             }
         }
@@ -512,6 +515,41 @@ namespace VidiGraph
             yield return new WaitForSeconds(0.25f);
 
             _clickWindowCR = null;
+        }
+
+        // listen for trigger press that triggers a duplication
+        IEnumerator CRDupeListen(Transform transform)
+        {
+            while (true)
+            {
+                if (RightTriggerPress.ReadIsPerformed())
+                {
+                    if (_lastState == ActionState.GrabNode)
+                    {
+                        _lastState = ActionState.UngrabNode;
+
+                        _networkManager.EndMLNodeMove(_hoveredNode.ID, transform);
+
+
+                        if (_clickWindowCR != null)
+                        {
+                            _networkManager.ToggleSelectedNodes(new List<int> { _hoveredNode.ID });
+
+                            CoroutineUtils.StopIfRunning(this, _clickWindowCR);
+                            _clickWindowCR = null;
+                        }
+
+                        CoroutineUtils.StopIfRunning(this, _unhoverNodeCR);
+                        _unhoverNodeCR = StartCoroutine(CRDelayUnhoverNode());
+
+                        break;
+                    }
+                }
+
+                yield return null;
+            }
+
+            _dupeListenerCR = null;
         }
     }
 

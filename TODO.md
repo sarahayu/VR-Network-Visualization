@@ -1,16 +1,12 @@
 # TODO
 
-- optimize reflection: https://stackoverflow.com/questions/7999652/best-way-to-cache-a-reflection-property-getter-setter
-- encode using voice, start figuring out:
-    - way to generate lambda functions from criteria? e.g. create linear scale colorer from attribute name and color
-- parse all waves into one
+- replicate cluster/node
 - move multiple selections
+- optimize reflection: https://stackoverflow.com/questions/7999652/best-way-to-cache-a-reflection-property-getter-setter
+- parse all waves into one
 - attaching nodes, average pos?
 
 
--  hover over community, then while still hovering quickly swipe over node in another community. node stays hovered
-    - deprecated: (IGNORE as not high priority: fixing it would unfix hovering over node immediately after unhovering another node. plus, highlights reset themselves quite easily)
-    - update: GOTTA FIX
 - general code cleanup
 - when splatting to surface, account for random nodes that are not part of same community
 - move control point calculation to a transformer
@@ -24,7 +20,6 @@
 
 - move nodes back on surface deletion
 - when using voice, attach cluster not based on cluster pos
-- replicate cluster/node
 
 
 - refactor surface
@@ -56,6 +51,12 @@
 - bigger surface
 - bring back attach nodes
 - mic latency
+- encode using voice, start figuring out:
+    - way to generate lambda functions from criteria? e.g. create linear scale colorer from attribute name and color
+-  hover over community, then while still hovering quickly swipe over node in another community. node stays hovered
+    - deprecated: (IGNORE as not high priority: fixing it would unfix hovering over node immediately after unhovering another node. plus, highlights reset themselves quite easily)
+    - update: GOTTA FIX
+- latency examine
 
 ## Ignore
 - move node moving animation to mln
