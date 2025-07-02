@@ -55,8 +55,6 @@ namespace VidiGraph
 
         string _lastOptionLabel = "";
 
-        InteractionTimer _nodeHoverExit = new InteractionTimer();
-        InteractionTimer _commHoverExit = new InteractionTimer();
         bool _cancelUpcomingDeselection = false;
 
         TextMeshProUGUI _infoCol1;
@@ -290,21 +288,6 @@ namespace VidiGraph
             _networkManager.SetMLLinksAlpha(linkIDs2, 0.4f);
 
             return true;
-        }
-
-        void CheckForUnhover()
-        {
-            if (_nodeHoverExit.TickAndCheckDidInteract() && _hoveredNode != null)
-            {
-                _networkManager.UnhoverNode(_hoveredNode.ID);
-                _hoveredNode = null;
-            }
-
-            if (_commHoverExit.TickAndCheckDidInteract() && _hoveredCommunity != null)
-            {
-                _networkManager.UnhoverCommunity(_hoveredCommunity.ID);
-                _hoveredCommunity = null;
-            }
         }
 
         void CreateNewOptionBtns(HashSet<string> opts)

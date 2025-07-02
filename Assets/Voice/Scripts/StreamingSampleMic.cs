@@ -196,7 +196,9 @@ namespace Whisper.Samples
                         Debug.Log("Cypher Query: " + query);
                         var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
 
+                        TimerUtils.StartTime("SetSelectedNodes");
                         _networkManager.SetSelectedNodes(nodes.Select(n => n.ID), true);
+                        TimerUtils.EndTime("SetSelectedNodes");
 
 
                         loadingIcon.SetLoading(false);

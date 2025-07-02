@@ -691,7 +691,7 @@ namespace VidiGraph
         }
 
         void TransformNetwork(string transformer, bool animated = true, Action onFinished = null,
-            bool updateCommunityProps = true, bool updateStorage = false, bool updateRenderElements = true)
+            bool updateCommunityProps = true, bool updateStorage = true, bool updateRenderElements = true)
         {
             if (animated)
             {

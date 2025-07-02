@@ -31,12 +31,16 @@ namespace VidiGraph
 
         public override void InitialStore(NetworkFileData networkFile, NetworkGlobal networkGlobal, MultiLayoutContext networkContext)
         {
+            TimerUtils.StartTime("DatabaseStorage.InitialStore");
             DatabaseStorageUtils.BulkInitNetwork(networkFile, networkGlobal, networkContext, _driver, _convertWinPaths);
+            TimerUtils.EndTime("DatabaseStorage.InitialStore");
         }
 
         public override void UpdateStore(NetworkGlobal networkGlobal, MultiLayoutContext networkContext)
         {
+            TimerUtils.StartTime("DatabaseStorage.UpdateStore");
             DatabaseStorageUtils.BulkUpdateNetwork(networkGlobal, networkContext, _driver, _convertWinPaths);
+            TimerUtils.EndTime("DatabaseStorage.UpdateStore");
         }
 
         public IEnumerable<Node> GetNodesFromStore(NetworkGlobal networkGlobal, string command)

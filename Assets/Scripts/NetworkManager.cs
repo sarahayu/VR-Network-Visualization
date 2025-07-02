@@ -40,6 +40,13 @@ namespace VidiGraph
             _storage?.InitialStore(_fileLoader.ClusterLayout, _networkGlobal, _multiLayoutNetwork.Context);
 
             _multiLayoutNetwork.SetStorageUpdateCallback(() => _storage?.UpdateStore(_networkGlobal, _multiLayoutNetwork.Context));
+
+            PauseRenderUpdate();
+
+            SetMLNodeColorEncoding("Degree", 0, 0.1f, "#00FF00");
+            SetMLNodeSizeEncoding("Degree", -0.01f, 0.1f);
+
+            UnpauseRenderUpdate();
         }
 
         public void Initialize()

@@ -452,9 +452,13 @@ namespace VidiGraph
                 var session = driver.Session();
                 var res = session.Run(command);
 
+                TimerUtils.StartTime("session.Run");
                 Debug.Log($"Command executed successfully: {command}");
+                TimerUtils.EndTime("session.Run");
 
+                TimerUtils.StartTime("res.Select");
                 var nodes = res.Select(r => networkGlobal.Nodes[r[0].As<INode>().Properties["nodeId"].As<int>()]);
+                TimerUtils.EndTime("res.Select");
 
                 return nodes;
             }

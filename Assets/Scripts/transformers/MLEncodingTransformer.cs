@@ -25,6 +25,7 @@ namespace VidiGraph
 
         public override void ApplyTransformation()
         {
+            TimerUtils.StartTime("MLEncodingTransformer.ApplyTransformation");
             foreach (var node in _networkGlobal.Nodes)
             {
                 var nodeContext = _networkContext.Nodes[node.ID];
@@ -49,6 +50,7 @@ namespace VidiGraph
 
                 linkContext.Dirty = true;
             }
+            TimerUtils.EndTime("MLEncodingTransformer.ApplyTransformation");
         }
 
         public bool SetNodeColorEncoding(string prop, float min, float max, string color)
