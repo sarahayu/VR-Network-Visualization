@@ -239,7 +239,7 @@ namespace VidiGraph
                 updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
-        public void SetNodesColor(IEnumerable<int> nodeIDs, Color color, bool updateStorage, bool updateRenderElements)
+        public void SetNodesColor(IEnumerable<int> nodeIDs, string color, bool updateStorage, bool updateRenderElements)
         {
             _editTransformer.SetNodesColor(nodeIDs, color);
             TransformNetwork("edit", animated: false,
@@ -253,14 +253,14 @@ namespace VidiGraph
                 updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
-        public void SetLinksColorStart(IEnumerable<int> linkIDs, Color color, bool updateStorage, bool updateRenderElements)
+        public void SetLinksColorStart(IEnumerable<int> linkIDs, string color, bool updateStorage, bool updateRenderElements)
         {
             _editTransformer.SetLinksColorStart(linkIDs, color);
             TransformNetwork("edit", animated: false,
                 updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
-        public void SetLinksColorEnd(IEnumerable<int> linkIDs, Color color, bool updateStorage, bool updateRenderElements)
+        public void SetLinksColorEnd(IEnumerable<int> linkIDs, string color, bool updateStorage, bool updateRenderElements)
         {
             _editTransformer.SetLinksColorEnd(linkIDs, color);
             TransformNetwork("edit", animated: false,

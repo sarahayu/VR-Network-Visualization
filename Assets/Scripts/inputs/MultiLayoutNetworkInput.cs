@@ -9,6 +9,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 namespace VidiGraph
@@ -45,6 +46,7 @@ namespace VidiGraph
 
         NetworkManager _networkManager;
         SurfaceManager _surfaceManager;
+        XRInteractionManager _xrManager;
 
         Community _hoveredCommunity = null;
         Node _hoveredNode = null;
@@ -85,6 +87,7 @@ namespace VidiGraph
         {
             _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _surfaceManager = GameObject.Find("/Surface Manager").GetComponent<SurfaceManager>();
+            _xrManager = GameObject.Find("/XR Interaction Manager").GetComponent<XRInteractionManager>();
 
             _tooltip.SetActive(false);
             _infoCol1 = _tooltip.GetNamedChild("NodeInfo_1").GetComponent<TextMeshProUGUI>();
@@ -282,10 +285,10 @@ namespace VidiGraph
             var linkIDs2 = _networkManager.NetworkGlobal.Links.GetRange(10, 10).Select(l => l.ID);
 
             _networkManager.SetMLNodesSize(nodeIDs1, 4);
-            _networkManager.SetMLNodesColor(nodeIDs2, Color.red);
+            _networkManager.SetMLNodesColor(nodeIDs2, "#FF0000");
             _networkManager.SetMLLinksWidth(linkIDs1, 3f);
-            _networkManager.SetMLLinksColorStart(linkIDs2, Color.magenta);
-            _networkManager.SetMLLinksColorEnd(linkIDs1, Color.yellow);
+            _networkManager.SetMLLinksColorStart(linkIDs2, "#00FF00");
+            _networkManager.SetMLLinksColorEnd(linkIDs1, "#00FFFF");
             _networkManager.SetMLLinksAlpha(linkIDs2, 0.4f);
 
             return true;
@@ -455,7 +458,7 @@ namespace VidiGraph
                     _networkManager.StartMLNodeMove(node.ID);
                     _clickWindowCR = StartCoroutine(CRSelectionWindow());
 
-                    _dupeListenerCR = StartCoroutine(CRDupeListen(evt.interactableObject.transform));
+                    _dupeListenerCR = StartCoroutine(CRDupeListen(evt.interactorObject, evt.interactableObject));
                 }
             }
         }
@@ -518,32 +521,14 @@ namespace VidiGraph
         }
 
         // listen for trigger press that triggers a duplication
-        IEnumerator CRDupeListen(Transform transform)
+        IEnumerator CRDupeListen(IXRSelectInteractor interactor, IXRSelectInteractable interactable)
         {
             while (true)
             {
                 if (RightTriggerPress.ReadIsPerformed())
                 {
-                    if (_lastState == ActionState.GrabNode)
-                    {
-                        _lastState = ActionState.UngrabNode;
-
-                        _networkManager.EndMLNodeMove(_hoveredNode.ID, transform);
-
-
-                        if (_clickWindowCR != null)
-                        {
-                            _networkManager.ToggleSelectedNodes(new List<int> { _hoveredNode.ID });
-
-                            CoroutineUtils.StopIfRunning(this, _clickWindowCR);
-                            _clickWindowCR = null;
-                        }
-
-                        CoroutineUtils.StopIfRunning(this, _unhoverNodeCR);
-                        _unhoverNodeCR = StartCoroutine(CRDelayUnhoverNode());
-
-                        break;
-                    }
+                    _xrManager.SelectExit(interactor, interactable);
+                    break;
                 }
 
                 yield return null;

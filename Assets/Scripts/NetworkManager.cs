@@ -246,7 +246,7 @@ namespace VidiGraph
             _multiLayoutNetwork.SetNodesSize(nodeIDs, size, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetMLNodesColor(IEnumerable<int> nodeIDs, Color color)
+        public void SetMLNodesColor(IEnumerable<int> nodeIDs, string color)
         {
             _multiLayoutNetwork.SetNodesColor(nodeIDs, color, _updatingStorage, _updatingRenderElements);
         }
@@ -266,12 +266,12 @@ namespace VidiGraph
             _multiLayoutNetwork.SetLinksWidth(linkIDs, width, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetMLLinksColorStart(IEnumerable<int> linkIDs, Color color)
+        public void SetMLLinksColorStart(IEnumerable<int> linkIDs, string color)
         {
             _multiLayoutNetwork.SetLinksColorStart(linkIDs, color, _updatingStorage, _updatingRenderElements);
         }
 
-        public void SetMLLinksColorEnd(IEnumerable<int> linkIDs, Color color)
+        public void SetMLLinksColorEnd(IEnumerable<int> linkIDs, string color)
         {
             _multiLayoutNetwork.SetLinksColorEnd(linkIDs, color, _updatingStorage, _updatingRenderElements);
         }

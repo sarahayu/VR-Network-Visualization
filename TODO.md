@@ -1,6 +1,7 @@
 # TODO
 
 - replicate cluster/node
+    - when asking to select nodes, does it select on subnetworks as well?
 - move multiple selections
 - optimize reflection: https://stackoverflow.com/questions/7999652/best-way-to-cache-a-reflection-property-getter-setter
 - parse all waves into one
@@ -57,6 +58,7 @@
     - deprecated: (IGNORE as not high priority: fixing it would unfix hovering over node immediately after unhovering another node. plus, highlights reset themselves quite easily)
     - update: GOTTA FIX
 - latency examine
+- change edit commands to use string color
 
 ## Ignore
 - move node moving animation to mln

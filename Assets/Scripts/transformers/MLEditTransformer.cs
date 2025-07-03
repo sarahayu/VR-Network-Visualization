@@ -95,12 +95,12 @@ namespace VidiGraph
             foreach (var nodeUpdate in nodeIDs.Select(nid => GetUpdates(_nodeUpdates, nid))) nodeUpdate.Add(newAttr);
         }
 
-        public void SetNodesColor(IEnumerable<int> nodeIDs, Color color)
+        public void SetNodesColor(IEnumerable<int> nodeIDs, string color)
         {
             var newAttr = new UpdatedAttr
             {
                 attr = Attr.Color,
-                valColor = color,
+                valColor = ColorUtils.StringToColor(color),
             };
 
             foreach (var nodeUpdate in nodeIDs.Select(nid => GetUpdates(_nodeUpdates, nid))) nodeUpdate.Add(newAttr);
@@ -117,23 +117,23 @@ namespace VidiGraph
             foreach (var linkUpdate in linkIDs.Select(nid => GetUpdates(_linkUpdates, nid))) linkUpdate.Add(newAttr);
         }
 
-        public void SetLinksColorStart(IEnumerable<int> linkIDs, Color color)
+        public void SetLinksColorStart(IEnumerable<int> linkIDs, string color)
         {
             var newAttr = new UpdatedAttr
             {
                 attr = Attr.ColorStart,
-                valColor = color,
+                valColor = ColorUtils.StringToColor(color),
             };
 
             foreach (var linkUpdate in linkIDs.Select(nid => GetUpdates(_linkUpdates, nid))) linkUpdate.Add(newAttr);
         }
 
-        public void SetLinksColorEnd(IEnumerable<int> linkIDs, Color color)
+        public void SetLinksColorEnd(IEnumerable<int> linkIDs, string color)
         {
             var newAttr = new UpdatedAttr
             {
                 attr = Attr.ColorEnd,
-                valColor = color,
+                valColor = ColorUtils.StringToColor(color),
             };
 
             foreach (var linkUpdate in linkIDs.Select(nid => GetUpdates(_linkUpdates, nid))) linkUpdate.Add(newAttr);
