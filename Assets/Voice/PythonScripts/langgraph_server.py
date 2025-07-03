@@ -51,7 +51,8 @@ cypher_prompt = ChatPromptTemplate.from_template(
 
 action_prompt = ChatPromptTemplate.from_template(
     "You are an expert in generating graph commands. \
-        Return only the action and the required parameters that user ask for such as 'Select', 'Deselect', 'Move', format should be like ['select', ""], ['deselect', ""], ['move', ""]\
+        Return only the action and the required parameters that user ask for such as 'Select', 'Deselect', 'Move', format should be like ['select', ""], ['deselect', ""], ['move', ""]\" \
+        Moreover users say 'highlight' is the same with 'select', 'bring' is the same with 'move', etc \
         Some required parameters format should be like: ['layout', 'layout_type'] \
         \n\n User Request: {input}"
 )
