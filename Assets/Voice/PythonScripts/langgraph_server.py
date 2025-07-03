@@ -156,7 +156,7 @@ def classify():
             "timings": result.get("timings", {})
         })
     except Exception as e:
-        print_colored(f"🔥 ERROR in /classify: {e}", 'red')
+        print_colored(f"ERROR in /classify: {e}", 'red')
         return jsonify({"error": str(e)}), 500
 
 @app.route("/ping", methods=["GET"])

@@ -227,7 +227,7 @@ namespace Whisper.Samples
                                 break;
                         }
 
-                        loadingIcon.SetLoading(false);
+                        loadingIcon.SetLoading(false); // Done processing
                     }
                 }
             }
