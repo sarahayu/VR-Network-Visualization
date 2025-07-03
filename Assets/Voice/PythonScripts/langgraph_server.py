@@ -17,6 +17,7 @@ def merge_dicts(old: dict[str, float] | None, new: dict[str, float]) -> dict[str
 class AgentState(TypedDict):
     input: Annotated[str, override]
     code: Annotated[str, override]
+    action: Annotated[str, override]
     timings: Annotated[dict[str, float], merge_dicts]
     judgment: Annotated[str, override]
 
@@ -27,7 +28,7 @@ llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 clarify_prompt = ChatPromptTemplate.from_template(
     "The user input might be unclear. \
-    Ask a clarifying question so we can understand the user's intent better.\n\nUser input: {input}"
+    Ask a clarifying question so we can understand the user's intent better.\n\n User input: {input}"
 )
 
 cypher_prompt = ChatPromptTemplate.from_template(
@@ -45,14 +46,21 @@ cypher_prompt = ChatPromptTemplate.from_template(
     drinker, (bool)\
     gpa (float)\
     grade (int) \n\n\
-    Only return the Cypher query, no explanations.\n\nUser Request: {input}"
+    Only return the Cypher query, no explanations.\n\n User Request: {input}"
+)
+
+action_prompt = ChatPromptTemplate.from_template(
+    "You are an expert in generating graph commands. \
+        Return only the action and the required parameters that user ask for such as 'Select', 'Deselect', 'Move', format should be like ['select', ""], ['deselect', ""], ['move', ""]\
+        Some required parameters format should be like: ['layout', 'layout_type'] \
+        \n\n User Request: {input}"
 )
 
 ambiguity_prompt = ChatPromptTemplate.from_template(
     "Decide whether the following user input is ambiguous for generating corresponding graph commands or not. \
     Voice detection might have mistakes such as color 'rate' actually refer to color 'red'. \
     Try to get the correct meaning, do not see these pronunciation mistakes as ambiguous. \
-    Reply with only 'yes' if it is ambiguous and 'no' if it is clear.\n\nUser input: {input}"
+    Reply with only 'yes' if it is ambiguous and 'no' if it is clear.\n\n User input: {input}"
 )
 
 
@@ -93,10 +101,12 @@ def clarify_agent(state: AgentState) -> dict:
 
 @timed_node("execute_agent")
 def execute_agent(state: AgentState) -> dict:
-    messages = cypher_prompt.format_messages(input=state["input"])
-    cypher = llm(messages).content.strip()
+    messages1 = cypher_prompt.format_messages(input=state["input"])
+    messages2 = action_prompt.format_messages(input=state["input"])
+    cypher = llm(messages1).content.strip()
+    action = llm(messages2).content.strip()
     print_colored(f"Generated Cypher query: {cypher}", 'green')
-    return {"input": "", "code": cypher, "__next__": "return_code"}
+    return {"input": "", "code": cypher, "action": action, "__next__": "return_code"}
 
 @timed_node("return_code")
 def return_code(state: AgentState) -> AgentState:
@@ -109,6 +119,8 @@ def decide_clarify(state: AgentState) -> str:
     else:
         return "execute_agent"
 
+# The graph structure
+
 graph = StateGraph(state_schema=AgentState)
 graph.add_node("general_agent", general_agent)
 graph.add_node("clarify_agent", clarify_agent)
@@ -116,7 +128,12 @@ graph.add_node("execute_agent", execute_agent)
 graph.add_node("return_code", return_code)
 
 graph.set_entry_point("general_agent")
-graph.add_conditional_edges("general_agent", decide_clarify)
+
+graph.add_conditional_edges(
+    "general_agent", decide_clarify, 
+    {"clarify_agent": "clarify_agent", "execute_agent": "execute_agent"}
+)
+
 graph.add_edge("clarify_agent", "return_code")
 graph.add_edge("execute_agent", "return_code")
 
@@ -132,7 +149,7 @@ def classify():
         result = langgraph_app.invoke(state)
         print_colored(f"Result from langgraph: {result}", 'green')
         return jsonify({
-            "type": "select",
+            "type": result.get("action", ""), # Could be 'Select', 'Deselect', 'Move', etc.
             "query": result.get("code", ""),
             "clarify": result.get("input", ""),
             "timings": result.get("timings", {})

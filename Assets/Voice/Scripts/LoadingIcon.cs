@@ -16,10 +16,10 @@ public class LoadingIcon : MonoBehaviour
 
     void Update()
     {
-        if (loading) transform.Rotate(Vector3.forward, -rotationSpeed * Time.deltaTime);
+        if (loading) transform.Rotate(Vector3.forward, -rotationSpeed * Time.deltaTime); // Rotate the icon
     }
 
-    public void SetLoading(bool isLoading)
+    public void SetLoading(bool isLoading) // If loading then make it active, else make it inactive
     {
         loading = isLoading;
         gameObject.SetActive(loading);

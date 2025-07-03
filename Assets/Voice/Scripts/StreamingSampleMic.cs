@@ -193,13 +193,39 @@ namespace Whisper.Samples
                     else
                     {
                         var query = classification.query.Substring(10, classification.query.Length - 13);
+                        var action = classification.action[0];
+                        Debug.Log("Action: " + action);
                         Debug.Log("Cypher Query: " + query);
-                        var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
 
-                        TimerUtils.StartTime("SetSelectedNodes");
-                        _networkManager.SetSelectedNodes(nodes.Select(n => n.ID), true);
-                        TimerUtils.EndTime("SetSelectedNodes");
-
+                        switch (action[0])
+                        {
+                            case "select":
+                                var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
+                                TimerUtils.StartTime("SetSelectedNodes");
+                                _networkManager.SetSelectedNodes(nodes.Select(n => n.ID), true);
+                                TimerUtils.EndTime("SetSelectedNodes");
+                                break;
+                            case "deselect":
+                                var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
+                                TimerUtils.StartTime("Deselect Nodes");
+                                _networkManager.ClearSelection();
+                                TimerUtils.EndTime("Deselect Nodes");
+                                break;
+                            case "move":
+                                var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
+                                TimerUtils.StartTime("Move Nodes");
+                                _networkManager.SetSelectedNodes(nodes.Select(n => n.ID), true);
+                                _networkManager.BringMLNodes(nodes.Select(n => n.ID));
+                                TimerUtils.EndTime("Move Nodes");
+                                break;
+                            case "layout":
+                                TimerUtils.StartTime("Layout Change");
+                                _networkManager.SetMLLayout(commID.Select(n=>n.ID), action[1]);
+                                TimerUtils.EndTime("Layout Change");
+                            default:
+                                Debug.LogWarning("Unknown action: " + action);
+                                break;
+                        }
 
                         loadingIcon.SetLoading(false);
                     }
