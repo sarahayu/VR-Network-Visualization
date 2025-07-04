@@ -16,10 +16,11 @@ def merge_dicts(old: dict[str, float] | None, new: dict[str, float]) -> dict[str
 
 class AgentState(TypedDict):
     input: Annotated[str, override]
-    code: Annotated[str, override]
-    action: Annotated[str, override]
+    code_list: Annotated[list[str], override]
+    action_queue: Annotated[list[list[str]], override]
     timings: Annotated[dict[str, float], merge_dicts]
     judgment: Annotated[str, override]
+
 
 
 
@@ -49,12 +50,17 @@ cypher_prompt = ChatPromptTemplate.from_template(
     Only return the Cypher query, no explanations.\n\n User Request: {input}"
 )
 
+# Color code?
 action_prompt = ChatPromptTemplate.from_template(
     "You are an expert in generating graph commands. \
-        Return only the action and the required parameters that user ask for such as 'Select', 'Deselect', 'Move', format should be like ['select', ""], ['deselect', ""], ['move', ""]\" \
-        Moreover users say 'highlight' is the same with 'select', 'bring' is the same with 'move', etc \
-        Some required parameters format should be like: ['layout', 'layout_type'] \
-        \n\n User Request: {input}"
+    Return only a list of user intents in order, no other words. \
+    Each intent should be a two-item list: [action, parameters]. \
+    Actions can be 'select', 'deselect', 'move', 'color',  etc. \
+    Synonyms like 'highlight' = 'select', 'bring' = 'move'. \
+    For example: [['select', ''], ['move', '']], ['color', '#FF0000'] \
+    Also there is layout command with layout types 'floor', 'cluster' and 'spherical', return things such as ['layout', 'floor'] \
+    If the command is ambiguous, still list what you can extract clearly. \
+    \n\n User Request: {input}"
 )
 
 ambiguity_prompt = ChatPromptTemplate.from_template(
@@ -102,17 +108,38 @@ def clarify_agent(state: AgentState) -> dict:
 
 @timed_node("execute_agent")
 def execute_agent(state: AgentState) -> dict:
-    messages1 = cypher_prompt.format_messages(input=state["input"])
-    messages2 = action_prompt.format_messages(input=state["input"])
-    cypher = llm(messages1).content.strip()
-    action = llm(messages2).content.strip()
-    print_colored(f"Generated Cypher query: {cypher}", 'green')
-    return {"input": "", "code": cypher, "action": action, "__next__": "return_code"}
+    # Prompt LLM
+    action_messages = action_prompt.format_messages(input=state["input"])
+    action_list_str = llm(action_messages).content.strip()
+    print_colored(f"Generated action list: {action_list_str}", 'green')
+    
+    try:
+        action_queue = eval(action_list_str)
+        if not isinstance(action_queue, list):
+            raise ValueError("Invalid format")
+    except Exception:
+        raise ValueError("Failed to parse action list from LLM")
+
+    code_list = []
+    for action, param in action_queue:
+        msg = cypher_prompt.format_messages(input=f"{action} {param}")
+        cypher_code = llm(msg).content.strip()
+        code_list.append(cypher_code)
+
+    return {
+        "input": "", 
+        "code_list": code_list,
+        "action_queue": action_queue,
+        "__next__": "return_code"
+    }
+
 
 @timed_node("return_code")
 def return_code(state: AgentState) -> AgentState:
-    print_colored(f"Returning code: {state['code']}", 'magenta')
+    print_colored("Returning code list and action queue", 'magenta')
     return state
+
+
 
 def decide_clarify(state: AgentState) -> str:
     if state['judgment'].startswith("yes"):
@@ -146,18 +173,24 @@ def classify():
         data = request.get_json(force=True)
         user_input = data.get("userText", "")
         print(f"Received input: {user_input}")
-        state = {"input": user_input, "code": "", "timings": {}}
+        state = {
+            "input": user_input,
+            "code_list": [],
+            "action_queue": [],
+            "timings": {}
+        }
         result = langgraph_app.invoke(state)
         print_colored(f"Result from langgraph: {result}", 'green')
         return jsonify({
-            "type": result.get("action", ""), # Could be 'Select', 'Deselect', 'Move', etc.
-            "query": result.get("code", ""),
+            "queries": result.get("code_list", []),
+            "actions": result.get("action_queue", []),
             "clarify": result.get("input", ""),
             "timings": result.get("timings", {})
         })
     except Exception as e:
         print_colored(f"ERROR in /classify: {e}", 'red')
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/ping", methods=["GET"])
 def ping():

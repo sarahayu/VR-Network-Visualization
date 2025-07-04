@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Networking;
 using System.Collections;
+using System.Collections.Generic;
 using System.Text;
 using Whisper.Utils;
 
@@ -192,37 +193,51 @@ namespace Whisper.Samples
                     }
                     else
                     {
-                        var query = classification.query.Substring(10, classification.query.Length - 13);
-                        var action = classification.action[0];
+                        Debug.Log("Classification Response: " + responseJson);
+                        List<string> query = classification.query;
+                        // [0].Substring(10, classification.query[0].Length - 13);
+                        List<List<string>> action = classification.action;
                         Debug.Log("Action: " + action);
                         Debug.Log("Cypher Query: " + query);
 
-                        switch (action[0])
+                        switch (action[0][0])
                         {
                             case "select":
-                                var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
+                                Debug.Log("Selecting nodes with query: " + query[0]);
+                                var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query[0]);
                                 TimerUtils.StartTime("SetSelectedNodes");
                                 _networkManager.SetSelectedNodes(nodes.Select(n => n.ID), true);
                                 TimerUtils.EndTime("SetSelectedNodes");
                                 break;
                             case "deselect":
-                                var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
+                                Debug.Log("Deselecting nodes");
                                 TimerUtils.StartTime("Deselect Nodes");
                                 _networkManager.ClearSelection();
                                 TimerUtils.EndTime("Deselect Nodes");
                                 break;
                             case "move":
-                                var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
+                                Debug.Log("Moving selected nodes");
+                                var nodes_move = _networkManager.SelectedNodes;
                                 TimerUtils.StartTime("Move Nodes");
-                                _networkManager.SetSelectedNodes(nodes.Select(n => n.ID), true);
-                                _networkManager.BringMLNodes(nodes.Select(n => n.ID));
+                                _networkManager.BringMLNodes(nodes_move);
                                 TimerUtils.EndTime("Move Nodes");
                                 break;
                             case "layout":
+                                Debug.Log("Changing layout to: " + action[0][1]);
+                                var comms = _networkManager.SelectedCommunities;
                                 TimerUtils.StartTime("Layout Change");
-                                _networkManager.SetMLLayout(commID.Select(n=>n.ID), action[1]);
+                                _networkManager.SetMLLayout(comms, action[0][1]);
                                 TimerUtils.EndTime("Layout Change");
+                                break;
+                            case "color":
+                                Debug.Log("Changing color of selected nodes to: " + action[0][1]);
+                                var nodes_color = _networkManager.SelectedNodes;
+                                TimerUtils.StartTime("SetColor");
+                                _networkManager.SetMLNodesColor(nodes_color, Color.red); // Hardcoded to red for now
+                                TimerUtils.EndTime("SetColor");
+                                break;
                             default:
+                                // Handle unknown actions
                                 Debug.LogWarning("Unknown action: " + action);
                                 break;
                         }
@@ -251,9 +266,10 @@ public class ClassificationRequest
 [System.Serializable]
 public class ClassificationResponse
 {
-    public string query;
+    public List<string> query = new List<string>();
     public string clarify;
     public Timing timings;
+    public List<List<string>> action = new List<List<string>>();
 }
 
 [System.Serializable]
