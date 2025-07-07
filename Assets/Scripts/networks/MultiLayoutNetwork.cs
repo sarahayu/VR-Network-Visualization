@@ -68,8 +68,7 @@ namespace VidiGraph
         bool _isSphericalLayout;
 
         Coroutine _curAnim = null;
-        Coroutine _curNodeMover = null;
-        Coroutine _curCommMover = null;
+        Coroutine _curMover = null;
 
 
         void Update()
@@ -170,19 +169,19 @@ namespace VidiGraph
 
         public void StartNodeMove(int nodeID)
         {
-            CoroutineUtils.StopIfRunning(this, _curNodeMover);
-            _curNodeMover = StartCoroutine(CRMoveNode(nodeID, GetNodeTransform(nodeID)));
+            CoroutineUtils.StopIfRunning(this, _curMover);
+            _curMover = StartCoroutine(CRMoveNode(nodeID));
         }
 
         public void StartNodesMove(IEnumerable<int> nodeIDs)
         {
-            CoroutineUtils.StopIfRunning(this, _curNodeMover);
-            _curNodeMover = StartCoroutine(CRMoveNodes(nodeIDs, nodeIDs.Select(nid => GetNodeTransform(nid))));
+            CoroutineUtils.StopIfRunning(this, _curMover);
+            _curMover = StartCoroutine(CRMoveNodes(nodeIDs));
         }
 
         public void EndNodeMove(int nodeID)
         {
-            CoroutineUtils.StopIfRunning(this, _curNodeMover);
+            CoroutineUtils.StopIfRunning(this, _curMover);
             UpdateNetwork(
                 updateCommunityProps: true,
                 updateStorage: true,
@@ -194,7 +193,7 @@ namespace VidiGraph
 
         public void EndNodesMove()
         {
-            CoroutineUtils.StopIfRunning(this, _curNodeMover);
+            CoroutineUtils.StopIfRunning(this, _curMover);
             UpdateNetwork(
                 updateCommunityProps: true,
                 updateStorage: true,
@@ -204,17 +203,29 @@ namespace VidiGraph
 
         public void StartCommMove(int commID)
         {
-            CoroutineUtils.StopIfRunning(this, _curCommMover);
+            CoroutineUtils.StopIfRunning(this, _curMover);
+            _curMover = StartCoroutine(CRMoveComm(commID));
+        }
 
-            var nodeIDs = _manager.NetworkGlobal.Communities[commID].Nodes.Select(n => n.ID);
-            var nodeTransforms = nodeIDs.Select(nid => GetNodeTransform(nid));
-
-            _curCommMover = StartCoroutine(CRMoveComm(GetCommTransform(commID), nodeIDs, nodeTransforms));
+        public void StartCommsMove(IEnumerable<int> commIDs)
+        {
+            CoroutineUtils.StopIfRunning(this, _curMover);
+            _curMover = StartCoroutine(CRMoveComms(commIDs));
         }
 
         public void EndCommMove()
         {
-            CoroutineUtils.StopIfRunning(this, _curCommMover);
+            CoroutineUtils.StopIfRunning(this, _curMover);
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: true,
+                updateRenderElements: true
+            );
+        }
+
+        public void EndCommsMove()
+        {
+            CoroutineUtils.StopIfRunning(this, _curMover);
             UpdateNetwork(
                 updateCommunityProps: true,
                 updateStorage: true,
@@ -780,11 +791,13 @@ namespace VidiGraph
             onFinished?.Invoke();
         }
 
-        IEnumerator CRMoveNode(int nodeID, Transform toTrack)
+        IEnumerator CRMoveNode(int nodeID)
         {
+            var nodeTransform = GetNodeTransform(nodeID);
+
             while (true)
             {
-                _context.Nodes[nodeID].Position = toTrack.position;
+                _context.Nodes[nodeID].Position = nodeTransform.position;
                 _context.Nodes[nodeID].Dirty = true;
 
                 UpdateNetwork(
@@ -798,13 +811,15 @@ namespace VidiGraph
 
         }
 
-        IEnumerator CRMoveNodes(IEnumerable<int> nodeIDs, IEnumerable<Transform> toTracks)
+        IEnumerator CRMoveNodes(IEnumerable<int> nodeIDs)
         {
+            var nodeTransforms = nodeIDs.Select(nid => GetNodeTransform(nid));
+
             while (true)
             {
-                foreach (var (nodeID, toTrack) in nodeIDs.Zip(toTracks, Tuple.Create))
+                foreach (var (nodeID, nodeTransform) in nodeIDs.Zip(nodeTransforms, Tuple.Create))
                 {
-                    _context.Nodes[nodeID].Position = toTrack.position;
+                    _context.Nodes[nodeID].Position = nodeTransform.position;
                     _context.Nodes[nodeID].Dirty = true;
                 }
 
@@ -820,10 +835,15 @@ namespace VidiGraph
             }
         }
 
-        IEnumerator CRMoveComm(Transform comm, IEnumerable<int> nodeIDs, IEnumerable<Transform> toMoves)
+        IEnumerator CRMoveComm(int commID)
         {
             Vector3 lastCommPosition = Vector3.positiveInfinity;
             Quaternion lastCommRotation = Quaternion.identity;
+
+            var comm = GetCommTransform(commID);
+
+            var nodeIDs = _manager.NetworkGlobal.Communities[commID].Nodes.Select(n => n.ID);
+            var nodeTransforms = nodeIDs.Select(nid => GetNodeTransform(nid));
 
             while (true)
             {
@@ -836,13 +856,67 @@ namespace VidiGraph
                     var diffRot = curRotation * Quaternion.Inverse(lastCommRotation);
                     diffRot.ToAngleAxis(out var angle, out var axis);
 
-                    foreach (var (nodeID, toMove) in nodeIDs.Zip(toMoves, Tuple.Create))
+                    foreach (var (nodeID, nodeTransform) in nodeIDs.Zip(nodeTransforms, Tuple.Create))
                     {
-                        toMove.RotateAround(lastCommPosition, axis, angle);
+                        nodeTransform.RotateAround(lastCommPosition, axis, angle);
 
-                        toMove.position += diff;
-                        _context.Nodes[nodeID].Position = toMove.position;
+                        nodeTransform.position += diff;
+                        _context.Nodes[nodeID].Position = nodeTransform.position;
                         _context.Nodes[nodeID].Dirty = true;
+                    }
+                }
+
+                lastCommPosition = curPosition;
+                lastCommRotation = curRotation;
+
+                // update network without updating the storage for performance reasons
+                UpdateNetwork(
+                    updateCommunityProps: true,
+                    updateStorage: false,
+                    updateRenderElements: true
+                );
+
+                yield return null;
+            }
+        }
+
+        IEnumerator CRMoveComms(IEnumerable<int> commIDs)
+        {
+            Vector3 lastCommPosition = Vector3.positiveInfinity;
+            Quaternion lastCommRotation = Quaternion.identity;
+
+            var commTransform = GetCommTransform(commIDs.First());
+
+            Dictionary<int, IEnumerable<int>> nodeIDs = new();
+            Dictionary<int, IEnumerable<Transform>> nodeTransforms = new();
+
+            foreach (var commID in commIDs)
+            {
+                nodeIDs[commID] = _manager.NetworkGlobal.Communities[commID].Nodes.Select(n => n.ID);
+                nodeTransforms[commID] = nodeIDs[commID].Select(nid => GetNodeTransform(nid));
+            }
+
+            while (true)
+            {
+                var curPosition = commTransform.position;
+                var curRotation = commTransform.rotation;
+
+                if (float.IsFinite(lastCommPosition.x))
+                {
+                    var diff = curPosition - lastCommPosition;
+                    var diffRot = curRotation * Quaternion.Inverse(lastCommRotation);
+                    diffRot.ToAngleAxis(out var angle, out var axis);
+
+                    foreach (var commID in commIDs)
+                    {
+                        foreach (var (nodeID, nodeTransform) in nodeIDs[commID].Zip(nodeTransforms[commID], Tuple.Create))
+                        {
+                            nodeTransform.RotateAround(lastCommPosition, axis, angle);
+
+                            nodeTransform.position += diff;
+                            _context.Nodes[nodeID].Position = nodeTransform.position;
+                            _context.Nodes[nodeID].Dirty = true;
+                        }
                     }
                 }
 

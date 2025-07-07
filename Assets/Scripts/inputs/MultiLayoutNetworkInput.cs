@@ -81,6 +81,7 @@ namespace VidiGraph
         ActionState _lastState = ActionState.None;
 
         Coroutine _clickWindowCR = null;
+        Coroutine _transformMoverCR = null;
         Coroutine _dupeListenerCR = null;
 
         public override void Initialize()
@@ -379,8 +380,22 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.GrabComm;
 
-                    _networkManager.StartMLCommMove(community.ID);
-                    _clickWindowCR = StartCoroutine(CRSelectionWindow());
+                    if (community.Selected)
+                    {
+                        _transformMoverCR = StartCoroutine(CRAllSelectedComms(community.ID, _networkManager.SelectedCommunities));
+                        _networkManager.StartMLCommsMove(_networkManager.SelectedCommunities);
+
+                        _clickWindowCR = StartCoroutine(CRSelectionWindow());
+
+                        _dupeListenerCR = StartCoroutine(CRDupeListen(evt.interactorObject, evt.interactableObject));
+
+                    }
+                    else
+                    {
+                        _networkManager.StartMLCommMove(community.ID);
+                        _clickWindowCR = StartCoroutine(CRSelectionWindow());
+                    }
+
                 }
 
             }
@@ -395,6 +410,14 @@ namespace VidiGraph
                     _lastState = ActionState.UngrabComm;
 
                     _networkManager.EndMLCommMove(community.ID);
+
+                    if (_transformMoverCR != null)
+                    {
+                        _networkManager.EndMLCommsMove(_networkManager.SelectedCommunities);
+
+                        CoroutineUtils.StopIfRunning(this, _transformMoverCR);
+                        _transformMoverCR = null;
+                    }
 
                     if (_clickWindowCR != null)
                     {
@@ -455,10 +478,24 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.GrabNode;
 
-                    _networkManager.StartMLNodeMove(node.ID);
-                    _clickWindowCR = StartCoroutine(CRSelectionWindow());
+                    if (node.Selected)
+                    {
+                        _transformMoverCR = StartCoroutine(CRAllSelectedNodes(node.ID, _networkManager.SelectedNodes));
+                        _networkManager.StartMLNodesMove(_networkManager.SelectedNodes);
 
-                    _dupeListenerCR = StartCoroutine(CRDupeListen(evt.interactorObject, evt.interactableObject));
+                        _clickWindowCR = StartCoroutine(CRSelectionWindow());
+
+                        _dupeListenerCR = StartCoroutine(CRDupeListen(evt.interactorObject, evt.interactableObject));
+                    }
+                    else
+                    {
+                        _networkManager.StartMLNodeMove(node.ID);
+                        _clickWindowCR = StartCoroutine(CRSelectionWindow());
+
+                        _dupeListenerCR = StartCoroutine(CRDupeListen(evt.interactorObject, evt.interactableObject));
+
+                    }
+
                 }
             }
         }
@@ -472,6 +509,14 @@ namespace VidiGraph
                     _lastState = ActionState.UngrabNode;
 
                     _networkManager.EndMLNodeMove(node.ID, evt.interactableObject.transform);
+
+                    if (_transformMoverCR != null)
+                    {
+                        _networkManager.EndMLNodesMove(_networkManager.SelectedNodes);
+
+                        CoroutineUtils.StopIfRunning(this, _transformMoverCR);
+                        _transformMoverCR = null;
+                    }
 
 
                     if (_clickWindowCR != null)
@@ -535,6 +580,72 @@ namespace VidiGraph
             }
 
             _dupeListenerCR = null;
+        }
+
+        IEnumerator CRAllSelectedNodes(int grabbedID, IEnumerable<int> nodeIDs)
+        {
+            Vector3 lastSurfPosition = Vector3.positiveInfinity;
+            Quaternion lastSurfRotation = Quaternion.identity;
+
+            var grabbedTransform = _networkManager.GetMLNodeTransform(grabbedID);
+            var otherTransforms = nodeIDs.Where(nid => nid != grabbedID).Select(nid => _networkManager.GetMLNodeTransform(nid));
+
+            while (true)
+            {
+                var curPosition = grabbedTransform.position;
+                var curRotation = grabbedTransform.rotation;
+
+                if (float.IsFinite(lastSurfPosition.x))
+                {
+                    var diff = curPosition - lastSurfPosition;
+                    var diffRot = curRotation * Quaternion.Inverse(lastSurfRotation);
+                    diffRot.ToAngleAxis(out var angle, out var axis);
+
+                    foreach (var child in otherTransforms)
+                    {
+                        child.RotateAround(lastSurfPosition, axis, angle);
+
+                        child.position += diff;
+                    }
+                }
+
+                lastSurfPosition = curPosition;
+                lastSurfRotation = curRotation;
+                yield return null;
+            }
+        }
+
+        IEnumerator CRAllSelectedComms(int grabbedID, IEnumerable<int> commIDs)
+        {
+            Vector3 lastSurfPosition = Vector3.positiveInfinity;
+            Quaternion lastSurfRotation = Quaternion.identity;
+
+            var grabbedTransform = _networkManager.GetMLCommTransform(grabbedID);
+            var otherTransforms = commIDs.Where(cid => cid != grabbedID).Select(cid => _networkManager.GetMLCommTransform(cid));
+
+            while (true)
+            {
+                var curPosition = grabbedTransform.position;
+                var curRotation = grabbedTransform.rotation;
+
+                if (float.IsFinite(lastSurfPosition.x))
+                {
+                    var diff = curPosition - lastSurfPosition;
+                    var diffRot = curRotation * Quaternion.Inverse(lastSurfRotation);
+                    diffRot.ToAngleAxis(out var angle, out var axis);
+
+                    foreach (var child in otherTransforms)
+                    {
+                        child.RotateAround(lastSurfPosition, axis, angle);
+
+                        child.position += diff;
+                    }
+                }
+
+                lastSurfPosition = curPosition;
+                lastSurfRotation = curRotation;
+                yield return null;
+            }
         }
     }
 

@@ -166,9 +166,19 @@ namespace VidiGraph
             _multiLayoutNetwork.StartCommMove(commID);
         }
 
+        public void StartMLCommsMove(IEnumerable<int> commIDs)
+        {
+            _multiLayoutNetwork.StartCommsMove(commIDs);
+        }
+
         public void EndMLCommMove(int commID)
         {
             _multiLayoutNetwork.EndCommMove();
+        }
+
+        public void EndMLCommsMove(IEnumerable<int> commIDs)
+        {
+            _multiLayoutNetwork.EndCommsMove();
 
         }
 
