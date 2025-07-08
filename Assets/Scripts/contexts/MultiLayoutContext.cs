@@ -5,6 +5,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -74,6 +75,7 @@ namespace VidiGraph
             None,
             Cluster,
             Floor,
+            Hairball,
             Other,
             NumStates,
         }
@@ -118,6 +120,36 @@ namespace VidiGraph
             foreach (var community in networkGlobal.Communities.Values)
             {
                 Communities[community.ID] = new Community();
+            }
+
+            SetDefaultEncodings(networkGlobal, networkFile);
+        }
+
+        public void SetFromGlobal(NetworkGlobal networkGlobal, NetworkFileData networkFile, IEnumerable<int> nodeIDs)
+        {
+            Nodes.Clear();
+            Links.Clear();
+            Communities.Clear();
+
+            foreach (var nodeID in nodeIDs)
+            {
+                Nodes[nodeID] = new Node();
+            }
+
+            foreach (var link in networkGlobal.Links)
+            {
+                if (nodeIDs.Contains(link.SourceNodeID) || nodeIDs.Contains(link.TargetNodeID))
+                {
+                    Links[link.ID] = new Link();
+                }
+            }
+
+            foreach (var community in networkGlobal.Communities.Values)
+            {
+                if (community.Nodes.Select(n => n.ID).ToHashSet().Intersect(nodeIDs).Count() != 0)
+                {
+                    Communities[community.ID] = new Community();
+                }
             }
 
             SetDefaultEncodings(networkGlobal, networkFile);
@@ -210,6 +242,8 @@ namespace VidiGraph
                     return CommunityState.Cluster;
                 case "floor":
                     return CommunityState.Floor;
+                case "hairball":
+                    return CommunityState.Hairball;
                 default:
                     return CommunityState.Other;
             }

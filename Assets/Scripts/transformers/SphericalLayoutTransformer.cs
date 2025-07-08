@@ -43,7 +43,7 @@ namespace VidiGraph
                 nodeContext.Position = _sphericalTransform.TransformPoint(sphericalPos);
                 nodeContext.Dirty = true;
 
-                foreach (var link in _networkGlobal.NodeLinkMatrix[nodeID])
+                foreach (var link in _networkGlobal.NodeLinkMatrixUndir[nodeID])
                 {
                     var linkContext = _networkContext.Links[link.ID];
                     linkContext.BundlingStrength = _networkContext.ContextSettings.EdgeBundlingStrength;
@@ -137,7 +137,7 @@ namespace VidiGraph
                 _startPositions[nodeID] = networkContext.Nodes[nodeID].Position;
                 _endPositions[nodeID] = endingContextTransform.TransformPoint(sphericalPos);
 
-                foreach (var link in networkGlobal.NodeLinkMatrix[nodeID])
+                foreach (var link in networkGlobal.NodeLinkMatrixUndir[nodeID])
                 {
                     var linkContext = _networkContext.Links[link.ID];
                     linkContext.BundlingStrength = _networkContext.ContextSettings.EdgeBundlingStrength;

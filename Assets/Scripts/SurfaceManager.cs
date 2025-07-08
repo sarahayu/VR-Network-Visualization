@@ -381,7 +381,7 @@ namespace VidiGraph
 
             foreach (var nodeID in nodeIDs)
             {
-                foreach (var link in _manager.NetworkGlobal.NodeLinkMatrix[nodeID])
+                foreach (var link in _manager.NetworkGlobal.NodeLinkMatrixUndir[nodeID])
                 {
                     // check other node of this link
                     if (nodeID == link.SourceNodeID)

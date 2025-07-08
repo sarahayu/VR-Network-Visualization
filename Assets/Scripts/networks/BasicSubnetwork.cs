@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace VidiGraph
 {
-    public class MultiLayoutNetwork : Network
+    public class BasicSubnetwork : Network
     {
         [Serializable]
         public class Settings
@@ -48,8 +48,6 @@ namespace VidiGraph
 
         Dictionary<string, NetworkContextTransformer> _transformers = new Dictionary<string, NetworkContextTransformer>();
 
-        // keep a reference to sphericallayout to focus on individual communities
-        SphericalLayoutTransformer _sphericalLayoutTransformer;
 
         // keep a reference to hairballlayout to focus on individual communities
         HairballLayoutTransformer _hairballLayoutTransformer;
@@ -60,15 +58,11 @@ namespace VidiGraph
         // keep a reference to bringNodeLayout to focus on individual nodes
         BringNodeTransformer _bringNodeTransformer;
 
-        // keep a reference to floorLayout to focus on individual communities
-        FloorLayoutTransformer _floorLayoutTransformer;
         // keep a reference to encoding to change encoding
         MLEncodingTransformer _encodingTransformer;
 
         // keep a reference to edit to change network properties
         MLEditTransformer _editTransformer;
-
-        bool _isSphericalLayout;
 
         Coroutine _curAnim = null;
         Coroutine _curMover = null;
@@ -79,19 +73,18 @@ namespace VidiGraph
             Draw();
         }
 
-        public void Initialize()
+        public void Initialize(IEnumerable<int> nodeIDs)
         {
             GetManager();
 
-            InitContext();
+            InitContext(nodeIDs);
             InitInput();
             InitTransformers();
 
             // apply initial transformations before first render so we don't get a weird jump
             TransformNetworkNoRender("encoding");
-            _isSphericalLayout = true;
-            _sphericalLayoutTransformer.UpdateCommsOnNextApply(_context.Communities.Keys);
-            TransformNetworkNoRender("spherical");
+            _hairballLayoutTransformer.UpdateOnNextApply(nodeIDs);
+            TransformNetworkNoRender("hairball");
 
             InitRenderer();
         }
@@ -104,35 +97,6 @@ namespace VidiGraph
         public override void DrawPreview()
         {
             Draw();
-        }
-
-        public void ToggleSphericalAndHairball(bool animated = true)
-        {
-            bool newIsSphericalLayout = !_isSphericalLayout;
-
-            string layout = newIsSphericalLayout ? "spherical" : "hairball";
-
-            if (layout == "spherical")
-            {
-                foreach (var commID in _context.Communities.Keys)
-                {
-                    QueueLayoutChange(commID, "spherical");
-                    _context.Communities[commID].State = MultiLayoutContext.CommunityState.None;
-                }
-            }
-            else
-            {
-
-                foreach (var commID in _context.Communities.Keys)
-                {
-                    _context.Communities[commID].State = MultiLayoutContext.CommunityState.Hairball;
-                    _hairballLayoutTransformer.UpdateOnNextApply(_manager.NetworkGlobal.Communities[commID].Nodes.Select(n => n.ID));
-                }
-            }
-
-            TransformNetwork(layout, animated);
-
-            _isSphericalLayout = newIsSphericalLayout;
         }
 
         public void UpdateSelectedElements()
@@ -159,8 +123,7 @@ namespace VidiGraph
             switch (layout)
             {
                 case "cluster": _clusterLayoutTransformer.UpdateOnNextApply(commID); break;
-                case "floor": _floorLayoutTransformer.UpdateOnNextApply(commID); break;
-                case "spherical": _sphericalLayoutTransformer.UpdateCommOnNextApply(commID); break;
+                case "hairball": _hairballLayoutTransformer.UpdateOnNextApply(commID); break;
                 default: break;
             }
         }
@@ -174,9 +137,8 @@ namespace VidiGraph
 
         public void ReturnNodes(IEnumerable<int> nodeIDs)
         {
-            _sphericalLayoutTransformer.UpdateNodesOnNextApply(nodeIDs);
-
-            TransformNetwork("spherical", animated: true);
+            _hairballLayoutTransformer.UpdateOnNextApply(nodeIDs);
+            TransformNetwork("hairball", animated: true);
         }
 
         public void StartNodeMove(int nodeID)
@@ -640,9 +602,9 @@ namespace VidiGraph
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
         }
 
-        void InitContext()
+        void InitContext(IEnumerable<int> nodeIDs)
         {
-            _context.SetFromGlobal(_manager.NetworkGlobal, _manager.FileLoader.SphericalLayout);
+            _context.SetFromGlobal(_manager.NetworkGlobal, _manager.FileLoader.SphericalLayout, nodeIDs);
             SetContextSettings();
         }
 
@@ -686,10 +648,6 @@ namespace VidiGraph
             _transformers["hairball"] = _hairballLayoutTransformer;
             _transformers["hairball"].Initialize(_manager.NetworkGlobal, _context);
 
-            _sphericalLayoutTransformer = GetComponentInChildren<SphericalLayoutTransformer>();
-            _transformers["spherical"] = _sphericalLayoutTransformer;
-            _transformers["spherical"].Initialize(_manager.NetworkGlobal, _context);
-
             _bringNodeTransformer = GetComponentInChildren<BringNodeTransformer>();
             _transformers["bringNode"] = _bringNodeTransformer;
             _transformers["bringNode"].Initialize(_manager.NetworkGlobal, _context);
@@ -697,10 +655,6 @@ namespace VidiGraph
             _clusterLayoutTransformer = GetComponentInChildren<ClusterLayoutTransformer>();
             _transformers["cluster"] = _clusterLayoutTransformer;
             _transformers["cluster"].Initialize(_manager.NetworkGlobal, _context);
-
-            _floorLayoutTransformer = GetComponentInChildren<FloorLayoutTransformer>();
-            _transformers["floor"] = _floorLayoutTransformer;
-            _transformers["floor"].Initialize(_manager.NetworkGlobal, _context);
 
             _encodingTransformer = GetComponentInChildren<MLEncodingTransformer>();
             _transformers["encoding"] = _encodingTransformer;
@@ -763,6 +717,11 @@ namespace VidiGraph
             );
 
             cb?.Invoke();
+        }
+
+        void ClearCommunityState(int community)
+        {
+            _context.Communities[community].State = MultiLayoutContext.CommunityState.None;
         }
 
         IEnumerator CRAnimateTransformation(string transformer, Action onFinished = null,

@@ -43,7 +43,7 @@ namespace VidiGraph
                     _networkContext.Nodes[node.ID].Position = clusterPos;
                     _networkContext.Nodes[node.ID].Dirty = true;
 
-                    foreach (var link in _networkGlobal.NodeLinkMatrix[node.ID])
+                    foreach (var link in _networkGlobal.NodeLinkMatrixUndir[node.ID])
                     {
                         var linkContext = _networkContext.Links[link.ID];
                         linkContext.Alpha = _networkContext.ContextSettings.LinkContext2FocusAlphaFactor;
@@ -62,7 +62,7 @@ namespace VidiGraph
                         {
                             linkContext.BundleEnd = false;
 
-                            if (_networkContext.Communities[link.TargetNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
+                            if (_networkContext.Communities[link.SourceNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
                             {
                                 linkContext.BundlingStrength = 0f;
                                 linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
@@ -88,7 +88,7 @@ namespace VidiGraph
             _commsToUpdate.Add(commID);
         }
 
-        public void UpdateOnNextApply(List<int> commIDs)
+        public void UpdateOnNextApply(IEnumerable<int> commIDs)
         {
             _commsToUpdate.UnionWith(commIDs);
         }
@@ -119,7 +119,7 @@ namespace VidiGraph
                     _endPositions[node.ID] = endingContextTransform.TransformPoint(clusterPos);
                     _networkContext.Nodes[node.ID].Dirty = true;
 
-                    foreach (var link in networkGlobal.NodeLinkMatrix[node.ID])
+                    foreach (var link in networkGlobal.NodeLinkMatrixUndir[node.ID])
                     {
                         var linkContext = _networkContext.Links[link.ID];
                         linkContext.Alpha = _networkContext.ContextSettings.LinkContext2FocusAlphaFactor;
@@ -138,7 +138,7 @@ namespace VidiGraph
                         {
                             linkContext.BundleEnd = false;
 
-                            if (_networkContext.Communities[link.TargetNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
+                            if (_networkContext.Communities[link.SourceNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
                             {
                                 linkContext.BundlingStrength = 0f;
                                 linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;

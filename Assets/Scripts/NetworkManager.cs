@@ -216,7 +216,6 @@ namespace VidiGraph
             _multiLayoutNetwork.UpdateSelectedElements();
             _handheldNetwork.UpdateRenderElements();
             _multiLayoutNetworkInput.CheckSelectionActions();
-
         }
 
         // layout = [spherical, cluster, floor]

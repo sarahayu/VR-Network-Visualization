@@ -35,7 +35,7 @@ namespace VidiGraph
                     var selected = node.Selected;
                     _networkContext.Nodes[node.ID].Dirty = true;
 
-                    foreach (var link in _networkGlobal.NodeLinkMatrix[node.ID])
+                    foreach (var link in _networkGlobal.NodeLinkMatrixUndir[node.ID])
                     {
                         _networkContext.Links[link.ID].Dirty = true;
                     }

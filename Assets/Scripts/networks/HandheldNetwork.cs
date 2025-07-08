@@ -25,7 +25,7 @@ namespace VidiGraph
             Draw();
         }
 
-        public override void Initialize()
+        public void Initialize()
         {
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkContext.SetFromGlobal(_manager.NetworkGlobal);

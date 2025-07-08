@@ -21,7 +21,8 @@ namespace VidiGraph
         public List<Link> TreeLinks { get { return _treeLinks; } }
         public List<int> RealNodes { get { return _realNodeIDs; } }
         public List<int> VirtualNodes { get { return _virtualNodeIDs; } }
-        public Dictionary<int, List<Link>> NodeLinkMatrix { get { return _nodeLinkMatrix; } }
+        public Dictionary<int, List<Link>> NodeLinkMatrixUndir { get { return _nodeLinkMatrixUndir; } }
+        public Dictionary<int, List<Link>> NodeLinkMatrixDir { get { return _nodeLinkMatrixDir; } }
         public Node HoveredNode = null;
         public Community HoveredCommunity = null;
         public HashSet<int> SelectedNodes { get { return _selectedNodes; } }
@@ -36,7 +37,9 @@ namespace VidiGraph
         List<Link> _treeLinks = new List<Link>();
         List<int> _realNodeIDs = new List<int>();
         List<int> _virtualNodeIDs = new List<int>();
-        Dictionary<int, List<Link>> _nodeLinkMatrix
+        Dictionary<int, List<Link>> _nodeLinkMatrixUndir
+             = new Dictionary<int, List<Link>>();
+        Dictionary<int, List<Link>> _nodeLinkMatrixDir
              = new Dictionary<int, List<Link>>();
         HashSet<int> _selectedNodes = new HashSet<int>();
         HashSet<int> _selectedComms = new HashSet<int>();
@@ -48,7 +51,8 @@ namespace VidiGraph
             _treeLinks.Clear();
             _realNodeIDs.Clear();
             _virtualNodeIDs.Clear();
-            _nodeLinkMatrix.Clear();
+            _nodeLinkMatrixUndir.Clear();
+            _nodeLinkMatrixDir.Clear();
             _communities.Clear();
             HighContrastColors.ResetRandomColor();
         }
@@ -72,7 +76,8 @@ namespace VidiGraph
                 node.IdxProcessed = i;
 
                 // Initialize the node-link matrix
-                _nodeLinkMatrix.Add(node.ID, new List<Link>());
+                _nodeLinkMatrixUndir.Add(node.ID, new List<Link>());
+                _nodeLinkMatrixDir.Add(node.ID, new List<Link>());
 
                 // Group the nodes by virtual or not
                 if (node.IsVirtualNode) _virtualNodeIDs.Add(node.ID);
@@ -100,8 +105,10 @@ namespace VidiGraph
                 link.IdxProcessed = i;
 
                 // Build Node-Link Matrix
-                _nodeLinkMatrix[link.SourceNodeID].Add(link);
-                _nodeLinkMatrix[link.TargetNodeID].Add(link);
+                _nodeLinkMatrixUndir[link.SourceNodeID].Add(link);
+                _nodeLinkMatrixUndir[link.TargetNodeID].Add(link);
+
+                _nodeLinkMatrixDir[link.SourceNodeID].Add(link);
 
                 link.ID = i;
                 link.Dirty = true;

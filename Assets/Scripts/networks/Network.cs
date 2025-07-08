@@ -17,8 +17,6 @@ namespace VidiGraph
         public void UpdateStorage() { StorageUpdateFn?.Invoke(); }
         public void SetStorageUpdateCallback(Action fn) { StorageUpdateFn = fn; }
 
-        public abstract void Initialize();
-
         public abstract void UpdateRenderElements();
         public abstract void DrawPreview();
     }
