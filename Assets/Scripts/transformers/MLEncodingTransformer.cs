@@ -12,7 +12,7 @@ namespace VidiGraph
     {
         NetworkGlobal _networkGlobal;
         MultiLayoutContext _networkContext;
-        MultiLayoutContextUtils _utils;
+        MultiLayoutNetworkReflector _utils;
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
@@ -20,14 +20,15 @@ namespace VidiGraph
             _networkContext = (MultiLayoutContext)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _utils = new MultiLayoutContextUtils(_networkContext, manager);
+            _utils = new MultiLayoutNetworkReflector(_networkContext, manager);
         }
 
         public override void ApplyTransformation()
         {
             TimerUtils.StartTime("MLEncodingTransformer.ApplyTransformation");
-            foreach (var node in _networkGlobal.Nodes)
+            foreach (var (nodeID, _) in _networkContext.Nodes)
             {
+                var node = _networkGlobal.Nodes[nodeID];
                 var nodeContext = _networkContext.Nodes[node.ID];
 
                 nodeContext.Size = _networkContext.GetNodeSize(node);
@@ -36,8 +37,9 @@ namespace VidiGraph
                 nodeContext.Dirty = true;
             }
 
-            foreach (var link in _networkGlobal.Links)
+            foreach (var (linkID, _) in _networkContext.Links)
             {
+                var link = _networkGlobal.Links[linkID];
                 var linkContext = _networkContext.Links[link.ID];
 
                 linkContext.Width = _networkContext.GetLinkWidth(link);

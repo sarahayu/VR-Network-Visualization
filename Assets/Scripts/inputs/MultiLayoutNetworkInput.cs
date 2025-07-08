@@ -84,7 +84,7 @@ namespace VidiGraph
         Coroutine _transformMoverCR = null;
         Coroutine _dupeListenerCR = null;
 
-        public override void Initialize()
+        public void Initialize()
         {
             _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _surfaceManager = GameObject.Find("/Surface Manager").GetComponent<SurfaceManager>();
@@ -282,8 +282,8 @@ namespace VidiGraph
 
             var nodeIDs1 = _networkManager.NetworkGlobal.RealNodes.GetRange(0, 10);
             var nodeIDs2 = _networkManager.NetworkGlobal.RealNodes.GetRange(10, 10);
-            var linkIDs1 = _networkManager.NetworkGlobal.Links.GetRange(0, 10).Select(l => l.ID);
-            var linkIDs2 = _networkManager.NetworkGlobal.Links.GetRange(10, 10).Select(l => l.ID);
+            var linkIDs1 = _networkManager.NetworkGlobal.Links.Values.ToList().GetRange(0, 10).Select(l => l.ID);
+            var linkIDs2 = _networkManager.NetworkGlobal.Links.Values.ToList().GetRange(10, 10).Select(l => l.ID);
 
             _networkManager.SetMLNodesSize(nodeIDs1, 4);
             _networkManager.SetMLNodesColor(nodeIDs2, "#FF0000");
@@ -380,7 +380,7 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.GrabComm;
 
-                    if (community.Selected)
+                    if (community.SelectedOnSubnetworks.Contains(-1))
                     {
                         _transformMoverCR = StartCoroutine(CRAllSelectedComms(community.ID, _networkManager.SelectedCommunities));
                         _networkManager.StartMLCommsMove(_networkManager.SelectedCommunities);
@@ -478,7 +478,7 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.GrabNode;
 
-                    if (node.Selected)
+                    if (node.SelectedOnSubnetworks.Contains(-1))
                     {
                         _transformMoverCR = StartCoroutine(CRAllSelectedNodes(node.ID, _networkManager.SelectedNodes));
                         _networkManager.StartMLNodesMove(_networkManager.SelectedNodes);
@@ -573,6 +573,8 @@ namespace VidiGraph
                 if (RightTriggerPress.ReadIsPerformed())
                 {
                     _xrManager.SelectExit(interactor, interactable);
+
+                    _networkManager.CreateSubnetwork(_networkManager.SelectedNodes, -1);
                     break;
                 }
 

@@ -15,6 +15,14 @@ namespace VidiGraph
             var sourceNodeProps = networkProperties.Nodes[link.SourceNodeID];
             var targetNodeProps = networkProperties.Nodes[link.TargetNodeID];
 
+            if (networkProperties.Links[link.ID].BundlingStrength < 0.001f)
+            {
+                return new[] {
+                    sourceNodeProps.Position,
+                    targetNodeProps.Position
+                };
+            }
+
             var sCenter = networkProperties.Communities[sourceNode.CommunityID].MassCenter;
             var tCenter = networkProperties.Communities[targetNode.CommunityID].MassCenter;
             var sFocus = networkProperties.Links[link.ID].BundleStart;

@@ -32,17 +32,17 @@ namespace VidiGraph
         [SerializeField]
         XRInputButtonReader CommandPress = new XRInputButtonReader("CommandPress");
 
-        [SerializeField]
-        GameObject _tooltip;
-        [SerializeField]
-        Transform _buttonsTransform;
-        [SerializeField]
-        GameObject _optionPrefab;
+        // [SerializeField]
+        // GameObject _tooltip;
+        // [SerializeField]
+        // Transform _buttonsTransform;
+        // [SerializeField]
+        // GameObject _optionPrefab;
 
-        [SerializeField]
-        Color _btnHighlight = new Color(200f / 255, 200f / 255, 200f / 255);
-        [SerializeField]
-        Color _btnDefault = new Color(94f / 255, 94f / 255, 94f / 255);
+        // [SerializeField]
+        // Color _btnHighlight = new Color(200f / 255, 200f / 255, 200f / 255);
+        // [SerializeField]
+        // Color _btnDefault = new Color(94f / 255, 94f / 255, 94f / 255);
 
         NetworkManager _networkManager;
         SurfaceManager _surfaceManager;
@@ -53,14 +53,14 @@ namespace VidiGraph
 
         List<Tuple<string, GameObject>> _curOptions = new List<Tuple<string, GameObject>>();
 
-        HashSet<string> _lastOptions = new HashSet<string>();
+        // HashSet<string> _lastOptions = new HashSet<string>();
 
-        string _lastOptionLabel = "";
+        // string _lastOptionLabel = "";
 
         bool _cancelUpcomingDeselection = false;
 
-        TextMeshProUGUI _infoCol1;
-        TextMeshProUGUI _infoCol2;
+        // TextMeshProUGUI _infoCol1;
+        // TextMeshProUGUI _infoCol2;
 
         Coroutine _unhoverNodeCR = null;
         Coroutine _unhoverCommCR = null;
@@ -84,15 +84,19 @@ namespace VidiGraph
         Coroutine _transformMoverCR = null;
         Coroutine _dupeListenerCR = null;
 
-        public override void Initialize()
+        int _subnetworkID;
+
+        public void Initialize(int subnetworkID)
         {
             _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _surfaceManager = GameObject.Find("/Surface Manager").GetComponent<SurfaceManager>();
             _xrManager = GameObject.Find("/XR Interaction Manager").GetComponent<XRInteractionManager>();
 
-            _tooltip.SetActive(false);
-            _infoCol1 = _tooltip.GetNamedChild("NodeInfo_1").GetComponent<TextMeshProUGUI>();
-            _infoCol2 = _tooltip.GetNamedChild("NodeInfo_2").GetComponent<TextMeshProUGUI>();
+            // _tooltip.SetActive(false);
+            // _infoCol1 = _tooltip.GetNamedChild("NodeInfo_1").GetComponent<TextMeshProUGUI>();
+            // _infoCol2 = _tooltip.GetNamedChild("NodeInfo_2").GetComponent<TextMeshProUGUI>();
+
+            _subnetworkID = subnetworkID;
 
             var renderer = GetComponentInChildren<NetworkRenderer>();
 
@@ -129,9 +133,7 @@ namespace VidiGraph
             }
 
             if (UpdateSelection()) { }
-            else if (ToggleSphericalAndHairball()) { }
-            else if (CheckSelectionActions()) { }
-            else if (RunExperimentalCommand()) { }
+            // else if (CheckSelectionActions()) { }
 
             if (IsUnhoverNode(_lastState) && _hoveredNode != null)
             {
@@ -156,96 +158,96 @@ namespace VidiGraph
             return state == ActionState.UnhoverComm || state == ActionState.HoverNode;
         }
 
-        public bool CheckSelectionActions()
-        {
-            var newOpts = _networkManager.GetValidOptions();
+        // public bool CheckSelectionActions()
+        // {
+        //     var newOpts = _networkManager.GetValidOptions();
 
-            if (!newOpts.SetEquals(_lastOptions))
-            {
-                CreateNewOptionBtns(newOpts);
+        //     if (!newOpts.SetEquals(_lastOptions))
+        //     {
+        //         CreateNewOptionBtns(newOpts);
 
-                _lastOptions = newOpts;
-            }
+        //         _lastOptions = newOpts;
+        //     }
 
-            CheckThumbstickRotation();
+        //     CheckThumbstickRotation();
 
-            return CheckThumbstickClick();
-        }
+        //     return CheckThumbstickClick();
+        // }
 
-        void UnhoverAllButtons()
-        {
-            foreach (var (_, go) in _curOptions)
-            {
-                go.GetComponentInChildren<Image>().color = _btnDefault;
-            }
-        }
+        // void UnhoverAllButtons()
+        // {
+        //     foreach (var (_, go) in _curOptions)
+        //     {
+        //         go.GetComponentInChildren<Image>().color = _btnDefault;
+        //     }
+        // }
 
-        string UpdateHoveredButton(float angle)
-        {
-            string hoveredBtn = null;
+        // string UpdateHoveredButton(float angle)
+        // {
+        //     string hoveredBtn = null;
 
-            int optInd = ContextMenuUtils.GetHoveredOpt(angle, _curOptions.Count);
+        //     int optInd = ContextMenuUtils.GetHoveredOpt(angle, _curOptions.Count);
 
-            int curInd = 0;
-            foreach (var (label, go) in _curOptions)
-            {
-                if (curInd == optInd)
-                {
-                    go.GetComponentInChildren<Image>().color = _btnHighlight;
-                    hoveredBtn = label;
-                }
-                else
-                {
-                    go.GetComponentInChildren<Image>().color = _btnDefault;
-                }
+        //     int curInd = 0;
+        //     foreach (var (label, go) in _curOptions)
+        //     {
+        //         if (curInd == optInd)
+        //         {
+        //             go.GetComponentInChildren<Image>().color = _btnHighlight;
+        //             hoveredBtn = label;
+        //         }
+        //         else
+        //         {
+        //             go.GetComponentInChildren<Image>().color = _btnDefault;
+        //         }
 
-                curInd++;
-            }
+        //         curInd++;
+        //     }
 
-            return hoveredBtn;
-        }
+        //     return hoveredBtn;
+        // }
 
-        void CheckThumbstickRotation()
-        {
-            var thumbVal = Thumbstick.ReadValue();
+        // void CheckThumbstickRotation()
+        // {
+        //     var thumbVal = Thumbstick.ReadValue();
 
-            if (thumbVal != Vector2.zero)
-            {
-                float angle = -Vector2.SignedAngle(Vector2.up, thumbVal);
+        //     if (thumbVal != Vector2.zero)
+        //     {
+        //         float angle = -Vector2.SignedAngle(Vector2.up, thumbVal);
 
-                _lastOptionLabel = UpdateHoveredButton(angle);
-            }
-            else if (_lastOptionLabel != null)
-            {
-                UnhoverAllButtons();
-                _lastOptionLabel = null;
-            }
-        }
+        //         _lastOptionLabel = UpdateHoveredButton(angle);
+        //     }
+        //     else if (_lastOptionLabel != null)
+        //     {
+        //         UnhoverAllButtons();
+        //         _lastOptionLabel = null;
+        //     }
+        // }
 
         bool CheckThumbstickClick()
         {
-            if (ThumbstickClick.ReadWasPerformedThisFrame())
-            {
-                switch (_lastOptionLabel)
-                {
-                    case "Bring Node":
-                        _networkManager.BringMLNodes(_networkManager.SelectedNodes);
-                        break;
-                    case "Reset Node(s)":
-                        _networkManager.ReturnMLNodes(_networkManager.SelectedNodes);
-                        break;
-                    case "Focus Comm.":
-                        _networkManager.SetMLLayout(_networkManager.SelectedCommunities, "cluster");
-                        break;
-                    case "Project Comm. Floor":
-                        _networkManager.SetMLLayout(_networkManager.SelectedCommunities, "floor");
-                        break;
-                    default:
-                        return false;
-                }
+            // if (ThumbstickClick.ReadWasPerformedThisFrame())
+            // {
+            //     switch (_lastOptionLabel)
+            //     {
+            //         case "Bring Node":
+            //             _networkManager.BringMLNodes(_networkManager.SelectedNodes, _subnetworkID);
+            //             break;
+            //         case "Reset Node(s)":
+            //             _networkManager.ReturnMLNodes(_networkManager.SelectedNodes, _subnetworkID);
+            //             break;
+            //         case "Focus Comm.":
+            //             _networkManager.SetMLLayout(_networkManager.SelectedCommunities, "cluster");
+            //             break;
+            //         case "Project Comm. Floor":
+            //             _networkManager.SetMLLayout(_networkManager.SelectedCommunities, "floor");
+            //             break;
+            //         default:
+            //             return false;
+            //     }
 
-                return true;
-            }
+            //     return true;
+            // }
 
             return false;
         }
@@ -267,55 +269,27 @@ namespace VidiGraph
             return true;
         }
 
-        bool ToggleSphericalAndHairball()
-        {
-            if (!LeftGripPress.ReadWasPerformedThisFrame()) return false;
+        // void CreateNewOptionBtns(HashSet<string> opts)
+        // {
+        //     foreach (var (_, go) in _curOptions) Destroy(go);
 
-            _networkManager.ToggleBigNetworkSphericalAndHairball();
+        //     _curOptions.Clear();
 
-            return true;
-        }
+        //     if (opts.Count == 0) return;
 
-        bool RunExperimentalCommand()
-        {
-            if (!CommandPress.ReadWasPerformedThisFrame()) return false;
+        //     float totPhi = 275f;
 
-            var nodeIDs1 = _networkManager.NetworkGlobal.RealNodes.GetRange(0, 10);
-            var nodeIDs2 = _networkManager.NetworkGlobal.RealNodes.GetRange(10, 10);
-            var linkIDs1 = _networkManager.NetworkGlobal.Links.GetRange(0, 10).Select(l => l.ID);
-            var linkIDs2 = _networkManager.NetworkGlobal.Links.GetRange(10, 10).Select(l => l.ID);
+        //     float phi = totPhi / opts.Count;
+        //     float curAngle = -totPhi / 2 + phi / 2;
 
-            _networkManager.SetMLNodesSize(nodeIDs1, 4);
-            _networkManager.SetMLNodesColor(nodeIDs2, "#FF0000");
-            _networkManager.SetMLLinksWidth(linkIDs1, 3f);
-            _networkManager.SetMLLinksColorStart(linkIDs2, "#00FF00");
-            _networkManager.SetMLLinksColorEnd(linkIDs1, "#00FFFF");
-            _networkManager.SetMLLinksAlpha(linkIDs2, 0.4f);
+        //     foreach (var label in opts)
+        //     {
+        //         var btn = ContextMenuUtils.MakeOption(_optionPrefab, _buttonsTransform, label, curAngle);
+        //         _curOptions.Add(new Tuple<string, GameObject>(label, btn));
 
-            return true;
-        }
-
-        void CreateNewOptionBtns(HashSet<string> opts)
-        {
-            foreach (var (_, go) in _curOptions) Destroy(go);
-
-            _curOptions.Clear();
-
-            if (opts.Count == 0) return;
-
-            float totPhi = 275f;
-
-            float phi = totPhi / opts.Count;
-            float curAngle = -totPhi / 2 + phi / 2;
-
-            foreach (var label in opts)
-            {
-                var btn = ContextMenuUtils.MakeOption(_optionPrefab, _buttonsTransform, label, curAngle);
-                _curOptions.Add(new Tuple<string, GameObject>(label, btn));
-
-                curAngle += phi;
-            }
-        }
+        //         curAngle += phi;
+        //     }
+        // }
 
         string[] GetPropsStr(Node node, int split)
         {
@@ -380,10 +354,11 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.GrabComm;
 
-                    if (community.Selected)
+                    if (community.SelectedOnSubnetworks.Contains(_subnetworkID))
                     {
+
                         _transformMoverCR = StartCoroutine(CRAllSelectedComms(community.ID, _networkManager.SelectedCommunities));
-                        _networkManager.StartMLCommsMove(_networkManager.SelectedCommunities);
+                        _networkManager.StartMLCommsMove(_networkManager.SelectedCommunities, _subnetworkID);
 
                         _clickWindowCR = StartCoroutine(CRSelectionWindow());
 
@@ -392,7 +367,7 @@ namespace VidiGraph
                     }
                     else
                     {
-                        _networkManager.StartMLCommMove(community.ID);
+                        _networkManager.StartMLCommMove(community.ID, _subnetworkID);
                         _clickWindowCR = StartCoroutine(CRSelectionWindow());
                     }
 
@@ -447,12 +422,12 @@ namespace VidiGraph
                     _networkManager.HoverNode(node.ID);
                     _hoveredNode = node;
 
-                    _tooltip.SetActive(true);
+                    // _tooltip.SetActive(true);
 
-                    var halves = GetPropsStr(node, 2);
+                    // var halves = GetPropsStr(node, 2);
 
-                    _infoCol1.SetText(halves.Length >= 1 ? halves[0] : "");
-                    _infoCol2.SetText(halves.Length >= 2 ? halves[1] : "");
+                    // _infoCol1.SetText(halves.Length >= 1 ? halves[0] : "");
+                    // _infoCol2.SetText(halves.Length >= 2 ? halves[1] : "");
                 }
             }
         }
@@ -465,7 +440,7 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.UnhoverNode;
 
-                    _tooltip.SetActive(false);
+                    // _tooltip.SetActive(false);
                 }
             }
         }
@@ -478,7 +453,7 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.GrabNode;
 
-                    if (node.Selected)
+                    if (node.SelectedOnSubnetworks.Contains(_subnetworkID))
                     {
                         _transformMoverCR = StartCoroutine(CRAllSelectedNodes(node.ID, _networkManager.SelectedNodes));
                         _networkManager.StartMLNodesMove(_networkManager.SelectedNodes);
@@ -542,7 +517,7 @@ namespace VidiGraph
             yield return new WaitForSeconds(0.1f);
 
             _lastState = ActionState.UnhoverNode;
-            _tooltip.SetActive(false);
+            // _tooltip.SetActive(false);
 
             _unhoverNodeCR = null;
         }

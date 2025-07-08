@@ -82,7 +82,7 @@ namespace VidiGraph
 
             foreach (var link in Links.Values) link.Weight = 0;
 
-            foreach (var link in networkGlobal.Links)
+            foreach (var link in networkGlobal.Links.Values)
             {
                 int c1 = link.SourceNode.CommunityID;
                 int c2 = link.TargetNode.CommunityID;

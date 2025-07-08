@@ -38,10 +38,11 @@ namespace VidiGraph
 
         public Settings BaseSettings;
         public MultiLayoutContext Context { get { return _context; } }
+        public int ID { get { return _id; } }
 
         NetworkManager _manager;
 
-        NetworkInput _input;
+        BasicSubnetworkInput _input;
         NetworkRenderer _renderer;
 
         MultiLayoutContext _context = new MultiLayoutContext();
@@ -51,9 +52,6 @@ namespace VidiGraph
 
         // keep a reference to hairballlayout to focus on individual communities
         HairballLayoutTransformer _hairballLayoutTransformer;
-
-        // keep a reference to clusterlayout to focus on individual communities
-        ClusterLayoutTransformer _clusterLayoutTransformer;
 
         // keep a reference to bringNodeLayout to focus on individual nodes
         BringNodeTransformer _bringNodeTransformer;
@@ -68,16 +66,20 @@ namespace VidiGraph
         Coroutine _curMover = null;
 
 
+        static int _idCounter = 0;
+
+        int _id = _idCounter++;
+
         void Update()
         {
             Draw();
         }
 
-        public void Initialize(IEnumerable<int> nodeIDs)
+        public void Initialize(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext)
         {
             GetManager();
 
-            InitContext(nodeIDs);
+            InitContext(nodeIDs, sourceContext);
             InitInput();
             InitTransformers();
 
@@ -122,7 +124,6 @@ namespace VidiGraph
         {
             switch (layout)
             {
-                case "cluster": _clusterLayoutTransformer.UpdateOnNextApply(commID); break;
                 case "hairball": _hairballLayoutTransformer.UpdateOnNextApply(commID); break;
                 default: break;
             }
@@ -161,8 +162,6 @@ namespace VidiGraph
                 updateStorage: true,
                 updateRenderElements: true
             );
-
-
         }
 
         public void EndNodesMove()
@@ -602,16 +601,17 @@ namespace VidiGraph
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
         }
 
-        void InitContext(IEnumerable<int> nodeIDs)
+        void InitContext(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext)
         {
-            _context.SetFromGlobal(_manager.NetworkGlobal, _manager.FileLoader.SphericalLayout, nodeIDs);
-            SetContextSettings();
+            _context.SetFromGlobal(_manager.NetworkGlobal, _manager.FileLoader.SphericalLayout, nodeIDs, ID);
+            BasicSubnetworkUtils.InitFromContext(_context, sourceContext);
+            BasicSubnetworkUtils.SetContextSettings(_context.ContextSettings, BaseSettings);
         }
 
         void InitInput()
         {
-            _input = GetComponent<NetworkInput>();
-            _input.Initialize();
+            _input = GetComponent<BasicSubnetworkInput>();
+            _input.Initialize(ID);
         }
 
         void InitRenderer()
@@ -625,23 +625,6 @@ namespace VidiGraph
             _renderer.Draw();
         }
 
-        void SetContextSettings()
-        {
-            _context.ContextSettings.NodeScale = BaseSettings.NodeScale;
-            _context.ContextSettings.LinkWidth = BaseSettings.LinkWidth;
-            _context.ContextSettings.EdgeBundlingStrength = BaseSettings.EdgeBundlingStrength;
-            _context.ContextSettings.CommSelectColor = BaseSettings.CommSelectColor;
-            _context.ContextSettings.NodeSelectColor = BaseSettings.NodeSelectColor;
-            _context.ContextSettings.LinkSelectColor = BaseSettings.LinkSelectColor;
-            _context.ContextSettings.CommHoverColor = BaseSettings.CommHoverColor;
-            _context.ContextSettings.NodeHoverColor = BaseSettings.NodeHoverColor;
-            _context.ContextSettings.LinkHoverColor = BaseSettings.LinkHoverColor;
-            _context.ContextSettings.LinkMinimumAlpha = BaseSettings.LinkMinimumAlpha;
-            _context.ContextSettings.LinkNormalAlphaFactor = BaseSettings.LinkNormalAlphaFactor;
-            _context.ContextSettings.LinkContextAlphaFactor = BaseSettings.LinkContextAlphaFactor;
-            _context.ContextSettings.LinkContext2FocusAlphaFactor = BaseSettings.LinkContext2FocusAlphaFactor;
-        }
-
         void InitTransformers()
         {
             _hairballLayoutTransformer = GetComponentInChildren<HairballLayoutTransformer>();
@@ -651,10 +634,6 @@ namespace VidiGraph
             _bringNodeTransformer = GetComponentInChildren<BringNodeTransformer>();
             _transformers["bringNode"] = _bringNodeTransformer;
             _transformers["bringNode"].Initialize(_manager.NetworkGlobal, _context);
-
-            _clusterLayoutTransformer = GetComponentInChildren<ClusterLayoutTransformer>();
-            _transformers["cluster"] = _clusterLayoutTransformer;
-            _transformers["cluster"].Initialize(_manager.NetworkGlobal, _context);
 
             _encodingTransformer = GetComponentInChildren<MLEncodingTransformer>();
             _transformers["encoding"] = _encodingTransformer;
@@ -717,11 +696,6 @@ namespace VidiGraph
             );
 
             cb?.Invoke();
-        }
-
-        void ClearCommunityState(int community)
-        {
-            _context.Communities[community].State = MultiLayoutContext.CommunityState.None;
         }
 
         IEnumerator CRAnimateTransformation(string transformer, Action onFinished = null,

@@ -151,7 +151,7 @@ namespace VidiGraph
         {
             foreach (var (communityID, community) in _networkGlobal.Communities)
             {
-                if (community.Selected) _commSpheres[communityID].SetActive(true);
+                if (community.SelectedOnSubnetworks.Contains(-1)) _commSpheres[communityID].SetActive(true);
                 else _commSpheres[communityID].SetActive(false);
             }
         }

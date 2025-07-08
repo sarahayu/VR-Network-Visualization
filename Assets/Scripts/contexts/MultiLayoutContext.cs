@@ -37,6 +37,7 @@ namespace VidiGraph
             public float Size { get; set; } = 1f;
             public Vector3 Position { get; set; } = Vector3.zero;
             public Color Color { get; set; }
+            public int SubnetworkID { get; set; }   // used by BasicSubnetwork
 
             // detect if node needs to be rerendered
             public bool Dirty { get; set; } = false;
@@ -59,7 +60,6 @@ namespace VidiGraph
 
         public class Community
         {
-
             public double Mass { get; set; }
             public Vector3 MassCenter { get; set; }
             public double Size { get; set; }
@@ -96,12 +96,16 @@ namespace VidiGraph
         public Func<VidiGraph.Link, bool> GetLinkBundleEnd = null;
         public Func<VidiGraph.Link, float> GetLinkAlpha = null;
 
+        public int SubnetworkID { get { return _subnetworkID; } }
+
+        int _subnetworkID = -1; // -1 means main multilayoutnetwork, 0 and up means subnetwork
+
         public MultiLayoutContext()
         {
             // expose constructor
         }
 
-        public void SetFromGlobal(NetworkGlobal networkGlobal, NetworkFileData networkFile)
+        public void SetFromGlobal(NetworkGlobal networkGlobal, NetworkFileData networkFile, int subnetworkID = -1)
         {
             Nodes.Clear();
             Links.Clear();
@@ -112,7 +116,7 @@ namespace VidiGraph
                 Nodes[node.ID] = new Node();
             }
 
-            foreach (var link in networkGlobal.Links)
+            foreach (var link in networkGlobal.Links.Values)
             {
                 Links[link.ID] = new Link();
             }
@@ -122,10 +126,12 @@ namespace VidiGraph
                 Communities[community.ID] = new Community();
             }
 
+            _subnetworkID = subnetworkID;
+
             SetDefaultEncodings(networkGlobal, networkFile);
         }
 
-        public void SetFromGlobal(NetworkGlobal networkGlobal, NetworkFileData networkFile, IEnumerable<int> nodeIDs)
+        public void SetFromGlobal(NetworkGlobal networkGlobal, NetworkFileData networkFile, IEnumerable<int> nodeIDs, int subnetworkID = -1)
         {
             Nodes.Clear();
             Links.Clear();
@@ -136,9 +142,9 @@ namespace VidiGraph
                 Nodes[nodeID] = new Node();
             }
 
-            foreach (var link in networkGlobal.Links)
+            foreach (var link in networkGlobal.Links.Values)
             {
-                if (nodeIDs.Contains(link.SourceNodeID) || nodeIDs.Contains(link.TargetNodeID))
+                if (nodeIDs.Contains(link.SourceNodeID) && nodeIDs.Contains(link.TargetNodeID))
                 {
                     Links[link.ID] = new Link();
                 }
@@ -152,22 +158,24 @@ namespace VidiGraph
                 }
             }
 
+            _subnetworkID = subnetworkID;
+
             SetDefaultEncodings(networkGlobal, networkFile);
         }
 
         public void RecomputeGeometricProps(NetworkGlobal networkGlobal)
         {
-            foreach (var community in networkGlobal.Communities.Values)
+            foreach (var (communityID, community) in Communities)
             {
-                var contextCommunity = Communities[community.ID];
-
-                CommunityMathUtils.ComputeMassProperties(community.Nodes, Nodes,
+                var contextCommunity = Communities[communityID];
+                var nodes = networkGlobal.Communities[communityID].Nodes.Where(n => Nodes.ContainsKey(n.ID));
+                CommunityMathUtils.ComputeMassProperties(nodes, Nodes,
                     out var mass, out var massCenter);
 
                 contextCommunity.Mass = mass;
                 contextCommunity.MassCenter = massCenter;
 
-                contextCommunity.Size = CommunityMathUtils.ComputeSize(community.Nodes, Nodes,
+                contextCommunity.Size = CommunityMathUtils.ComputeSize(nodes, Nodes,
                     contextCommunity.MassCenter);
 
                 contextCommunity.Dirty = true;

@@ -334,7 +334,7 @@ namespace VidiGraph
                     nFile.WriteLine(values);
                 }
 
-                foreach (var linkGlobal in networkGlobal.Links)
+                foreach (var linkGlobal in networkGlobal.Links.Values)
                 {
                     var linkID = linkGlobal.ID;
                     var linkContext = context.Links[linkID];

@@ -41,7 +41,7 @@ namespace VidiGraph
 
         NetworkManager _manager;
 
-        NetworkInput _input;
+        MultiLayoutNetworkInput _input;
         NetworkRenderer _renderer;
 
         MultiLayoutContext _context = new MultiLayoutContext();
@@ -151,7 +151,6 @@ namespace VidiGraph
             }
 
             TransformNetwork(layout, animated: true);
-
         }
 
         void QueueLayoutChange(int commID, string layout)
@@ -199,8 +198,6 @@ namespace VidiGraph
                 updateStorage: true,
                 updateRenderElements: true
             );
-
-
         }
 
         public void EndNodesMove()
@@ -648,7 +645,7 @@ namespace VidiGraph
 
         void InitInput()
         {
-            _input = GetComponent<NetworkInput>();
+            _input = GetComponent<MultiLayoutNetworkInput>();
             _input.Initialize();
         }
 

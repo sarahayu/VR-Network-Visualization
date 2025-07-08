@@ -9,7 +9,6 @@ namespace VidiGraph
 {
     public abstract class NetworkInput : MonoBehaviour
     {
-        public abstract void Initialize();
     }
 
 }

@@ -2,6 +2,7 @@
 
 - replicate cluster/node
     - when asking to select nodes, does it select on subnetworks as well?
+    - how do i communicate subnetwork id across renderers and inputs? make it a part of subnetwork context, for a start. now for input...
 - optimize reflection: https://stackoverflow.com/questions/7999652/best-way-to-cache-a-reflection-property-getter-setter
 - parse all waves into one
 - attaching nodes, average pos?

@@ -23,7 +23,8 @@ namespace VidiGraph
         public IList<int> AncIDsOrderList { get; set; } = new List<int>();
 
         public bool Dirty { get; set; } = false;
-        public bool Selected { get; set; } = false;
+        public bool Selected { get { return SelectedOnSubnetworks.Count != 0; } }
+        public IList<int> SelectedOnSubnetworks { get; set; } = new List<int>();
     }
 
 }

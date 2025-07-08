@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -28,12 +29,14 @@ namespace VidiGraph
         Material _splineMaterial;
 
         MultiLayoutContext.Settings _contextSettings;
+        int _subnetworkID;
 
-        public void Initialize(ComputeShader computeShader, Material material, MultiLayoutContext.Settings contextSettings)
+        public void Initialize(ComputeShader computeShader, Material material, MultiLayoutContext context)
         {
             _batchComputeShader = computeShader;
             _splineMaterial = material;
-            _contextSettings = contextSettings;
+            _contextSettings = context.ContextSettings;
+            _subnetworkID = context.SubnetworkID;
 
             // Configure the spline compute shader
             // _batchComputeShader.SetVector("COLOR_HIGHLIGHT", _contextSettings.LinkSelectColor);
@@ -56,12 +59,13 @@ namespace VidiGraph
             uint splineSampleCount = 0;
 
             uint splineIdx = 0;
-            foreach (var link in networkGlobal.Links)
+            foreach (var (linkID, linkProps) in networkContext.Links)
             {
                 /*
                  * Add Compute Shader data
                  */
 
+                var link = networkGlobal.Links[linkID];
                 var cp = controlPoints[link.ID];
                 int NumSegments = cp.Count + BSplineDegree - 2; //NumControlPoints + Degree - 2 (First/Last Point)
                 Color sourceColor = link.SourceNode.ColorParsed;
@@ -147,8 +151,9 @@ namespace VidiGraph
 
             int splineIdx = 0;
 
-            foreach (var link in networkGlobal.Links)
+            foreach (var (linkID, linkProps) in networkContext.Links)
             {
+                var link = networkGlobal.Links[linkID];
                 link.Dirty = false;
                 var cp = controlPoints[link.ID];
                 int ControlPointCount = cp.Count;
@@ -215,7 +220,7 @@ namespace VidiGraph
                     spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkHoverColor;
                 }
 
-                if (link.SourceNode.Selected || link.TargetNode.Selected)
+                if (link.SourceNode.SelectedOnSubnetworks.Contains(_subnetworkID) || link.TargetNode.SelectedOnSubnetworks.Contains(_subnetworkID))
                 {
                     spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkSelectColor;
                 }
@@ -306,7 +311,7 @@ namespace VidiGraph
         {
             // Run the ComputeShader. 1 Thread per segment.
             int kernel = _batchComputeShader.FindKernel("CSMain");
-            _batchComputeShader.Dispatch(kernel, _splineSegments.Count / 32, 1, 1);
+            _batchComputeShader.Dispatch(kernel, Math.Max(1, Mathf.CeilToInt(_splineSegments.Count / 32)), 1, 1);
 
             Graphics.DrawProcedural(_splineMaterial, new Bounds(Vector3.zero, Vector3.one * 500),
                 MeshTopology.Triangles, _outSampleControlPointData.count * 6);

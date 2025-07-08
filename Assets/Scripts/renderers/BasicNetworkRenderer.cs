@@ -102,7 +102,7 @@ namespace VidiGraph
             }
             // ...whereas this is concerned with the visible links between nodes in the graph
 
-            foreach (var link in _networkData.Links)
+            foreach (var link in _networkData.Links.Values)
             {
                 Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
                     endPos = _networkProperties.Nodes[link.TargetNodeID].Position;
@@ -139,7 +139,7 @@ namespace VidiGraph
             }
             // ...whereas this is concerned with the visible links between nodes in the graph
 
-            foreach (var link in _networkData.Links)
+            foreach (var link in _networkData.Links.Values)
             {
                 Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
                     endPos = _networkProperties.Nodes[link.TargetNodeID].Position;

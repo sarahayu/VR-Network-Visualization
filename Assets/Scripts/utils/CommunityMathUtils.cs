@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace VidiGraph
@@ -8,7 +9,7 @@ namespace VidiGraph
 
     public static class CommunityMathUtils
     {
-        public static void ComputeMassProperties(List<Node> nodes, Dictionary<int, MultiLayoutContext.Node> nodeContexts,
+        public static void ComputeMassProperties(IEnumerable<Node> nodes, Dictionary<int, MultiLayoutContext.Node> nodeContexts,
             out double mass, out Vector3 massCenter)
         {
             mass = 0;
@@ -20,10 +21,10 @@ namespace VidiGraph
                 massCenter += nodeContexts[node.ID].Position;
             }
 
-            massCenter /= nodes.Count;
+            massCenter /= nodes.Count();
         }
 
-        public static float ComputeSize(List<Node> nodes, Dictionary<int, MultiLayoutContext.Node> nodeContexts, Vector3 massCenter)
+        public static float ComputeSize(IEnumerable<Node> nodes, Dictionary<int, MultiLayoutContext.Node> nodeContexts, Vector3 massCenter)
         {
             float size = 0.1f;
 
