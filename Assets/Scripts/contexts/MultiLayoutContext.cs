@@ -6,6 +6,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using GK;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -65,6 +66,8 @@ namespace VidiGraph
             public double Size { get; set; }
 
             public CommunityState State { get; set; } = CommunityState.None;
+            public Mesh Mesh { get; set; } = new();
+            public IEnumerable<Node> Nodes { get; set; }
 
             // detect if link needs to be rerendered
             public bool Dirty { get; set; } = false;
@@ -163,20 +166,21 @@ namespace VidiGraph
             SetDefaultEncodings(networkGlobal, networkFile);
         }
 
-        public void RecomputeGeometricProps(NetworkGlobal networkGlobal)
+        public void RecomputeCommProps(NetworkGlobal networkGlobal)
         {
             foreach (var (communityID, community) in Communities)
             {
                 var contextCommunity = Communities[communityID];
                 var nodes = networkGlobal.Communities[communityID].Nodes.Where(n => Nodes.ContainsKey(n.ID));
-                CommunityMathUtils.ComputeMassProperties(nodes, Nodes,
-                    out var mass, out var massCenter);
+
+                MultiLayoutContextUtils.ComputeProperties(nodes, Nodes,
+                    out var mass, out var massCenter, out var size);
 
                 contextCommunity.Mass = mass;
                 contextCommunity.MassCenter = massCenter;
-
-                contextCommunity.Size = CommunityMathUtils.ComputeSize(nodes, Nodes,
-                    contextCommunity.MassCenter);
+                contextCommunity.Size = size;
+                contextCommunity.Nodes = nodes.Select(n => Nodes[n.ID]);
+                contextCommunity.Mesh = MultiLayoutContextUtils.GenerateConvexHull(contextCommunity);
 
                 contextCommunity.Dirty = true;
             }

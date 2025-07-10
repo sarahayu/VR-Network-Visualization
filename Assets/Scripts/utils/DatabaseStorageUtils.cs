@@ -13,9 +13,11 @@ namespace VidiGraph
 {
     public class DatabaseStorageUtils
     {
-        public static void BulkInitNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal, MultiLayoutContext context, IDriver driver, bool convertWinPaths)
+        public static void BulkInitNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal,
+            MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
+            IDriver driver, bool convertWinPaths)
         {
-            DumpNetwork(networkFile, networkGlobal, context, out var fc, out var fn, out var fn2n);
+            DumpNetwork(networkFile, networkGlobal, context, subnetworkContexts, out var fc, out var fn, out var fn2n);
 
             bool shutdown = false;
 
@@ -146,18 +148,10 @@ namespace VidiGraph
             }
         }
 
-        static string _fc = null, _fn = null, _fn2n = null;
-
-        public static void BulkUpdateNetwork(NetworkGlobal networkGlobal, MultiLayoutContext context, IDriver driver, bool convertWinPaths)
+        public static void BulkUpdateNetwork(NetworkGlobal networkGlobal, MultiLayoutContext context,
+            IEnumerable<MultiLayoutContext> subnetworkContexts, IDriver driver, bool convertWinPaths)
         {
-            if (_fc == null)
-            {
-                _fc = FileUtil.GetUniqueTempPathInProject();
-                _fn = FileUtil.GetUniqueTempPathInProject();
-                _fn2n = FileUtil.GetUniqueTempPathInProject();
-            }
-
-            DumpNetwork(null, networkGlobal, context, _fc, _fn, _fn2n, true);
+            DumpNetwork(null, networkGlobal, context, subnetworkContexts, out var fc, out var fn, out var fn2n, true);
 
             bool shutdown = false;
 
@@ -165,9 +159,9 @@ namespace VidiGraph
             {
                 var sess = driver.Session();
 
-                var nfc = ConvertToNeoPath(_fc, convertWinPaths);
-                var nfn = ConvertToNeoPath(_fn, convertWinPaths);
-                var nfn2n = ConvertToNeoPath(_fn2n, convertWinPaths);
+                var nfc = ConvertToNeoPath(fc, convertWinPaths);
+                var nfn = ConvertToNeoPath(fn, convertWinPaths);
+                var nfn2n = ConvertToNeoPath(fn2n, convertWinPaths);
 
                 sess.Run(
                             "LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';'" +
@@ -252,19 +246,14 @@ namespace VidiGraph
             }
         }
 
-        static void DumpNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal, MultiLayoutContext context,
+        static void DumpNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal,
+            MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
             out string commFile, out string nodeFile, out string nodeToNodeFile, bool onlyDirty = false)
         {
             commFile = FileUtil.GetUniqueTempPathInProject();
             nodeFile = FileUtil.GetUniqueTempPathInProject();
             nodeToNodeFile = FileUtil.GetUniqueTempPathInProject();
 
-            DumpNetwork(networkFile, networkGlobal, context, commFile, nodeFile, nodeToNodeFile, onlyDirty);
-        }
-
-        static void DumpNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal, MultiLayoutContext context,
-            string commFile, string nodeFile, string nodeToNodeFile, bool onlyDirty = false)
-        {
             using (StreamWriter cFile = new StreamWriter(commFile, append: false),
                                     nFile = new StreamWriter(nodeFile, append: false),
                                     n2nFile = new StreamWriter(nodeToNodeFile, append: false))

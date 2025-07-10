@@ -948,7 +948,7 @@ namespace VidiGraph
 
         void UpdateCommunityProps()
         {
-            _context.RecomputeGeometricProps(_manager.NetworkGlobal);
+            _context.RecomputeCommProps(_manager.NetworkGlobal);
         }
     }
 }

@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using GK;
 using UnityEngine;
 
 namespace VidiGraph
@@ -22,7 +24,7 @@ namespace VidiGraph
             MultiLayoutContext.Community commProps, Color selectColor, int subnetworkID, Renderer renderer = null)
         {
             commObj.transform.localPosition = commProps.MassCenter;
-            commObj.transform.localScale = Vector3.one * (float)commProps.Size * 2;
+            commObj.transform.localScale = Vector3.one;
 
             if (!renderer)
                 renderer = commObj.GetComponentInChildren<Renderer>();
@@ -32,6 +34,17 @@ namespace VidiGraph
             renderer.GetPropertyBlock(props);
             props.SetColor("_Color", commGlobal.SelectedOnSubnetworks.Contains(subnetworkID) ? selectColor : new Color(0f, 0f, 0f, 0f));
             renderer.SetPropertyBlock(props);
+
+
+            // have to modify mesh to account for rotation due to grabbing events
+            var invRot = Quaternion.Inverse(commObj.transform.rotation);
+
+            var newMesh = new Mesh();
+            newMesh.vertices = commProps.Mesh.vertices.Select(v => invRot * v).ToArray();
+            newMesh.triangles = commProps.Mesh.triangles;
+
+            commObj.GetComponent<MeshFilter>().sharedMesh = newMesh;
+            commObj.GetComponent<MeshCollider>().sharedMesh = newMesh;
 
             return commObj;
         }
