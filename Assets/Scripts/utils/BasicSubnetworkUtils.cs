@@ -18,24 +18,7 @@ namespace VidiGraph
             return retVal;
         }
 
-        public static void SetContextSettings(MultiLayoutContext.Settings settings, BasicSubnetwork.Settings baseSettings)
-        {
-            settings.NodeScale = baseSettings.NodeScale;
-            settings.LinkWidth = baseSettings.LinkWidth;
-            settings.EdgeBundlingStrength = baseSettings.EdgeBundlingStrength;
-            settings.CommSelectColor = baseSettings.CommSelectColor;
-            settings.NodeSelectColor = baseSettings.NodeSelectColor;
-            settings.LinkSelectColor = baseSettings.LinkSelectColor;
-            settings.CommHoverColor = baseSettings.CommHoverColor;
-            settings.NodeHoverColor = baseSettings.NodeHoverColor;
-            settings.LinkHoverColor = baseSettings.LinkHoverColor;
-            settings.LinkMinimumAlpha = baseSettings.LinkMinimumAlpha;
-            settings.LinkNormalAlphaFactor = baseSettings.LinkNormalAlphaFactor;
-            settings.LinkContextAlphaFactor = baseSettings.LinkContextAlphaFactor;
-            settings.LinkContext2FocusAlphaFactor = baseSettings.LinkContext2FocusAlphaFactor;
-        }
-
-        public static void InitFromContext(MultiLayoutContext targetContext, MultiLayoutContext sourceContext)
+        public static void InitFromContext(MultiLayoutContext targetContext, MultiLayoutContext sourceContext, BasicSubnetwork.Settings baseSettings)
         {
             foreach (var (nodeID, tNode) in targetContext.Nodes)
             {
@@ -62,6 +45,30 @@ namespace VidiGraph
 
                 tLink.Dirty = true;
             }
+
+            targetContext.ContextSettings.NodeScale = baseSettings.NodeScale;
+            targetContext.ContextSettings.LinkWidth = baseSettings.LinkWidth;
+            targetContext.ContextSettings.EdgeBundlingStrength = baseSettings.EdgeBundlingStrength;
+            targetContext.ContextSettings.CommSelectColor = baseSettings.CommSelectColor;
+            targetContext.ContextSettings.NodeSelectColor = baseSettings.NodeSelectColor;
+            targetContext.ContextSettings.LinkSelectColor = baseSettings.LinkSelectColor;
+            targetContext.ContextSettings.CommHoverColor = baseSettings.CommHoverColor;
+            targetContext.ContextSettings.NodeHoverColor = baseSettings.NodeHoverColor;
+            targetContext.ContextSettings.LinkHoverColor = baseSettings.LinkHoverColor;
+            targetContext.ContextSettings.LinkMinimumAlpha = baseSettings.LinkMinimumAlpha;
+            targetContext.ContextSettings.LinkNormalAlphaFactor = baseSettings.LinkNormalAlphaFactor;
+            targetContext.ContextSettings.LinkContextAlphaFactor = baseSettings.LinkContextAlphaFactor;
+            targetContext.ContextSettings.LinkContext2FocusAlphaFactor = baseSettings.LinkContext2FocusAlphaFactor;
+
+            targetContext.GetNodeSize = sourceContext.GetNodeSize;
+            targetContext.GetNodeColor = sourceContext.GetNodeColor;
+            targetContext.GetLinkWidth = sourceContext.GetLinkWidth;
+            targetContext.GetLinkBundlingStrength = sourceContext.GetLinkBundlingStrength;
+            targetContext.GetLinkColorStart = sourceContext.GetLinkColorStart;
+            targetContext.GetLinkColorEnd = sourceContext.GetLinkColorEnd;
+            targetContext.GetLinkBundleStart = sourceContext.GetLinkBundleStart;
+            targetContext.GetLinkBundleEnd = sourceContext.GetLinkBundleEnd;
+            targetContext.GetLinkAlpha = sourceContext.GetLinkAlpha;
         }
     }
 }
