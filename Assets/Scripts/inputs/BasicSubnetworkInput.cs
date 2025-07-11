@@ -321,8 +321,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                CoroutineUtils.StopIfRunning(this, _unhoverCommCR);
-                _unhoverCommCR = null;
+                CoroutineUtils.StopIfRunning(this, ref _unhoverCommCR);
 
                 if (_lastState == ActionState.None || _lastState == ActionState.UnhoverComm || _lastState == ActionState.UnhoverNode)
                 {
@@ -390,19 +389,17 @@ namespace VidiGraph
                     {
                         _networkManager.EndMLCommsMove(_networkManager.SelectedCommunities);
 
-                        CoroutineUtils.StopIfRunning(this, _transformMoverCR);
-                        _transformMoverCR = null;
+                        CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
                     }
 
                     if (_clickWindowCR != null)
                     {
                         _networkManager.ToggleSelectedCommunities(new List<int> { _hoveredCommunity.ID });
 
-                        CoroutineUtils.StopIfRunning(this, _clickWindowCR);
-                        _clickWindowCR = null;
+                        CoroutineUtils.StopIfRunning(this, ref _clickWindowCR);
                     }
 
-                    CoroutineUtils.StopIfRunning(this, _unhoverCommCR);
+                    CoroutineUtils.StopIfRunning(this, ref _unhoverCommCR);
                     _unhoverCommCR = StartCoroutine(CRDelayUnhoverComm());
                 }
             }
@@ -412,8 +409,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                CoroutineUtils.StopIfRunning(this, _unhoverNodeCR);
-                _unhoverNodeCR = null;
+                CoroutineUtils.StopIfRunning(this, ref _unhoverNodeCR);
 
                 if (_lastState == ActionState.None || _lastState == ActionState.UnhoverNode || _lastState == ActionState.UnhoverComm)
                 {
@@ -489,8 +485,7 @@ namespace VidiGraph
                     {
                         _networkManager.EndMLNodesMove(_networkManager.SelectedNodes);
 
-                        CoroutineUtils.StopIfRunning(this, _transformMoverCR);
-                        _transformMoverCR = null;
+                        CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
                     }
 
 
@@ -498,11 +493,10 @@ namespace VidiGraph
                     {
                         _networkManager.ToggleSelectedNodes(new List<int> { _hoveredNode.ID });
 
-                        CoroutineUtils.StopIfRunning(this, _clickWindowCR);
-                        _clickWindowCR = null;
+                        CoroutineUtils.StopIfRunning(this, ref _clickWindowCR);
                     }
 
-                    CoroutineUtils.StopIfRunning(this, _unhoverNodeCR);
+                    CoroutineUtils.StopIfRunning(this, ref _unhoverNodeCR);
                     _unhoverNodeCR = StartCoroutine(CRDelayUnhoverNode());
                 }
             }

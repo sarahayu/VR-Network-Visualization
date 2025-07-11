@@ -144,19 +144,19 @@ namespace VidiGraph
 
         public void StartNodeMove(int nodeID)
         {
-            CoroutineUtils.StopIfRunning(this, _curMover);
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
             _curMover = StartCoroutine(CRMoveNode(nodeID));
         }
 
         public void StartNodesMove(IEnumerable<int> nodeIDs)
         {
-            CoroutineUtils.StopIfRunning(this, _curMover);
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
             _curMover = StartCoroutine(CRMoveNodes(nodeIDs));
         }
 
         public void EndNodeMove(int nodeID)
         {
-            CoroutineUtils.StopIfRunning(this, _curMover);
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
             UpdateNetwork(
                 updateCommunityProps: true,
                 updateStorage: true,
@@ -166,7 +166,7 @@ namespace VidiGraph
 
         public void EndNodesMove()
         {
-            CoroutineUtils.StopIfRunning(this, _curMover);
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
             UpdateNetwork(
                 updateCommunityProps: true,
                 updateStorage: true,
@@ -176,19 +176,19 @@ namespace VidiGraph
 
         public void StartCommMove(int commID)
         {
-            CoroutineUtils.StopIfRunning(this, _curMover);
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
             _curMover = StartCoroutine(CRMoveComm(commID));
         }
 
         public void StartCommsMove(IEnumerable<int> commIDs)
         {
-            CoroutineUtils.StopIfRunning(this, _curMover);
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
             _curMover = StartCoroutine(CRMoveComms(commIDs));
         }
 
         public void EndCommMove()
         {
-            CoroutineUtils.StopIfRunning(this, _curMover);
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
             UpdateNetwork(
                 updateCommunityProps: true,
                 updateStorage: true,
@@ -198,7 +198,7 @@ namespace VidiGraph
 
         public void EndCommsMove()
         {
-            CoroutineUtils.StopIfRunning(this, _curMover);
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
             UpdateNetwork(
                 updateCommunityProps: true,
                 updateStorage: true,
@@ -651,7 +651,7 @@ namespace VidiGraph
         {
             if (animated)
             {
-                if (CoroutineUtils.StopIfRunning(this, _curAnim))
+                if (CoroutineUtils.StopIfRunning(this, ref _curAnim))
                 {
                     // update network since we cancelled coroutine prematurely
 

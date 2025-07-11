@@ -191,7 +191,7 @@ namespace VidiGraph
 
         void StartAttachAnim(IEnumerable<int> nodeIDs, int surfID)
         {
-            CoroutineUtils.StopIfRunning(this, _attachAnimation);
+            CoroutineUtils.StopIfRunning(this, ref _attachAnimation);
 
             var startPositions = nodeIDs.Select(nid => _manager.GetMLNodeTransform(nid).position);
             var endPositions = SurfaceManagerUtils.CalcProjected(surfID, nodeIDs.Select(nid => _manager.NetworkGlobal.Nodes[nid]), this, _manager);
@@ -243,7 +243,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                CoroutineUtils.StopIfRunning(this, _surfaceHighlighter);
+                CoroutineUtils.StopIfRunning(this, ref _surfaceHighlighter);
                 TryAttachNode(node.ID);
                 UnhighlightSurfaces();
             }
@@ -253,7 +253,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                CoroutineUtils.StopIfRunning(this, _surfaceHighlighter);
+                CoroutineUtils.StopIfRunning(this, ref _surfaceHighlighter);
                 _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLNodeTransform(node.ID)));
             }
         }
@@ -262,7 +262,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                CoroutineUtils.StopIfRunning(this, _surfaceHighlighter);
+                CoroutineUtils.StopIfRunning(this, ref _surfaceHighlighter);
                 TryAttachNodes(community.Nodes.Select(n => n.ID));
                 UnhighlightSurfaces();
             }
@@ -272,7 +272,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                CoroutineUtils.StopIfRunning(this, _surfaceHighlighter);
+                CoroutineUtils.StopIfRunning(this, ref _surfaceHighlighter);
                 _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLCommTransform(community.ID)));
             }
         }
