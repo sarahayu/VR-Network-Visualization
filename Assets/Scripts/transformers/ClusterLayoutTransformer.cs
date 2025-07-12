@@ -35,16 +35,20 @@ namespace VidiGraph
 
             foreach (var commID in _commsToUpdate)
             {
-                _networkGlobal.Communities[commID].Dirty = true;
+                _networkContext.Communities[commID].Dirty = true;
 
-                foreach (var node in _networkGlobal.Communities[commID].Nodes)
+                foreach (var nodeID in _networkContext.Communities[commID].Nodes)
                 {
+                    var node = _networkGlobal.Nodes[nodeID];
+
                     var clusterPos = clusterNodes[node.IdxProcessed]._position3D;
                     _networkContext.Nodes[node.ID].Position = clusterPos;
                     _networkContext.Nodes[node.ID].Dirty = true;
 
                     foreach (var link in _networkGlobal.NodeLinkMatrixUndir[node.ID])
                     {
+                        if (!_networkContext.Links.ContainsKey(link.ID)) continue;
+
                         var linkContext = _networkContext.Links[link.ID];
                         linkContext.Alpha = _networkContext.ContextSettings.LinkContext2FocusAlphaFactor;
 

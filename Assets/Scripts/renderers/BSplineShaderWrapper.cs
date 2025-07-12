@@ -68,8 +68,8 @@ namespace VidiGraph
                 var link = networkGlobal.Links[linkID];
                 var cp = controlPoints[link.ID];
                 int NumSegments = cp.Count + BSplineDegree - 2; //NumControlPoints + Degree - 2 (First/Last Point)
-                Color sourceColor = link.SourceNode.ColorParsed;
-                Color targetColor = link.TargetNode.ColorParsed;
+                Color sourceColor = linkProps.ColorStart;
+                Color targetColor = linkProps.ColorEnd;
 
                 Vector3 startPosition = cp[0];
                 Vector3 endPosition = cp[cp.Count - 1];
@@ -140,7 +140,8 @@ namespace VidiGraph
             _splineMaterial.SetBuffer("OutSamplePointData", _outSampleControlPointData);
         }
 
-        public void UpdateBuffers(NetworkGlobal networkGlobal, MultiLayoutContext networkContext, Dictionary<int, List<Vector3>> controlPoints)
+        public void UpdateBuffers(NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
+            HashSet<int> selNodes, Dictionary<int, List<Vector3>> controlPoints)
         {
             // Initialize Compute Shader data
             _splineControlPoints = new List<SplineControlPointData>();
@@ -220,7 +221,7 @@ namespace VidiGraph
                     spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkHoverColor;
                 }
 
-                if (link.SourceNode.SelectedOnSubnetworks.Contains(_subnetworkID) || link.TargetNode.SelectedOnSubnetworks.Contains(_subnetworkID))
+                if (selNodes.Contains(link.SourceNodeID) || selNodes.Contains(link.TargetNodeID))
                 {
                     spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkSelectColor;
                 }

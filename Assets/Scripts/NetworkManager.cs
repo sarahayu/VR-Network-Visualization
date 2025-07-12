@@ -27,12 +27,38 @@ namespace VidiGraph
 
         public NetworkFilesLoader FileLoader { get { return _fileLoader; } }
         public NetworkGlobal NetworkGlobal { get { return _networkGlobal; } }
-        public HashSet<int> SelectedNodes { get { return _networkGlobal.SelectedNodes; } }
-        public HashSet<int> SelectedCommunities { get { return _networkGlobal.SelectedCommunities; } }
+
+        [Obsolete("SelectedNodes is deprecated, please use SubnSelectedNodes().")]
+        public HashSet<int> SelectedNodes
+        {
+            get
+            {
+                return _subnetworks.Values
+                    .Select(subn => subn.SelectedNodes)
+                    .SelectMany(i => i)
+                    .Union(_multiLayoutNetwork.SelectedNodes)
+                    .ToHashSet();
+            }
+        }
+
+        [Obsolete("SelectedCommunities is deprecated, please use SubnSelectedCommunities().")]
+        public HashSet<int> SelectedCommunities
+        {
+            get
+            {
+                return _subnetworks.Values
+                    .Select(subn => subn.SelectedCommunities)
+                    .SelectMany(i => i)
+                    .Union(_multiLayoutNetwork.SelectedCommunities)
+                    .ToHashSet().ToHashSet();
+            }
+        }
+
+        NetworkGlobal _networkGlobal = new();
 
         NetworkFilesLoader _fileLoader;
         NetworkStorage _storage;
-        NetworkGlobal _networkGlobal;
+
         bool _updatingStorage = true;
         bool _updatingRenderElements = true;
 
@@ -59,10 +85,9 @@ namespace VidiGraph
         public void Initialize()
         {
             _fileLoader = GetComponent<NetworkFilesLoader>();
-            _networkGlobal = GetComponent<NetworkGlobal>();
 
             _fileLoader.LoadFiles();
-            _networkGlobal.InitNetwork();
+            _networkGlobal.InitNetwork(_fileLoader);
 
             _multiLayoutNetwork.Initialize();
             _handheldNetwork?.Initialize();
@@ -102,6 +127,7 @@ namespace VidiGraph
         {
             _updatingStorage = true;
             _multiLayoutNetwork.UpdateStorage();
+            foreach (var subn in _subnetworks.Values) subn.UpdateStorage();
         }
 
         public void PauseRenderUpdate()
@@ -112,7 +138,7 @@ namespace VidiGraph
         public void UnpauseRenderUpdate()
         {
             _updatingRenderElements = true;
-            _multiLayoutNetwork.UpdateRenderElements();
+            RenderUpdate();
         }
 
         public void ToggleBigNetworkSphericalAndHairball(bool animated = true)
@@ -124,26 +150,46 @@ namespace VidiGraph
         {
             _networkGlobal.HoveredNode = _networkGlobal.Nodes[nodeID];
             _multiLayoutNetwork.UpdateRenderElements();
+            foreach (var subn in _subnetworks.Values) subn.UpdateRenderElements();
         }
 
         public void UnhoverNode(int nodeID)
         {
             _networkGlobal.HoveredNode = null;
             _multiLayoutNetwork.UpdateRenderElements();
+            foreach (var subn in _subnetworks.Values) subn.UpdateRenderElements();
         }
 
         public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool selected, int subnetworkID = -1)
         {
-            _networkGlobal.SetSelectedNodes(nodeIDs, selected, subnetworkID);
-            _multiLayoutNetwork.UpdateSelectedElements();
+            if (subnetworkID == -1)
+            {
+                _multiLayoutNetwork.SetSelectedNodes(nodeIDs, selected);
+                _multiLayoutNetwork.UpdateSelectedElements();
+            }
+            else
+            {
+                _subnetworks[subnetworkID].SetSelectedNodes(nodeIDs, selected);
+                _subnetworks[subnetworkID].UpdateSelectedElements();
+            }
+
             _handheldNetwork.UpdateRenderElements();
             _multiLayoutNetworkInput.CheckSelectionActions();
         }
 
         public void ToggleSelectedNodes(IEnumerable<int> nodeIDs, int subnetworkID = -1)
         {
-            _networkGlobal.ToggleSelectedNodes(nodeIDs, subnetworkID);
-            _multiLayoutNetwork.UpdateSelectedElements();
+            if (subnetworkID == -1)
+            {
+                _multiLayoutNetwork.ToggleSelectedNodes(nodeIDs);
+                _multiLayoutNetwork.UpdateSelectedElements();
+            }
+            else
+            {
+                _subnetworks[subnetworkID].ToggleSelectedNodes(nodeIDs);
+                _subnetworks[subnetworkID].UpdateSelectedElements();
+            }
+
             _handheldNetwork.UpdateRenderElements();
             _multiLayoutNetworkInput.CheckSelectionActions();
         }
@@ -172,19 +218,7 @@ namespace VidiGraph
             }
         }
 
-        public void EndMLNodeMove(int nodeID, Transform transform, int subnetworkID = -1)
-        {
-            if (subnetworkID == -1)
-            {
-                _multiLayoutNetwork.EndNodeMove(nodeID);
-            }
-            else
-            {
-                _subnetworks[subnetworkID].EndNodeMove(nodeID);
-            }
-        }
-
-        public void EndMLNodesMove(IEnumerable<int> nodeIDs, int subnetworkID = -1)
+        public void EndMLNodesMove(int subnetworkID = -1)
         {
             if (subnetworkID == -1)
             {
@@ -220,19 +254,7 @@ namespace VidiGraph
             }
         }
 
-        public void EndMLCommMove(int commID, int subnetworkID = -1)
-        {
-            if (subnetworkID == -1)
-            {
-                _multiLayoutNetwork.EndCommMove();
-            }
-            else
-            {
-                _subnetworks[subnetworkID].EndCommMove();
-            }
-        }
-
-        public void EndMLCommsMove(IEnumerable<int> commIDs, int subnetworkID = -1)
+        public void EndMLCommsMove(int subnetworkID = -1)
         {
             if (subnetworkID == -1)
             {
@@ -248,34 +270,56 @@ namespace VidiGraph
         {
             _networkGlobal.HoveredCommunity = _networkGlobal.Communities[commID];
             _multiLayoutNetwork.UpdateRenderElements();
+            foreach (var subn in _subnetworks.Values) subn.UpdateRenderElements();
         }
 
         public void UnhoverCommunity(int commID)
         {
             _networkGlobal.HoveredCommunity = null;
             _multiLayoutNetwork.UpdateRenderElements();
+            foreach (var subn in _subnetworks.Values) subn.UpdateRenderElements();
         }
 
         public void SetSelectedCommunities(IEnumerable<int> commIDs, bool selected, int subnetworkID = -1)
         {
-            _networkGlobal.SetSelectedCommunities(commIDs, selected, subnetworkID);
-            _multiLayoutNetwork.UpdateSelectedElements();
+            if (subnetworkID == -1)
+            {
+                _multiLayoutNetwork.SetSelectedComms(commIDs, selected);
+                _multiLayoutNetwork.UpdateSelectedElements();
+            }
+            else
+            {
+                _subnetworks[subnetworkID].SetSelectedComms(commIDs, selected);
+                _subnetworks[subnetworkID].UpdateSelectedElements();
+            }
+
             _handheldNetwork.UpdateRenderElements();
             _multiLayoutNetworkInput.CheckSelectionActions();
         }
 
         public void ToggleSelectedCommunities(IEnumerable<int> commIDs, int subnetworkID = -1)
         {
-            _networkGlobal.ToggleSelectedCommunities(commIDs, subnetworkID);
-            _multiLayoutNetwork.UpdateSelectedElements();
+            if (subnetworkID == -1)
+            {
+                _multiLayoutNetwork.ToggleSelectedComms(commIDs);
+                _multiLayoutNetwork.UpdateSelectedElements();
+            }
+            else
+            {
+                _subnetworks[subnetworkID].ToggleSelectedComms(commIDs);
+                _subnetworks[subnetworkID].UpdateSelectedElements();
+            }
+
             _handheldNetwork.UpdateRenderElements();
             _multiLayoutNetworkInput.CheckSelectionActions();
         }
 
         public void ClearSelection()
         {
-            _networkGlobal.ClearSelectedItems();
+            ClearSelectedItems();
             _multiLayoutNetwork.UpdateSelectedElements();
+            foreach (var subn in _subnetworks.Values) subn.UpdateSelectedElements();
+
             _handheldNetwork.UpdateRenderElements();
             _multiLayoutNetworkInput.CheckSelectionActions();
         }
@@ -354,6 +398,8 @@ namespace VidiGraph
                     _subnetworks[subnetworkID].Context);
                 _subnetworks[subn.ID] = subn;
             }
+
+            RenderUpdate();
         }
 
         public void SetMLNodesSize(IEnumerable<int> nodeIDs, float size, int subnetworkID = -1)
@@ -840,6 +886,45 @@ namespace VidiGraph
                 return _subnetworks[subnetworkID].SetLinkAlphaEncoding(prop, valueToAlpha,
                     _updatingStorage, _updatingRenderElements);
             }
+        }
+
+        public HashSet<int> SubnSelectedNodes(int subnetworkID)
+        {
+            if (subnetworkID == -1) return _multiLayoutNetwork.SelectedNodes;
+            return _subnetworks[subnetworkID].SelectedNodes;
+        }
+
+        public HashSet<int> SubnSelectedCommunities(int subnetworkID)
+        {
+            if (subnetworkID == -1) return _multiLayoutNetwork.SelectedCommunities;
+            return _subnetworks[subnetworkID].SelectedCommunities;
+        }
+
+        public bool IsNodeSelected(int nodeID, int subnetworkID)
+        {
+            if (subnetworkID == -1) return _multiLayoutNetwork.SelectedNodes.Contains(nodeID);
+            return _subnetworks[subnetworkID].SelectedNodes.Contains(nodeID);
+        }
+
+        public bool IsCommSelected(int commID, int subnetworkID)
+        {
+            if (subnetworkID == -1) return _multiLayoutNetwork.SelectedCommunities.Contains(commID);
+            return _subnetworks[subnetworkID].SelectedCommunities.Contains(commID);
+        }
+
+        /*=============== start private methods ===================*/
+
+        void RenderUpdate()
+        {
+            _multiLayoutNetwork.UpdateRenderElements();
+            foreach (var subn in _subnetworks.Values) subn.UpdateRenderElements();
+        }
+
+        // clears both nodes and communities
+        void ClearSelectedItems()
+        {
+            _multiLayoutNetwork.ClearSelection();
+            foreach (var subn in _subnetworks.Values) subn.ClearSelection();
         }
     }
 }

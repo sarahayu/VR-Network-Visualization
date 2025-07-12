@@ -9,29 +9,31 @@ namespace VidiGraph
 {
     public class HighlightTransformer : NetworkContextTransformer
     {
+        NetworkManager _manager;
         NetworkGlobal _networkGlobal;
         MultiLayoutContext _networkContext;
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
+            _networkGlobal = networkGlobal;
             _networkContext = (MultiLayoutContext)networkContext;
 
-            var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _networkGlobal = manager.NetworkGlobal;
+            _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
         }
 
         public override void ApplyTransformation()
         {
-            foreach (var node in _networkGlobal.Nodes)
+            foreach (var (nodeID, node) in _networkContext.Nodes)
             {
                 if (node.Dirty)
                 {
-                    var selected = node.SelectedOnSubnetworks.Contains(_networkContext.SubnetworkID);
-                    _networkContext.Nodes[node.ID].Dirty = true;
+                    var selected = _manager.IsNodeSelected(nodeID, _networkContext.SubnetworkID);
+                    _networkContext.Nodes[nodeID].Dirty = true;
 
-                    foreach (var link in _networkGlobal.NodeLinkMatrixUndir[node.ID])
+                    foreach (var link in _networkGlobal.NodeLinkMatrixUndir[nodeID])
                     {
-                        _networkContext.Links[link.ID].Dirty = true;
+                        if (_networkContext.Links.ContainsKey(link.ID))
+                            _networkContext.Links[link.ID].Dirty = true;
                     }
 
                 }

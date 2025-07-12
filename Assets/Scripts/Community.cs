@@ -21,7 +21,5 @@ namespace VidiGraph
 
         // detect if community needs to be rerendered
         public bool Dirty = false;
-        public bool Selected { get { return SelectedOnSubnetworks.Count != 0; } }
-        public IList<int> SelectedOnSubnetworks { get; set; } = new List<int>();
     }
 }

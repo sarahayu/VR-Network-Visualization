@@ -378,10 +378,12 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.GrabComm;
 
-                    if (community.SelectedOnSubnetworks.Contains(-1))
+                    var selComms = _networkManager.SubnSelectedCommunities(-1);
+
+                    if (selComms.Contains(community.ID))
                     {
-                        _transformMoverCR = StartCoroutine(CRAllSelectedComms(community.ID, _networkManager.SelectedCommunities));
-                        _networkManager.StartMLCommsMove(_networkManager.SelectedCommunities);
+                        _transformMoverCR = StartCoroutine(CRAllSelectedComms(community.ID, selComms));
+                        _networkManager.StartMLCommsMove(selComms);
 
                         _clickWindowCR = StartCoroutine(CRSelectionWindow());
 
@@ -406,14 +408,8 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.UngrabComm;
 
-                    _networkManager.EndMLCommMove(community.ID);
-
-                    if (_transformMoverCR != null)
-                    {
-                        _networkManager.EndMLCommsMove(_networkManager.SelectedCommunities);
-
-                        CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
-                    }
+                    _networkManager.EndMLCommsMove();
+                    CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
 
                     if (_clickWindowCR != null)
                     {
@@ -474,10 +470,12 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.GrabNode;
 
-                    if (node.SelectedOnSubnetworks.Contains(-1))
+                    var selNodes = _networkManager.SubnSelectedNodes(-1);
+
+                    if (selNodes.Contains(node.ID))
                     {
-                        _transformMoverCR = StartCoroutine(CRAllSelectedNodes(node.ID, _networkManager.SelectedNodes));
-                        _networkManager.StartMLNodesMove(_networkManager.SelectedNodes);
+                        _transformMoverCR = StartCoroutine(CRAllSelectedNodes(node.ID, selNodes));
+                        _networkManager.StartMLNodesMove(selNodes);
 
                         _clickWindowCR = StartCoroutine(CRSelectionWindow());
 
@@ -504,14 +502,8 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.UngrabNode;
 
-                    _networkManager.EndMLNodeMove(node.ID, evt.interactableObject.transform);
-
-                    if (_transformMoverCR != null)
-                    {
-                        _networkManager.EndMLNodesMove(_networkManager.SelectedNodes);
-
-                        CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
-                    }
+                    _networkManager.EndMLNodesMove();
+                    CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
 
                     if (_clickWindowCR != null)
                     {
@@ -569,7 +561,7 @@ namespace VidiGraph
                 {
                     _xrManager.SelectExit(interactor, interactable);
 
-                    _networkManager.CreateSubnetwork(_networkManager.SelectedNodes, -1);
+                    _networkManager.CreateSubnetwork(_networkManager.SubnSelectedNodes(-1), -1);
                     break;
                 }
 

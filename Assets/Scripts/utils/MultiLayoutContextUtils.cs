@@ -28,9 +28,8 @@ namespace VidiGraph
         }
 
 
-        public static Mesh GenerateConvexHull(MultiLayoutContext.Community commProps)
+        public static Mesh GenerateConvexHull(MultiLayoutContext.Community commProps, IEnumerable<MultiLayoutContext.Node> commNodes)
         {
-
             var calc = new ConvexHullCalculator();
             var verts = new List<Vector3>();
             var tris = new List<int>();
@@ -38,7 +37,7 @@ namespace VidiGraph
 
             var points = new List<Vector3>();
 
-            foreach (var node in commProps.Nodes)
+            foreach (var node in commNodes)
             {
                 var size = node.Size + 0.03f;
                 var pos = node.Position - commProps.MassCenter;

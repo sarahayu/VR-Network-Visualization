@@ -38,7 +38,9 @@ namespace VidiGraph
             public float Size { get; set; } = 1f;
             public Vector3 Position { get; set; } = Vector3.zero;
             public Color Color { get; set; }
-            public int SubnetworkID { get; set; }   // used by BasicSubnetwork
+            public int CommunityID { get; set; }
+            // TODO restrict modification access
+            public bool Selected { get; set; }          // DONT MODIFY DIRECTLY, use SetSelectedNodes/Communities
 
             // detect if node needs to be rerendered
             public bool Dirty { get; set; } = false;
@@ -61,13 +63,15 @@ namespace VidiGraph
 
         public class Community
         {
+            // we want to store ID because communities in context may be different from global
+            public int ID { get; set; }
             public double Mass { get; set; }
             public Vector3 MassCenter { get; set; }
             public double Size { get; set; }
 
             public CommunityState State { get; set; } = CommunityState.None;
             public Mesh Mesh { get; set; } = new();
-            public IEnumerable<Node> Nodes { get; set; }
+            public IEnumerable<int> Nodes { get; set; }
 
             // detect if link needs to be rerendered
             public bool Dirty { get; set; } = false;
@@ -101,7 +105,13 @@ namespace VidiGraph
 
         public int SubnetworkID { get { return _subnetworkID; } }
 
+        public HashSet<int> SelectedNodes { get { return _selectedNodes; } }
+        public HashSet<int> SelectedCommunities { get { return _selectedComms; } }
+
         int _subnetworkID = -1; // -1 means main multilayoutnetwork, 0 and up means subnetwork
+
+        HashSet<int> _selectedNodes = new HashSet<int>();
+        HashSet<int> _selectedComms = new HashSet<int>();
 
         public MultiLayoutContext()
         {
@@ -157,7 +167,10 @@ namespace VidiGraph
             {
                 if (community.Nodes.Select(n => n.ID).ToHashSet().Intersect(nodeIDs).Count() != 0)
                 {
-                    Communities[community.ID] = new Community();
+                    Communities[community.ID] = new Community()
+                    {
+                        ID = community.ID
+                    };
                 }
             }
 
@@ -179,12 +192,55 @@ namespace VidiGraph
                 contextCommunity.Mass = mass;
                 contextCommunity.MassCenter = massCenter;
                 contextCommunity.Size = size;
-                contextCommunity.Nodes = nodes.Select(n => Nodes[n.ID]);
-                contextCommunity.Mesh = MultiLayoutContextUtils.GenerateConvexHull(contextCommunity);
+                contextCommunity.Nodes = nodes.Select(n => n.ID);
+                contextCommunity.Mesh = MultiLayoutContextUtils.GenerateConvexHull(contextCommunity, nodes.Select(n => Nodes[n.ID]));
 
                 contextCommunity.Dirty = true;
             }
         }
+
+        public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool isSelected)
+        {
+            foreach (var nodeID in nodeIDs)
+            {
+                Nodes[nodeID].Selected = isSelected;
+                Nodes[nodeID].Dirty = true;
+            }
+
+            RecomputeSelecteds();
+        }
+
+        public void SetSelectedComms(IEnumerable<int> commIDs, bool isSelected)
+        {
+            SetSelectedNodes(GetNodesFromCommunities(commIDs), isSelected);
+        }
+
+        public void ToggleSelectedNodes(IEnumerable<int> nodeIDs)
+        {
+            var selNodes = SelectedNodes;
+            var newSelNodes = nodeIDs.Except(selNodes);
+            var newUnselNodes = nodeIDs.Intersect(selNodes);
+
+            SetSelectedNodes(newSelNodes, true);
+            SetSelectedNodes(newUnselNodes, false);
+        }
+
+        public void ToggleSelectedComms(IEnumerable<int> commIDs)
+        {
+            var selComms = SelectedCommunities;
+            var newSelComms = commIDs.Except(selComms);
+            var newUnselComms = commIDs.Intersect(selComms);
+
+            SetSelectedComms(newSelComms, true);
+            SetSelectedComms(newUnselComms, false);
+        }
+
+        public void ClearSelection()
+        {
+            SetSelectedNodes(SelectedNodes, false);
+        }
+
+        /*=============== start private methods ===================*/
 
         void SetDefaultEncodings(NetworkGlobal networkGlobal, NetworkFileData networkFile)
         {
@@ -242,6 +298,24 @@ namespace VidiGraph
         Color GetColor(int commID, Dictionary<int, VidiGraph.Community> comms)
         {
             return commID == -1 ? Color.black : comms[commID].Color;
+        }
+
+        void RecomputeSelecteds()
+        {
+            _selectedNodes = Nodes.Keys.Where(nid => Nodes[nid].Selected).ToHashSet();
+            _selectedComms = Communities.Keys
+                .Where(cid => Communities[cid].Nodes
+                    .All(nid => Nodes[nid].Selected))
+                .ToHashSet();
+        }
+
+        HashSet<int> GetNodesFromCommunities(IEnumerable<int> commIDs)
+        {
+            var nodes = new HashSet<int>();
+
+            foreach (var commID in commIDs) nodes.UnionWith(Communities[commID].Nodes);
+
+            return nodes;
         }
 
         static public CommunityState StrToState(string state)

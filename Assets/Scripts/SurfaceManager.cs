@@ -227,7 +227,7 @@ namespace VidiGraph
                 // end node moves
                 StopCoroutine(_surfaceMover);
                 _surfaceMover = null;
-                _manager.EndMLNodesMove(_surfaces[id].Nodes.Keys);
+                _manager.EndMLNodesMove();
             });
         }
 

@@ -15,12 +15,6 @@ namespace VidiGraph
 
             // idx gets remapped to node id, because we do not assume it's the same as the order stated in datafile. why? idk the original code didn't either.
             node.ID = fileNode.idx;
-            node.Color = fileNode.color;
-
-            if (node.Color != null)
-                node.ColorParsed = ColorUtils.StringToColor(node.Color.ToUpper());
-            else
-                node.ColorParsed = Color.black;
 
             node.IsVirtualNode = fileNode.virtualNode;
             node.Height = fileNode.height;

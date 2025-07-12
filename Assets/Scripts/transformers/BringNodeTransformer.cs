@@ -36,7 +36,6 @@ namespace VidiGraph
 
         public override void ApplyTransformation()
         {
-
             foreach (var nodeID in _nodesToUpdate)
             {
                 var nodePos = _networkContext.Nodes[nodeID].Position;

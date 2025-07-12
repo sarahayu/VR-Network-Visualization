@@ -38,6 +38,9 @@ namespace VidiGraph
 
         public Settings BaseSettings;
         public MultiLayoutContext Context { get { return _context; } }
+
+        public HashSet<int> SelectedNodes { get { return Context.SelectedNodes; } }
+        public HashSet<int> SelectedCommunities { get { return Context.SelectedCommunities; } }
         public int ID { get { return _id; } }
 
         NetworkManager _manager;
@@ -127,6 +130,47 @@ namespace VidiGraph
                 case "hairball": _hairballLayoutTransformer.UpdateOnNextApply(commID); break;
                 default: break;
             }
+        }
+
+        public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool isSelected)
+        {
+            var validNodes = Context.Nodes.Keys.Union(nodeIDs);
+            var updateNodes = isSelected ? nodeIDs.Except(SelectedNodes) : nodeIDs.Intersect(SelectedNodes);
+
+            if (validNodes.Count() != nodeIDs.Count())
+            {
+                Debug.LogWarning($"Nodes {string.Join(", ", nodeIDs.Except(validNodes))} not found in subnetwork {ID}");
+            }
+
+            Context.SetSelectedNodes(updateNodes, isSelected);
+        }
+
+        public void SetSelectedComms(IEnumerable<int> commIDs, bool isSelected)
+        {
+            var validComms = Context.Communities.Keys.Union(commIDs);
+            var updateComms = isSelected ? commIDs.Except(SelectedCommunities) : commIDs.Intersect(SelectedNodes);
+
+            if (validComms.Count() != commIDs.Count())
+            {
+                Debug.LogWarning($"Communities {string.Join(", ", commIDs.Except(validComms))} not found in subnetwork {ID}");
+            }
+
+            Context.SetSelectedComms(updateComms, isSelected);
+        }
+
+        public void ToggleSelectedNodes(IEnumerable<int> nodeIDs)
+        {
+            Context.ToggleSelectedNodes(nodeIDs);
+        }
+
+        public void ToggleSelectedComms(IEnumerable<int> commIDs)
+        {
+            Context.ToggleSelectedComms(commIDs);
+        }
+
+        public void ClearSelection()
+        {
+            Context.ClearSelection();
         }
 
         public void BringNodes(IEnumerable<int> nodeIDs)

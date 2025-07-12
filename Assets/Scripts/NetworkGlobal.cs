@@ -13,7 +13,7 @@ using UnityEngine;
 
 namespace VidiGraph
 {
-    public class NetworkGlobal : MonoBehaviour
+    public class NetworkGlobal
     {
         public NodeCollection Nodes { get { return _nodes; } }
         public Dictionary<int, Link> Links { get { return _links; } }
@@ -25,8 +25,6 @@ namespace VidiGraph
         public Dictionary<int, List<Link>> NodeLinkMatrixDir { get { return _nodeLinkMatrixDir; } }
         public Node HoveredNode = null;
         public Community HoveredCommunity = null;
-        public HashSet<int> SelectedNodes { get { return _selectedNodes; } }
-        public HashSet<int> SelectedCommunities { get { return _selectedComms; } }
 
         int _rootNodeID;
         // TODO change to maps... KISS
@@ -41,8 +39,6 @@ namespace VidiGraph
              = new Dictionary<int, List<Link>>();
         Dictionary<int, List<Link>> _nodeLinkMatrixDir
              = new Dictionary<int, List<Link>>();
-        HashSet<int> _selectedNodes = new HashSet<int>();
-        HashSet<int> _selectedComms = new HashSet<int>();
 
         void Reset()
         {
@@ -57,11 +53,9 @@ namespace VidiGraph
             HighContrastColors.ResetRandomColor();
         }
 
-        public void InitNetwork()
+        public void InitNetwork(NetworkFilesLoader fileLoader)
         {
             Reset();
-
-            var fileLoader = GetComponent<NetworkFilesLoader>();
             var fileNodes = fileLoader.SphericalLayout.nodes;
             var fileLinks = fileLoader.SphericalLayout.links;
 
@@ -141,156 +135,6 @@ namespace VidiGraph
             }
         }
 
-        public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool selected, int subnetworkID)
-        {
-            if (selected)
-            {
-                foreach (var nodeID in nodeIDs)
-                {
-                    if (Nodes[nodeID].IsVirtualNode) continue;
-                    if (!_selectedNodes.Contains(nodeID))
-                    {
-                        _selectedNodes.Add(nodeID);
-
-                        Nodes[nodeID].SelectedOnSubnetworks.Add(subnetworkID);
-                        Nodes[nodeID].Dirty = true;
-                    }
-                }
-            }
-            else
-            {
-                foreach (var nodeID in nodeIDs)
-                {
-                    if (Nodes[nodeID].IsVirtualNode) continue;
-                    if (_selectedNodes.Contains(nodeID))
-                    {
-                        _selectedNodes.Remove(nodeID);
-
-                        Nodes[nodeID].SelectedOnSubnetworks.Remove(subnetworkID);
-                        Nodes[nodeID].Dirty = true;
-                    }
-                }
-            }
-
-            UpdateSelectedCommunities(subnetworkID);
-        }
-
-        public void ToggleSelectedNodes(IEnumerable<int> nodeIDs, int subnetworkID)
-        {
-            foreach (var nodeID in nodeIDs)
-            {
-                if (Nodes[nodeID].IsVirtualNode) continue;
-
-                if (_selectedNodes.Contains(nodeID))
-                {
-                    _selectedNodes.Remove(nodeID);
-
-                    Nodes[nodeID].SelectedOnSubnetworks.Remove(subnetworkID);
-                    Nodes[nodeID].Dirty = true;
-                }
-                else
-                {
-                    _selectedNodes.Add(nodeID);
-
-                    Nodes[nodeID].SelectedOnSubnetworks.Add(subnetworkID);
-                    Nodes[nodeID].Dirty = true;
-                }
-            }
-
-            UpdateSelectedCommunities(subnetworkID);
-        }
-
-        public void SetSelectedCommunities(IEnumerable<int> commIDs, bool selected, int subnetworkID)
-        {
-            if (selected)
-            {
-                foreach (var commID in commIDs)
-                {
-                    var globalComm = Communities[commID];
-                    if (!globalComm.SelectedOnSubnetworks.Contains(subnetworkID))
-                    {
-                        globalComm.SelectedOnSubnetworks.Add(subnetworkID);
-                        _selectedNodes.UnionWith(globalComm.Nodes.Select(n => n.ID));
-                    }
-                    globalComm.Dirty = true;
-                }
-            }
-            else
-            {
-                foreach (var commID in commIDs)
-                {
-                    var globalComm = Communities[commID];
-                    if (globalComm.SelectedOnSubnetworks.Contains(subnetworkID))
-                    {
-                        globalComm.SelectedOnSubnetworks.Remove(subnetworkID);
-                        _selectedNodes.ExceptWith(globalComm.Nodes.Select(n => n.ID));
-                    }
-                    globalComm.Dirty = true;
-                }
-            }
-
-            UpdateSelectedCommunities(subnetworkID);
-        }
-
-        public void ToggleSelectedCommunities(IEnumerable<int> commIDs, int subnetworkID)
-        {
-            var oldSelectedNodes = new HashSet<int>(_selectedNodes);
-
-            foreach (var commID in commIDs)
-            {
-                var globalComm = Communities[commID];
-                if (globalComm.SelectedOnSubnetworks.Contains(subnetworkID))
-                {
-                    globalComm.SelectedOnSubnetworks.Remove(subnetworkID);
-                    _selectedNodes.ExceptWith(globalComm.Nodes.Select(n => n.ID));
-                }
-                else
-                {
-                    globalComm.SelectedOnSubnetworks.Add(subnetworkID);
-                    _selectedNodes.UnionWith(globalComm.Nodes.Select(n => n.ID));
-                }
-                globalComm.Dirty = true;
-            }
-
-            var newSelected = _selectedNodes.Except(oldSelectedNodes);
-            var removed = oldSelectedNodes.Except(_selectedNodes);
-
-            foreach (var newNodeID in newSelected)
-            {
-                Nodes[newNodeID].SelectedOnSubnetworks.Add(subnetworkID);
-                Nodes[newNodeID].Dirty = true;
-            }
-
-            foreach (var oldNodeID in removed)
-            {
-                Nodes[oldNodeID].SelectedOnSubnetworks.Remove(subnetworkID);
-                Nodes[oldNodeID].Dirty = true;
-            }
-
-            UpdateSelectedCommunities(subnetworkID);
-        }
-
-        // clears both nodes and communities
-        public void ClearSelectedItems()
-        {
-            foreach (var nodeID in _selectedNodes)
-            {
-                Nodes[nodeID].SelectedOnSubnetworks.Clear();
-                Nodes[nodeID].Dirty = true;
-            }
-
-            _selectedNodes.Clear();
-
-            foreach (var (_, comm) in Communities)
-            {
-                comm.SelectedOnSubnetworks.Clear();
-                // just mark all of them dirty, there usually isn't many communities
-                comm.Dirty = true;
-            }
-
-            UpdateSelectedCommunities(-1);
-        }
-
         /*=============== start private methods ===================*/
 
         void ComputeCommunityElems()
@@ -333,11 +177,6 @@ namespace VidiGraph
             {
                 if (!node.IsVirtualNode)
                 {
-                    if (node.CommunityID == -1)
-                    {
-                        Debug.Log(node.ID);
-                        Debug.Log(string.Join(";", node.AncIDsOrderList));
-                    }
                     _communities[node.CommunityID].Nodes.Add(node);
                 }
             }
@@ -471,56 +310,6 @@ namespace VidiGraph
 
                 BuildTreeLinks(childID);
             }
-        }
-
-        // return a list of communityIDs of communities where all of its nodes are selected.
-        // this helps us select a community by also selecting all of its nodes.
-        // hashsets ensure no duplicates.
-        HashSet<int> GetCompleteCommunities(HashSet<int> nodeIDs, int subnetworkID)
-        {
-            // TODO change specs. what is considered "selected"?
-            Dictionary<int, int> curCommSize = new Dictionary<int, int>();
-
-            foreach (var nodeID in nodeIDs)
-            {
-                int commID = Nodes[nodeID].CommunityID;
-
-                if (!curCommSize.ContainsKey(commID))
-                    curCommSize[commID] = 0;
-
-                curCommSize[commID] += 1;
-            }
-
-            HashSet<int> completeComm = new HashSet<int>();
-
-            foreach (var (commID, size) in curCommSize)
-            {
-                if (size == Communities[commID].Nodes.Count)
-                    completeComm.Add(commID);
-            }
-
-            return completeComm;
-        }
-
-        void UpdateSelectedCommunities(int subnetworkID)
-        {
-            // we'll just calculate complete communities every time since there usually isn't a lot of communities.
-            var completeComms = GetCompleteCommunities(_selectedNodes, subnetworkID);
-            var incompleteComms = Communities.Keys.ToHashSet().Except(completeComms);
-
-            foreach (var comm in completeComms)
-            {
-                Communities[comm].SelectedOnSubnetworks.Add(subnetworkID);
-                Communities[comm].Dirty = true;
-            }
-
-            foreach (var comm in incompleteComms)
-            {
-                Communities[comm].SelectedOnSubnetworks.Remove(subnetworkID);
-                Communities[comm].Dirty = true;
-            }
-
-            _selectedComms = completeComms;
         }
     }
 }

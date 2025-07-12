@@ -37,7 +37,12 @@ namespace VidiGraph
         }
 
         public Settings BaseSettings;
+
+        // TODO restrict edit access
         public MultiLayoutContext Context { get { return _context; } }
+
+        public HashSet<int> SelectedNodes { get { return Context.SelectedNodes; } }
+        public HashSet<int> SelectedCommunities { get { return Context.SelectedCommunities; } }
 
         NetworkManager _manager;
 
@@ -164,6 +169,60 @@ namespace VidiGraph
             }
         }
 
+        public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool isSelected)
+        {
+            var validNodes = Context.Nodes.Keys.Intersect(nodeIDs);
+            var updateNodes = nodeIDs.Except(SelectedNodes);        // only update necessary nodes
+
+            if (validNodes.Count() != nodeIDs.Count())
+            {
+                Debug.LogWarning($"Nodes {string.Join(", ", nodeIDs.Except(validNodes))} not found in subnetwork {-1}");
+            }
+
+            Context.SetSelectedNodes(updateNodes, isSelected);
+        }
+
+        public void SetSelectedComms(IEnumerable<int> commIDs, bool isSelected)
+        {
+            var validComms = Context.Communities.Keys.Intersect(commIDs);
+
+            if (validComms.Count() != commIDs.Count())
+            {
+                Debug.LogWarning($"Communities {string.Join(", ", commIDs.Except(validComms))} not found in subnetwork {-1}");
+            }
+
+            Context.SetSelectedComms(validComms, isSelected);
+        }
+
+        public void ToggleSelectedNodes(IEnumerable<int> nodeIDs)
+        {
+            var validNodes = Context.Nodes.Keys.Intersect(nodeIDs);
+
+            if (validNodes.Count() != nodeIDs.Count())
+            {
+                Debug.LogWarning($"Nodes {string.Join(", ", nodeIDs.Except(validNodes))} not found in subnetwork {-1}");
+            }
+
+            Context.ToggleSelectedNodes(validNodes);
+        }
+
+        public void ToggleSelectedComms(IEnumerable<int> commIDs)
+        {
+            var validComms = Context.Communities.Keys.Intersect(commIDs);
+
+            if (validComms.Count() != commIDs.Count())
+            {
+                Debug.LogWarning($"Communities {string.Join(", ", commIDs.Except(validComms))} not found in subnetwork {-1}");
+            }
+
+            Context.ToggleSelectedComms(validComms);
+        }
+
+        public void ClearSelection()
+        {
+            Context.ClearSelection();
+        }
+
         public void BringNodes(IEnumerable<int> nodeIDs)
         {
             _bringNodeTransformer.UpdateOnNextApply(nodeIDs);
@@ -190,16 +249,6 @@ namespace VidiGraph
             _curMover = StartCoroutine(CRMoveNodes(nodeIDs));
         }
 
-        public void EndNodeMove(int nodeID)
-        {
-            CoroutineUtils.StopIfRunning(this, ref _curMover);
-            UpdateNetwork(
-                updateCommunityProps: true,
-                updateStorage: true,
-                updateRenderElements: true
-            );
-        }
-
         public void EndNodesMove()
         {
             CoroutineUtils.StopIfRunning(this, ref _curMover);
@@ -220,16 +269,6 @@ namespace VidiGraph
         {
             CoroutineUtils.StopIfRunning(this, ref _curMover);
             _curMover = StartCoroutine(CRMoveComms(commIDs));
-        }
-
-        public void EndCommMove()
-        {
-            CoroutineUtils.StopIfRunning(this, ref _curMover);
-            UpdateNetwork(
-                updateCommunityProps: true,
-                updateStorage: true,
-                updateRenderElements: true
-            );
         }
 
         public void EndCommsMove()

@@ -28,6 +28,7 @@ namespace VidiGraph
         Dictionary<int, Renderer> _commRenderers = new Dictionary<int, Renderer>();
 
         BSplineShaderWrapper _shaderWrapper = new BSplineShaderWrapper();
+        NetworkManager _networkManager;
         NetworkGlobal _networkGlobal;
         MultiLayoutContext _networkContext;
         int _lastHoveredNode = -1;
@@ -53,7 +54,8 @@ namespace VidiGraph
         {
             Reset();
 
-            _networkGlobal = GameObject.Find("/Network Manager").GetComponent<NetworkGlobal>();
+            _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
+            _networkGlobal = _networkManager.NetworkGlobal;
             _networkContext = (MultiLayoutContext)networkContext;
 
             InitializeShaders();
@@ -121,8 +123,7 @@ namespace VidiGraph
             foreach (var (commID, communityProps) in _networkContext.Communities)
             {
                 var community = _networkGlobal.Communities[commID];
-                var commObj = CommunityRenderUtils.MakeCommunity(CommunityPrefab, transform,
-                    community, communityProps, _networkContext.SubnetworkID);
+                var commObj = CommunityRenderUtils.MakeCommunity(CommunityPrefab, transform, communityProps);
 
                 _communityGameObjs[commID] = commObj;
                 _commRenderers[commID] = commObj.GetComponentInChildren<Renderer>();
@@ -191,14 +192,14 @@ namespace VidiGraph
 
         void UpdateNodes()
         {
-            foreach (var nodeID in _networkContext.Nodes.Keys)
+            foreach (var (nodeID, contextNode) in _networkContext.Nodes)
             {
                 Node globalNode = _networkGlobal.Nodes[nodeID];
-                MultiLayoutContext.Node contextNode = _networkContext.Nodes[nodeID];
 
                 if (DrawVirtualNodes || !globalNode.IsVirtualNode)
                 {
-                    if ((nodeID == _networkGlobal.HoveredNode?.ID) && !globalNode.SelectedOnSubnetworks.Contains(_networkContext.SubnetworkID))
+                    if ((nodeID == _networkGlobal.HoveredNode?.ID)
+                        && !_networkContext.SelectedNodes.Contains(nodeID))
                     {
                         var hoverCol = _networkContext.ContextSettings.NodeHoverColor;
                         NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], hoverCol, _nodeRenderers[nodeID]);
@@ -214,7 +215,7 @@ namespace VidiGraph
                             var hoverCol = _networkContext.ContextSettings.NodeHoverColor;
                             NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], hoverCol, _nodeRenderers[nodeID]);
                         }
-                        if (globalNode.SelectedOnSubnetworks.Contains(_networkContext.SubnetworkID))
+                        if (_networkContext.SelectedNodes.Contains(nodeID))
                             NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], _networkContext.ContextSettings.NodeSelectColor, _nodeRenderers[nodeID]);
                         globalNode.Dirty = contextNode.Dirty = false;
                     }
@@ -228,9 +229,9 @@ namespace VidiGraph
         {
             foreach (var commID in _networkContext.Communities.Keys)
             {
-
                 Community globalComm = _networkGlobal.Communities[commID];
-                if (commID == _networkGlobal.HoveredCommunity?.ID && !globalComm.SelectedOnSubnetworks.Contains(_networkContext.SubnetworkID))
+                if (commID == _networkGlobal.HoveredCommunity?.ID
+                        && !_networkContext.SelectedCommunities.Contains(commID))
                 {
                     var hoverCol = _networkContext.ContextSettings.CommHoverColor;
                     CommunityRenderUtils.SetCommunityColor(_communityGameObjs[commID], hoverCol, _commRenderers[commID]);
@@ -240,15 +241,16 @@ namespace VidiGraph
                 {
                     MultiLayoutContext.Community contextComm = _networkContext.Communities[commID];
 
-                    CommunityRenderUtils.UpdateCommunity(_communityGameObjs[commID], globalComm, contextComm,
-                        _networkContext.ContextSettings.CommSelectColor, _networkContext.SubnetworkID, _commRenderers[commID]);
+                    CommunityRenderUtils.UpdateCommunity(_communityGameObjs[commID], contextComm,
+                        _networkContext.SelectedCommunities.Contains(commID), _networkContext.ContextSettings.CommSelectColor, _commRenderers[commID]);
 
                     if (commID == _networkGlobal.HoveredCommunity?.ID)
                     {
                         var hoverCol = _networkContext.ContextSettings.CommHoverColor;
                         CommunityRenderUtils.SetCommunityColor(_communityGameObjs[commID], hoverCol, _commRenderers[commID]);
                     }
-                    if (globalComm.Selected)
+
+                    if (_networkContext.SelectedCommunities.Contains(commID))
                         CommunityRenderUtils.SetCommunityColor(_communityGameObjs[commID], _networkContext.ContextSettings.CommSelectColor, _commRenderers[commID]);
                     globalComm.Dirty = contextComm.Dirty = false;
                 }
@@ -276,7 +278,9 @@ namespace VidiGraph
         void UpdateGPULinks()
         {
             ComputeControlPoints();
-            _shaderWrapper.UpdateBuffers(_networkGlobal, _networkContext, _controlPointsMap);
+            _shaderWrapper.UpdateBuffers(_networkGlobal, _networkContext,
+                _networkContext.SelectedNodes,
+                _controlPointsMap);
         }
 
         bool NodeNeedsRenderUpdate(int nodeID)

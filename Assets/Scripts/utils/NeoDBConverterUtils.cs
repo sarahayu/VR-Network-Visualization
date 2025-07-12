@@ -28,7 +28,7 @@ namespace VidiGraph
                             ID = node.ID,
                             Label = node.Label,
                             Degree = node.Degree,
-                            Selected = node.Selected,
+                            // Selected = node.Selected,
                             CommunityID = node.CommunityID,
                         });
 
@@ -118,7 +118,7 @@ namespace VidiGraph
                         new
                         {
                             ID = community.ID,
-                            Selected = community.Selected
+                            // Selected = community.Selected
                         });
 
                     return "success";

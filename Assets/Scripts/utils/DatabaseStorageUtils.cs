@@ -287,7 +287,7 @@ namespace VidiGraph
                     if (onlyDirty && !commGlobal.Dirty && !commContext.Dirty) continue;
 
                     var commId = commID;
-                    var selected = commGlobal.Selected;
+                    var selected = false; //commGlobal.Selected;
                     var render_mass = commContext.Mass;
                     var render_massCenter = commContext.MassCenter;
                     var render_size = commContext.Size;
@@ -307,7 +307,7 @@ namespace VidiGraph
                     var nodeId = nodeID;
                     var label = nodeGlobal.Label;
                     var degree = nodeGlobal.Degree;
-                    var selected = nodeGlobal.Selected;
+                    var selected = false; //nodeGlobal.Selected;
                     var commId = nodeGlobal.CommunityID;
                     var render_size = nodeContext.Size;
                     var render_pos = nodeContext.Position.ToString();

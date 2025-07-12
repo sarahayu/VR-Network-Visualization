@@ -42,7 +42,7 @@ namespace VidiGraph
 
         Dictionary<int, GameObject> _commSpheres = new Dictionary<int, GameObject>();
         Dictionary<int, Renderer> _commSphereRends = new Dictionary<int, Renderer>();
-        NetworkGlobal _networkGlobal;
+        NetworkManager _networkManager;
         MinimapContext _networkContext;
         HeightMap _heightMap;
 
@@ -80,7 +80,7 @@ namespace VidiGraph
         {
             Reset();
 
-            _networkGlobal = GameObject.Find("/Network Manager").GetComponent<NetworkGlobal>();
+            _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkContext = (MinimapContext)networkContext;
 
             GameObject linkObj = Instantiate(_meshPrefab, NetworkTransform);
@@ -95,7 +95,7 @@ namespace VidiGraph
             mMaterial.SetFloat("_CurvatureRadius", _curvatureRadius);
 
             var flatMesh = new FlatMesh(
-                networkGlobal: _networkGlobal,
+                networkGlobal: _networkManager.NetworkGlobal,
                 networkContext: _networkContext,
                 subdivideSunflower: 2000,
                 subdivideRidges: 50
@@ -149,9 +149,10 @@ namespace VidiGraph
 
         public override void UpdateRenderElements()
         {
-            foreach (var (communityID, community) in _networkGlobal.Communities)
+            foreach (var (communityID, community) in _networkManager.NetworkGlobal.Communities)
             {
-                if (community.SelectedOnSubnetworks.Contains(-1)) _commSpheres[communityID].SetActive(true);
+                if (_networkManager.SubnSelectedCommunities(-1).Contains(communityID))
+                    _commSpheres[communityID].SetActive(true);
                 else _commSpheres[communityID].SetActive(false);
             }
         }
@@ -226,7 +227,7 @@ namespace VidiGraph
 
         void GenerateNodeColors()
         {
-            _nodeColTex = TerrainTextureUtils.GenerateNodeColsFromGraph(_networkGlobal, _networkContext, _heightMap, TEX_RES_ALBEDO, TEX_RES_ALBEDO);
+            _nodeColTex = TerrainTextureUtils.GenerateNodeColsFromGraph(_networkManager.NetworkGlobal, _networkContext, _heightMap, TEX_RES_ALBEDO, TEX_RES_ALBEDO);
         }
     }
 

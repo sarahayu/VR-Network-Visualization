@@ -11,17 +11,17 @@ namespace VidiGraph
     public static class CommunityRenderUtils
     {
 
-        public static GameObject MakeCommunity(GameObject prefab, Transform transform, Community commGlobal,
-            MultiLayoutContext.Community commProps, int subnetworkID)
+        public static GameObject MakeCommunity(GameObject prefab, Transform transform,
+            MultiLayoutContext.Community commProps)
         {
             GameObject commObj = UnityEngine.Object.Instantiate(prefab, transform);
 
             // community won't be selected anyways so just set select color to transparent
-            return UpdateCommunity(commObj, commGlobal, commProps, Color.clear, subnetworkID);
+            return UpdateCommunity(commObj, commProps, false, Color.clear);
         }
 
-        public static GameObject UpdateCommunity(GameObject commObj, Community commGlobal,
-            MultiLayoutContext.Community commProps, Color selectColor, int subnetworkID, Renderer renderer = null)
+        public static GameObject UpdateCommunity(GameObject commObj, MultiLayoutContext.Community commProps,
+            bool selected, Color selectColor, Renderer renderer = null)
         {
             commObj.transform.localPosition = commProps.MassCenter;
             commObj.transform.localScale = Vector3.one;
@@ -32,7 +32,7 @@ namespace VidiGraph
             MaterialPropertyBlock props = new MaterialPropertyBlock();
 
             renderer.GetPropertyBlock(props);
-            props.SetColor("_Color", commGlobal.SelectedOnSubnetworks.Contains(subnetworkID) ? selectColor : new Color(0f, 0f, 0f, 0f));
+            props.SetColor("_Color", selected ? selectColor : new Color(0f, 0f, 0f, 0f));
             renderer.SetPropertyBlock(props);
 
 
