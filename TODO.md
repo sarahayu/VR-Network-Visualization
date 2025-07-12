@@ -1,5 +1,8 @@
 # TODO
 
+- how to communicate between network input systems to prevent deselecting when selecting on other input
+- transfer selection to new subnetwork
+
 - replicate cluster/node
     - community is global and contexted. main mlcontext is synced to global
     - store all mlnetwork nodes

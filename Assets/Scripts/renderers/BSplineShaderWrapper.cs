@@ -312,6 +312,12 @@ namespace VidiGraph
         {
             // Run the ComputeShader. 1 Thread per segment.
             int kernel = _batchComputeShader.FindKernel("CSMain");
+
+            _batchComputeShader.SetBuffer(kernel, "InSplineData", _inSplineData);
+            _batchComputeShader.SetBuffer(kernel, "InSplineControlPointData", _inSplineControlPointData);
+            _batchComputeShader.SetBuffer(kernel, "InSplineSegmentData", _inSplineSegmentData);
+            _batchComputeShader.SetBuffer(kernel, "OutSamplePointData", _outSampleControlPointData);
+
             _batchComputeShader.Dispatch(kernel, Math.Max(1, Mathf.CeilToInt(_splineSegments.Count / 32)), 1, 1);
 
             Graphics.DrawProcedural(_splineMaterial, new Bounds(Vector3.zero, Vector3.one * 500),
