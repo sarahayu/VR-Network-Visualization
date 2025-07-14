@@ -19,15 +19,15 @@ namespace VidiGraph
         float _surfaceAttractionDist = 0.1f;
         [SerializeField]
         Color _highlightCol = Color.green;
+        [SerializeField]
+        Vector3 _surfSpawnOffset = Vector3.zero;
+        [SerializeField]
+        Transform _spawnOrigin;
 
         public Dictionary<int, GameObject> Surfaces { get { return _surfaces.Values.ToDictionary(si => si.ID, si => si.GameObject); } }
 
         public bool IsMovingSurface { get { return _surfaceMover != null; } }
-
-        public delegate void SurfaceHoverEnterEvent(int surfaceID, HoverEnterEventArgs evt);
-        public event SurfaceHoverEnterEvent OnSurfaceHoverEnter;
-        public delegate void SurfaceHoverExitEvent(int surfaceID, HoverExitEventArgs evt);
-        public event SurfaceHoverExitEvent OnSurfaceHoverExit;
+        public int CurHoveredSurface { get { return _curHoveredSurface; } }
 
         class Surface
         {
@@ -42,6 +42,7 @@ namespace VidiGraph
         Dictionary<int, int> _nodeToSurf = new Dictionary<int, int>();
 
         int _curID = 0;
+        int _curHoveredSurface = -1;
 
         NetworkManager _manager;
         NetworkRenderer _mlRenderer;
@@ -102,6 +103,12 @@ namespace VidiGraph
             return SpawnSurface(_userPos.position + _userPos.rotation * Vector3.forward, Quaternion.FromToRotation(Vector3.up, -_userPos.forward));
         }
 
+        public int SpawnSurfaceFromPointer()
+        {
+            SurfaceInputUtils.CalcPosAndRot(_spawnOrigin, _surfSpawnOffset, out var position, out var rotation);
+            return SpawnSurface(position, rotation);
+        }
+
 
         public void DeleteSurface(int surfID)
         {
@@ -113,6 +120,16 @@ namespace VidiGraph
                 _surfaces.Remove(surfID);
                 _colliders.Remove(surfID);
             }
+        }
+
+        public void HoverSurface(int surfID)
+        {
+            _curHoveredSurface = surfID;
+        }
+
+        public void UnhoverSurface()
+        {
+            _curHoveredSurface = -1;
         }
 
         // return ID of closest surface
@@ -205,12 +222,12 @@ namespace VidiGraph
 
             xrInteractable.hoverEntered.AddListener(evt =>
             {
-                OnSurfaceHoverEnter(id, evt);
+                HoverSurface(id);
             });
 
             xrInteractable.hoverExited.AddListener(evt =>
             {
-                OnSurfaceHoverExit(id, evt);
+                UnhoverSurface();
             });
 
             xrInteractable.selectEntered.AddListener(evt =>

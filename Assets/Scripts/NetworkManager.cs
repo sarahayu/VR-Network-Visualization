@@ -174,7 +174,7 @@ namespace VidiGraph
             }
 
             _handheldNetwork.UpdateRenderElements();
-            _multiLayoutNetworkInput.CheckSelectionActions();
+            UpdateTooltip();
         }
 
         public void ToggleSelectedNodes(IEnumerable<int> nodeIDs, int subnetworkID = -1)
@@ -191,7 +191,7 @@ namespace VidiGraph
             }
 
             _handheldNetwork.UpdateRenderElements();
-            _multiLayoutNetworkInput.CheckSelectionActions();
+            UpdateTooltip();
         }
 
         public void StartMLNodeMove(int nodeID, int subnetworkID = -1)
@@ -294,7 +294,7 @@ namespace VidiGraph
             }
 
             _handheldNetwork.UpdateRenderElements();
-            _multiLayoutNetworkInput.CheckSelectionActions();
+            UpdateTooltip();
         }
 
         public void ToggleSelectedCommunities(IEnumerable<int> commIDs, int subnetworkID = -1)
@@ -311,7 +311,7 @@ namespace VidiGraph
             }
 
             _handheldNetwork.UpdateRenderElements();
-            _multiLayoutNetworkInput.CheckSelectionActions();
+            UpdateTooltip();
         }
 
         public void ClearSelection()
@@ -321,7 +321,7 @@ namespace VidiGraph
             foreach (var subn in _subnetworks.Values) subn.UpdateSelectedElements();
 
             _handheldNetwork.UpdateRenderElements();
-            _multiLayoutNetworkInput.CheckSelectionActions();
+            UpdateTooltip();
         }
 
         // layout = [spherical, cluster, floor]
@@ -925,6 +925,11 @@ namespace VidiGraph
         {
             _multiLayoutNetwork.ClearSelection();
             foreach (var subn in _subnetworks.Values) subn.ClearSelection();
+        }
+
+        void UpdateTooltip()
+        {
+
         }
     }
 }
