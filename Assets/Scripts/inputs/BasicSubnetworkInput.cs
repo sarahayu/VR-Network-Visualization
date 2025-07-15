@@ -234,7 +234,7 @@ namespace VidiGraph
 
                     var selNodes = _networkManager.SubnSelectedNodes(_subnetworkID);
 
-                    if (selNodes.Contains(_subnetworkID))
+                    if (selNodes.Contains(node.ID))
                     {
                         _transformMoverCR = StartCoroutine(CRAllSelectedNodes(node.ID, selNodes));
                         _networkManager.StartMLNodesMove(selNodes, _subnetworkID);

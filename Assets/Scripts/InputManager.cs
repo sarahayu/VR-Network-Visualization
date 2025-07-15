@@ -85,37 +85,37 @@ public class InputManager : MonoBehaviour
 
     void LeftGripAction()
     {
-        LeftGripListener();
+        LeftGripListener?.Invoke();
         _networkManager.ToggleBigNetworkSphericalAndHairball();
     }
 
     void LeftTriggerAction()
     {
-        LeftTriggerListener();
+        LeftTriggerListener?.Invoke();
 
     }
 
     void LeftPrimaryAction()
     {
-        LeftPrimaryListener();
+        LeftPrimaryListener?.Invoke();
 
     }
 
     void LeftSecondaryAction()
     {
-        LeftSecondaryListener();
+        LeftSecondaryListener?.Invoke();
 
     }
 
     void LeftJoystickClickAction()
     {
-        LeftJoystickClickListener();
+        LeftJoystickClickListener?.Invoke();
 
     }
 
     void RightGripAction()
     {
-        RightGripListener();
+        RightGripListener?.Invoke();
 
         if (_networkManager.NetworkGlobal.HoveredCommunity == null
             && _networkManager.NetworkGlobal.HoveredNode == null)
@@ -126,13 +126,13 @@ public class InputManager : MonoBehaviour
 
     void RightTriggerAction()
     {
-        RightTriggerListener();
+        RightTriggerListener?.Invoke();
 
     }
 
     void RightPrimaryAction()
     {
-        RightPrimaryListener();
+        RightPrimaryListener?.Invoke();
 
         if (_surfaceManager.CurHoveredSurface == -1)
             _surfaceManager.SpawnSurfaceFromPointer();
@@ -142,7 +142,7 @@ public class InputManager : MonoBehaviour
 
     void RightSecondaryAction()
     {
-        RightSecondaryListener();
+        RightSecondaryListener?.Invoke();
         var nodeIDs1 = _networkManager.NetworkGlobal.RealNodes.GetRange(0, 10);
         var nodeIDs2 = _networkManager.NetworkGlobal.RealNodes.GetRange(10, 10);
         var linkIDs1 = _networkManager.NetworkGlobal.Links.Values.ToList().GetRange(0, 10).Select(l => l.ID);
@@ -158,7 +158,7 @@ public class InputManager : MonoBehaviour
 
     void RightJoystickClickAction()
     {
-        RightJoystickClickListener();
+        RightJoystickClickListener?.Invoke();
 
     }
 

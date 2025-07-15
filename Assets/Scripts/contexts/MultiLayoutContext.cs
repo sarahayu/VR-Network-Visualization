@@ -127,6 +127,7 @@ namespace VidiGraph
             foreach (var node in networkGlobal.Nodes)
             {
                 Nodes[node.ID] = new Node();
+                Nodes[node.ID].CommunityID = node.CommunityID;
             }
 
             foreach (var link in networkGlobal.Links.Values)
@@ -153,6 +154,7 @@ namespace VidiGraph
             foreach (var nodeID in nodeIDs)
             {
                 Nodes[nodeID] = new Node();
+                Nodes[nodeID].CommunityID = networkGlobal.Nodes[nodeID].CommunityID;
             }
 
             foreach (var link in networkGlobal.Links.Values)
