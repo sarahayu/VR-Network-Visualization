@@ -1,14 +1,16 @@
+/*
+*
+* BasicSubnetworkInput takes care of input logic for elements of subnetworks.
+*
+*/
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
-using TMPro;
-using Unity.XR.CoreUtils;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit;
-using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
@@ -16,16 +18,12 @@ namespace VidiGraph
 {
     public class BasicSubnetworkInput : NetworkInput
     {
-
         NetworkManager _networkManager;
-        SurfaceManager _surfaceManager;
         InputManager _inputManager;
         XRInteractionManager _xrManager;
 
         Community _hoveredCommunity = null;
         Node _hoveredNode = null;
-
-        bool _cancelUpcomingDeselection = false;
 
         Coroutine _unhoverNodeCR = null;
         Coroutine _unhoverCommCR = null;
@@ -47,20 +45,14 @@ namespace VidiGraph
 
         Coroutine _clickWindowCR = null;
         Coroutine _transformMoverCR = null;
-        Coroutine _dupeListenerCR = null;
 
         int _subnetworkID;
 
         public void Initialize(int subnetworkID)
         {
             _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _surfaceManager = GameObject.Find("/Surface Manager").GetComponent<SurfaceManager>();
             _inputManager = GameObject.Find("/Input Manager").GetComponent<InputManager>();
             _xrManager = GameObject.Find("/XR Interaction Manager").GetComponent<XRInteractionManager>();
-
-            // _tooltip.SetActive(false);
-            // _infoCol1 = _tooltip.GetNamedChild("NodeInfo_1").GetComponent<TextMeshProUGUI>();
-            // _infoCol2 = _tooltip.GetNamedChild("NodeInfo_2").GetComponent<TextMeshProUGUI>();
 
             _subnetworkID = subnetworkID;
 
@@ -200,13 +192,6 @@ namespace VidiGraph
 
                     _networkManager.HoverNode(node.ID);
                     _hoveredNode = node;
-
-                    // _tooltip.SetActive(true);
-
-                    // var halves = GetPropsStr(node, 2);
-
-                    // _infoCol1.SetText(halves.Length >= 1 ? halves[0] : "");
-                    // _infoCol2.SetText(halves.Length >= 2 ? halves[1] : "");
                 }
             }
         }
@@ -218,8 +203,6 @@ namespace VidiGraph
                 if (_lastState == ActionState.HoverNode || _lastState == ActionState.UngrabNode)
                 {
                     _lastState = ActionState.UnhoverNode;
-
-                    // _tooltip.SetActive(false);
                 }
             }
         }
@@ -290,7 +273,6 @@ namespace VidiGraph
             yield return new WaitForSeconds(0.1f);
 
             _lastState = ActionState.UnhoverNode;
-            // _tooltip.SetActive(false);
 
             _unhoverNodeCR = null;
         }
@@ -320,11 +302,11 @@ namespace VidiGraph
 
             _inputManager.RightTriggerListener += act = () =>
             {
-                // _xrManager.SelectExit(interactor, interactable);
+                _xrManager.SelectExit(interactor, interactable);
 
-                // _networkManager.CreateSubnetwork(_networkManager.SubnSelectedNodes(-1), -1);
+                _networkManager.CreateSubnetwork(_networkManager.SubnSelectedNodes(_subnetworkID), _subnetworkID);
 
-                // _inputManager.RightTriggerListener -= act;
+                _inputManager.RightTriggerListener -= act;
             };
         }
 

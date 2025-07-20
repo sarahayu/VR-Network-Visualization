@@ -1,6 +1,6 @@
 /*
 *
-* NetworkFileData stores ONLY our JSON file data (no in game variables like in game position, animation time, etc)
+* NetworkFileData stores ONLY our JSON file data (no in-game variables like in game position, animation time, etc).
 *
 */
 
@@ -10,6 +10,8 @@ using UnityEngine;
 
 namespace VidiGraph
 {
+    // uncomment to parse custom propdata inside file
+
     // using Props = BullyProps;
     using Props = FriendProps;
 

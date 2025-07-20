@@ -1,8 +1,10 @@
-using System;
-using System.Collections;
+/*
+*
+* NetworkStorage is base class for classes that store network data somewhere.
+*
+*/
+
 using System.Collections.Generic;
-using System.Linq;
-using Neo4j.Driver;
 using UnityEngine;
 
 namespace VidiGraph

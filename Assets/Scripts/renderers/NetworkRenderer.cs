@@ -1,4 +1,10 @@
-using System;
+/*
+*
+* NetworkRenderer is the base class for network renderers.
+* It abstracts away render element events (e.g. hover, grab) from the rest of the application e.g. input systems, surface manager, etc.
+*
+*/
+
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 

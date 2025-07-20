@@ -18,7 +18,7 @@ namespace VidiGraph
             return retVal;
         }
 
-        public static void InitFromContext(MultiLayoutContext targetContext, MultiLayoutContext sourceContext, BasicSubnetwork.Settings baseSettings)
+        public static void InitFromContext(MultiLayoutContext targetContext, MultiLayoutContext sourceContext)
         {
             foreach (var (nodeID, tNode) in targetContext.Nodes)
             {
@@ -45,20 +45,6 @@ namespace VidiGraph
 
                 tLink.Dirty = true;
             }
-
-            targetContext.ContextSettings.NodeScale = baseSettings.NodeScale;
-            targetContext.ContextSettings.LinkWidth = baseSettings.LinkWidth;
-            targetContext.ContextSettings.EdgeBundlingStrength = baseSettings.EdgeBundlingStrength;
-            targetContext.ContextSettings.CommSelectColor = baseSettings.CommSelectColor;
-            targetContext.ContextSettings.NodeSelectColor = baseSettings.NodeSelectColor;
-            targetContext.ContextSettings.LinkSelectColor = baseSettings.LinkSelectColor;
-            targetContext.ContextSettings.CommHoverColor = baseSettings.CommHoverColor;
-            targetContext.ContextSettings.NodeHoverColor = baseSettings.NodeHoverColor;
-            targetContext.ContextSettings.LinkHoverColor = baseSettings.LinkHoverColor;
-            targetContext.ContextSettings.LinkMinimumAlpha = baseSettings.LinkMinimumAlpha;
-            targetContext.ContextSettings.LinkNormalAlphaFactor = baseSettings.LinkNormalAlphaFactor;
-            targetContext.ContextSettings.LinkContextAlphaFactor = baseSettings.LinkContextAlphaFactor;
-            targetContext.ContextSettings.LinkContext2FocusAlphaFactor = baseSettings.LinkContext2FocusAlphaFactor;
 
             targetContext.GetNodeSize = sourceContext.GetNodeSize;
             targetContext.GetNodeColor = sourceContext.GetNodeColor;

@@ -1,7 +1,10 @@
-using System;
-using System.Collections;
+/*
+*
+* Node is NetworkGlobal's representation of a node.
+*
+*/
+
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace VidiGraph
 {

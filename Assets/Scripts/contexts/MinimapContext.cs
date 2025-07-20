@@ -1,9 +1,8 @@
 /*
-* MinimapContext contains network information specific to MultiLayoutNetwork.
+* MinimapContext contains network information specific to the minimap.
 */
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;

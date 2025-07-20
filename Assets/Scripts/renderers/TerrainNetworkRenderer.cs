@@ -1,5 +1,9 @@
-using System;
-using System.Collections;
+/*
+*
+* TerrainNetworkRenderer is a terrain representation renderer for the minimap network.
+*
+*/
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -13,32 +17,22 @@ namespace VidiGraph
         public Transform NetworkTransform;
 
 
-        [SerializeField]
-        float _meshSize = 1f;
-        [SerializeField]
-        float _meshHeight = 1f;
+        [SerializeField] float _meshSize = 1f;
+        [SerializeField] float _meshHeight = 1f;
 
-        [SerializeField]
-        float _falloff = 1f;
+        [SerializeField] float _falloff = 1f;
 
-        [SerializeField]
-        float _lineColorIntensity = 0.2f;
+        [SerializeField] float _lineColorIntensity = 0.2f;
 
-        [SerializeField]
-        AnimationCurve _falloffShapeFunc = AnimationCurve.Linear(0, 0, 1, 1);
+        [SerializeField] AnimationCurve _falloffShapeFunc = AnimationCurve.Linear(0, 0, 1, 1);
 
-        [SerializeField]
-        AnimationCurve _peakHeightFunc = AnimationCurve.Linear(0, 0, 1, 1);
+        [SerializeField] AnimationCurve _peakHeightFunc = AnimationCurve.Linear(0, 0, 1, 1);
 
-        [SerializeField]
-        AnimationCurve _slackFunc = AnimationCurve.Linear(0, 0.5f, 1, 1);
+        [SerializeField] AnimationCurve _slackFunc = AnimationCurve.Linear(0, 0.5f, 1, 1);
 
-        [SerializeField]
-        float _curvatureRadius = 100f;
-        [SerializeField]
-        GameObject _communityPointPrefab;
-        [SerializeField]
-        float _communityPointSize = 0.1f;
+        [SerializeField] float _curvatureRadius = 100f;
+        [SerializeField] GameObject _communityPointPrefab;
+        [SerializeField] float _communityPointSize = 0.1f;
 
         Dictionary<int, GameObject> _commSpheres = new Dictionary<int, GameObject>();
         Dictionary<int, Renderer> _commSphereRends = new Dictionary<int, Renderer>();
@@ -46,8 +40,7 @@ namespace VidiGraph
         MinimapContext _networkContext;
         HeightMap _heightMap;
 
-        [SerializeField]
-        GameObject _meshPrefab;
+        [SerializeField] GameObject _meshPrefab;
 
         MeshFilter _meshFilter;
         MeshRenderer _meshRenderer;

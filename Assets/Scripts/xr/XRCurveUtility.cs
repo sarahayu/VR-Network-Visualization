@@ -1,4 +1,9 @@
-// this file taken from xr.interaction.toolkit CurveUtility
+/*
+*
+* XRCurveUtility is used by PointerVisualController.
+* I didn't know what to copy so I copied everything directly from XR Interaction Toolkit CurveUtility.
+*
+*/
 
 #if BURST_PRESENT
 using Unity.Burst;

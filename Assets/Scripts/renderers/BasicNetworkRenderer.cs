@@ -1,4 +1,9 @@
-using System.Collections;
+/*
+*
+* BasicNetworkRenderer is a basic node/link renderer for multilayout network (and subnetworks).
+*
+*/
+
 using System.Collections.Generic;
 using UnityEngine;
 

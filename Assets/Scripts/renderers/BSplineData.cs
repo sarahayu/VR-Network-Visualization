@@ -1,4 +1,9 @@
-using System;
+/*
+*
+* BSplineData is used by BSplineShaderWrapper.
+*
+*/
+
 using UnityEngine;
 
 namespace VidiGraph

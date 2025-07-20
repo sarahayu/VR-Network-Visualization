@@ -1,9 +1,10 @@
-using System.Collections;
-using System.Collections.Generic;
+/*
+*
+* NetworkInput is the base class for inputs of networks.
+*
+*/
+
 using UnityEngine;
-using UnityEngine.XR.Interaction.Toolkit;
-using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
-using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 namespace VidiGraph
 {

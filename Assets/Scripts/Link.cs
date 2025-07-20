@@ -1,7 +1,10 @@
-using System;
-using System.Collections;
+/*
+*
+* Link is NetworkGlobal's representation of a link.
+*
+*/
+
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace VidiGraph
 {

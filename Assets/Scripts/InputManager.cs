@@ -1,6 +1,11 @@
+/*
+*
+* InputManager takes care of most input, especially filtering valid inputs. 
+* Other classes may listen to input events via this manager's listeners.
+*
+*/
+
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;

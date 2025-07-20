@@ -1,19 +1,17 @@
 /*
-* NetworkContext3D contains network information specific to MultiLayoutNetwork.
+* MultiLayoutContext contains network information specific to MultiLayoutNetwork and BasicSubnetwork.
 */
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using GK;
 using UnityEngine;
-using UnityEngine.Assertions;
 
 namespace VidiGraph
 {
     public class MultiLayoutContext : NetworkContext
     {
+        [Serializable]
         public class Settings
         {
             public float NodeScale = 1f;

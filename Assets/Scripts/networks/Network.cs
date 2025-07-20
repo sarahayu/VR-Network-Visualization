@@ -1,12 +1,10 @@
 /*
 *
-* TODO Description goes here
+* Network is the base class for any custom networks.
 *
 */
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace VidiGraph

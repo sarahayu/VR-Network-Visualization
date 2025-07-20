@@ -9,34 +9,7 @@ namespace VidiGraph
 {
     public class MultiLayoutNetwork : Network
     {
-        [Serializable]
-        public class Settings
-        {
-            [Range(0.0f, 100f)]
-            public float NodeScale = 1f;
-            [Range(0.0f, 0.1f)]
-            public float LinkWidth = 0.0025f;
-            [Range(0.0f, 1.0f)]
-            public float EdgeBundlingStrength = 0.8f;
-
-            public Color CommSelectColor;
-            public Color NodeSelectColor;
-            public Color LinkSelectColor;
-            public Color CommHoverColor;
-            public Color NodeHoverColor;
-            public Color LinkHoverColor;
-
-            [Range(0.0f, 0.1f)]
-            public float LinkMinimumAlpha = 0.01f;
-            [Range(0.0f, 1.0f)]
-            public float LinkNormalAlphaFactor = 0.05f;
-            [Range(0.0f, 1.0f)]
-            public float LinkContextAlphaFactor = 0.5f;
-            [Range(0.0f, 1.0f)]
-            public float LinkContext2FocusAlphaFactor = 0.8f;
-        }
-
-        public Settings BaseSettings;
+        public MultiLayoutContext.Settings BaseSettings;
 
         // TODO restrict edit access
         public MultiLayoutContext Context { get { return _context; } }
@@ -701,19 +674,7 @@ namespace VidiGraph
 
         void SetContextSettings()
         {
-            _context.ContextSettings.NodeScale = BaseSettings.NodeScale;
-            _context.ContextSettings.LinkWidth = BaseSettings.LinkWidth;
-            _context.ContextSettings.EdgeBundlingStrength = BaseSettings.EdgeBundlingStrength;
-            _context.ContextSettings.CommSelectColor = BaseSettings.CommSelectColor;
-            _context.ContextSettings.NodeSelectColor = BaseSettings.NodeSelectColor;
-            _context.ContextSettings.LinkSelectColor = BaseSettings.LinkSelectColor;
-            _context.ContextSettings.CommHoverColor = BaseSettings.CommHoverColor;
-            _context.ContextSettings.NodeHoverColor = BaseSettings.NodeHoverColor;
-            _context.ContextSettings.LinkHoverColor = BaseSettings.LinkHoverColor;
-            _context.ContextSettings.LinkMinimumAlpha = BaseSettings.LinkMinimumAlpha;
-            _context.ContextSettings.LinkNormalAlphaFactor = BaseSettings.LinkNormalAlphaFactor;
-            _context.ContextSettings.LinkContextAlphaFactor = BaseSettings.LinkContextAlphaFactor;
-            _context.ContextSettings.LinkContext2FocusAlphaFactor = BaseSettings.LinkContext2FocusAlphaFactor;
+            _context.ContextSettings = BaseSettings;
         }
 
         void InitTransformers()

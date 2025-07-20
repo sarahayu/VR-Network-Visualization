@@ -1,8 +1,11 @@
-using System;
-using System.Collections;
+/*
+*
+* BundledNetworkRenderer is a renderer optimized for bundled links for multilayout networks (and subnetworks).
+*
+*/
+
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.PlayerLoop;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 namespace VidiGraph

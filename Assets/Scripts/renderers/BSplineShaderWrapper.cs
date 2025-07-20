@@ -1,5 +1,10 @@
+/*
+*
+* BSplineShaderWrapper is used by BundledNetworkRenderer to simplify shader operations.
+*
+*/
+
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 

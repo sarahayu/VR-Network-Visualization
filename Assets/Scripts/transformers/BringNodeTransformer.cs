@@ -9,10 +9,8 @@ namespace VidiGraph
 {
     public class BringNodeTransformer : NetworkContextTransformer
     {
-        [SerializeField]
-        float _targetSpread = 2f;
-        [SerializeField]
-        float _offset = 0.2f;
+        [SerializeField] float _targetSpread = 2f;
+        [SerializeField] float _offset = 0.2f;
 
         NetworkGlobal _networkGlobal;
         MultiLayoutContext _networkContext;

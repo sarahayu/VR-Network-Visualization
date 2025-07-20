@@ -1,5 +1,9 @@
-using System;
-using System.Collections;
+/*
+*
+* Community is NetworkGlobal's representation of a community.
+*
+*/
+
 using System.Collections.Generic;
 using UnityEngine;
 

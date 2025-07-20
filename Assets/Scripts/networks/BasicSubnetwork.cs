@@ -2,41 +2,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Neo4j.Driver;
 using UnityEngine;
 
 namespace VidiGraph
 {
     public class BasicSubnetwork : Network
     {
-        [Serializable]
-        public class Settings
-        {
-            [Range(0.0f, 100f)]
-            public float NodeScale = 1f;
-            [Range(0.0f, 0.1f)]
-            public float LinkWidth = 0.0025f;
-            [Range(0.0f, 1.0f)]
-            public float EdgeBundlingStrength = 0.8f;
-
-            public Color CommSelectColor;
-            public Color NodeSelectColor;
-            public Color LinkSelectColor;
-            public Color CommHoverColor;
-            public Color NodeHoverColor;
-            public Color LinkHoverColor;
-
-            [Range(0.0f, 0.1f)]
-            public float LinkMinimumAlpha = 0.01f;
-            [Range(0.0f, 1.0f)]
-            public float LinkNormalAlphaFactor = 0.05f;
-            [Range(0.0f, 1.0f)]
-            public float LinkContextAlphaFactor = 0.5f;
-            [Range(0.0f, 1.0f)]
-            public float LinkContext2FocusAlphaFactor = 0.8f;
-        }
-
-        public Settings BaseSettings;
+        public MultiLayoutContext.Settings BaseSettings;
         public MultiLayoutContext Context { get { return _context; } }
 
         public HashSet<int> SelectedNodes { get { return Context.SelectedNodes; } }
@@ -67,7 +39,6 @@ namespace VidiGraph
 
         Coroutine _curAnim = null;
         Coroutine _curMover = null;
-
 
         static int _idCounter = 0;
 
@@ -648,7 +619,8 @@ namespace VidiGraph
         void InitContext(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext)
         {
             _context.SetFromGlobal(_manager.NetworkGlobal, _manager.FileLoader.SphericalLayout, nodeIDs, ID);
-            BasicSubnetworkUtils.InitFromContext(_context, sourceContext, BaseSettings);
+            _context.ContextSettings = BaseSettings;
+            BasicSubnetworkUtils.InitFromContext(_context, sourceContext);
         }
 
         void InitInput()

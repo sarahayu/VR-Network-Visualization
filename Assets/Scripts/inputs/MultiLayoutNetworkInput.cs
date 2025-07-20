@@ -1,14 +1,16 @@
+/*
+*
+* MultiLayoutNetworkInput takes care of input logic for elements of the main multilayout.
+*
+*/
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
-using TMPro;
-using Unity.XR.CoreUtils;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit;
-using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
@@ -17,7 +19,6 @@ namespace VidiGraph
     public class MultiLayoutNetworkInput : NetworkInput
     {
         NetworkManager _networkManager;
-        SurfaceManager _surfaceManager;
         InputManager _inputManager;
         XRInteractionManager _xrManager;
 
@@ -48,7 +49,6 @@ namespace VidiGraph
         public void Initialize()
         {
             _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _surfaceManager = GameObject.Find("/Surface Manager").GetComponent<SurfaceManager>();
             _inputManager = GameObject.Find("/Input Manager").GetComponent<InputManager>();
             _xrManager = GameObject.Find("/XR Interaction Manager").GetComponent<XRInteractionManager>();
 

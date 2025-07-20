@@ -1,11 +1,10 @@
 /*
 *
-* TODO Description goes here
+* NetworkManager is where all network operations are done from.
 *
 */
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -14,14 +13,9 @@ namespace VidiGraph
 {
     public class NetworkManager : MonoBehaviour
     {
-        [SerializeField]
-        MultiLayoutNetwork _multiLayoutNetwork;
-        [SerializeField]
-        MultiLayoutNetworkInput _multiLayoutNetworkInput;
-        [SerializeField]
-        HandheldNetwork _handheldNetwork;
-        [SerializeField]
-        GameObject _subnetworkPrefab;
+        [SerializeField] MultiLayoutNetwork _multiLayoutNetwork;
+        [SerializeField] HandheldNetwork _handheldNetwork;
+        [SerializeField] GameObject _subnetworkPrefab;
 
         Dictionary<int, BasicSubnetwork> _subnetworks = new();
 

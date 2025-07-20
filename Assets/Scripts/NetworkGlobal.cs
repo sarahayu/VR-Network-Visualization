@@ -1,14 +1,10 @@
 /*
 * NetworkGlobal contains all information about the network needed for the network representation(s) in the scene.
-* To avoid bloating this class, anything specific to a network representation should go in a NetworkContext.
+* To avoid bloating this class, anything specific to a network visual representation should go in a NetworkContext.
 */
 
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using UnityEditor;
 using UnityEngine;
 
 namespace VidiGraph

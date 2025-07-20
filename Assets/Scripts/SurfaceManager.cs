@@ -1,3 +1,9 @@
+/*
+*
+* SurfaceManager is where all surface operations are done from.
+*
+*/
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,16 +19,11 @@ namespace VidiGraph
 {
     public class SurfaceManager : MonoBehaviour
     {
-        [SerializeField]
-        GameObject _surfacePrefab;
-        [SerializeField]
-        float _surfaceAttractionDist = 0.1f;
-        [SerializeField]
-        Color _highlightCol = Color.green;
-        [SerializeField]
-        Vector3 _surfSpawnOffset = Vector3.zero;
-        [SerializeField]
-        Transform _spawnOrigin;
+        [SerializeField] GameObject _surfacePrefab;
+        [SerializeField] float _surfaceAttractionDist = 0.1f;
+        [SerializeField] Color _highlightCol = Color.green;
+        [SerializeField] Vector3 _surfSpawnOffset = Vector3.zero;
+        [SerializeField] Transform _spawnOrigin;
 
         public Dictionary<int, GameObject> Surfaces { get { return _surfaces.Values.ToDictionary(si => si.ID, si => si.GameObject); } }
 
@@ -47,7 +48,7 @@ namespace VidiGraph
         NetworkManager _manager;
         NetworkRenderer _mlRenderer;
 
-        MultiLayoutNetwork.Settings _mlSettings;
+        MultiLayoutContext.Settings _mlSettings;
 
 
         Coroutine _surfaceHighlighter = null;
