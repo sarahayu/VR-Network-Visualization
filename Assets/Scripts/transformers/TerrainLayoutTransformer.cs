@@ -1,17 +1,12 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace VidiGraph
 {
     public class TerrainLayoutTransformer : NetworkContextTransformer
     {
-        public Transform SphericalPosition;
-
         NetworkGlobal _networkGlobal;
         MinimapContext _networkContext;
-        TransformInfo _terrainTransform;
 
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
@@ -23,7 +18,6 @@ namespace VidiGraph
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
             _fileLoader = manager.FileLoader;
-            _terrainTransform = new TransformInfo(SphericalPosition);
         }
 
         public override void ApplyTransformation()

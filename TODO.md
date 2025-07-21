@@ -1,6 +1,11 @@
 # TODO
 
-- how to communicate between network input systems to prevent deselecting when selecting on other input
+- minimap is mini of world. have little avatar moving around
+- figure out options interface
+- fix dupe glitch
+- update storage for subgraph data
+- shells for subgraphs
+
 - transfer selection to new subnetwork
 
 - replicate cluster/node
@@ -67,6 +72,7 @@
 - wrap community shape and subgraph shapes
 - when asking to select nodes, does it select on subnetworks as well? - no
 - how do i communicate subnetwork id across renderers and inputs? make it a part of subnetwork context, for a start. now for input...
+- reorganize code
 
 ## Ignore
 - move node moving animation to mln

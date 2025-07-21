@@ -57,7 +57,7 @@ namespace VidiGraph
 
         void InitializeTransformers()
         {
-            _transformer = GetComponentInChildren<TerrainLayoutTransformer>();
+            _transformer = GetComponentInChildren<NetworkContextTransformer>();
             _transformer.Initialize(_manager.NetworkGlobal, _networkContext);
         }
     }
