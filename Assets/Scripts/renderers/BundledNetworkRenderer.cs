@@ -110,8 +110,7 @@ namespace VidiGraph
 
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
-                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps,
-                        _networkContext.ContextSettings.NodeScale);
+                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps);
 
                     _nodeGameObjs[nodeID] = nodeObj;
                     _nodeRenderers[nodeID] = nodeObj.GetComponentInChildren<Renderer>();
@@ -210,8 +209,7 @@ namespace VidiGraph
 
                     if (NodeNeedsRenderUpdate(nodeID))
                     {
-                        NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[nodeID], globalNode, contextNode,
-                            _networkContext.ContextSettings.NodeScale, _nodeRenderers[nodeID]);
+                        NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[nodeID], globalNode, contextNode, _nodeRenderers[nodeID]);
 
                         if (nodeID == _networkGlobal.HoveredNode?.ID)
                         {

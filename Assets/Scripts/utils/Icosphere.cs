@@ -59,15 +59,13 @@ namespace VidiGraph
             return i;
         }
 
-        public static Mesh Create(float radius)
+        public static Mesh Create(float radius, int detail = 1)
         {
             Mesh mesh = new Mesh();
             mesh.Clear();
 
             List<Vector3> vertList = new List<Vector3>();
             Dictionary<long, int> middlePointIndexCache = new Dictionary<long, int>();
-
-            int recursionLevel = 1;
 
             // create 12 vertices of a icosahedron
             float t = (1f + Mathf.Sqrt(5f)) / 2f;
@@ -122,7 +120,7 @@ namespace VidiGraph
 
 
             // refine triangles
-            for (int i = 0; i < recursionLevel; i++)
+            for (int i = 0; i < detail; i++)
             {
                 List<TriangleIndices> faces2 = new List<TriangleIndices>();
                 foreach (var tri in faces)

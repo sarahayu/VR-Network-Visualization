@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using GK;
@@ -28,7 +27,7 @@ namespace VidiGraph
         }
 
 
-        public static Mesh GenerateConvexHull(MultiLayoutContext.Community commProps, IEnumerable<MultiLayoutContext.Node> commNodes)
+        public static Mesh GenerateConvexHull(MultiLayoutContext.Community commProps, IEnumerable<MultiLayoutContext.Node> commNodes, float nodeScale)
         {
             var calc = new ConvexHullCalculator();
             var verts = new List<Vector3>();
@@ -39,15 +38,13 @@ namespace VidiGraph
 
             foreach (var node in commNodes)
             {
-                var size = node.Size + 0.03f;
+                var nodeRadius = node.Size / 2;
+                var buffer = 0.3f;
                 var pos = node.Position - commProps.MassCenter;
 
-                points.Add(pos + Vector3.forward * size);
-                points.Add(pos + Vector3.back * size);
-                points.Add(pos + Vector3.up * size);
-                points.Add(pos + Vector3.down * size);
-                points.Add(pos + Vector3.left * size);
-                points.Add(pos + Vector3.right * size);
+                var mesh = IcoSphere.Create(radius: nodeRadius + buffer * nodeScale);
+
+                points.AddRange(mesh.vertices.Select(v => v + pos));
             }
 
             try

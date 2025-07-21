@@ -84,7 +84,7 @@ namespace VidiGraph
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
                     var nodeProps = _networkProperties.Nodes[node.ID];
-                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, NetworkTransform, node, nodeProps, NodeScale);
+                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, NetworkTransform, node, nodeProps);
 
                     _nodeGameObjs[node.ID] = nodeObj;
                 }
@@ -124,7 +124,7 @@ namespace VidiGraph
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
                     var nodeProps = _networkProperties.Nodes[node.ID];
-                    NodeLinkRenderUtils.UpdateNode(NodePrefab, node, nodeProps, NodeScale);
+                    NodeLinkRenderUtils.UpdateNode(NodePrefab, node, nodeProps);
                 }
             }
         }

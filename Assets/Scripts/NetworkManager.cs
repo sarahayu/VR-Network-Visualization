@@ -67,13 +67,6 @@ namespace VidiGraph
             _multiLayoutNetwork.SetStorageUpdateCallback(() =>
                 _storage?.UpdateStore(_networkGlobal, _multiLayoutNetwork.Context,
                     _subnetworks.Values.Select(sn => sn.Context)));
-
-            PauseRenderUpdate();
-
-            SetMLNodeColorEncoding("Degree", 0, 0.1f, "#00FF00");
-            SetMLNodeSizeEncoding("Degree", -0.01f, 0.1f);
-
-            UnpauseRenderUpdate();
         }
 
         public void Initialize()
@@ -85,6 +78,13 @@ namespace VidiGraph
 
             _multiLayoutNetwork.Initialize();
             _handheldNetwork?.Initialize();
+
+            PauseRenderUpdate();
+
+            SetMLNodeColorEncoding("Degree", 0, 0.1f, "#00FF00");
+            SetMLNodeSizeEncoding("Degree", -0.01f, 0.1f);
+
+            UnpauseRenderUpdate();
         }
 
         public void DrawPreview()

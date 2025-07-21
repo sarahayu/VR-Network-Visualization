@@ -193,7 +193,7 @@ namespace VidiGraph
                 contextCommunity.MassCenter = massCenter;
                 contextCommunity.Size = size;
                 contextCommunity.Nodes = nodes.Select(n => n.ID);
-                contextCommunity.Mesh = MultiLayoutContextUtils.GenerateConvexHull(contextCommunity, nodes.Select(n => Nodes[n.ID]));
+                contextCommunity.Mesh = MultiLayoutContextUtils.GenerateConvexHull(contextCommunity, nodes.Select(n => Nodes[n.ID]), ContextSettings.NodeScale);
 
                 contextCommunity.Dirty = true;
             }
