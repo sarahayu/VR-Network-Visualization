@@ -183,6 +183,7 @@ namespace VidiGraph
         {
             foreach (var (communityID, community) in Communities)
             {
+                if (!community.Dirty) continue;
                 var contextCommunity = Communities[communityID];
                 var nodes = networkGlobal.Communities[communityID].Nodes.Where(n => Nodes.ContainsKey(n.ID));
 
@@ -194,8 +195,6 @@ namespace VidiGraph
                 contextCommunity.Size = size;
                 contextCommunity.Nodes = nodes.Select(n => n.ID);
                 contextCommunity.Mesh = MultiLayoutContextUtils.GenerateConvexHull(contextCommunity, nodes.Select(n => Nodes[n.ID]), ContextSettings.NodeScale);
-
-                contextCommunity.Dirty = true;
             }
         }
 

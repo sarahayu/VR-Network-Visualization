@@ -13,7 +13,7 @@ Shader "Custom/Minimap"
         LOD 200
 
         Pass
-        {            
+        {
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
@@ -49,7 +49,7 @@ Shader "Custom/Minimap"
                 float2 vec = IN.uv - float2(0.5, 0.5);
                 float2 forward = float2(0, -1);
                 float cosVec = dot(vec, forward) / sqrt(vec.x * vec.x + vec.y * vec.y);
- 
+                
                 if (cosVec > cosFOV) darken = half4(1, 1, 1, 1);
                 else darken = _Color;
 

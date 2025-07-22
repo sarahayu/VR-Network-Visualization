@@ -44,6 +44,7 @@ namespace VidiGraph
                     var clusterPos = clusterNodes[node.IdxProcessed]._position3D;
                     _networkContext.Nodes[node.ID].Position = clusterPos;
                     _networkContext.Nodes[node.ID].Dirty = true;
+                    _networkContext.Communities[_networkContext.Nodes[nodeID].CommunityID].Dirty = true;
 
                     foreach (var link in _networkGlobal.NodeLinkMatrixUndir[node.ID])
                     {

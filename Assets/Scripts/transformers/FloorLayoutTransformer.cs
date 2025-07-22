@@ -42,6 +42,7 @@ namespace VidiGraph
                     var floorPos = floorNodes[node.IdxProcessed]._position3D;
                     _networkContext.Nodes[node.ID].Position = _floorTransform.TransformPoint(new Vector3(floorPos.x, floorPos.y, floorPos.z));
                     _networkContext.Nodes[node.ID].Dirty = true;
+                    _networkContext.Communities[_networkContext.Nodes[node.ID].CommunityID].Dirty = true;
 
                     foreach (var link in _networkGlobal.NodeLinkMatrixUndir[node.ID])
                     {

@@ -31,8 +31,19 @@ namespace VidiGraph
             public NodeState State = NodeState.None;
         }
 
-        public Dictionary<Tuple<int, int>, Link> Links = new Dictionary<Tuple<int, int>, Link>();
-        public Dictionary<int, Node> CommunityNodes = new Dictionary<int, Node>();
+        public class Surface
+        {
+            public Vector3 Position;
+            public Quaternion Rotation;
+        }
+
+        public Dictionary<Tuple<int, int>, Link> Links { get; } = new();
+        public Dictionary<int, Node> CommunityNodes { get; } = new();
+        public Dictionary<int, Node> Nodes { get; } = new();
+        public Dictionary<int, Surface> Surfaces { get; } = new();
+
+        // for now, update all nodes if any of them are dirty.
+        public bool NodesDirty { get; set; }
 
         [HideInInspector]
         public TransformInfo CurrentTransform = new TransformInfo();
@@ -42,38 +53,8 @@ namespace VidiGraph
             // expose constructor
         }
 
-        public void SetFromGlobal(NetworkGlobal networkGlobal)
-        {
-            Links.Clear();
-            CommunityNodes.Clear();
-
-            foreach (var community in networkGlobal.Communities.Values)
-            {
-                CommunityNodes[community.ID] = new Node();
-            }
-
-            for (int i = 0; i < networkGlobal.Communities.Count; i++)
-            {
-                for (int j = i + 1; j < networkGlobal.Communities.Count; j++)
-                {
-                    int c1 = networkGlobal.Communities.ElementAt(i).Value.ID;
-                    int c2 = networkGlobal.Communities.ElementAt(j).Value.ID;
-                    Links[CommunityMathUtils.IDsToLinkKey(c1, c2)] = new Link();
-                }
-            }
-
-            if (Links.Count > 100)
-            {
-                var delEntries = Links.Keys.OrderBy(x => UnityEngine.Random.value).ToList().GetRange(100, Links.Keys.Count - 100);
-
-                foreach (var l in delEntries) Links.Remove(l);
-            }
-
-        }
-
         public void RecomputeProps(NetworkGlobal networkGlobal)
         {
-
             foreach (var community in networkGlobal.Communities.Values)
             {
                 CommunityNodes[community.ID].Size = community.Nodes.Count;

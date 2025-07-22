@@ -10,7 +10,10 @@ namespace VidiGraph
         public MinimapContext Context { get { return _networkContext; } }
         NetworkManager _manager;
         NetworkRenderer _renderer;
-        NetworkContextTransformer _transformer;
+        OverviewLayoutTransformer _transformer;
+
+        MultiLayoutNetwork _mlNetwork;
+        Dictionary<int, BasicSubnetwork> _subnetworks;
 
         void Awake()
         {
@@ -25,15 +28,17 @@ namespace VidiGraph
             Draw();
         }
 
-        public void Initialize()
+        public void Initialize(MultiLayoutNetwork mlNetwork, Dictionary<int, BasicSubnetwork> subnetworks)
         {
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _networkContext.SetFromGlobal(_manager.NetworkGlobal);
+            _mlNetwork = mlNetwork;
+            _subnetworks = subnetworks;
 
             InitializeTransformers();
 
+            _transformer.UpdateData(_mlNetwork, _subnetworks.Values);
             _transformer.ApplyTransformation();
-            _networkContext.RecomputeProps(_manager.NetworkGlobal);
+            // _networkContext.RecomputeProps(_manager.NetworkGlobal);
 
             _renderer = GetComponentInChildren<NetworkRenderer>();
             _renderer.Initialize(_networkContext);
@@ -52,12 +57,13 @@ namespace VidiGraph
 
         void Draw()
         {
+            _renderer.UpdateRenderElements();
             _renderer.Draw();
         }
 
         void InitializeTransformers()
         {
-            _transformer = GetComponentInChildren<NetworkContextTransformer>();
+            _transformer = GetComponentInChildren<OverviewLayoutTransformer>();
             _transformer.Initialize(_manager.NetworkGlobal, _networkContext);
         }
     }

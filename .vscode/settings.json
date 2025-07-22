@@ -54,5 +54,8 @@
     },
     "editor.formatOnSave": true,
     "dotnet.preferCSharpExtension": true,
-    "editor.defaultFormatter": "ms-dotnettools.csharp"
+    "editor.defaultFormatter": "ms-dotnettools.csharp",
+    "[shaderlab]": {
+        "editor.defaultFormatter": "litefeel.shaderlabformatter"
+    }
 }

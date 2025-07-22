@@ -29,12 +29,14 @@ namespace VidiGraph
             foreach (var (nodeID, _) in _networkContext.Nodes)
             {
                 var node = _networkGlobal.Nodes[nodeID];
+                if (node.IsVirtualNode) continue;
                 var nodeContext = _networkContext.Nodes[node.ID];
 
                 nodeContext.Size = _networkContext.GetNodeSize(node);
                 nodeContext.Color = _networkContext.GetNodeColor(node);
 
                 nodeContext.Dirty = true;
+                _networkContext.Communities[_networkContext.Nodes[nodeID].CommunityID].Dirty = true;
             }
 
             foreach (var (linkID, _) in _networkContext.Links)

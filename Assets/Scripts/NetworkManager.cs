@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using UnityEngine;
 
@@ -77,7 +78,7 @@ namespace VidiGraph
             _networkGlobal.InitNetwork(_fileLoader);
 
             _multiLayoutNetwork.Initialize();
-            _handheldNetwork?.Initialize();
+            _handheldNetwork?.Initialize(_multiLayoutNetwork, _subnetworks);
 
             PauseRenderUpdate();
 

@@ -38,6 +38,7 @@ namespace VidiGraph
 
                 _networkContext.Nodes[node.ID].Position = _hairballTransform.TransformPoint(hairballNodes[node.IdxProcessed]._position3D);
                 _networkContext.Nodes[node.ID].Dirty = true;
+                _networkContext.Communities[_networkContext.Nodes[node.ID].CommunityID].Dirty = true;
 
                 foreach (var link in _networkGlobal.NodeLinkMatrixDir[node.ID])
                 {

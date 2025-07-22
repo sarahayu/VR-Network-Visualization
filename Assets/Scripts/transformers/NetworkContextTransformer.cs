@@ -10,11 +10,17 @@ namespace VidiGraph
     {
         public abstract void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext);
         public abstract void ApplyTransformation();
-        public abstract TransformInterpolator GetInterpolator();
+        public virtual TransformInterpolator GetInterpolator()
+        {
+            return new TransformInterpolator();
+        }
     }
 
-    abstract public class TransformInterpolator
+    public class TransformInterpolator
     {
-        public abstract void Interpolate(float t);
+        public virtual void Interpolate(float t)
+        {
+            // leave empty
+        }
     }
 }

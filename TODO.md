@@ -1,6 +1,9 @@
 # TODO
 
 - minimap is mini of world. have little avatar moving around
+    - TODO: check if node is virtual before applying context transformations
+    - then, double check that CRMoveNodes is no longer laggy as hell on surface move
+    - spawn surface minis
 - figure out options interface
 - fix dupe glitch
 - update storage for subgraph data

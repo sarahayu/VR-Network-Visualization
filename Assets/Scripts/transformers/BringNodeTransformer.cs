@@ -39,6 +39,7 @@ namespace VidiGraph
                 var nodePos = _networkContext.Nodes[nodeID].Position;
                 _networkContext.Nodes[nodeID].Position = BringNodeUtils.GetDestinationPoint(nodePos, _camera, _targetSpread, _offset);
                 _networkContext.Nodes[nodeID].Dirty = true;
+                _networkContext.Communities[_networkContext.Nodes[nodeID].CommunityID].Dirty = true;
             }
 
             _nodesToUpdate.Clear();

@@ -44,6 +44,7 @@ namespace VidiGraph
                     }
                 }
 
+                _networkContext.Communities[_networkContext.Nodes[nodeID].CommunityID].Dirty = true;
                 _networkContext.Nodes[nodeID].Dirty = true;
             }
 

@@ -42,6 +42,7 @@ namespace VidiGraph
 
                 nodeContext.Position = _sphericalTransform.TransformPoint(sphericalPos);
                 nodeContext.Dirty = true;
+                _networkContext.Communities[_networkContext.Nodes[nodeID].CommunityID].Dirty = true;
 
                 foreach (var link in _networkGlobal.NodeLinkMatrixUndir[nodeID])
                 {
