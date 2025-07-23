@@ -8,6 +8,9 @@
 - fix dupe glitch
 - update storage for subgraph data
 - shells for subgraphs
+- remove communities from global
+- change all new inits to just new()
+- remove empty interpolators
 
 - transfer selection to new subnetwork
 

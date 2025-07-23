@@ -14,19 +14,32 @@ using VidiGraph;
 public class InputManager : MonoBehaviour
 {
 
-    [SerializeField] XRInputButtonReader LeftGrip = new XRInputButtonReader("LeftGrip");
-    [SerializeField] XRInputButtonReader LeftTrigger = new XRInputButtonReader("LeftTrigger");
-    [SerializeField] XRInputButtonReader LeftPrimary = new XRInputButtonReader("LeftPrimary");
-    [SerializeField] XRInputButtonReader LeftSecondary = new XRInputButtonReader("LeftSecondary");
-    [SerializeField] XRInputValueReader<Vector2> LeftJoystick = new XRInputValueReader<Vector2>("LeftJoystick");
-    [SerializeField] XRInputButtonReader LeftJoystickClick = new XRInputButtonReader("LeftJoystickClick");
+    [SerializeField] XRInputButtonReader _leftGrip = new XRInputButtonReader("LeftGrip");
+    [SerializeField] XRInputButtonReader _leftTrigger = new XRInputButtonReader("LeftTrigger");
+    [SerializeField] XRInputButtonReader _leftPrimary = new XRInputButtonReader("LeftPrimary");
+    [SerializeField] XRInputButtonReader _leftSecondary = new XRInputButtonReader("LeftSecondary");
+    [SerializeField] XRInputValueReader<Vector2> _leftJoystick = new XRInputValueReader<Vector2>("LeftJoystick");
+    [SerializeField] XRInputButtonReader _leftJoystickClick = new XRInputButtonReader("LeftJoystickClick");
 
-    [SerializeField] XRInputButtonReader RightGrip = new XRInputButtonReader("RightGrip");
-    [SerializeField] XRInputButtonReader RightTrigger = new XRInputButtonReader("RightTrigger");
-    [SerializeField] XRInputButtonReader RightPrimary = new XRInputButtonReader("RightPrimary");
-    [SerializeField] XRInputButtonReader RightSecondary = new XRInputButtonReader("RightSecondary");
-    [SerializeField] XRInputValueReader<Vector2> RightJoystick = new XRInputValueReader<Vector2>("RightJoystick");
-    [SerializeField] XRInputButtonReader RightJoystickClick = new XRInputButtonReader("RightJoystickClick");
+    [SerializeField] XRInputButtonReader _rightGrip = new XRInputButtonReader("RightGrip");
+    [SerializeField] XRInputButtonReader _rightTrigger = new XRInputButtonReader("RightTrigger");
+    [SerializeField] XRInputButtonReader _rightPrimary = new XRInputButtonReader("RightPrimary");
+    [SerializeField] XRInputButtonReader _rightSecondary = new XRInputButtonReader("RightSecondary");
+    [SerializeField] XRInputValueReader<Vector2> _rightJoystick = new XRInputValueReader<Vector2>("RightJoystick");
+    [SerializeField] XRInputButtonReader _rightJoystickClick = new XRInputButtonReader("RightJoystickClick");
+
+    public XRInputButtonReader LeftGrip { get => _leftGrip; }
+    public XRInputButtonReader LeftTrigger { get => _leftTrigger; }
+    public XRInputButtonReader LeftPrimary { get => _leftPrimary; }
+    public XRInputButtonReader LeftSecondary { get => _leftSecondary; }
+    public XRInputValueReader<Vector2> LeftJoystick { get => _leftJoystick; }
+    public XRInputButtonReader LeftJoystickClick { get => _leftJoystickClick; }
+    public XRInputButtonReader RightGrip { get => _rightGrip; }
+    public XRInputButtonReader RightTrigger { get => _rightTrigger; }
+    public XRInputButtonReader RightPrimary { get => _rightPrimary; }
+    public XRInputButtonReader RightSecondary { get => _rightSecondary; }
+    public XRInputValueReader<Vector2> RightJoystick { get => _rightJoystick; }
+    public XRInputButtonReader RightJoystickClick { get => _rightJoystickClick; }
 
     public event Action LeftGripListener;
     public event Action LeftTriggerListener;
@@ -44,18 +57,18 @@ public class InputManager : MonoBehaviour
 
     void OnEnable()
     {
-        LeftGrip.EnableDirectActionIfModeUsed();
-        LeftTrigger.EnableDirectActionIfModeUsed();
-        LeftPrimary.EnableDirectActionIfModeUsed();
-        LeftSecondary.EnableDirectActionIfModeUsed();
-        LeftJoystick.EnableDirectActionIfModeUsed();
-        LeftJoystickClick.EnableDirectActionIfModeUsed();
-        RightGrip.EnableDirectActionIfModeUsed();
-        RightTrigger.EnableDirectActionIfModeUsed();
-        RightPrimary.EnableDirectActionIfModeUsed();
-        RightSecondary.EnableDirectActionIfModeUsed();
-        RightJoystick.EnableDirectActionIfModeUsed();
-        RightJoystickClick.EnableDirectActionIfModeUsed();
+        _leftGrip.EnableDirectActionIfModeUsed();
+        _leftTrigger.EnableDirectActionIfModeUsed();
+        _leftPrimary.EnableDirectActionIfModeUsed();
+        _leftSecondary.EnableDirectActionIfModeUsed();
+        _leftJoystick.EnableDirectActionIfModeUsed();
+        _leftJoystickClick.EnableDirectActionIfModeUsed();
+        _rightGrip.EnableDirectActionIfModeUsed();
+        _rightTrigger.EnableDirectActionIfModeUsed();
+        _rightPrimary.EnableDirectActionIfModeUsed();
+        _rightSecondary.EnableDirectActionIfModeUsed();
+        _rightJoystick.EnableDirectActionIfModeUsed();
+        _rightJoystickClick.EnableDirectActionIfModeUsed();
     }
 
     // Start is called before the first frame update

@@ -45,6 +45,9 @@ namespace VidiGraph
         // for now, update all nodes if any of them are dirty.
         public bool NodesDirty { get; set; }
 
+        public float Zoom { get; set; } = 1f;
+        public float Scale { get; set; } = 1f;
+
         [HideInInspector]
         public TransformInfo CurrentTransform = new TransformInfo();
 

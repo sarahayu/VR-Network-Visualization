@@ -26,23 +26,24 @@ namespace VidiGraph
         public override void ApplyTransformation()
         {
             TimerUtils.StartTime("MLEncodingTransformer.ApplyTransformation");
-            foreach (var (nodeID, _) in _networkContext.Nodes)
+            foreach (var (nodeID, nodeContext) in _networkContext.Nodes)
             {
                 var node = _networkGlobal.Nodes[nodeID];
                 if (node.IsVirtualNode) continue;
-                var nodeContext = _networkContext.Nodes[node.ID];
 
                 nodeContext.Size = _networkContext.GetNodeSize(node);
                 nodeContext.Color = _networkContext.GetNodeColor(node);
 
                 nodeContext.Dirty = true;
-                _networkContext.Communities[_networkContext.Nodes[nodeID].CommunityID].Dirty = true;
+                _networkContext.Communities[nodeContext.CommunityID].Dirty = true;
             }
 
-            foreach (var (linkID, _) in _networkContext.Links)
+            foreach (var (linkID, linkContext) in _networkContext.Links)
             {
                 var link = _networkGlobal.Links[linkID];
-                var linkContext = _networkContext.Links[link.ID];
+
+                if (_networkGlobal.Nodes[link.SourceNodeID].IsVirtualNode
+                    || _networkGlobal.Nodes[link.TargetNodeID].IsVirtualNode) continue;
 
                 linkContext.Width = _networkContext.GetLinkWidth(link);
                 linkContext.BundlingStrength = _networkContext.GetLinkBundlingStrength(link);

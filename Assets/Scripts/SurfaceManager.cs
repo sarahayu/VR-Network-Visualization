@@ -95,18 +95,22 @@ namespace VidiGraph
             _surfaces[id] = si;
             _colliders[id] = highlighter.GetComponent<Collider>();
 
+            _manager.TriggerRenderUpdate();
+
             return id;
         }
 
         // spawn in front of main camera
         public int SpawnSurface()
         {
+            _manager.TriggerRenderUpdate();
             return SpawnSurface(_userPos.position + _userPos.rotation * Vector3.forward, Quaternion.FromToRotation(Vector3.up, -_userPos.forward));
         }
 
         public int SpawnSurfaceFromPointer()
         {
             SurfaceInputUtils.CalcPosAndRot(_spawnOrigin, _surfSpawnOffset, out var position, out var rotation);
+            _manager.TriggerRenderUpdate();
             return SpawnSurface(position, rotation);
         }
 
@@ -121,6 +125,7 @@ namespace VidiGraph
                 _surfaces.Remove(surfID);
                 _colliders.Remove(surfID);
             }
+            _manager.TriggerRenderUpdate();
         }
 
         public void HoverSurface(int surfID)
@@ -246,6 +251,7 @@ namespace VidiGraph
                 StopCoroutine(_surfaceMover);
                 _surfaceMover = null;
                 _manager.EndMLNodesMove();
+                _manager.TriggerRenderUpdate();
             });
         }
 
@@ -387,6 +393,7 @@ namespace VidiGraph
             _manager.SetMLNodesPosition(nodeIDs, endPositions);
 
             _manager.UnpauseStorageUpdate();
+            _manager.TriggerRenderUpdate();
 
             _attachAnimation = null;
         }

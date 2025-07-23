@@ -37,9 +37,15 @@ namespace VidiGraph
                 };
             }
 
-            foreach (var subn in _subnetworks)
+            _networkContext.Surfaces.Clear();
+
+            foreach (var (surfID, surf) in _surfaceManager.Surfaces)
             {
-                //
+                _networkContext.Surfaces[surfID] = new MinimapContext.Surface()
+                {
+                    Position = surf.transform.position,
+                    Rotation = surf.transform.rotation,
+                };
             }
         }
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -18,6 +19,8 @@ namespace VidiGraph
         ParticleSystem.Particle[] _nodes;
         ParticleSystem _nodeParticles;
         MinimapContext _networkContext;
+
+        Dictionary<int, GameObject> _surfaces = new();
 
         // Start is called before the first frame update
         void Start()
@@ -84,10 +87,12 @@ namespace VidiGraph
             var nodes = _networkContext.Nodes.Values.ToList();
 
             var userPos = _userTransform.position;
+            var userForward = _userTransform.forward;
             userPos.y = 0;
+            var rot = Quaternion.AngleAxis(Vector2.SignedAngle(Vector2.up, new Vector2(userForward.x, userForward.z)), Vector3.up);
             for (int ii = 0; ii < nodes.Count; ++ii)
             {
-                _nodes[ii].position = Quaternion.AngleAxis(-_userTransform.rotation.eulerAngles.y, Vector3.up) * ((nodes[ii].Position - userPos) / 40);
+                _nodes[ii].position = rot * ((nodes[ii].Position - userPos) / (_networkContext.Scale * _networkContext.Zoom));
                 _nodes[ii].startColor = nodes[ii].Color;
                 _nodes[ii].startSize = 0.01f;
                 _nodes[ii].remainingLifetime = 1000000f;
@@ -95,6 +100,27 @@ namespace VidiGraph
             for (int ii = nodes.Count; ii < MAX_NODES; ++ii)
             {
                 _nodes[ii].remainingLifetime = -1f;
+            }
+
+            foreach (var surfID in _networkContext.Surfaces.Keys.Except(_surfaces.Keys))
+            {
+                _surfaces[surfID] = Instantiate(_surfacePrefab, _networkTransform);
+            }
+
+            foreach (var surfID in _surfaces.Keys.Except(_networkContext.Surfaces.Keys))
+            {
+                Destroy(_surfaces[surfID]);
+
+                _surfaces.Remove(surfID);
+            }
+
+            foreach (var (surfID, surf) in _surfaces)
+            {
+                var pos = _networkContext.Surfaces[surfID].Position;
+                pos.y = 0;
+
+                pos = rot * ((pos - userPos) / (_networkContext.Scale * _networkContext.Zoom));
+                surf.transform.SetLocalPositionAndRotation(pos, _networkContext.Surfaces[surfID].Rotation);
             }
         }
     }

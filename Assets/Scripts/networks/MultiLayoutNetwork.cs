@@ -804,6 +804,7 @@ namespace VidiGraph
             {
                 _context.Nodes[nodeID].Position = nodeTransform.position;
                 _context.Nodes[nodeID].Dirty = true;
+                _context.Communities[_context.Nodes[nodeID].CommunityID].Dirty = true;
 
                 UpdateNetwork(
                     updateCommunityProps: true,
@@ -826,6 +827,7 @@ namespace VidiGraph
                 {
                     _context.Nodes[nodeID].Position = nodeTransform.position;
                     _context.Nodes[nodeID].Dirty = true;
+                    _context.Communities[_context.Nodes[nodeID].CommunityID].Dirty = true;
                 }
 
                 // update network without updating the storage for performance reasons
@@ -870,6 +872,8 @@ namespace VidiGraph
                         _context.Nodes[nodeID].Dirty = true;
                     }
                 }
+
+                _context.Communities[commID].Dirty = true;
 
                 lastCommPosition = curPosition;
                 lastCommRotation = curRotation;
@@ -922,6 +926,8 @@ namespace VidiGraph
                             _context.Nodes[nodeID].Position = nodeTransform.position;
                             _context.Nodes[nodeID].Dirty = true;
                         }
+
+                        _context.Communities[commID].Dirty = true;
                     }
                 }
 

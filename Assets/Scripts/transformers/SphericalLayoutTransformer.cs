@@ -42,7 +42,9 @@ namespace VidiGraph
 
                 nodeContext.Position = _sphericalTransform.TransformPoint(sphericalPos);
                 nodeContext.Dirty = true;
-                _networkContext.Communities[_networkContext.Nodes[nodeID].CommunityID].Dirty = true;
+
+                if (!nodeGlobal.IsVirtualNode)
+                    _networkContext.Communities[nodeContext.CommunityID].Dirty = true;
 
                 foreach (var link in _networkGlobal.NodeLinkMatrixUndir[nodeID])
                 {
@@ -65,13 +67,6 @@ namespace VidiGraph
                     link.Dirty = true;
 
                 }
-            }
-
-            // just mark all communities as dirty
-            // TODO optimize?
-            foreach (var comm in _networkGlobal.Communities.Values)
-            {
-                comm.Dirty = true;
             }
 
             _nodesToUpdate.Clear();
@@ -160,13 +155,6 @@ namespace VidiGraph
                 }
             }
 
-            // just mark all communities as dirty
-            // TODO optimize?
-            foreach (var comm in networkGlobal.Communities.Values)
-            {
-                comm.Dirty = true;
-            }
-
             nodesToUpdate.Clear();
         }
 
@@ -177,6 +165,9 @@ namespace VidiGraph
                 _networkContext.Nodes[nodeID].Position
                     = Vector3.Lerp(_startPositions[nodeID], _endPositions[nodeID], Mathf.SmoothStep(0f, 1f, t));
                 _networkContext.Nodes[nodeID].Dirty = true;
+
+                if (_networkContext.Nodes[nodeID].CommunityID != -1)
+                    _networkContext.Communities[_networkContext.Nodes[nodeID].CommunityID].Dirty = true;
             }
         }
     }

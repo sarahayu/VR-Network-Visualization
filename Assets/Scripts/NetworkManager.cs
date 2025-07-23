@@ -136,6 +136,11 @@ namespace VidiGraph
             RenderUpdate();
         }
 
+        public void TriggerRenderUpdate()
+        {
+            RenderUpdate();
+        }
+
         public void ToggleBigNetworkSphericalAndHairball(bool animated = true)
         {
             _multiLayoutNetwork.ToggleSphericalAndHairball(animated);
@@ -223,6 +228,7 @@ namespace VidiGraph
             {
                 _subnetworks[subnetworkID].EndNodesMove();
             }
+            _handheldNetwork.UpdateRenderElements();
         }
 
         public void StartMLCommMove(int commID, int subnetworkID = -1)
@@ -259,6 +265,7 @@ namespace VidiGraph
             {
                 _subnetworks[subnetworkID].EndCommsMove();
             }
+            _handheldNetwork.UpdateRenderElements();
         }
 
         public void HoverCommunity(int commID)

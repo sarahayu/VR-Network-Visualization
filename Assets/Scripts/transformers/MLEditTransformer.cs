@@ -28,6 +28,8 @@ namespace VidiGraph
         {
             foreach (var (nodeID, updates) in _nodeUpdates)
             {
+                if (_networkGlobal.Nodes[nodeID].IsVirtualNode) continue;
+
                 foreach (var update in updates)
                 {
                     switch (update.attr)
@@ -50,6 +52,10 @@ namespace VidiGraph
 
             foreach (var (linkID, updates) in _linkUpdates)
             {
+                var linkGlobal = _networkGlobal.Links[linkID];
+                if (_networkGlobal.Nodes[linkGlobal.SourceNodeID].IsVirtualNode
+                    || _networkGlobal.Nodes[linkGlobal.TargetNodeID].IsVirtualNode) continue;
+
                 foreach (var update in updates)
                 {
                     switch (update.attr)

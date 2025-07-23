@@ -618,9 +618,8 @@ namespace VidiGraph
 
         void InitContext(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext)
         {
-            _context.SetFromGlobal(_manager.NetworkGlobal, _manager.FileLoader.SphericalLayout, nodeIDs, ID);
+            _context.SetFromContext(_manager.NetworkGlobal, sourceContext, nodeIDs);
             _context.ContextSettings = BaseSettings;
-            BasicSubnetworkUtils.InitFromContext(_context, sourceContext);
         }
 
         void InitInput()

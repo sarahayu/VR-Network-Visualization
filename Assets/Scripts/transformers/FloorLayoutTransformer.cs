@@ -35,38 +35,54 @@ namespace VidiGraph
 
             foreach (var commID in _commsToUpdate)
             {
-                _networkGlobal.Communities[commID].Dirty = true;
+                var commContext = _networkContext.Communities[commID];
+                commContext.Dirty = true;
 
-                foreach (var node in _networkGlobal.Communities[commID].Nodes)
+                foreach (var nodeID in commContext.Nodes)
                 {
-                    var floorPos = floorNodes[node.IdxProcessed]._position3D;
-                    _networkContext.Nodes[node.ID].Position = _floorTransform.TransformPoint(new Vector3(floorPos.x, floorPos.y, floorPos.z));
-                    _networkContext.Nodes[node.ID].Dirty = true;
-                    _networkContext.Communities[_networkContext.Nodes[node.ID].CommunityID].Dirty = true;
+                    var nodeGlobal = _networkGlobal.Nodes[nodeID];
 
-                    foreach (var link in _networkGlobal.NodeLinkMatrixUndir[node.ID])
+                    if (nodeGlobal.IsVirtualNode) continue;
+
+                    var nodeContext = _networkContext.Nodes[nodeID];
+
+                    var floorPos = floorNodes[nodeGlobal.IdxProcessed]._position3D;
+                    nodeContext.Position = _floorTransform.TransformPoint(new Vector3(floorPos.x, floorPos.y, floorPos.z));
+                    nodeContext.Dirty = true;
+
+                    foreach (var link in _networkGlobal.NodeLinkMatrixUndir[nodeID])
                     {
                         var linkContext = _networkContext.Links[link.ID];
                         linkContext.BundlingStrength = _networkContext.ContextSettings.EdgeBundlingStrength;
                         linkContext.Alpha = _networkContext.ContextSettings.LinkContext2FocusAlphaFactor;
 
-                        if (link.SourceNodeID == node.ID) linkContext.BundleStart = false;
-                        else linkContext.BundleEnd = false;
+                        if (link.SourceNodeID == nodeID)
+                        {
+                            linkContext.BundleStart = false;
+
+                            if (nodeContext.CommunityID == _networkContext.Nodes[link.TargetNodeID].CommunityID)
+                            {
+                                _networkContext.Links[link.ID].BundlingStrength = 0f;
+                                _networkContext.Links[link.ID].Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
+                            }
+                        }
+                        else
+                        {
+                            linkContext.BundleEnd = false;
+
+                            if (nodeContext.CommunityID == _networkContext.Nodes[link.SourceNodeID].CommunityID)
+                            {
+                                _networkContext.Links[link.ID].BundlingStrength = 0f;
+                                _networkContext.Links[link.ID].Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
+                            }
+                        }
+
                         link.Dirty = true;
                     }
-                }
-
-                foreach (var link in _networkGlobal.Communities[commID].InnerLinks)
-                {
-                    _networkContext.Links[link.ID].BundlingStrength = 0f;
-                    _networkContext.Links[link.ID].Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
-                    link.Dirty = true;
                 }
             }
 
             _commsToUpdate.Clear();
-
-            // _networkContext.CurrentTransform.SetFromTransform(_floorTransform);
         }
 
         public override TransformInterpolator GetInterpolator()

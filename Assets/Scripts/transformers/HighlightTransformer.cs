@@ -28,7 +28,6 @@ namespace VidiGraph
                 if (node.Dirty)
                 {
                     var selected = _manager.IsNodeSelected(nodeID, _networkContext.SubnetworkID);
-                    _networkContext.Nodes[nodeID].Dirty = true;
 
                     foreach (var link in _networkGlobal.NodeLinkMatrixUndir[nodeID])
                     {

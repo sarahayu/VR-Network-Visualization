@@ -36,9 +36,10 @@ namespace VidiGraph
                 // TODO calculate at runtime
                 if (node.IsVirtualNode) continue;
 
-                _networkContext.Nodes[node.ID].Position = _hairballTransform.TransformPoint(hairballNodes[node.IdxProcessed]._position3D);
-                _networkContext.Nodes[node.ID].Dirty = true;
-                _networkContext.Communities[_networkContext.Nodes[node.ID].CommunityID].Dirty = true;
+                var nodeContext = _networkContext.Nodes[node.ID];
+                nodeContext.Position = _hairballTransform.TransformPoint(hairballNodes[node.IdxProcessed]._position3D);
+                nodeContext.Dirty = true;
+                _networkContext.Communities[nodeContext.CommunityID].Dirty = true;
 
                 foreach (var link in _networkGlobal.NodeLinkMatrixDir[node.ID])
                 {
@@ -97,7 +98,6 @@ namespace VidiGraph
 
                 _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
                 _endPositions[node.ID] = endingContextTransform.TransformPoint(hairballNodes[node.IdxProcessed]._position3D);
-                _networkContext.Nodes[node.ID].Dirty = true;
 
                 foreach (var link in networkGlobal.NodeLinkMatrixDir[node.ID])
                 {
@@ -126,13 +126,7 @@ namespace VidiGraph
                 _networkContext.Nodes[nodeID].Position
                     = Vector3.Lerp(_startPositions[nodeID], _endPositions[nodeID], Mathf.SmoothStep(0f, 1f, t));
                 _networkContext.Nodes[nodeID].Dirty = true;
-            }
-
-            // just mark all communities as dirty
-            // TODO optimize?
-            foreach (var comm in _networkContext.Communities.Values)
-            {
-                comm.Dirty = true;
+                _networkContext.Communities[_networkContext.Nodes[nodeID].CommunityID].Dirty = true;
             }
         }
     }

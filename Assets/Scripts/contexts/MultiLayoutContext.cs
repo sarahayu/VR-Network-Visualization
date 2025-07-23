@@ -116,7 +116,7 @@ namespace VidiGraph
             // expose constructor
         }
 
-        public void SetFromGlobal(NetworkGlobal networkGlobal, NetworkFileData networkFile, int subnetworkID = -1)
+        public void SetFromGlobal(NetworkGlobal networkGlobal, NetworkFileData networkFile)
         {
             Nodes.Clear();
             Links.Clear();
@@ -135,15 +135,18 @@ namespace VidiGraph
 
             foreach (var community in networkGlobal.Communities.Values)
             {
-                Communities[community.ID] = new Community();
+                Communities[community.ID] = new Community()
+                {
+                    Nodes = community.Nodes.Select(n => n.ID),
+                };
             }
 
-            _subnetworkID = subnetworkID;
+            _subnetworkID = -1;
 
             SetDefaultEncodings(networkGlobal, networkFile);
         }
 
-        public void SetFromGlobal(NetworkGlobal networkGlobal, NetworkFileData networkFile, IEnumerable<int> nodeIDs, int subnetworkID = -1)
+        public void SetFromContext(NetworkGlobal networkGlobal, MultiLayoutContext otherContext, IEnumerable<int> nodeIDs)
         {
             Nodes.Clear();
             Links.Clear();
@@ -151,33 +154,95 @@ namespace VidiGraph
 
             foreach (var nodeID in nodeIDs)
             {
-                Nodes[nodeID] = new Node();
-                Nodes[nodeID].CommunityID = networkGlobal.Nodes[nodeID].CommunityID;
+                Nodes[nodeID] = new Node()
+                {
+                    CommunityID = otherContext.Nodes[nodeID].CommunityID,
+                    Size = otherContext.Nodes[nodeID].Size,
+                    Color = otherContext.Nodes[nodeID].Color,
+                    Position = otherContext.Nodes[nodeID].Position,
+                    Dirty = true,
+                };
             }
 
-            foreach (var link in networkGlobal.Links.Values)
+            foreach (var link in otherContext.Links.Keys.Select(lid => networkGlobal.Links[lid]))
             {
                 if (nodeIDs.Contains(link.SourceNodeID) && nodeIDs.Contains(link.TargetNodeID))
                 {
-                    Links[link.ID] = new Link();
-                }
-            }
-
-            foreach (var community in networkGlobal.Communities.Values)
-            {
-                if (community.Nodes.Select(n => n.ID).ToHashSet().Intersect(nodeIDs).Count() != 0)
-                {
-                    Communities[community.ID] = new Community()
+                    Links[link.ID] = new Link()
                     {
-                        ID = community.ID
+                        Width = otherContext.Links[link.ID].Width,
+                        BundlingStrength = otherContext.Links[link.ID].BundlingStrength,
+                        ColorStart = otherContext.Links[link.ID].ColorStart,
+                        ColorEnd = otherContext.Links[link.ID].ColorEnd,
+                        BundleStart = otherContext.Links[link.ID].BundleStart,
+                        BundleEnd = otherContext.Links[link.ID].BundleEnd,
+                        Alpha = otherContext.Links[link.ID].Alpha,
+                        Dirty = true,
                     };
                 }
             }
 
-            _subnetworkID = subnetworkID;
+            foreach (var community in otherContext.Communities.Values)
+            {
+                var intersectedNodes = community.Nodes.ToHashSet().Intersect(nodeIDs);
+                if (intersectedNodes.Count() != 0)
+                {
+                    Communities[community.ID] = new Community()
+                    {
+                        ID = community.ID,
+                        Nodes = intersectedNodes
+                    };
+                }
+            }
 
-            SetDefaultEncodings(networkGlobal, networkFile);
+            _subnetworkID = otherContext.SubnetworkID;
+
+            GetNodeSize = otherContext.GetNodeSize;
+            GetNodeColor = otherContext.GetNodeColor;
+            GetLinkWidth = otherContext.GetLinkWidth;
+            GetLinkBundlingStrength = otherContext.GetLinkBundlingStrength;
+            GetLinkColorStart = otherContext.GetLinkColorStart;
+            GetLinkColorEnd = otherContext.GetLinkColorEnd;
+            GetLinkBundleStart = otherContext.GetLinkBundleStart;
+            GetLinkBundleEnd = otherContext.GetLinkBundleEnd;
+            GetLinkAlpha = otherContext.GetLinkAlpha;
         }
+
+        // public void SetFromGlobal(NetworkGlobal networkGlobal, NetworkFileData networkFile, IEnumerable<int> nodeIDs, int subnetworkID = -1)
+        // {
+        //     Nodes.Clear();
+        //     Links.Clear();
+        //     Communities.Clear();
+
+        //     foreach (var nodeID in nodeIDs)
+        //     {
+        //         Nodes[nodeID] = new Node();
+        //         Nodes[nodeID].CommunityID = networkGlobal.Nodes[nodeID].CommunityID;
+        //     }
+
+        //     foreach (var link in networkGlobal.Links.Values)
+        //     {
+        //         if (nodeIDs.Contains(link.SourceNodeID) && nodeIDs.Contains(link.TargetNodeID))
+        //         {
+        //             Links[link.ID] = new Link();
+        //         }
+        //     }
+
+        //     foreach (var community in networkGlobal.Communities.Values)
+        //     {
+        //         if (community.Nodes.Select(n => n.ID).ToHashSet().Intersect(nodeIDs).Count() != 0)
+        //         {
+        //             Communities[community.ID] = new Community()
+        //             {
+        //                 ID = community.ID
+        //             };
+        //         }
+        //     }
+
+        //     _subnetworkID = subnetworkID;
+
+        //     SetDefaultEncodings(networkGlobal, networkFile);
+        // }
 
         public void RecomputeCommProps(NetworkGlobal networkGlobal)
         {
@@ -185,7 +250,7 @@ namespace VidiGraph
             {
                 if (!community.Dirty) continue;
                 var contextCommunity = Communities[communityID];
-                var nodes = networkGlobal.Communities[communityID].Nodes.Where(n => Nodes.ContainsKey(n.ID));
+                var nodes = contextCommunity.Nodes.Select(nid => networkGlobal.Nodes[nid]);
 
                 MultiLayoutContextUtils.ComputeProperties(nodes, Nodes,
                     out var mass, out var massCenter, out var size);
@@ -193,7 +258,6 @@ namespace VidiGraph
                 contextCommunity.Mass = mass;
                 contextCommunity.MassCenter = massCenter;
                 contextCommunity.Size = size;
-                contextCommunity.Nodes = nodes.Select(n => n.ID);
                 contextCommunity.Mesh = MultiLayoutContextUtils.GenerateConvexHull(contextCommunity, nodes.Select(n => Nodes[n.ID]), ContextSettings.NodeScale);
             }
         }
