@@ -45,6 +45,7 @@ namespace VidiGraph
 
         Coroutine _clickWindowCR = null;
         Coroutine _transformMoverCR = null;
+        Action _dupeCB = null;
 
         public void Initialize()
         {
@@ -69,6 +70,8 @@ namespace VidiGraph
 
         void Update()
         {
+            if (!Enabled) return;
+
             if (IsUnhoverNode(_lastState) && _hoveredNode != null)
             {
                 _networkManager.UnhoverNode(_hoveredNode.ID);
@@ -94,6 +97,8 @@ namespace VidiGraph
 
         void OnCommunityHoverEnter(Community community, HoverEnterEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 CoroutineUtils.StopIfRunning(this, ref _unhoverCommCR);
@@ -110,6 +115,8 @@ namespace VidiGraph
 
         void OnCommunityHoverExit(Community community, HoverExitEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 if (_lastState == ActionState.HoverComm || _lastState == ActionState.UngrabComm)
@@ -121,6 +128,8 @@ namespace VidiGraph
 
         void OnCommunityGrabEnter(Community community, SelectEnterEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 if (_lastState == ActionState.HoverComm || _lastState == ActionState.UngrabComm)
@@ -151,6 +160,8 @@ namespace VidiGraph
 
         void OnCommunityGrabExit(Community community, SelectExitEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 if (_lastState == ActionState.GrabComm)
@@ -169,12 +180,20 @@ namespace VidiGraph
 
                     CoroutineUtils.StopIfRunning(this, ref _unhoverCommCR);
                     _unhoverCommCR = StartCoroutine(CRDelayUnhoverComm());
+
+                    if (_dupeCB != null)
+                    {
+                        _inputManager.RightTriggerListener -= _dupeCB;
+                        _dupeCB = null;
+                    }
                 }
             }
         }
 
         void OnNodeHoverEnter(Node node, HoverEnterEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 CoroutineUtils.StopIfRunning(this, ref _unhoverNodeCR);
@@ -191,6 +210,8 @@ namespace VidiGraph
 
         void OnNodeHoverExit(Node node, HoverExitEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 if (_lastState == ActionState.HoverNode || _lastState == ActionState.UngrabNode)
@@ -202,6 +223,8 @@ namespace VidiGraph
 
         void OnNodeGrabEnter(Node node, SelectEnterEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 if (_lastState == ActionState.HoverNode || _lastState == ActionState.UngrabNode)
@@ -234,6 +257,8 @@ namespace VidiGraph
 
         void OnNodeGrabExit(Node node, SelectExitEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 if (_lastState == ActionState.GrabNode)
@@ -252,6 +277,12 @@ namespace VidiGraph
 
                     CoroutineUtils.StopIfRunning(this, ref _unhoverNodeCR);
                     _unhoverNodeCR = StartCoroutine(CRDelayUnhoverNode());
+
+                    if (_dupeCB != null)
+                    {
+                        _inputManager.RightTriggerListener -= _dupeCB;
+                        _dupeCB = null;
+                    }
                 }
             }
         }
@@ -259,15 +290,14 @@ namespace VidiGraph
         // listen for trigger press that triggers a duplication
         void DupeListen(IXRSelectInteractor interactor, IXRSelectInteractable interactable)
         {
-            Action act = null;
-
-            _inputManager.RightTriggerListener += act = () =>
+            _inputManager.RightTriggerListener += _dupeCB = () =>
             {
                 _xrManager.SelectExit(interactor, interactable);
 
                 _networkManager.CreateSubnetwork(_networkManager.SubnSelectedNodes(-1), -1);
 
-                _inputManager.RightTriggerListener -= act;
+                _inputManager.RightTriggerListener -= _dupeCB;
+                _dupeCB = null;
             };
         }
 

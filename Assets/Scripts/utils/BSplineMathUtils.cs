@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace VidiGraph
@@ -19,6 +20,7 @@ namespace VidiGraph
             {
                 return new[] {
                     sourceNodeProps.Position,
+                    Vector3.Lerp(sourceNodeProps.Position, targetNodeProps.Position, 0.5f),
                     targetNodeProps.Position
                 };
             }
@@ -38,6 +40,7 @@ namespace VidiGraph
                     targetNodeProps.Position
                 };
             }
+
             if (tFocus && !sFocus)
             {
                 return new[] {
@@ -48,14 +51,9 @@ namespace VidiGraph
                 };
             }
 
-            Vector3[] result = new Vector3[link.PathInTree.Count];
-
-            for (int i = 0; i < link.PathInTree.Count; i++)
-            {
-                result[i] = networkProperties.Nodes[link.PathInTree[i].ID].Position;
-            }
-
-            return result;
+            return link.PathInTree
+                .Select(n => networkProperties.Nodes[n.ID].Position)
+                .ToArray();
         }
     }
 }

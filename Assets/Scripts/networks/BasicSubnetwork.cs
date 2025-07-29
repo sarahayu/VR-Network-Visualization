@@ -42,7 +42,7 @@ namespace VidiGraph
 
         static int _idCounter = 0;
 
-        int _id = _idCounter++;
+        int _id;
 
         void Update()
         {
@@ -51,6 +51,7 @@ namespace VidiGraph
 
         public void Initialize(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext)
         {
+            _id = _idCounter++;
             GetManager();
 
             InitContext(nodeIDs, sourceContext);
@@ -59,8 +60,8 @@ namespace VidiGraph
 
             // apply initial transformations before first render so we don't get a weird jump
             TransformNetworkNoRender("encoding");
-            _hairballLayoutTransformer.UpdateOnNextApply(nodeIDs);
-            TransformNetworkNoRender("hairball");
+            SetLinksBundlingStrength(_context.Links.Keys, 0f, updateStorage: true, updateRenderElements: false);
+            TransformNetworkNoRender("edit");
 
             InitRenderer();
         }
@@ -153,8 +154,7 @@ namespace VidiGraph
 
         public void ReturnNodes(IEnumerable<int> nodeIDs)
         {
-            _hairballLayoutTransformer.UpdateOnNextApply(nodeIDs);
-            TransformNetwork("hairball", animated: true);
+            throw new NotImplementedException();
         }
 
         public void StartNodeMove(int nodeID)
@@ -754,6 +754,7 @@ namespace VidiGraph
             {
                 _context.Nodes[nodeID].Position = nodeTransform.position;
                 _context.Nodes[nodeID].Dirty = true;
+                _context.Communities[_context.Nodes[nodeID].CommunityID].Dirty = true;
 
                 UpdateNetwork(
                     updateCommunityProps: true,
@@ -776,6 +777,7 @@ namespace VidiGraph
                 {
                     _context.Nodes[nodeID].Position = nodeTransform.position;
                     _context.Nodes[nodeID].Dirty = true;
+                    _context.Communities[_context.Nodes[nodeID].CommunityID].Dirty = true;
                 }
 
                 // update network without updating the storage for performance reasons
@@ -797,7 +799,7 @@ namespace VidiGraph
 
             var comm = GetCommTransform(commID);
 
-            var nodeIDs = _manager.NetworkGlobal.Communities[commID].Nodes.Select(n => n.ID);
+            var nodeIDs = _context.Communities[commID].Nodes;
             var nodeTransforms = nodeIDs.Select(nid => GetNodeTransform(nid));
 
             while (true)
@@ -820,6 +822,8 @@ namespace VidiGraph
                         _context.Nodes[nodeID].Dirty = true;
                     }
                 }
+
+                _context.Communities[commID].Dirty = true;
 
                 lastCommPosition = curPosition;
                 lastCommRotation = curRotation;
@@ -847,7 +851,7 @@ namespace VidiGraph
 
             foreach (var commID in commIDs)
             {
-                nodeIDs[commID] = _manager.NetworkGlobal.Communities[commID].Nodes.Select(n => n.ID);
+                nodeIDs[commID] = _context.Communities[commID].Nodes;
                 nodeTransforms[commID] = nodeIDs[commID].Select(nid => GetNodeTransform(nid));
             }
 
@@ -872,6 +876,8 @@ namespace VidiGraph
                             _context.Nodes[nodeID].Position = nodeTransform.position;
                             _context.Nodes[nodeID].Dirty = true;
                         }
+
+                        _context.Communities[commID].Dirty = true;
                     }
                 }
 

@@ -585,9 +585,9 @@ MonoBehaviour:
     NodeSelectColor: {r: 1, g: 0.56078434, b: 0, a: 0.5372549}
     CommSelectColor: {r: 0.42352942, g: 0.42352942, b: 0.42352942, a: 0.08627451}
     LinkSelectColor: {r: 1, g: 0.56078434, b: 0, a: 0.5372549}
-    NodeHoverColor: {r: 0, g: 0.49803922, b: 1, a: 0.28235295}
+    NodeHoverColor: {r: 0, g: 0.49803922, b: 1, a: 1}
     CommHoverColor: {r: 0.42352942, g: 0.42352942, b: 0.42352942, a: 0.050980393}
-    LinkHoverColor: {r: 1, g: 0, b: 0.9118242, a: 0.28235295}
+    LinkHoverColor: {r: 0, g: 0.49803922, b: 1, a: 0.28235295}
     LinkMinimumAlpha: 0
     LinkNormalAlphaFactor: 0.198
     LinkContextAlphaFactor: 0.5

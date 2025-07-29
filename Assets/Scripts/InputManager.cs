@@ -6,6 +6,7 @@
 */
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
@@ -27,6 +28,8 @@ public class InputManager : MonoBehaviour
     [SerializeField] XRInputButtonReader _rightSecondary = new XRInputButtonReader("RightSecondary");
     [SerializeField] XRInputValueReader<Vector2> _rightJoystick = new XRInputValueReader<Vector2>("RightJoystick");
     [SerializeField] XRInputButtonReader _rightJoystickClick = new XRInputButtonReader("RightJoystickClick");
+
+    [SerializeField] MultiLayoutNetworkInput _mlInput;
 
     public XRInputButtonReader LeftGrip { get => _leftGrip; }
     public XRInputButtonReader LeftTrigger { get => _leftTrigger; }
@@ -54,6 +57,7 @@ public class InputManager : MonoBehaviour
 
     NetworkManager _networkManager;
     SurfaceManager _surfaceManager;
+    Dictionary<int, BasicSubnetworkInput> _subnInput = new();
 
     void OnEnable()
     {
@@ -71,17 +75,25 @@ public class InputManager : MonoBehaviour
         _rightJoystickClick.EnableDirectActionIfModeUsed();
     }
 
-    // Start is called before the first frame update
     void Start()
     {
         _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
         _surfaceManager = GameObject.Find("/Surface Manager").GetComponent<SurfaceManager>();
     }
 
-    // Update is called once per frame
     void Update()
     {
-        HandleInput()?.Invoke();
+        HandleInput().Invoke();
+    }
+
+    public void RegisterSubnetworkInput(BasicSubnetworkInput input, int subnID)
+    {
+        _subnInput[subnID] = input;
+    }
+
+    public void UnregisterSubnetworkInput(int subnID)
+    {
+        _subnInput.Remove(subnID);
     }
 
     Action HandleInput()

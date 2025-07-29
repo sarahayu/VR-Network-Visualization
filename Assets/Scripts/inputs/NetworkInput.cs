@@ -10,6 +10,7 @@ namespace VidiGraph
 {
     public abstract class NetworkInput : MonoBehaviour
     {
+        public bool Enabled { get; set; } = true;
     }
 
 }

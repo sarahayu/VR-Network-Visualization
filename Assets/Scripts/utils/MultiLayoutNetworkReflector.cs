@@ -27,13 +27,13 @@ namespace VidiGraph
             _manager = manager;
             _fileData = manager.FileLoader.SphericalLayout;
 
-            _sampleGlobalNodeProps = ObjectUtils.AsDictionary(manager.NetworkGlobal.Nodes.NodeArray.First());
-            _sampleContextNodeProps = ObjectUtils.AsDictionary(context.Nodes.First().Value);
-            _sampleFileNodeProps = ObjectUtils.AsDictionary(manager.FileLoader.SphericalLayout.nodes.First().props);
+            _sampleGlobalNodeProps = ObjectUtils.AsDictionary(new Node());
+            _sampleContextNodeProps = ObjectUtils.AsDictionary(new MultiLayoutContext.Node());
+            _sampleFileNodeProps = ObjectUtils.AsDictionary(new NodeFileData().props);
 
-            _sampleGlobalLinkProps = ObjectUtils.AsDictionary(manager.NetworkGlobal.Links.First().Value);
-            _sampleContextLinkProps = ObjectUtils.AsDictionary(context.Links.First().Value);
-            _sampleFileLinkProps = ObjectUtils.AsDictionary(manager.FileLoader.SphericalLayout.links.First().props);
+            _sampleGlobalLinkProps = ObjectUtils.AsDictionary(new Link());
+            _sampleContextLinkProps = ObjectUtils.AsDictionary(new MultiLayoutContext.Link());
+            _sampleFileLinkProps = ObjectUtils.AsDictionary(new LinkFileData().props);
         }
 
         public bool TryCastNodeProp<T>(string propname)

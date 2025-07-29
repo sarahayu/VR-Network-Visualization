@@ -56,6 +56,8 @@ namespace VidiGraph
 
             _subnetworkID = subnetworkID;
 
+            _inputManager.RegisterSubnetworkInput(GetComponent<BasicSubnetworkInput>(), _subnetworkID);
+
             var renderer = GetComponentInChildren<NetworkRenderer>();
 
             renderer.OnCommunityHoverEnter += OnCommunityHoverEnter;
@@ -73,6 +75,8 @@ namespace VidiGraph
 
         void Update()
         {
+            if (!Enabled) return;
+
             if (IsUnhoverNode(_lastState) && _hoveredNode != null)
             {
                 _networkManager.UnhoverNode(_hoveredNode.ID);
@@ -84,6 +88,11 @@ namespace VidiGraph
                 _networkManager.UnhoverCommunity(_hoveredCommunity.ID);
                 _hoveredCommunity = null;
             }
+        }
+
+        void OnDestroy()
+        {
+            _inputManager.UnregisterSubnetworkInput(_subnetworkID);
         }
 
         static bool IsUnhoverNode(ActionState state)
@@ -98,6 +107,8 @@ namespace VidiGraph
 
         void OnCommunityHoverEnter(Community community, HoverEnterEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 CoroutineUtils.StopIfRunning(this, ref _unhoverCommCR);
@@ -115,6 +126,8 @@ namespace VidiGraph
 
         void OnCommunityHoverExit(Community community, HoverExitEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 if (_lastState == ActionState.HoverComm || _lastState == ActionState.UngrabComm)
@@ -126,6 +139,8 @@ namespace VidiGraph
 
         void OnCommunityGrabEnter(Community community, SelectEnterEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 if (_lastState == ActionState.HoverComm || _lastState == ActionState.UngrabComm)
@@ -158,6 +173,8 @@ namespace VidiGraph
 
         void OnCommunityGrabExit(Community community, SelectExitEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 if (_lastState == ActionState.GrabComm)
@@ -182,6 +199,8 @@ namespace VidiGraph
 
         void OnNodeHoverEnter(Node node, HoverEnterEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 CoroutineUtils.StopIfRunning(this, ref _unhoverNodeCR);
@@ -198,6 +217,8 @@ namespace VidiGraph
 
         void OnNodeHoverExit(Node node, HoverExitEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 if (_lastState == ActionState.HoverNode || _lastState == ActionState.UngrabNode)
@@ -209,6 +230,8 @@ namespace VidiGraph
 
         void OnNodeGrabEnter(Node node, SelectEnterEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 if (_lastState == ActionState.HoverNode || _lastState == ActionState.UngrabNode)
@@ -241,6 +264,8 @@ namespace VidiGraph
 
         void OnNodeGrabExit(Node node, SelectExitEventArgs evt)
         {
+            if (!Enabled) return;
+
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 if (_lastState == ActionState.GrabNode)

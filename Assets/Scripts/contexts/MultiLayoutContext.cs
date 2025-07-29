@@ -137,6 +137,7 @@ namespace VidiGraph
             {
                 Communities[community.ID] = new Community()
                 {
+                    ID = community.ID,
                     Nodes = community.Nodes.Select(n => n.ID),
                 };
             }

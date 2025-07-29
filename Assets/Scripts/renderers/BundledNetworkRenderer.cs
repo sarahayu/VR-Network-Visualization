@@ -169,21 +169,21 @@ namespace VidiGraph
                 Vector3 target = cp[length - 1];
                 Vector3 dVector3 = target - source;
 
-                Vector3[] cpDistributed = new Vector3[length + 2];
+                Vector3[] cpDistributed = new Vector3[length];
 
                 cpDistributed[0] = source;
 
-                for (int i = 0; i < length; i++)
+                for (int i = 1; i < length - 1; i++)
                 {
                     Vector3 point = cp[i];
 
-                    cpDistributed[i + 1].x = beta * point.x + (1 - beta) * (source.x + (i + 1) * dVector3.x / length);
-                    cpDistributed[i + 1].y = beta * point.y + (1 - beta) * (source.y + (i + 1) * dVector3.y / length);
-                    cpDistributed[i + 1].z = beta * point.z + (1 - beta) * (source.z + (i + 1) * dVector3.z / length);
+                    cpDistributed[i].x = beta * point.x + (1 - beta) * (source.x + (i) * dVector3.x / length);
+                    cpDistributed[i].y = beta * point.y + (1 - beta) * (source.y + (i) * dVector3.y / length);
+                    cpDistributed[i].z = beta * point.z + (1 - beta) * (source.z + (i) * dVector3.z / length);
                 }
-                cpDistributed[length + 1] = target;
+                cpDistributed[length - 1] = target;
 
-                _controlPointsMap[link.ID] = new List<Vector3>(cpDistributed);
+                _controlPointsMap[link.ID] = new List<Vector3>(cp);
             }
         }
 

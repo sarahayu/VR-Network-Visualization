@@ -17,6 +17,7 @@ namespace VidiGraph
         [SerializeField] MultiLayoutNetwork _multiLayoutNetwork;
         [SerializeField] HandheldNetwork _handheldNetwork;
         [SerializeField] GameObject _subnetworkPrefab;
+        [SerializeField] OptionsMenu _optionsMenu;
 
         Dictionary<int, BasicSubnetwork> _subnetworks = new();
 
@@ -174,7 +175,7 @@ namespace VidiGraph
             }
 
             _handheldNetwork.UpdateRenderElements();
-            UpdateTooltip();
+            UpdateOptions();
         }
 
         public void ToggleSelectedNodes(IEnumerable<int> nodeIDs, int subnetworkID = -1)
@@ -191,7 +192,7 @@ namespace VidiGraph
             }
 
             _handheldNetwork.UpdateRenderElements();
-            UpdateTooltip();
+            UpdateOptions();
         }
 
         public void StartMLNodeMove(int nodeID, int subnetworkID = -1)
@@ -296,7 +297,7 @@ namespace VidiGraph
             }
 
             _handheldNetwork.UpdateRenderElements();
-            UpdateTooltip();
+            UpdateOptions();
         }
 
         public void ToggleSelectedCommunities(IEnumerable<int> commIDs, int subnetworkID = -1)
@@ -313,7 +314,7 @@ namespace VidiGraph
             }
 
             _handheldNetwork.UpdateRenderElements();
-            UpdateTooltip();
+            UpdateOptions();
         }
 
         public void ClearSelection()
@@ -323,17 +324,19 @@ namespace VidiGraph
             foreach (var subn in _subnetworks.Values) subn.UpdateSelectedElements();
 
             _handheldNetwork.UpdateRenderElements();
-            UpdateTooltip();
+            UpdateOptions();
         }
 
         // layout = [spherical, cluster, floor]
-        public void SetMLLayout(IEnumerable<int> commIDs, string layout)
+        // TODO extend for subnetworks
+        public void SetMLLayout(IEnumerable<int> commIDs, string layout, int subnetworkID = -1)
         {
             _multiLayoutNetwork.SetLayout(commIDs, layout);
         }
 
         // layout = [spherical, cluster, floor]
-        public void SetMLLayout(int commID, string layout)
+        // TODO extend for subnetworks
+        public void SetMLLayout(int commID, string layout, int subnetworkID = -1)
         {
             _multiLayoutNetwork.SetLayout(new int[] { commID }, layout);
         }
@@ -358,7 +361,8 @@ namespace VidiGraph
             }
             else
             {
-                _subnetworks[subnetworkID].ReturnNodes(nodeIDs);
+                // TODO implement
+                // _subnetworks[subnetworkID].ReturnNodes(nodeIDs);
             }
         }
 
@@ -388,6 +392,8 @@ namespace VidiGraph
 
         public void CreateSubnetwork(IEnumerable<int> nodeIDs, int subnetworkID = -1)
         {
+            if (nodeIDs.Count() == 0) return;
+
             if (subnetworkID == -1)
             {
                 var subn = BasicSubnetworkUtils.CreateBasicSubnetwork(_subnetworkPrefab, transform, nodeIDs,
@@ -929,9 +935,91 @@ namespace VidiGraph
             foreach (var subn in _subnetworks.Values) subn.ClearSelection();
         }
 
-        void UpdateTooltip()
+        void UpdateOptions()
         {
+            int selectedSubnetworkForNodes = -2;
+            bool onlyOneSelectedForNodes = false;
 
+            int selectedSubnetworkForComms = -2;
+            bool onlyOneSelectedForComms = false;
+
+            Dictionary<int, HashSet<int>> subnToSelNodes = new();
+            Dictionary<int, HashSet<int>> subnToSelComms = new();
+
+            int curSubn = -1;
+            do
+            {
+                var selNodes = SubnSelectedNodes(curSubn);
+                if (selNodes.Count != 0)
+                {
+                    if (selectedSubnetworkForNodes == -2)
+                    {
+                        selectedSubnetworkForNodes = curSubn;
+                        onlyOneSelectedForNodes = true;
+                    }
+                    else
+                    {
+                        onlyOneSelectedForNodes = false;
+                    }
+
+                    subnToSelNodes[curSubn] = selNodes;
+                }
+
+                var selComms = SubnSelectedCommunities(curSubn);
+                if (selComms.Count != 0)
+                {
+                    if (selectedSubnetworkForComms == -2)
+                    {
+                        selectedSubnetworkForComms = curSubn;
+                        onlyOneSelectedForComms = true;
+                    }
+                    else
+                    {
+                        onlyOneSelectedForComms = false;
+                    }
+
+                    subnToSelComms[curSubn] = selComms;
+                }
+            } while (_subnetworks.ContainsKey(++curSubn));
+
+            if (selectedSubnetworkForNodes == -2)
+            {
+                _optionsMenu.ClearOptions();
+                return;
+            }
+
+            Dictionary<string, Action> callbacks = new();
+
+            callbacks["Reset node(s)"] = () =>
+            {
+                foreach (var (subn, subnNodes) in subnToSelNodes)
+                {
+                    if (subnNodes.Count != 0) ReturnMLNodes(subnNodes, subn);
+                }
+            };
+
+            callbacks["Bring node(s)"] = () =>
+            {
+                foreach (var (subn, subnNodes) in subnToSelNodes)
+                {
+                    if (subnNodes.Count != 0) BringMLNodes(subnNodes, subn);
+                }
+            };
+
+            if (onlyOneSelectedForComms && selectedSubnetworkForComms == -1)
+            {
+                callbacks["Focus comm."] = () =>
+                {
+                    SetMLLayout(subnToSelComms[-1], "cluster");
+                };
+
+                callbacks["Project comm. floor"] = () =>
+                {
+                    SetMLLayout(subnToSelComms[-1], "floor");
+                };
+            }
+
+            _optionsMenu.SetOptions(callbacks);
         }
     }
 }

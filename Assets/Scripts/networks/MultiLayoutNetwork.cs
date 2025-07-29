@@ -849,7 +849,7 @@ namespace VidiGraph
 
             var comm = GetCommTransform(commID);
 
-            var nodeIDs = _manager.NetworkGlobal.Communities[commID].Nodes.Select(n => n.ID);
+            var nodeIDs = _context.Communities[commID].Nodes;
             var nodeTransforms = nodeIDs.Select(nid => GetNodeTransform(nid));
 
             while (true)
@@ -901,7 +901,7 @@ namespace VidiGraph
 
             foreach (var commID in commIDs)
             {
-                nodeIDs[commID] = _manager.NetworkGlobal.Communities[commID].Nodes.Select(n => n.ID);
+                nodeIDs[commID] = _context.Communities[commID].Nodes;
                 nodeTransforms[commID] = nodeIDs[commID].Select(nid => GetNodeTransform(nid));
             }
 

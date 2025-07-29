@@ -21,6 +21,7 @@ namespace VidiGraph
         public Dictionary<int, List<Link>> NodeLinkMatrixDir { get { return _nodeLinkMatrixDir; } }
         public Node HoveredNode = null;
         public Community HoveredCommunity = null;
+        public int RootNodeID { get => _rootNodeID; }
 
         int _rootNodeID;
         // TODO change to maps... KISS
@@ -111,6 +112,8 @@ namespace VidiGraph
 
                 InitPathInTree(link);
             }
+
+            Debug.Log($"network global is {_links.Count}");
 
             BuildTreeLinks(_rootNodeID);
             CreateCommunities();
