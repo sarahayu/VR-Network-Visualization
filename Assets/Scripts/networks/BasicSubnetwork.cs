@@ -145,14 +145,14 @@ namespace VidiGraph
             Context.ClearSelection();
         }
 
-        public void BringNodes(IEnumerable<int> nodeIDs)
+        public void BringNodes(IEnumerable<int> nodeIDs, Action onFinished = null)
         {
             _bringNodeTransformer.UpdateOnNextApply(nodeIDs);
 
-            TransformNetwork("bringNode", animated: true);
+            TransformNetwork("bringNode", animated: true, onFinished: onFinished);
         }
 
-        public void ReturnNodes(IEnumerable<int> nodeIDs)
+        public void ReturnNodes(IEnumerable<int> nodeIDs, Action onFinished = null)
         {
             throw new NotImplementedException();
         }

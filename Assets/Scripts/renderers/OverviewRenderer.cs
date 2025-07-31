@@ -1,37 +1,54 @@
 using System.Collections.Generic;
 using System.Linq;
+using Unity.XR.CoreUtils;
 using UnityEngine;
 
 namespace VidiGraph
 {
     public class OverviewRenderer : NetworkRenderer
     {
-        const float HEADSET_FOV = 100f;     // Meta Quest FOV
 
         [SerializeField] Transform _networkTransform;
-        [SerializeField] Transform _userTransform;
+        [SerializeField] Transform _headTransform;
+        [SerializeField] Transform _wristTransform;
 
         [SerializeField] GameObject _floorPrefab;
         [SerializeField] GameObject _surfacePrefab;
         [SerializeField] GameObject _nodeCloudPrefab;
 
+        [SerializeField] float _headsetFOV = 100f;     // Meta Quest FOV
+        [SerializeField] float _nodeSize = 0.01f;
+        [SerializeField] float _appearThreshold = 0.7f;
+
         const int MAX_NODES = 3000;
         ParticleSystem.Particle[] _nodes;
         ParticleSystem _nodeParticles;
+        GameObject _floor;
         MinimapContext _networkContext;
 
         Dictionary<int, GameObject> _surfaces = new();
+        GameObject _gyroscope;
 
         // Start is called before the first frame update
         void Start()
         {
-
+            _gyroscope.SetActive(false);
         }
 
         // Update is called once per frame
         void Update()
         {
+            if (Vector3.Dot(-_wristTransform.right, Vector3.up) > _appearThreshold)
+            {
+                _gyroscope.transform.rotation = Quaternion.identity;
+                _floor.transform.rotation = GetTransformRotationXY(_headTransform);
+                _gyroscope.SetActive(true);
+            }
+            else
+            {
+                _gyroscope.SetActive(false);
 
+            }
         }
 
         void Reset()
@@ -52,16 +69,22 @@ namespace VidiGraph
 
             _networkContext = (MinimapContext)networkContext;
 
-            var floorObj = UnityEngine.Object.Instantiate(_floorPrefab, _networkTransform);
+            _gyroscope = new GameObject("gyroscope");
+            _gyroscope.transform.parent = _networkTransform;
+            _gyroscope.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            _gyroscope.transform.localScale = Vector3.one;
+
+            var floorObj = UnityEngine.Object.Instantiate(_floorPrefab, _gyroscope.transform);
 
             MaterialPropertyBlock props = new MaterialPropertyBlock();
-            var renderer = floorObj.GetComponent<Renderer>();
+            _floor = floorObj.GetNamedChild("Floor");
+            var renderer = _floor.GetNamedChild("Floor Visual").GetComponent<Renderer>();
 
             renderer.GetPropertyBlock(props);
-            props.SetFloat("_FOV", HEADSET_FOV);
+            props.SetFloat("_FOV", _headsetFOV);
             renderer.SetPropertyBlock(props);
 
-            var nodesObj = Instantiate(_nodeCloudPrefab, _networkTransform);
+            var nodesObj = Instantiate(_nodeCloudPrefab, _gyroscope.transform);
             _nodeParticles = nodesObj.GetComponent<ParticleSystem>();
 
             _nodes = new ParticleSystem.Particle[MAX_NODES];
@@ -86,17 +109,16 @@ namespace VidiGraph
         {
             var nodes = _networkContext.Nodes.Values.ToList();
 
-            var userPos = _userTransform.position;
-            var userForward = _userTransform.forward;
-            userPos.y = 0;
-            var rot = Quaternion.AngleAxis(Vector2.SignedAngle(Vector2.up, new Vector2(userForward.x, userForward.z)), Vector3.up);
+            var userPos = _wristTransform.position;
+
             for (int ii = 0; ii < nodes.Count; ++ii)
             {
-                _nodes[ii].position = rot * ((nodes[ii].Position - userPos) / (_networkContext.Scale * _networkContext.Zoom));
+                _nodes[ii].position = (nodes[ii].Position - userPos) / (_networkContext.Scale * _networkContext.Zoom);
                 _nodes[ii].startColor = nodes[ii].Color;
-                _nodes[ii].startSize = 0.01f;
-                _nodes[ii].remainingLifetime = 1000000f;
+                _nodes[ii].startSize = _nodeSize;
+                _nodes[ii].remainingLifetime = 10000f;
             }
+
             for (int ii = nodes.Count; ii < MAX_NODES; ++ii)
             {
                 _nodes[ii].remainingLifetime = -1f;
@@ -104,7 +126,7 @@ namespace VidiGraph
 
             foreach (var surfID in _networkContext.Surfaces.Keys.Except(_surfaces.Keys))
             {
-                _surfaces[surfID] = Instantiate(_surfacePrefab, _networkTransform);
+                _surfaces[surfID] = Instantiate(_surfacePrefab, _gyroscope.transform);
             }
 
             foreach (var surfID in _surfaces.Keys.Except(_networkContext.Surfaces.Keys))
@@ -117,11 +139,20 @@ namespace VidiGraph
             foreach (var (surfID, surf) in _surfaces)
             {
                 var pos = _networkContext.Surfaces[surfID].Position;
-                pos.y = 0;
 
-                pos = rot * ((pos - userPos) / (_networkContext.Scale * _networkContext.Zoom));
+                pos = (pos - userPos) / (_networkContext.Scale * _networkContext.Zoom);
                 surf.transform.SetLocalPositionAndRotation(pos, _networkContext.Surfaces[surfID].Rotation);
             }
+        }
+
+        static Quaternion GetTransformRotationXY(Transform transform, bool reverse = false)
+        {
+            // TODO better way to do this??
+            return Quaternion.AngleAxis(
+                    (reverse ? 1 : -1) * Vector2.SignedAngle(
+                        Vector2.up,
+                        new Vector2(transform.forward.x, transform.forward.z)),
+                    Vector3.up);
         }
     }
 }

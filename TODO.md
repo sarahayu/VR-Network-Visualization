@@ -1,10 +1,11 @@
 # TODO
 
-- minimap is mini of world. have little avatar moving around
-    - TODO: check if node is virtual before applying context transformations
-    - then, double check that CRMoveNodes is no longer laggy as hell on surface move
-    - spawn surface minis
-- figure out options interface
+- selection history with hue
+- try make non selected nodes gray, transparent, or outline?
+- try group hulls and only show selected nodes
+- too big buffer error at BSpineShaderWrapper:322
+- clean up transformer code and input code (less nesting!!!)
+
 - fix dupe glitch
 - update storage for subgraph data
 - shells for subgraphs
@@ -79,6 +80,15 @@
 - when asking to select nodes, does it select on subnetworks as well? - no
 - how do i communicate subnetwork id across renderers and inputs? make it a part of subnetwork context, for a start. now for input...
 - reorganize code
+- reimplement options (so we can clean up and test out transformers)
+- shrink nodes
+- add surfaces
+- minimap is mini of world. have little avatar moving around
+    - TODO: check if node is virtual before applying context transformations
+    - then, double check that CRMoveNodes is no longer laggy as hell on surface move
+    - spawn surface minis
+- figure out options interface
+- fix surface icon placement on minimap
 
 ## Ignore
 - move node moving animation to mln

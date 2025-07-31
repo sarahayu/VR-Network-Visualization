@@ -174,7 +174,7 @@ namespace VidiGraph
                 _subnetworks[subnetworkID].UpdateSelectedElements();
             }
 
-            _handheldNetwork.UpdateRenderElements();
+            UpdateHandheld();
             UpdateOptions();
         }
 
@@ -191,7 +191,7 @@ namespace VidiGraph
                 _subnetworks[subnetworkID].UpdateSelectedElements();
             }
 
-            _handheldNetwork.UpdateRenderElements();
+            UpdateHandheld();
             UpdateOptions();
         }
 
@@ -229,7 +229,7 @@ namespace VidiGraph
             {
                 _subnetworks[subnetworkID].EndNodesMove();
             }
-            _handheldNetwork.UpdateRenderElements();
+            UpdateHandheld();
         }
 
         public void StartMLCommMove(int commID, int subnetworkID = -1)
@@ -266,7 +266,7 @@ namespace VidiGraph
             {
                 _subnetworks[subnetworkID].EndCommsMove();
             }
-            _handheldNetwork.UpdateRenderElements();
+            UpdateHandheld();
         }
 
         public void HoverCommunity(int commID)
@@ -296,7 +296,7 @@ namespace VidiGraph
                 _subnetworks[subnetworkID].UpdateSelectedElements();
             }
 
-            _handheldNetwork.UpdateRenderElements();
+            UpdateHandheld();
             UpdateOptions();
         }
 
@@ -313,7 +313,7 @@ namespace VidiGraph
                 _subnetworks[subnetworkID].UpdateSelectedElements();
             }
 
-            _handheldNetwork.UpdateRenderElements();
+            UpdateHandheld();
             UpdateOptions();
         }
 
@@ -323,7 +323,7 @@ namespace VidiGraph
             _multiLayoutNetwork.UpdateSelectedElements();
             foreach (var subn in _subnetworks.Values) subn.UpdateSelectedElements();
 
-            _handheldNetwork.UpdateRenderElements();
+            UpdateHandheld();
             UpdateOptions();
         }
 
@@ -331,25 +331,25 @@ namespace VidiGraph
         // TODO extend for subnetworks
         public void SetMLLayout(IEnumerable<int> commIDs, string layout, int subnetworkID = -1)
         {
-            _multiLayoutNetwork.SetLayout(commIDs, layout);
+            _multiLayoutNetwork.SetLayout(commIDs, layout, UpdateHandheld);
         }
 
         // layout = [spherical, cluster, floor]
         // TODO extend for subnetworks
         public void SetMLLayout(int commID, string layout, int subnetworkID = -1)
         {
-            _multiLayoutNetwork.SetLayout(new int[] { commID }, layout);
+            _multiLayoutNetwork.SetLayout(new int[] { commID }, layout, UpdateHandheld);
         }
 
         public void BringMLNodes(IEnumerable<int> nodeIDs, int subnetworkID = -1)
         {
             if (subnetworkID == -1)
             {
-                _multiLayoutNetwork.BringNodes(nodeIDs);
+                _multiLayoutNetwork.BringNodes(nodeIDs, UpdateHandheld);
             }
             else
             {
-                _subnetworks[subnetworkID].BringNodes(nodeIDs);
+                _subnetworks[subnetworkID].BringNodes(nodeIDs, UpdateHandheld);
             }
         }
 
@@ -357,7 +357,7 @@ namespace VidiGraph
         {
             if (subnetworkID == -1)
             {
-                _multiLayoutNetwork.ReturnNodes(nodeIDs);
+                _multiLayoutNetwork.ReturnNodes(nodeIDs, UpdateHandheld);
             }
             else
             {
@@ -926,6 +926,7 @@ namespace VidiGraph
         {
             _multiLayoutNetwork.UpdateRenderElements();
             foreach (var subn in _subnetworks.Values) subn.UpdateRenderElements();
+            UpdateHandheld();
         }
 
         // clears both nodes and communities
@@ -933,6 +934,11 @@ namespace VidiGraph
         {
             _multiLayoutNetwork.ClearSelection();
             foreach (var subn in _subnetworks.Values) subn.ClearSelection();
+        }
+
+        void UpdateHandheld()
+        {
+            _handheldNetwork.UpdateRenderElements();
         }
 
         void UpdateOptions()

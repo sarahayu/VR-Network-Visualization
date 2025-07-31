@@ -392,8 +392,8 @@ namespace VidiGraph
 
             _manager.SetMLNodesPosition(nodeIDs, endPositions);
 
-            _manager.UnpauseStorageUpdate();
             _manager.TriggerRenderUpdate();
+            _manager.UnpauseStorageUpdate();
 
             _attachAnimation = null;
         }

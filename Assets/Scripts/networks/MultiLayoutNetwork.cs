@@ -119,7 +119,7 @@ namespace VidiGraph
         }
 
         // layout = [spherical, cluster, floor]
-        public void SetLayout(IEnumerable<int> commIDs, string layout)
+        public void SetLayout(IEnumerable<int> commIDs, string layout, Action onFinished = null)
         {
             foreach (var commID in commIDs)
             {
@@ -128,7 +128,7 @@ namespace VidiGraph
                 QueueLayoutChange(commID, layout);
             }
 
-            TransformNetwork(layout, animated: true);
+            TransformNetwork(layout, animated: true, onFinished: onFinished);
         }
 
         void QueueLayoutChange(int commID, string layout)
@@ -196,18 +196,18 @@ namespace VidiGraph
             Context.ClearSelection();
         }
 
-        public void BringNodes(IEnumerable<int> nodeIDs)
+        public void BringNodes(IEnumerable<int> nodeIDs, Action onFinished = null)
         {
             _bringNodeTransformer.UpdateOnNextApply(nodeIDs);
 
-            TransformNetwork("bringNode", animated: true);
+            TransformNetwork("bringNode", animated: true, onFinished: onFinished);
         }
 
-        public void ReturnNodes(IEnumerable<int> nodeIDs)
+        public void ReturnNodes(IEnumerable<int> nodeIDs, Action onFinished = null)
         {
             _sphericalLayoutTransformer.UpdateNodesOnNextApply(nodeIDs);
 
-            TransformNetwork("spherical", animated: true);
+            TransformNetwork("spherical", animated: true, onFinished: onFinished);
         }
 
         public void StartNodeMove(int nodeID)
