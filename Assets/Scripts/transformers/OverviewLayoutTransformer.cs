@@ -6,12 +6,16 @@ namespace VidiGraph
 {
     public class OverviewLayoutTransformer : NetworkContextTransformer
     {
+        const int MAX_NODE_SELECT_AGE = 10;
+
         NetworkGlobal _networkGlobal;
         MinimapContext _networkContext;
         SurfaceManager _surfaceManager;
         NetworkManager _networkManager;
         MultiLayoutNetwork _mlNetwork;
         IEnumerable<BasicSubnetwork> _subnetworks;
+
+        Dictionary<int, Dictionary<int, float>> _nodeSelectionTimes = new();
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
@@ -33,7 +37,7 @@ namespace VidiGraph
                 _networkContext.Nodes[nodeID] = new MinimapContext.Node()
                 {
                     Position = node.Position,
-                    Color = Color.white,
+                    Color = GetNodeColor(nodeID, subnetworkID: -1),
                 };
             }
 
@@ -53,6 +57,27 @@ namespace VidiGraph
         {
             _mlNetwork = mlNetwork;
             _subnetworks = subnetworks;
+        }
+
+        public void PushSelectionEvent(IEnumerable<int> nodes, int subnetworkID = -1)
+        {
+            if (!_nodeSelectionTimes.ContainsKey(subnetworkID)) _nodeSelectionTimes[subnetworkID] = new();
+            foreach (var nodeID in _nodeSelectionTimes[subnetworkID].Keys.ToList()) _nodeSelectionTimes[subnetworkID][nodeID] += 1;
+            foreach (var nodeID in nodes) _nodeSelectionTimes[subnetworkID][nodeID] = 0;
+        }
+
+        Color GetNodeColor(int nodeID, int subnetworkID)
+        {
+            if (!_nodeSelectionTimes.ContainsKey(subnetworkID))
+                return Color.gray;
+
+            var subNodeTimes = _nodeSelectionTimes[subnetworkID];
+
+            if (!subNodeTimes.ContainsKey(nodeID))
+                return Color.gray;
+
+            var lerped = Mathf.Min(1, subNodeTimes[nodeID] / MAX_NODE_SELECT_AGE);
+            return Color.Lerp(Color.blue, Color.white, lerped);
         }
     }
 }

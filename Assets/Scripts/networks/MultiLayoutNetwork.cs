@@ -167,7 +167,7 @@ namespace VidiGraph
             Context.SetSelectedComms(validComms, isSelected);
         }
 
-        public void ToggleSelectedNodes(IEnumerable<int> nodeIDs)
+        public IEnumerable<int> ToggleSelectedNodes(IEnumerable<int> nodeIDs)
         {
             var validNodes = Context.Nodes.Keys.Intersect(nodeIDs);
 
@@ -176,10 +176,10 @@ namespace VidiGraph
                 Debug.LogWarning($"Nodes {string.Join(", ", nodeIDs.Except(validNodes))} not found in subnetwork {-1}");
             }
 
-            Context.ToggleSelectedNodes(validNodes);
+            return Context.ToggleSelectedNodes(validNodes);
         }
 
-        public void ToggleSelectedComms(IEnumerable<int> commIDs)
+        public IEnumerable<int> ToggleSelectedComms(IEnumerable<int> commIDs)
         {
             var validComms = Context.Communities.Keys.Intersect(commIDs);
 
@@ -188,7 +188,7 @@ namespace VidiGraph
                 Debug.LogWarning($"Communities {string.Join(", ", commIDs.Except(validComms))} not found in subnetwork {-1}");
             }
 
-            Context.ToggleSelectedComms(validComms);
+            return Context.ToggleSelectedComms(validComms);
         }
 
         public void ClearSelection()

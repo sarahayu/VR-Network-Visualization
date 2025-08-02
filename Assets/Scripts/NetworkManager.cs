@@ -174,22 +174,28 @@ namespace VidiGraph
                 _subnetworks[subnetworkID].UpdateSelectedElements();
             }
 
+            if (selected)
+                _handheldNetwork.PushSelectionEvent(nodeIDs, subnetworkID);
+
             UpdateHandheld();
             UpdateOptions();
         }
 
         public void ToggleSelectedNodes(IEnumerable<int> nodeIDs, int subnetworkID = -1)
         {
+            IEnumerable<int> newSelecteds;
             if (subnetworkID == -1)
             {
-                _multiLayoutNetwork.ToggleSelectedNodes(nodeIDs);
+                newSelecteds = _multiLayoutNetwork.ToggleSelectedNodes(nodeIDs);
                 _multiLayoutNetwork.UpdateSelectedElements();
             }
             else
             {
-                _subnetworks[subnetworkID].ToggleSelectedNodes(nodeIDs);
+                newSelecteds = _subnetworks[subnetworkID].ToggleSelectedNodes(nodeIDs);
                 _subnetworks[subnetworkID].UpdateSelectedElements();
             }
+
+            _handheldNetwork.PushSelectionEvent(newSelecteds, subnetworkID);
 
             UpdateHandheld();
             UpdateOptions();
@@ -285,16 +291,26 @@ namespace VidiGraph
 
         public void SetSelectedCommunities(IEnumerable<int> commIDs, bool selected, int subnetworkID = -1)
         {
+            IEnumerable<int> selectedNodes = new List<int>();
             if (subnetworkID == -1)
             {
                 _multiLayoutNetwork.SetSelectedComms(commIDs, selected);
                 _multiLayoutNetwork.UpdateSelectedElements();
+
+                if (selected)
+                    selectedNodes = commIDs.Select(cid => _multiLayoutNetwork.Context.Communities[cid].Nodes).SelectMany(i => i);
             }
             else
             {
                 _subnetworks[subnetworkID].SetSelectedComms(commIDs, selected);
                 _subnetworks[subnetworkID].UpdateSelectedElements();
+
+                if (selected)
+                    selectedNodes = commIDs.Select(cid => _subnetworks[subnetworkID].Context.Communities[cid].Nodes).SelectMany(i => i);
             }
+
+
+            _handheldNetwork.PushSelectionEvent(selectedNodes, subnetworkID);
 
             UpdateHandheld();
             UpdateOptions();
@@ -302,16 +318,21 @@ namespace VidiGraph
 
         public void ToggleSelectedCommunities(IEnumerable<int> commIDs, int subnetworkID = -1)
         {
+            IEnumerable<int> selectedNodes;
             if (subnetworkID == -1)
             {
-                _multiLayoutNetwork.ToggleSelectedComms(commIDs);
+                var selectedComms = _multiLayoutNetwork.ToggleSelectedComms(commIDs);
                 _multiLayoutNetwork.UpdateSelectedElements();
+                selectedNodes = selectedComms.Select(cid => _multiLayoutNetwork.Context.Communities[cid].Nodes).SelectMany(i => i);
             }
             else
             {
-                _subnetworks[subnetworkID].ToggleSelectedComms(commIDs);
+                var selectedComms = _subnetworks[subnetworkID].ToggleSelectedComms(commIDs);
                 _subnetworks[subnetworkID].UpdateSelectedElements();
+                selectedNodes = selectedComms.Select(cid => _subnetworks[subnetworkID].Context.Communities[cid].Nodes).SelectMany(i => i);
             }
+
+            _handheldNetwork.PushSelectionEvent(selectedNodes, subnetworkID);
 
             UpdateHandheld();
             UpdateOptions();

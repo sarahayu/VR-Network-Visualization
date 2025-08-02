@@ -73,6 +73,12 @@ namespace VidiGraph
             Draw();
         }
 
+        public void PushSelectionEvent(IEnumerable<int> nodes, int subnetworkID)
+        {
+            _transformer.PushSelectionEvent(nodes, subnetworkID);
+        }
+
+
         /*=============== start private methods ===================*/
 
         void Draw()

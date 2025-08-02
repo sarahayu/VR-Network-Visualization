@@ -74,17 +74,17 @@ namespace VidiGraph
             _gyroscope.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
             _gyroscope.transform.localScale = Vector3.one;
 
-            var floorObj = UnityEngine.Object.Instantiate(_floorPrefab, _gyroscope.transform);
+            var floorObj = Instantiate(_floorPrefab, _gyroscope.transform);
+            var nodesObj = Instantiate(_nodeCloudPrefab, _gyroscope.transform);
 
-            MaterialPropertyBlock props = new MaterialPropertyBlock();
             _floor = floorObj.GetNamedChild("Floor");
-            var renderer = _floor.GetNamedChild("Floor Visual").GetComponent<Renderer>();
 
+            var renderer = _floor.GetNamedChild("Floor Visual").GetComponent<Renderer>();
+            MaterialPropertyBlock props = new MaterialPropertyBlock();
             renderer.GetPropertyBlock(props);
             props.SetFloat("_FOV", _headsetFOV);
             renderer.SetPropertyBlock(props);
 
-            var nodesObj = Instantiate(_nodeCloudPrefab, _gyroscope.transform);
             _nodeParticles = nodesObj.GetComponent<ParticleSystem>();
 
             _nodes = new ParticleSystem.Particle[MAX_NODES];
@@ -110,18 +110,19 @@ namespace VidiGraph
             var nodes = _networkContext.Nodes.Values.ToList();
 
             var userPos = _wristTransform.position;
+            var totScale = _networkContext.Scale * _networkContext.Zoom;
 
-            for (int ii = 0; ii < nodes.Count; ++ii)
+            for (int i = 0; i < nodes.Count; i++)
             {
-                _nodes[ii].position = (nodes[ii].Position - userPos) / (_networkContext.Scale * _networkContext.Zoom);
-                _nodes[ii].startColor = nodes[ii].Color;
-                _nodes[ii].startSize = _nodeSize;
-                _nodes[ii].remainingLifetime = 10000f;
+                _nodes[i].position = (nodes[i].Position - userPos) / totScale;
+                _nodes[i].startColor = nodes[i].Color;
+                _nodes[i].startSize = _nodeSize;
+                _nodes[i].remainingLifetime = Mathf.Infinity;
             }
 
-            for (int ii = nodes.Count; ii < MAX_NODES; ++ii)
+            for (int i = nodes.Count; i < MAX_NODES; i++)
             {
-                _nodes[ii].remainingLifetime = -1f;
+                _nodes[i].remainingLifetime = -1f;
             }
 
             foreach (var surfID in _networkContext.Surfaces.Keys.Except(_surfaces.Keys))
@@ -138,9 +139,7 @@ namespace VidiGraph
 
             foreach (var (surfID, surf) in _surfaces)
             {
-                var pos = _networkContext.Surfaces[surfID].Position;
-
-                pos = (pos - userPos) / (_networkContext.Scale * _networkContext.Zoom);
+                var pos = (_networkContext.Surfaces[surfID].Position - userPos) / totScale;
                 surf.transform.SetLocalPositionAndRotation(pos, _networkContext.Surfaces[surfID].Rotation);
             }
         }

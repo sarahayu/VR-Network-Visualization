@@ -1,6 +1,5 @@
 # TODO
 
-- selection history with hue
 - try make non selected nodes gray, transparent, or outline?
 - try group hulls and only show selected nodes
 - too big buffer error at BSpineShaderWrapper:322
@@ -89,6 +88,7 @@
     - spawn surface minis
 - figure out options interface
 - fix surface icon placement on minimap
+- selection history with hue
 
 ## Ignore
 - move node moving animation to mln

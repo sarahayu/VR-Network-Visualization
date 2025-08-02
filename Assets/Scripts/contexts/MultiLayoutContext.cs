@@ -276,10 +276,16 @@ namespace VidiGraph
 
         public void SetSelectedComms(IEnumerable<int> commIDs, bool isSelected)
         {
+            foreach (var commID in commIDs)
+            {
+                Communities[commID].Dirty = true;
+            }
+
             SetSelectedNodes(GetNodesFromCommunities(commIDs), isSelected);
         }
 
-        public void ToggleSelectedNodes(IEnumerable<int> nodeIDs)
+        // returns nodeIDs that are now selected
+        public IEnumerable<int> ToggleSelectedNodes(IEnumerable<int> nodeIDs)
         {
             var selNodes = SelectedNodes;
             var newSelNodes = nodeIDs.Except(selNodes);
@@ -287,9 +293,12 @@ namespace VidiGraph
 
             SetSelectedNodes(newSelNodes, true);
             SetSelectedNodes(newUnselNodes, false);
+
+            return newSelNodes;
         }
 
-        public void ToggleSelectedComms(IEnumerable<int> commIDs)
+        // returns commIDs that are now selected
+        public IEnumerable<int> ToggleSelectedComms(IEnumerable<int> commIDs)
         {
             var selComms = SelectedCommunities;
             var newSelComms = commIDs.Except(selComms);
@@ -297,10 +306,13 @@ namespace VidiGraph
 
             SetSelectedComms(newSelComms, true);
             SetSelectedComms(newUnselComms, false);
+
+            return newSelComms;
         }
 
         public void ClearSelection()
         {
+            SetSelectedComms(SelectedCommunities, false);
             SetSelectedNodes(SelectedNodes, false);
         }
 

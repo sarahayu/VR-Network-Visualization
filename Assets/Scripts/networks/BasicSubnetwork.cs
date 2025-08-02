@@ -130,14 +130,14 @@ namespace VidiGraph
             Context.SetSelectedComms(updateComms, isSelected);
         }
 
-        public void ToggleSelectedNodes(IEnumerable<int> nodeIDs)
+        public IEnumerable<int> ToggleSelectedNodes(IEnumerable<int> nodeIDs)
         {
-            Context.ToggleSelectedNodes(nodeIDs);
+            return Context.ToggleSelectedNodes(nodeIDs);
         }
 
-        public void ToggleSelectedComms(IEnumerable<int> commIDs)
+        public IEnumerable<int> ToggleSelectedComms(IEnumerable<int> commIDs)
         {
-            Context.ToggleSelectedComms(commIDs);
+            return Context.ToggleSelectedComms(commIDs);
         }
 
         public void ClearSelection()
