@@ -38,6 +38,7 @@ namespace VidiGraph
                 {
                     Position = node.Position,
                     Color = GetNodeColor(nodeID, subnetworkID: -1),
+                    Size = GetNodeSize(nodeID, subnetworkID: -1)
                 };
             }
 
@@ -78,6 +79,19 @@ namespace VidiGraph
 
             var lerped = Mathf.Min(1, subNodeTimes[nodeID] / MAX_NODE_SELECT_AGE);
             return Color.Lerp(Color.blue, Color.white, lerped);
+        }
+
+        int GetNodeSize(int nodeID, int subnetworkID)
+        {
+            if (!_nodeSelectionTimes.ContainsKey(subnetworkID))
+                return 1;
+
+            var subNodeTimes = _nodeSelectionTimes[subnetworkID];
+
+            if (!subNodeTimes.ContainsKey(nodeID))
+                return 1;
+
+            return 3;
         }
     }
 }

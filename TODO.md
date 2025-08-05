@@ -1,7 +1,11 @@
 # TODO
 
-- try make non selected nodes gray, transparent, or outline?
+-- small on non select
+-- zoom
+-- outline on hover
 - try group hulls and only show selected nodes
+
+- try make non selected nodes gray, transparent, or outline?
 - too big buffer error at BSpineShaderWrapper:322
 - clean up transformer code and input code (less nesting!!!)
 

@@ -15,6 +15,7 @@ namespace VidiGraph
         [SerializeField] GameObject _floorPrefab;
         [SerializeField] GameObject _surfacePrefab;
         [SerializeField] GameObject _nodeCloudPrefab;
+        [SerializeField] GameObject _nodeCloudOutlinePrefab;
 
         [SerializeField] float _headsetFOV = 100f;     // Meta Quest FOV
         [SerializeField] float _nodeSize = 0.01f;
@@ -22,9 +23,13 @@ namespace VidiGraph
 
         const int MAX_NODES = 3000;
         ParticleSystem.Particle[] _nodes;
+        ParticleSystem.Particle[] _nodeOutlines;
         ParticleSystem _nodeParticles;
+        ParticleSystem _nodeParticleOutlines;
         GameObject _floor;
+        GameObject _person;
         MinimapContext _networkContext;
+        NetworkGlobal _networkGlobal;
 
         Dictionary<int, GameObject> _surfaces = new();
         GameObject _gyroscope;
@@ -68,6 +73,7 @@ namespace VidiGraph
             Reset();
 
             _networkContext = (MinimapContext)networkContext;
+            _networkGlobal = GameObject.Find("/Network Manager").GetComponent<NetworkManager>().NetworkGlobal;
 
             _gyroscope = new GameObject("gyroscope");
             _gyroscope.transform.parent = _networkTransform;
@@ -76,8 +82,10 @@ namespace VidiGraph
 
             var floorObj = Instantiate(_floorPrefab, _gyroscope.transform);
             var nodesObj = Instantiate(_nodeCloudPrefab, _gyroscope.transform);
+            var nodeOutlinesObj = Instantiate(_nodeCloudOutlinePrefab, _gyroscope.transform);
 
             _floor = floorObj.GetNamedChild("Floor");
+            _person = floorObj.GetNamedChild("Person");
 
             var renderer = _floor.GetNamedChild("Floor Visual").GetComponent<Renderer>();
             MaterialPropertyBlock props = new MaterialPropertyBlock();
@@ -86,13 +94,16 @@ namespace VidiGraph
             renderer.SetPropertyBlock(props);
 
             _nodeParticles = nodesObj.GetComponent<ParticleSystem>();
+            _nodeParticleOutlines = nodeOutlinesObj.GetComponent<ParticleSystem>();
 
             _nodes = new ParticleSystem.Particle[MAX_NODES];
+            _nodeOutlines = new ParticleSystem.Particle[MAX_NODES];
         }
 
         public override void Draw()
         {
             _nodeParticles.SetParticles(_nodes, _nodes.Length);
+            _nodeParticleOutlines.SetParticles(_nodeOutlines, _nodeOutlines.Length);
         }
 
         public override Transform GetCommTransform(int commID)
@@ -116,13 +127,39 @@ namespace VidiGraph
             {
                 _nodes[i].position = (nodes[i].Position - userPos) / totScale;
                 _nodes[i].startColor = nodes[i].Color;
-                _nodes[i].startSize = _nodeSize;
+                _nodes[i].startSize = _nodeSize * nodes[i].Size;
                 _nodes[i].remainingLifetime = Mathf.Infinity;
             }
 
             for (int i = nodes.Count; i < MAX_NODES; i++)
             {
                 _nodes[i].remainingLifetime = -1f;
+            }
+
+            List<int> hoveredNodes = new();
+
+            if (_networkGlobal.HoveredNode != null)
+            {
+                hoveredNodes.Add(_networkGlobal.HoveredNode.ID);
+            }
+            else if (_networkGlobal.HoveredCommunity != null)
+            {
+                hoveredNodes = hoveredNodes.Union(_networkGlobal.HoveredCommunity.Nodes.Select(n => n.ID)).ToList();
+            }
+
+            for (int i = 0; i < hoveredNodes.Count; i++)
+            {
+                var nid = hoveredNodes[i];
+                _nodeOutlines[i].position = (_networkContext.Nodes[nid].Position - userPos) / totScale;
+                _nodeOutlines[i].startColor = Color.green;
+                _nodeOutlines[i].startSize = _nodeSize * _networkContext.Nodes[nid].Size * 1.5f;
+                _nodeOutlines[i].remainingLifetime = Mathf.Infinity;
+            }
+
+            for (int i = hoveredNodes.Count; i < MAX_NODES; i++)
+            {
+                _nodeOutlines[i].startSize = 0;
+                _nodeOutlines[i].remainingLifetime = -1f;
             }
 
             foreach (var surfID in _networkContext.Surfaces.Keys.Except(_surfaces.Keys))
@@ -140,8 +177,11 @@ namespace VidiGraph
             foreach (var (surfID, surf) in _surfaces)
             {
                 var pos = (_networkContext.Surfaces[surfID].Position - userPos) / totScale;
+                surf.transform.localScale = Vector3.one / _networkContext.Zoom;
                 surf.transform.SetLocalPositionAndRotation(pos, _networkContext.Surfaces[surfID].Rotation);
             }
+
+            _person.transform.localScale = Vector3.one / _networkContext.Zoom;
         }
 
         static Quaternion GetTransformRotationXY(Transform transform, bool reverse = false)
