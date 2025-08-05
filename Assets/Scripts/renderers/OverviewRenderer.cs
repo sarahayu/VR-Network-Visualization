@@ -121,6 +121,7 @@ namespace VidiGraph
             var nodes = _networkContext.Nodes.Values.ToList();
 
             var userPos = _wristTransform.position;
+            userPos.y -= 1.36144f / 2;
             var totScale = _networkContext.Scale * _networkContext.Zoom;
 
             for (int i = 0; i < nodes.Count; i++)
