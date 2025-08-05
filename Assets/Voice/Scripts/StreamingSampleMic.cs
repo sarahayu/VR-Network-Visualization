@@ -236,6 +236,13 @@ namespace Whisper.Samples
                                 _networkManager.SetMLNodesColor(nodes_color, Color.red); // Hardcoded to red for now
                                 TimerUtils.EndTime("SetColor");
                                 break;
+                            case "arithmetic":
+                                Debug.Log("Performing arithmetic operation: " + action[0][1]);
+                                TimerUtils.StartTime("Arithmetic Operation");
+                                var result = _databaseStorage.GetValueFromStore(_networkManager.NetworkGlobal, query[0]);
+                                Debug.Log("Arithmetic Result: " + result);
+                                TimerUtils.EndTime("Arithmetic Operation");
+                                break;
                             default:
                                 // Handle unknown actions
                                 Debug.LogWarning("Unknown action: " + action);

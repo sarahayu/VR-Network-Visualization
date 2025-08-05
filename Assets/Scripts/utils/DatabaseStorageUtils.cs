@@ -469,5 +469,32 @@ namespace VidiGraph
 
             return new List<Node>();
         }
+
+        public static double GetValueFromStore(NetworkGlobal networkGlobal, string command, IDriver driver, bool convertWinPaths = true)
+        {
+            try
+            {
+                using var session = driver.Session();
+
+                TimerUtils.StartTime("session.Run");
+                var res = session.Run(command);
+                TimerUtils.EndTime("session.Run");
+
+                TimerUtils.StartTime("res.Single");
+                var record = res.Single(); // Expecting a single row
+                var value = record[0].As<double>(); // Return the first column as double
+                TimerUtils.EndTime("res.Single");
+
+                Debug.Log($"Arithmetic result: {value}");
+                return value;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Execution Error: {e.Message}");
+            }
+
+            return 0.0; // Return default value on error
+        }
+
     }
 }
