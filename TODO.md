@@ -1,22 +1,19 @@
 # TODO
 
--- small on non select
--- zoom
--- outline on hover
-- try group hulls and only show selected nodes
+- merge
+- transfer selection to new subnetwork
+- make surface based off nodes
+- attaching nodes, average pos?
+- shells for subgraphs
 
-- try make non selected nodes gray, transparent, or outline?
 - too big buffer error at BSpineShaderWrapper:322
 - clean up transformer code and input code (less nesting!!!)
 
 - fix dupe glitch
 - update storage for subgraph data
-- shells for subgraphs
 - remove communities from global
 - change all new inits to just new()
 - remove empty interpolators
-
-- transfer selection to new subnetwork
 
 - replicate cluster/node
     - community is global and contexted. main mlcontext is synced to global
@@ -24,10 +21,9 @@
     - when asking to select nodes, does it select on subnetworks as well?
 - optimize reflection: https://stackoverflow.com/questions/7999652/best-way-to-cache-a-reflection-property-getter-setter
 - parse all waves into one
-- attaching nodes, average pos?
 
 
-- general code cleanup
+- general code cleanup  
 - when splatting to surface, account for random nodes that are not part of same community
 - move control point calculation to a transformer
     - keep bspline count constant
@@ -93,6 +89,11 @@
 - figure out options interface
 - fix surface icon placement on minimap
 - selection history with hue
+- small on non select
+- zoom
+- outline on hover
+- try group hulls and only show selected nodes
+- try make non selected nodes gray, transparent, or outline?
 
 ## Ignore
 - move node moving animation to mln
