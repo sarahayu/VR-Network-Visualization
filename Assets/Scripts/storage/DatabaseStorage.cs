@@ -47,5 +47,10 @@ namespace VidiGraph
         {
             return DatabaseStorageUtils.GetNodesFromStore(networkGlobal, command, _driver, _convertWinPaths);
         }
+
+        public double GetValueFromStore(NetworkGlobal networkGlobal, string command)
+        {
+            return DatabaseStorageUtils.GetValueFromStore(networkGlobal, command, _driver, _convertWinPaths);
+        }
     }
 }

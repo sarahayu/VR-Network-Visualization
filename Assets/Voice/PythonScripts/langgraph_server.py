@@ -1,8 +1,9 @@
 from flask import Flask, request, jsonify
 from langgraph.graph import StateGraph
 from typing import TypedDict, Annotated
-
 import time
+import asyncio
+
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from utils import print_colored
@@ -16,10 +17,10 @@ def merge_dicts(old: dict[str, float] | None, new: dict[str, float]) -> dict[str
 
 class AgentState(TypedDict):
     input: Annotated[str, override]
-    code: Annotated[str, override]
+    code_list: Annotated[list[str], override]
+    action_queue: Annotated[list[list[str]], override]
     timings: Annotated[dict[str, float], merge_dicts]
     judgment: Annotated[str, override]
-
 
 
 app = Flask(__name__)
@@ -27,7 +28,7 @@ llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 clarify_prompt = ChatPromptTemplate.from_template(
     "The user input might be unclear. \
-    Ask a clarifying question so we can understand the user's intent better.\n\nUser input: {input}"
+    Ask a clarifying question so we can understand the user's intent better.\n\n User input: {input}"
 )
 
 cypher_prompt = ChatPromptTemplate.from_template(
@@ -45,22 +46,37 @@ cypher_prompt = ChatPromptTemplate.from_template(
     drinker, (bool)\
     gpa (float)\
     grade (int) \n\n\
-    Only return the Cypher query, no explanations.\n\nUser Request: {input}"
+    Only return the valid Cypher query, no explanations.\n\n User Request: {input}"
+)
+
+action_prompt = ChatPromptTemplate.from_template(
+    "You are an expert in generating graph commands. \
+    Return only a list of user intents in order, no other words. \
+    Each intent should be a two-item list: [action, parameters]. \
+    Classify the action into the certain list,\
+    Actions can be 'select', 'deselect', 'move', 'color', 'layout', 'arithmetic'. \
+    Synonyms like 'highlight' = 'select' = 'show' = 'present', 'bring' = 'move' and so on. \
+    For example: [['select', ''], ['move', '']], ['color', '#FF0000'] \
+    Also there is layout command with layout types 'floor', 'cluster' and 'spherical', return things such as ['layout', 'floor'] \
+    As for the arithmetic, return the corresponding value, such as 'what's the degree of the selected node?'\
+    should be [['arithmetic', '']]. \
+    If the command is ambiguous, still list what you can extract clearly. \
+    \n\n User Request: {input}"
 )
 
 ambiguity_prompt = ChatPromptTemplate.from_template(
     "Decide whether the following user input is ambiguous for generating corresponding graph commands or not. \
     Voice detection might have mistakes such as color 'rate' actually refer to color 'red'. \
     Try to get the correct meaning, do not see these pronunciation mistakes as ambiguous. \
-    Reply with only 'yes' if it is ambiguous and 'no' if it is clear.\n\nUser input: {input}"
+    Reply with only 'yes' if it is ambiguous and 'no' if it is clear.\n\n User input: {input}"
 )
 
 
 def timed_node(node_name):
     def decorator(fn):
-        def wrapper(state: AgentState):
+        async def wrapper(state: AgentState):
             start = time.time()
-            result = fn(state)
+            result = await fn(state)
             end = time.time()
 
             duration = end - start
@@ -76,51 +92,88 @@ def timed_node(node_name):
     return decorator
 
 
-
 @timed_node("general_agent")
-def general_agent(state: AgentState) -> dict:
+async def general_agent(state: AgentState) -> dict:
     messages = ambiguity_prompt.format_messages(input=state["input"])
-    judgment = llm(messages).content.strip().lower()
+    judgment = (await llm.ainvoke(messages)).content.strip().lower()
     print_colored(f"Judgment on ambiguity: {judgment}", 'blue')
     return {"input": state["input"], "judgment": judgment}
 
+
 @timed_node("clarify_agent")
-def clarify_agent(state: AgentState) -> dict:
+async def clarify_agent(state: AgentState) -> dict:
     messages = clarify_prompt.format_messages(input=state["input"])
-    clarification_question = llm(messages).content.strip()
+    clarification_question = (await llm.ainvoke(messages)).content.strip()
     print_colored(f"Clarification question: {clarification_question}", 'yellow')
     return {"input": clarification_question, "code": "", "__next__": "return_code"}
 
-@timed_node("execute_agent")
-def execute_agent(state: AgentState) -> dict:
-    messages = cypher_prompt.format_messages(input=state["input"])
-    cypher = llm(messages).content.strip()
-    print_colored(f"Generated Cypher query: {cypher}", 'green')
-    return {"input": "", "code": cypher, "__next__": "return_code"}
+
+@timed_node("action_agent")
+async def action_agent(state: AgentState) -> dict:
+    action_messages = action_prompt.format_messages(input=state["input"])
+    action_list_str = (await llm.ainvoke(action_messages)).content.strip()
+    print_colored(f"Generated action list: {action_list_str}", 'green')
+
+    try:
+        action_queue = eval(action_list_str)
+        if not isinstance(action_queue, list):
+            raise ValueError("Invalid format")
+    except Exception:
+        raise ValueError("Failed to parse action list from LLM")
+
+    return {"action_queue": action_queue}
+
+
+@timed_node("cypher_agent")
+async def cypher_agent(state: AgentState) -> dict:
+    action_queue = state.get("action_queue", [])
+    code_list = []
+
+    for action, param in action_queue:
+        msg = cypher_prompt.format_messages(input=f"{action} {param}")
+        cypher_code = (await llm.ainvoke(msg)).content.strip()
+        code_list.append(cypher_code)
+
+    return {"code_list": code_list}
+
 
 @timed_node("return_code")
-def return_code(state: AgentState) -> AgentState:
-    print_colored(f"Returning code: {state['code']}", 'magenta')
+async def return_code(state: AgentState) -> AgentState:
+    print_colored("Returning code list and action queue", 'magenta')
     return state
+
 
 def decide_clarify(state: AgentState) -> str:
     if state['judgment'].startswith("yes"):
         return "clarify_agent"
     else:
-        return "execute_agent"
+        return "action_agent"
 
+
+# Graph Construction
 graph = StateGraph(state_schema=AgentState)
+
 graph.add_node("general_agent", general_agent)
 graph.add_node("clarify_agent", clarify_agent)
-graph.add_node("execute_agent", execute_agent)
+graph.add_node("action_agent", action_agent)
+graph.add_node("cypher_agent", cypher_agent)
 graph.add_node("return_code", return_code)
 
 graph.set_entry_point("general_agent")
-graph.add_conditional_edges("general_agent", decide_clarify)
+
+graph.add_conditional_edges(
+    "general_agent", decide_clarify,
+    {"clarify_agent": "clarify_agent", "action_agent": "action_agent"}
+)
+
+# Parallel execution: action_agent → cypher_agent and return_code
+graph.add_edge("action_agent", "cypher_agent")
+graph.add_edge("action_agent", "return_code")
+graph.add_edge("cypher_agent", "return_code")
 graph.add_edge("clarify_agent", "return_code")
-graph.add_edge("execute_agent", "return_code")
 
 langgraph_app = graph.compile()
+
 
 @app.route("/classify", methods=["POST"])
 def classify():
@@ -128,22 +181,32 @@ def classify():
         data = request.get_json(force=True)
         user_input = data.get("userText", "")
         print(f"Received input: {user_input}")
-        state = {"input": user_input, "code": "", "timings": {}}
-        result = langgraph_app.invoke(state)
+        state = {
+            "input": user_input,
+            "code_list": [],
+            "action_queue": [],
+            "timings": {}
+        }
+
+        # Use asyncio to run the async graph
+        result = asyncio.run(langgraph_app.ainvoke(state))
+
         print_colored(f"Result from langgraph: {result}", 'green')
         return jsonify({
-            "type": "select",
-            "query": result.get("code", ""),
+            "queries": result.get("code_list", []),
+            "actions": result.get("action_queue", []),
             "clarify": result.get("input", ""),
             "timings": result.get("timings", {})
         })
     except Exception as e:
-        print_colored(f"🔥 ERROR in /classify: {e}", 'red')
+        print_colored(f"ERROR in /classify: {e}", 'red')
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/ping", methods=["GET"])
 def ping():
     return "Server is alive!", 200
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
