@@ -46,7 +46,7 @@ cypher_prompt = ChatPromptTemplate.from_template(
     drinker, (bool)\
     gpa (float)\
     grade (int) \n\n\
-    Only return the valid Cypher query, no explanations.\n\n User Request: {input}"
+    Only return the valid Cypher query, no explanations. Do not format the result into a code block. \n\n User Request: {input}"
 )
 
 action_prompt = ChatPromptTemplate.from_template(
@@ -105,7 +105,7 @@ async def clarify_agent(state: AgentState) -> dict:
     messages = clarify_prompt.format_messages(input=state["input"])
     clarification_question = (await llm.ainvoke(messages)).content.strip()
     print_colored(f"Clarification question: {clarification_question}", 'yellow')
-    return {"input": clarification_question, "code": "", "__next__": "return_code"}
+    return {"clarify": clarification_question, "code": "", "__next__": "return_code"}
 
 
 @timed_node("action_agent")
@@ -133,6 +133,7 @@ async def cypher_agent(state: AgentState) -> dict:
         msg = cypher_prompt.format_messages(input=f"{action} {param}")
         cypher_code = (await llm.ainvoke(msg)).content.strip()
         code_list.append(cypher_code)
+        print(f"Got {cypher_code}")
 
     return {"code_list": code_list}
 
@@ -168,7 +169,7 @@ graph.add_conditional_edges(
 
 # Parallel execution: action_agent → cypher_agent and return_code
 graph.add_edge("action_agent", "cypher_agent")
-graph.add_edge("action_agent", "return_code")
+# graph.add_edge("action_agent", "return_code")
 graph.add_edge("cypher_agent", "return_code")
 graph.add_edge("clarify_agent", "return_code")
 
@@ -195,7 +196,7 @@ def classify():
         return jsonify({
             "queries": result.get("code_list", []),
             "actions": result.get("action_queue", []),
-            "clarify": result.get("input", ""),
+            "clarify": result.get("clarify", ""),
             "timings": result.get("timings", {})
         })
     except Exception as e:

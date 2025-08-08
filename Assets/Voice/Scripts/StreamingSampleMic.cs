@@ -9,6 +9,7 @@ using Whisper.Utils;
 using VidiGraph;
 using System.Linq;
 using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
+using Newtonsoft.Json;
 
 namespace Whisper.Samples
 {
@@ -174,7 +175,11 @@ namespace Whisper.Samples
                     string responseJson = www.downloadHandler.text;
 
                     // Parse JSON
-                    ClassificationResponse classification = JsonUtility.FromJson<ClassificationResponse>(responseJson);
+                    ClassificationResponse classification = JsonConvert.DeserializeObject<ClassificationResponse>(responseJson, new JsonSerializerSettings
+                    {
+                        NullValueHandling = NullValueHandling.Ignore,
+                        MissingMemberHandling = MissingMemberHandling.Ignore
+                    });
 
                     // Show timing info for debugging
                     if (classification.timings != null)
@@ -194,11 +199,13 @@ namespace Whisper.Samples
                     else
                     {
                         Debug.Log("Classification Response: " + responseJson);
-                        List<string> query = classification.query;
+                        var query = classification.queries;
                         // [0].Substring(10, classification.query[0].Length - 13);
-                        List<List<string>> action = classification.action;
+                        var action = classification.actions;
                         Debug.Log("Action: " + action);
                         Debug.Log("Cypher Query: " + query);
+
+                        Debug.Log(action.Count());
 
                         switch (action[0][0])
                         {
@@ -233,7 +240,7 @@ namespace Whisper.Samples
                                 Debug.Log("Changing color of selected nodes to: " + action[0][1]);
                                 var nodes_color = _networkManager.SelectedNodes;
                                 TimerUtils.StartTime("SetColor");
-                                _networkManager.SetMLNodesColor(nodes_color, Color.red); // Hardcoded to red for now
+                                _networkManager.SetMLNodesColor(nodes_color, "#FF0000"); // Hardcoded to red for now
                                 TimerUtils.EndTime("SetColor");
                                 break;
                             case "arithmetic":
@@ -273,10 +280,10 @@ public class ClassificationRequest
 [System.Serializable]
 public class ClassificationResponse
 {
-    public List<string> query = new List<string>();
+    public string[] queries;
     public string clarify;
     public Timing timings;
-    public List<List<string>> action = new List<List<string>>();
+    public string[][] actions;
 }
 
 [System.Serializable]
