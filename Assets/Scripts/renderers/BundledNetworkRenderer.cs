@@ -1,8 +1,11 @@
-using System;
-using System.Collections;
+/*
+*
+* BundledNetworkRenderer is a renderer optimized for bundled links for multilayout networks (and subnetworks).
+*
+*/
+
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.PlayerLoop;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 namespace VidiGraph
@@ -28,6 +31,7 @@ namespace VidiGraph
         Dictionary<int, Renderer> _commRenderers = new Dictionary<int, Renderer>();
 
         BSplineShaderWrapper _shaderWrapper = new BSplineShaderWrapper();
+        NetworkManager _networkManager;
         NetworkGlobal _networkGlobal;
         MultiLayoutContext _networkContext;
         int _lastHoveredNode = -1;
@@ -53,7 +57,8 @@ namespace VidiGraph
         {
             Reset();
 
-            _networkGlobal = GameObject.Find("/Network Manager").GetComponent<NetworkGlobal>();
+            _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
+            _networkGlobal = _networkManager.NetworkGlobal;
             _networkContext = (MultiLayoutContext)networkContext;
 
             InitializeShaders();
@@ -94,21 +99,21 @@ namespace VidiGraph
             _batchSplineMaterial = new Material(Shader.Find("Custom/Batch BSpline Unlit"));
             _batchSplineMaterial.SetFloat("_LineWidth", _networkContext.ContextSettings.LinkWidth);
 
-            _shaderWrapper.Initialize(SplineComputeShader, _batchSplineMaterial, _networkContext.ContextSettings);
+            _shaderWrapper.Initialize(SplineComputeShader, _batchSplineMaterial, _networkContext);
         }
 
         void CreateNodes()
         {
-            foreach (var node in _networkGlobal.Nodes)
+            foreach (var (nodeID, nodeProps) in _networkContext.Nodes)
             {
+                var node = _networkGlobal.Nodes[nodeID];
+
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
-                    var nodeProps = _networkContext.Nodes[node.ID];
-                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps,
-                        _networkContext.ContextSettings.NodeScale);
+                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps);
 
-                    _nodeGameObjs[node.ID] = nodeObj;
-                    _nodeRenderers[node.ID] = nodeObj.GetComponentInChildren<Renderer>();
+                    _nodeGameObjs[nodeID] = nodeObj;
+                    _nodeRenderers[nodeID] = nodeObj.GetComponentInChildren<Renderer>();
 
                     AddNodeInteraction(nodeObj, node);
                 }
@@ -117,11 +122,10 @@ namespace VidiGraph
 
         void CreateCommunities()
         {
-            foreach (var (commID, community) in _networkGlobal.Communities)
+            foreach (var (commID, communityProps) in _networkContext.Communities)
             {
-                var communityProps = _networkContext.Communities[commID];
-                var commObj = CommunityRenderUtils.MakeCommunity(CommunityPrefab, transform,
-                    community, communityProps);
+                var community = _networkGlobal.Communities[commID];
+                var commObj = CommunityRenderUtils.MakeCommunity(CommunityPrefab, transform, communityProps);
 
                 _communityGameObjs[commID] = commObj;
                 _commRenderers[commID] = commObj.GetComponentInChildren<Renderer>();
@@ -153,9 +157,10 @@ namespace VidiGraph
 
         void ComputeControlPoints()
         {
-            foreach (var link in _networkGlobal.Links)
+            foreach (var (linkID, linkProps) in _networkContext.Links)
             {
-                float beta = _networkContext.Links[link.ID].BundlingStrength;
+                var link = _networkGlobal.Links[linkID];
+                float beta = linkProps.BundlingStrength;
 
                 Vector3[] cp = BSplineMathUtils.ControlPoints(link, _networkGlobal, _networkContext);
                 int length = cp.Length;
@@ -164,21 +169,21 @@ namespace VidiGraph
                 Vector3 target = cp[length - 1];
                 Vector3 dVector3 = target - source;
 
-                Vector3[] cpDistributed = new Vector3[length + 2];
+                Vector3[] cpDistributed = new Vector3[length];
 
                 cpDistributed[0] = source;
 
-                for (int i = 0; i < length; i++)
+                for (int i = 1; i < length - 1; i++)
                 {
                     Vector3 point = cp[i];
 
-                    cpDistributed[i + 1].x = beta * point.x + (1 - beta) * (source.x + (i + 1) * dVector3.x / length);
-                    cpDistributed[i + 1].y = beta * point.y + (1 - beta) * (source.y + (i + 1) * dVector3.y / length);
-                    cpDistributed[i + 1].z = beta * point.z + (1 - beta) * (source.z + (i + 1) * dVector3.z / length);
+                    cpDistributed[i].x = beta * point.x + (1 - beta) * (source.x + (i) * dVector3.x / length);
+                    cpDistributed[i].y = beta * point.y + (1 - beta) * (source.y + (i) * dVector3.y / length);
+                    cpDistributed[i].z = beta * point.z + (1 - beta) * (source.z + (i) * dVector3.z / length);
                 }
-                cpDistributed[length + 1] = target;
+                cpDistributed[length - 1] = target;
 
-                _controlPointsMap[link.ID] = new List<Vector3>(cpDistributed);
+                _controlPointsMap[link.ID] = new List<Vector3>(cp);
             }
         }
 
@@ -189,14 +194,14 @@ namespace VidiGraph
 
         void UpdateNodes()
         {
-            foreach (var nodeID in _networkContext.Nodes.Keys)
+            foreach (var (nodeID, contextNode) in _networkContext.Nodes)
             {
                 Node globalNode = _networkGlobal.Nodes[nodeID];
-                MultiLayoutContext.Node contextNode = _networkContext.Nodes[nodeID];
 
                 if (DrawVirtualNodes || !globalNode.IsVirtualNode)
                 {
-                    if ((nodeID == _networkGlobal.HoveredNode?.ID) && !globalNode.Selected)
+                    if ((nodeID == _networkGlobal.HoveredNode?.ID)
+                        && !_networkContext.SelectedNodes.Contains(nodeID))
                     {
                         var hoverCol = _networkContext.ContextSettings.NodeHoverColor;
                         NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], hoverCol, _nodeRenderers[nodeID]);
@@ -204,15 +209,14 @@ namespace VidiGraph
 
                     if (NodeNeedsRenderUpdate(nodeID))
                     {
-                        NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[nodeID], globalNode, contextNode,
-                            _networkContext.ContextSettings.NodeScale, _nodeRenderers[nodeID]);
+                        NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[nodeID], globalNode, contextNode, _nodeRenderers[nodeID]);
 
                         if (nodeID == _networkGlobal.HoveredNode?.ID)
                         {
                             var hoverCol = _networkContext.ContextSettings.NodeHoverColor;
                             NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], hoverCol, _nodeRenderers[nodeID]);
                         }
-                        if (globalNode.Selected)
+                        if (_networkContext.SelectedNodes.Contains(nodeID))
                             NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], _networkContext.ContextSettings.NodeSelectColor, _nodeRenderers[nodeID]);
                         globalNode.Dirty = contextNode.Dirty = false;
                     }
@@ -224,11 +228,11 @@ namespace VidiGraph
 
         void UpdateCommunities()
         {
-            foreach (var commID in _networkGlobal.Communities.Keys)
+            foreach (var commID in _networkContext.Communities.Keys)
             {
-
                 Community globalComm = _networkGlobal.Communities[commID];
-                if (commID == _networkGlobal.HoveredCommunity?.ID && !globalComm.Selected)
+                if (commID == _networkGlobal.HoveredCommunity?.ID
+                        && !_networkContext.SelectedCommunities.Contains(commID))
                 {
                     var hoverCol = _networkContext.ContextSettings.CommHoverColor;
                     CommunityRenderUtils.SetCommunityColor(_communityGameObjs[commID], hoverCol, _commRenderers[commID]);
@@ -238,15 +242,16 @@ namespace VidiGraph
                 {
                     MultiLayoutContext.Community contextComm = _networkContext.Communities[commID];
 
-                    CommunityRenderUtils.UpdateCommunity(_communityGameObjs[commID], globalComm, contextComm,
-                        _networkContext.ContextSettings.CommSelectColor, _commRenderers[commID]);
+                    CommunityRenderUtils.UpdateCommunity(_communityGameObjs[commID], contextComm,
+                        _networkContext.SelectedCommunities.Contains(commID), _networkContext.ContextSettings.CommSelectColor, _commRenderers[commID]);
 
                     if (commID == _networkGlobal.HoveredCommunity?.ID)
                     {
                         var hoverCol = _networkContext.ContextSettings.CommHoverColor;
                         CommunityRenderUtils.SetCommunityColor(_communityGameObjs[commID], hoverCol, _commRenderers[commID]);
                     }
-                    if (globalComm.Selected)
+
+                    if (_networkContext.SelectedCommunities.Contains(commID))
                         CommunityRenderUtils.SetCommunityColor(_communityGameObjs[commID], _networkContext.ContextSettings.CommSelectColor, _commRenderers[commID]);
                     globalComm.Dirty = contextComm.Dirty = false;
                 }
@@ -274,7 +279,9 @@ namespace VidiGraph
         void UpdateGPULinks()
         {
             ComputeControlPoints();
-            _shaderWrapper.UpdateBuffers(_networkGlobal, _networkContext, _controlPointsMap);
+            _shaderWrapper.UpdateBuffers(_networkGlobal, _networkContext,
+                _networkContext.SelectedNodes,
+                _controlPointsMap);
         }
 
         bool NodeNeedsRenderUpdate(int nodeID)

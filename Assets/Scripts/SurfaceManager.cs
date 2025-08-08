@@ -1,3 +1,9 @@
+/*
+*
+* SurfaceManager is where all surface operations are done from.
+*
+*/
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,21 +19,16 @@ namespace VidiGraph
 {
     public class SurfaceManager : MonoBehaviour
     {
-        [SerializeField]
-        GameObject _surfacePrefab;
-        [SerializeField]
-        float _surfaceAttractionDist = 0.1f;
-        [SerializeField]
-        Color _highlightCol = Color.green;
+        [SerializeField] GameObject _surfacePrefab;
+        [SerializeField] float _surfaceAttractionDist = 0.1f;
+        [SerializeField] Color _highlightCol = Color.green;
+        [SerializeField] Vector3 _surfSpawnOffset = Vector3.zero;
+        [SerializeField] Transform _spawnOrigin;
 
         public Dictionary<int, GameObject> Surfaces { get { return _surfaces.Values.ToDictionary(si => si.ID, si => si.GameObject); } }
 
         public bool IsMovingSurface { get { return _surfaceMover != null; } }
-
-        public delegate void SurfaceHoverEnterEvent(int surfaceID, HoverEnterEventArgs evt);
-        public event SurfaceHoverEnterEvent OnSurfaceHoverEnter;
-        public delegate void SurfaceHoverExitEvent(int surfaceID, HoverExitEventArgs evt);
-        public event SurfaceHoverExitEvent OnSurfaceHoverExit;
+        public int CurHoveredSurface { get { return _curHoveredSurface; } }
 
         class Surface
         {
@@ -42,11 +43,12 @@ namespace VidiGraph
         Dictionary<int, int> _nodeToSurf = new Dictionary<int, int>();
 
         int _curID = 0;
+        int _curHoveredSurface = -1;
 
         NetworkManager _manager;
         NetworkRenderer _mlRenderer;
 
-        MultiLayoutNetwork.Settings _mlSettings;
+        MultiLayoutContext.Settings _mlSettings;
 
 
         Coroutine _surfaceHighlighter = null;
@@ -93,13 +95,23 @@ namespace VidiGraph
             _surfaces[id] = si;
             _colliders[id] = highlighter.GetComponent<Collider>();
 
+            _manager.TriggerRenderUpdate();
+
             return id;
         }
 
         // spawn in front of main camera
         public int SpawnSurface()
         {
+            _manager.TriggerRenderUpdate();
             return SpawnSurface(_userPos.position + _userPos.rotation * Vector3.forward, Quaternion.FromToRotation(Vector3.up, -_userPos.forward));
+        }
+
+        public int SpawnSurfaceFromPointer()
+        {
+            SurfaceInputUtils.CalcPosAndRot(_spawnOrigin, _surfSpawnOffset, out var position, out var rotation);
+            _manager.TriggerRenderUpdate();
+            return SpawnSurface(position, rotation);
         }
 
 
@@ -113,6 +125,17 @@ namespace VidiGraph
                 _surfaces.Remove(surfID);
                 _colliders.Remove(surfID);
             }
+            _manager.TriggerRenderUpdate();
+        }
+
+        public void HoverSurface(int surfID)
+        {
+            _curHoveredSurface = surfID;
+        }
+
+        public void UnhoverSurface()
+        {
+            _curHoveredSurface = -1;
         }
 
         // return ID of closest surface
@@ -191,7 +214,7 @@ namespace VidiGraph
 
         void StartAttachAnim(IEnumerable<int> nodeIDs, int surfID)
         {
-            CoroutineUtils.StopIfRunning(this, _attachAnimation);
+            CoroutineUtils.StopIfRunning(this, ref _attachAnimation);
 
             var startPositions = nodeIDs.Select(nid => _manager.GetMLNodeTransform(nid).position);
             var endPositions = SurfaceManagerUtils.CalcProjected(surfID, nodeIDs.Select(nid => _manager.NetworkGlobal.Nodes[nid]), this, _manager);
@@ -205,12 +228,12 @@ namespace VidiGraph
 
             xrInteractable.hoverEntered.AddListener(evt =>
             {
-                OnSurfaceHoverEnter(id, evt);
+                HoverSurface(id);
             });
 
             xrInteractable.hoverExited.AddListener(evt =>
             {
-                OnSurfaceHoverExit(id, evt);
+                UnhoverSurface();
             });
 
             xrInteractable.selectEntered.AddListener(evt =>
@@ -227,7 +250,8 @@ namespace VidiGraph
                 // end node moves
                 StopCoroutine(_surfaceMover);
                 _surfaceMover = null;
-                _manager.EndMLNodesMove(_surfaces[id].Nodes.Keys);
+                _manager.EndMLNodesMove();
+                _manager.TriggerRenderUpdate();
             });
         }
 
@@ -243,7 +267,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                CoroutineUtils.StopIfRunning(this, _surfaceHighlighter);
+                CoroutineUtils.StopIfRunning(this, ref _surfaceHighlighter);
                 TryAttachNode(node.ID);
                 UnhighlightSurfaces();
             }
@@ -253,7 +277,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                CoroutineUtils.StopIfRunning(this, _surfaceHighlighter);
+                CoroutineUtils.StopIfRunning(this, ref _surfaceHighlighter);
                 _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLNodeTransform(node.ID)));
             }
         }
@@ -262,7 +286,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                CoroutineUtils.StopIfRunning(this, _surfaceHighlighter);
+                CoroutineUtils.StopIfRunning(this, ref _surfaceHighlighter);
                 TryAttachNodes(community.Nodes.Select(n => n.ID));
                 UnhighlightSurfaces();
             }
@@ -272,7 +296,7 @@ namespace VidiGraph
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
-                CoroutineUtils.StopIfRunning(this, _surfaceHighlighter);
+                CoroutineUtils.StopIfRunning(this, ref _surfaceHighlighter);
                 _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLCommTransform(community.ID)));
             }
         }
@@ -368,6 +392,7 @@ namespace VidiGraph
 
             _manager.SetMLNodesPosition(nodeIDs, endPositions);
 
+            _manager.TriggerRenderUpdate();
             _manager.UnpauseStorageUpdate();
 
             _attachAnimation = null;
@@ -381,7 +406,7 @@ namespace VidiGraph
 
             foreach (var nodeID in nodeIDs)
             {
-                foreach (var link in _manager.NetworkGlobal.NodeLinkMatrix[nodeID])
+                foreach (var link in _manager.NetworkGlobal.NodeLinkMatrixUndir[nodeID])
                 {
                     // check other node of this link
                     if (nodeID == link.SourceNodeID)

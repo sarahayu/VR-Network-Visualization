@@ -1,6 +1,6 @@
 /*
 *
-* NetworkFileLoader loads ONLY data from files (NetworkDataStrcture should contain any additional properties needed by application)
+* NetworkFileLoader loads ONLY data from files (NetworkDataStrcture should contain any additional properties needed by application).
 *
 */
 

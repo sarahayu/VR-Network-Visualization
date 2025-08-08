@@ -1,5 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
+/*
+*
+* NetworkEditor is how we can reload network preview from editor mode
+*
+*/
+
 using UnityEngine;
 using UnityEditor;
 

@@ -1,5 +1,10 @@
+/*
+*
+* BasicCommNetworkRenderer is a basic node/link renderer for the minimap network.
+*
+*/
+
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 

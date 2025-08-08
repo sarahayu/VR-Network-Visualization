@@ -9,10 +9,8 @@ namespace VidiGraph
 {
     public class BringNodeTransformer : NetworkContextTransformer
     {
-        [SerializeField]
-        float _targetSpread = 2f;
-        [SerializeField]
-        float _offset = 0.2f;
+        [SerializeField] float _targetSpread = 2f;
+        [SerializeField] float _offset = 0.2f;
 
         NetworkGlobal _networkGlobal;
         MultiLayoutContext _networkContext;
@@ -36,12 +34,15 @@ namespace VidiGraph
 
         public override void ApplyTransformation()
         {
-
             foreach (var nodeID in _nodesToUpdate)
             {
-                var nodePos = _networkContext.Nodes[nodeID].Position;
-                _networkContext.Nodes[nodeID].Position = BringNodeUtils.GetDestinationPoint(nodePos, _camera, _targetSpread, _offset);
-                _networkContext.Nodes[nodeID].Dirty = true;
+                if (_networkGlobal.Nodes[nodeID].IsVirtualNode) continue;
+
+                var nodeContext = _networkContext.Nodes[nodeID];
+                var nodePos = nodeContext.Position;
+                nodeContext.Position = BringNodeUtils.GetDestinationPoint(nodePos, _camera, _targetSpread, _offset);
+                nodeContext.Dirty = true;
+                _networkContext.Communities[nodeContext.CommunityID].Dirty = true;
             }
 
             _nodesToUpdate.Clear();
@@ -76,6 +77,8 @@ namespace VidiGraph
 
             foreach (var nodeID in nodesToUpdate)
             {
+                if (networkGlobal.Nodes[nodeID].IsVirtualNode) continue;
+
                 var nodePos = _networkContext.Nodes[nodeID].Position;
                 var bringNodePos = BringNodeUtils.GetDestinationPoint(nodePos, camera, targetSpread, offset);
                 _startPositions[nodeID] = nodePos;
@@ -92,9 +95,8 @@ namespace VidiGraph
                 _networkContext.Nodes[nodeID].Position
                     = Vector3.Lerp(_startPositions[nodeID], _endPositions[nodeID], Mathf.SmoothStep(0f, 1f, t));
                 _networkContext.Nodes[nodeID].Dirty = true;
+                _networkContext.Communities[_networkContext.Nodes[nodeID].CommunityID].Dirty = true;
             }
-
-            // GameObjectUtils.LerpTransform(_networkContext.CurrentTransform, _startingContextTransform, _endingContextTransform, t);
         }
     }
 

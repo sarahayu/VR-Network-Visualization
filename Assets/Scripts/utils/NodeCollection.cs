@@ -1,6 +1,7 @@
 /*
 *
-* Custom Collection to access nodes by their idx (so I never EVER shoot myself in the foot by using list indices)
+* NodeCollection custom collection to access nodes by their idx (so I never EVER shoot myself in the foot by using list indices).
+* Ideally we'll remove this class and use a normal dictionary.
 *
 */
 
@@ -8,7 +9,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace VidiGraph
 {

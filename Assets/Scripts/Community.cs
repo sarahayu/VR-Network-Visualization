@@ -1,5 +1,9 @@
-using System;
-using System.Collections;
+/*
+*
+* Community is NetworkGlobal's representation of a community.
+*
+*/
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -21,6 +25,5 @@ namespace VidiGraph
 
         // detect if community needs to be rerendered
         public bool Dirty = false;
-        public bool Selected = false;
     }
 }

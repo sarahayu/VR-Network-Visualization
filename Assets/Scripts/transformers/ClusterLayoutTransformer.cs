@@ -35,16 +35,20 @@ namespace VidiGraph
 
             foreach (var commID in _commsToUpdate)
             {
-                _networkGlobal.Communities[commID].Dirty = true;
+                _networkContext.Communities[commID].Dirty = true;
 
-                foreach (var node in _networkGlobal.Communities[commID].Nodes)
+                foreach (var nodeID in _networkContext.Communities[commID].Nodes)
                 {
+                    var node = _networkGlobal.Nodes[nodeID];
+
                     var clusterPos = clusterNodes[node.IdxProcessed]._position3D;
                     _networkContext.Nodes[node.ID].Position = clusterPos;
                     _networkContext.Nodes[node.ID].Dirty = true;
 
-                    foreach (var link in _networkGlobal.NodeLinkMatrix[node.ID])
+                    foreach (var link in _networkGlobal.NodeLinkMatrixUndir[node.ID])
                     {
+                        if (!_networkContext.Links.ContainsKey(link.ID)) continue;
+
                         var linkContext = _networkContext.Links[link.ID];
                         linkContext.Alpha = _networkContext.ContextSettings.LinkContext2FocusAlphaFactor;
 
@@ -62,7 +66,7 @@ namespace VidiGraph
                         {
                             linkContext.BundleEnd = false;
 
-                            if (_networkContext.Communities[link.TargetNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
+                            if (_networkContext.Communities[link.SourceNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
                             {
                                 linkContext.BundlingStrength = 0f;
                                 linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
@@ -88,7 +92,7 @@ namespace VidiGraph
             _commsToUpdate.Add(commID);
         }
 
-        public void UpdateOnNextApply(List<int> commIDs)
+        public void UpdateOnNextApply(IEnumerable<int> commIDs)
         {
             _commsToUpdate.UnionWith(commIDs);
         }
@@ -109,17 +113,16 @@ namespace VidiGraph
 
             foreach (var commID in toUpdate)
             {
-                networkGlobal.Communities[commID].Dirty = true;
-
-                foreach (var node in networkGlobal.Communities[commID].Nodes)
+                foreach (var nodeID in networkContext.Communities[commID].Nodes)
                 {
+                    var node = networkGlobal.Nodes[nodeID];
+
                     var clusterPos = clusterNodes[node.IdxProcessed]._position3D;
 
                     _startPositions[node.ID] = networkContext.Nodes[node.ID].Position;
                     _endPositions[node.ID] = endingContextTransform.TransformPoint(clusterPos);
-                    _networkContext.Nodes[node.ID].Dirty = true;
 
-                    foreach (var link in networkGlobal.NodeLinkMatrix[node.ID])
+                    foreach (var link in networkGlobal.NodeLinkMatrixUndir[node.ID])
                     {
                         var linkContext = _networkContext.Links[link.ID];
                         linkContext.Alpha = _networkContext.ContextSettings.LinkContext2FocusAlphaFactor;
@@ -138,7 +141,7 @@ namespace VidiGraph
                         {
                             linkContext.BundleEnd = false;
 
-                            if (_networkContext.Communities[link.TargetNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
+                            if (_networkContext.Communities[link.SourceNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
                             {
                                 linkContext.BundlingStrength = 0f;
                                 linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
@@ -160,7 +163,9 @@ namespace VidiGraph
                 _networkContext.Nodes[nodeID].Position
                     = Vector3.Lerp(_startPositions[nodeID], _endPositions[nodeID], Mathf.SmoothStep(0f, 1f, t));
                 _networkContext.Nodes[nodeID].Dirty = true;
+                _networkContext.Communities[_networkContext.Nodes[nodeID].CommunityID].Dirty = true;
             }
+
         }
     }
 

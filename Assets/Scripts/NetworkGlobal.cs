@@ -1,45 +1,41 @@
 /*
 * NetworkGlobal contains all information about the network needed for the network representation(s) in the scene.
-* To avoid bloating this class, anything specific to a network representation should go in a NetworkContext.
+* To avoid bloating this class, anything specific to a network visual representation should go in a NetworkContext.
 */
 
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using UnityEditor;
 using UnityEngine;
 
 namespace VidiGraph
 {
-    public class NetworkGlobal : MonoBehaviour
+    public class NetworkGlobal
     {
         public NodeCollection Nodes { get { return _nodes; } }
-        public List<Link> Links { get { return _links; } }
+        public Dictionary<int, Link> Links { get { return _links; } }
         public Dictionary<int, Community> Communities { get { return _communities; } }
         public List<Link> TreeLinks { get { return _treeLinks; } }
         public List<int> RealNodes { get { return _realNodeIDs; } }
         public List<int> VirtualNodes { get { return _virtualNodeIDs; } }
-        public Dictionary<int, List<Link>> NodeLinkMatrix { get { return _nodeLinkMatrix; } }
+        public Dictionary<int, List<Link>> NodeLinkMatrixUndir { get { return _nodeLinkMatrixUndir; } }
+        public Dictionary<int, List<Link>> NodeLinkMatrixDir { get { return _nodeLinkMatrixDir; } }
         public Node HoveredNode = null;
         public Community HoveredCommunity = null;
-        public HashSet<int> SelectedNodes { get { return _selectedNodes; } }
-        public HashSet<int> SelectedCommunities { get { return _selectedComms; } }
+        public int RootNodeID { get => _rootNodeID; }
 
         int _rootNodeID;
         // TODO change to maps... KISS
         NodeCollection _nodes = new NodeCollection();
-        List<Link> _links = new List<Link>();
+        Dictionary<int, Link> _links = new Dictionary<int, Link>();
         Dictionary<int, Community> _communities = new Dictionary<int, Community>();
 
         List<Link> _treeLinks = new List<Link>();
         List<int> _realNodeIDs = new List<int>();
         List<int> _virtualNodeIDs = new List<int>();
-        Dictionary<int, List<Link>> _nodeLinkMatrix
+        Dictionary<int, List<Link>> _nodeLinkMatrixUndir
              = new Dictionary<int, List<Link>>();
-        HashSet<int> _selectedNodes = new HashSet<int>();
-        HashSet<int> _selectedComms = new HashSet<int>();
+        Dictionary<int, List<Link>> _nodeLinkMatrixDir
+             = new Dictionary<int, List<Link>>();
 
         void Reset()
         {
@@ -48,16 +44,15 @@ namespace VidiGraph
             _treeLinks.Clear();
             _realNodeIDs.Clear();
             _virtualNodeIDs.Clear();
-            _nodeLinkMatrix.Clear();
+            _nodeLinkMatrixUndir.Clear();
+            _nodeLinkMatrixDir.Clear();
             _communities.Clear();
             HighContrastColors.ResetRandomColor();
         }
 
-        public void InitNetwork()
+        public void InitNetwork(NetworkFilesLoader fileLoader)
         {
             Reset();
-
-            var fileLoader = GetComponent<NetworkFilesLoader>();
             var fileNodes = fileLoader.SphericalLayout.nodes;
             var fileLinks = fileLoader.SphericalLayout.links;
 
@@ -72,7 +67,8 @@ namespace VidiGraph
                 node.IdxProcessed = i;
 
                 // Initialize the node-link matrix
-                _nodeLinkMatrix.Add(node.ID, new List<Link>());
+                _nodeLinkMatrixUndir.Add(node.ID, new List<Link>());
+                _nodeLinkMatrixDir.Add(node.ID, new List<Link>());
 
                 // Group the nodes by virtual or not
                 if (node.IsVirtualNode) _virtualNodeIDs.Add(node.ID);
@@ -100,8 +96,10 @@ namespace VidiGraph
                 link.IdxProcessed = i;
 
                 // Build Node-Link Matrix
-                _nodeLinkMatrix[link.SourceNodeID].Add(link);
-                _nodeLinkMatrix[link.TargetNodeID].Add(link);
+                _nodeLinkMatrixUndir[link.SourceNodeID].Add(link);
+                _nodeLinkMatrixUndir[link.TargetNodeID].Add(link);
+
+                _nodeLinkMatrixDir[link.SourceNodeID].Add(link);
 
                 link.ID = i;
                 link.Dirty = true;
@@ -110,10 +108,12 @@ namespace VidiGraph
                 _nodes[link.SourceNodeID].Degree += 0.01;
                 _nodes[link.TargetNodeID].Degree += 0.01;
 
-                _links.Add(link);
+                _links[link.ID] = link;
 
                 InitPathInTree(link);
             }
+
+            Debug.Log($"network global is {_links.Count}");
 
             BuildTreeLinks(_rootNodeID);
             CreateCommunities();
@@ -134,156 +134,6 @@ namespace VidiGraph
             }
         }
 
-        public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool selected)
-        {
-            if (selected)
-            {
-                foreach (var nodeID in nodeIDs)
-                {
-                    if (Nodes[nodeID].IsVirtualNode) continue;
-                    if (!_selectedNodes.Contains(nodeID))
-                    {
-                        _selectedNodes.Add(nodeID);
-
-                        Nodes[nodeID].Selected = true;
-                        Nodes[nodeID].Dirty = true;
-                    }
-                }
-            }
-            else
-            {
-                foreach (var nodeID in nodeIDs)
-                {
-                    if (Nodes[nodeID].IsVirtualNode) continue;
-                    if (_selectedNodes.Contains(nodeID))
-                    {
-                        _selectedNodes.Remove(nodeID);
-
-                        Nodes[nodeID].Selected = false;
-                        Nodes[nodeID].Dirty = true;
-                    }
-                }
-            }
-
-            UpdateSelectedCommunities();
-        }
-
-        public void ToggleSelectedNodes(IEnumerable<int> nodeIDs)
-        {
-            foreach (var nodeID in nodeIDs)
-            {
-                if (Nodes[nodeID].IsVirtualNode) continue;
-
-                if (_selectedNodes.Contains(nodeID))
-                {
-                    _selectedNodes.Remove(nodeID);
-
-                    Nodes[nodeID].Selected = false;
-                    Nodes[nodeID].Dirty = true;
-                }
-                else
-                {
-                    _selectedNodes.Add(nodeID);
-
-                    Nodes[nodeID].Selected = true;
-                    Nodes[nodeID].Dirty = true;
-                }
-            }
-
-            UpdateSelectedCommunities();
-        }
-
-        public void SetSelectedCommunities(IEnumerable<int> commIDs, bool selected)
-        {
-            if (selected)
-            {
-                foreach (var commID in commIDs)
-                {
-                    var globalComm = Communities[commID];
-                    if (!globalComm.Selected)
-                    {
-                        globalComm.Selected = true;
-                        _selectedNodes.UnionWith(globalComm.Nodes.Select(n => n.ID));
-                    }
-                    globalComm.Dirty = true;
-                }
-            }
-            else
-            {
-                foreach (var commID in commIDs)
-                {
-                    var globalComm = Communities[commID];
-                    if (globalComm.Selected)
-                    {
-                        globalComm.Selected = false;
-                        _selectedNodes.ExceptWith(globalComm.Nodes.Select(n => n.ID));
-                    }
-                    globalComm.Dirty = true;
-                }
-            }
-
-            UpdateSelectedCommunities();
-        }
-
-        public void ToggleSelectedCommunities(IEnumerable<int> commIDs)
-        {
-            var oldSelectedNodes = new HashSet<int>(_selectedNodes);
-
-            foreach (var commID in commIDs)
-            {
-                var globalComm = Communities[commID];
-                if (globalComm.Selected)
-                {
-                    globalComm.Selected = false;
-                    _selectedNodes.ExceptWith(globalComm.Nodes.Select(n => n.ID));
-                }
-                else
-                {
-                    globalComm.Selected = true;
-                    _selectedNodes.UnionWith(globalComm.Nodes.Select(n => n.ID));
-                }
-                globalComm.Dirty = true;
-            }
-
-            var newSelected = _selectedNodes.Except(oldSelectedNodes);
-            var removed = oldSelectedNodes.Except(_selectedNodes);
-
-            foreach (var newNodeID in newSelected)
-            {
-                Nodes[newNodeID].Selected = true;
-                Nodes[newNodeID].Dirty = true;
-            }
-
-            foreach (var oldNodeID in removed)
-            {
-                Nodes[oldNodeID].Selected = false;
-                Nodes[oldNodeID].Dirty = true;
-            }
-
-            UpdateSelectedCommunities();
-        }
-
-        // clears both nodes and communities
-        public void ClearSelectedItems()
-        {
-            foreach (var nodeID in _selectedNodes)
-            {
-                Nodes[nodeID].Selected = false;
-                Nodes[nodeID].Dirty = true;
-            }
-
-            _selectedNodes.Clear();
-
-            foreach (var (_, comm) in Communities)
-            {
-                comm.Selected = false;
-                // just mark all of them dirty, there usually isn't many communities
-                comm.Dirty = true;
-            }
-
-            UpdateSelectedCommunities();
-        }
-
         /*=============== start private methods ===================*/
 
         void ComputeCommunityElems()
@@ -294,7 +144,7 @@ namespace VidiGraph
 
         void FindCommunityLinks()
         {
-            foreach (var link in _links)
+            foreach (var link in _links.Values)
             {
                 var sourceCommunity = _nodes[link.SourceNodeID].CommunityID;
                 var targetCommunity = _nodes[link.TargetNodeID].CommunityID;
@@ -326,11 +176,6 @@ namespace VidiGraph
             {
                 if (!node.IsVirtualNode)
                 {
-                    if (node.CommunityID == -1)
-                    {
-                        Debug.Log(node.ID);
-                        Debug.Log(string.Join(";", node.AncIDsOrderList));
-                    }
                     _communities[node.CommunityID].Nodes.Add(node);
                 }
             }
@@ -464,55 +309,6 @@ namespace VidiGraph
 
                 BuildTreeLinks(childID);
             }
-        }
-
-        // return a list of communityIDs of communities where all of its nodes are selected.
-        // this helps us select a community by also selecting all of its nodes.
-        // hashsets ensure no duplicates.
-        HashSet<int> GetCompleteCommunities(HashSet<int> nodeIDs)
-        {
-            Dictionary<int, int> curCommSize = new Dictionary<int, int>();
-
-            foreach (var nodeID in nodeIDs)
-            {
-                int commID = Nodes[nodeID].CommunityID;
-
-                if (!curCommSize.ContainsKey(commID))
-                    curCommSize[commID] = 0;
-
-                curCommSize[commID] += 1;
-            }
-
-            HashSet<int> completeComm = new HashSet<int>();
-
-            foreach (var (commID, size) in curCommSize)
-            {
-                if (size == Communities[commID].Nodes.Count)
-                    completeComm.Add(commID);
-            }
-
-            return completeComm;
-        }
-
-        void UpdateSelectedCommunities()
-        {
-            // we'll just calculate complete communities every time since there usually isn't a lot of communities.
-            var completeComms = GetCompleteCommunities(_selectedNodes);
-            var incompleteComms = Communities.Keys.ToHashSet().Except(completeComms);
-
-            foreach (var comm in completeComms)
-            {
-                Communities[comm].Selected = true;
-                Communities[comm].Dirty = true;
-            }
-
-            foreach (var comm in incompleteComms)
-            {
-                Communities[comm].Selected = false;
-                Communities[comm].Dirty = true;
-            }
-
-            _selectedComms = completeComms;
         }
     }
 }

@@ -9,39 +9,17 @@ namespace VidiGraph
 {
     public class MultiLayoutNetwork : Network
     {
-        [Serializable]
-        public class Settings
-        {
-            [Range(0.0f, 100f)]
-            public float NodeScale = 1f;
-            [Range(0.0f, 0.1f)]
-            public float LinkWidth = 0.0025f;
-            [Range(0.0f, 1.0f)]
-            public float EdgeBundlingStrength = 0.8f;
+        public MultiLayoutContext.Settings BaseSettings;
 
-            public Color CommSelectColor;
-            public Color NodeSelectColor;
-            public Color LinkSelectColor;
-            public Color CommHoverColor;
-            public Color NodeHoverColor;
-            public Color LinkHoverColor;
-
-            [Range(0.0f, 0.1f)]
-            public float LinkMinimumAlpha = 0.01f;
-            [Range(0.0f, 1.0f)]
-            public float LinkNormalAlphaFactor = 0.05f;
-            [Range(0.0f, 1.0f)]
-            public float LinkContextAlphaFactor = 0.5f;
-            [Range(0.0f, 1.0f)]
-            public float LinkContext2FocusAlphaFactor = 0.8f;
-        }
-
-        public Settings BaseSettings;
+        // TODO restrict edit access
         public MultiLayoutContext Context { get { return _context; } }
+
+        public HashSet<int> SelectedNodes { get { return Context.SelectedNodes; } }
+        public HashSet<int> SelectedCommunities { get { return Context.SelectedCommunities; } }
 
         NetworkManager _manager;
 
-        NetworkInput _input;
+        MultiLayoutNetworkInput _input;
         NetworkRenderer _renderer;
 
         MultiLayoutContext _context = new MultiLayoutContext();
@@ -50,6 +28,9 @@ namespace VidiGraph
 
         // keep a reference to sphericallayout to focus on individual communities
         SphericalLayoutTransformer _sphericalLayoutTransformer;
+
+        // keep a reference to hairballlayout to focus on individual communities
+        HairballLayoutTransformer _hairballLayoutTransformer;
 
         // keep a reference to clusterlayout to focus on individual communities
         ClusterLayoutTransformer _clusterLayoutTransformer;
@@ -68,8 +49,7 @@ namespace VidiGraph
         bool _isSphericalLayout;
 
         Coroutine _curAnim = null;
-        Coroutine _curNodeMover = null;
-        Coroutine _curCommMover = null;
+        Coroutine _curMover = null;
 
 
         void Update()
@@ -77,7 +57,7 @@ namespace VidiGraph
             Draw();
         }
 
-        public override void Initialize()
+        public void Initialize()
         {
             GetManager();
 
@@ -115,7 +95,16 @@ namespace VidiGraph
                 foreach (var commID in _context.Communities.Keys)
                 {
                     QueueLayoutChange(commID, "spherical");
-                    ClearCommunityState(commID);
+                    _context.Communities[commID].State = MultiLayoutContext.CommunityState.None;
+                }
+            }
+            else
+            {
+
+                foreach (var commID in _context.Communities.Keys)
+                {
+                    _context.Communities[commID].State = MultiLayoutContext.CommunityState.Hairball;
+                    _hairballLayoutTransformer.UpdateOnNextApply(_manager.NetworkGlobal.Communities[commID].Nodes.Select(n => n.ID));
                 }
             }
 
@@ -130,7 +119,7 @@ namespace VidiGraph
         }
 
         // layout = [spherical, cluster, floor]
-        public void SetLayout(IEnumerable<int> commIDs, string layout)
+        public void SetLayout(IEnumerable<int> commIDs, string layout, Action onFinished = null)
         {
             foreach (var commID in commIDs)
             {
@@ -139,8 +128,7 @@ namespace VidiGraph
                 QueueLayoutChange(commID, layout);
             }
 
-            TransformNetwork(layout, animated: true);
-
+            TransformNetwork(layout, animated: true, onFinished: onFinished);
         }
 
         void QueueLayoutChange(int commID, string layout)
@@ -154,47 +142,89 @@ namespace VidiGraph
             }
         }
 
-        public void BringNodes(IEnumerable<int> nodeIDs)
+        public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool isSelected)
+        {
+            var validNodes = Context.Nodes.Keys.Intersect(nodeIDs);
+            var updateNodes = nodeIDs.Except(SelectedNodes);        // only update necessary nodes
+
+            if (validNodes.Count() != nodeIDs.Count())
+            {
+                Debug.LogWarning($"Nodes {string.Join(", ", nodeIDs.Except(validNodes))} not found in subnetwork {-1}");
+            }
+
+            Context.SetSelectedNodes(updateNodes, isSelected);
+        }
+
+        public void SetSelectedComms(IEnumerable<int> commIDs, bool isSelected)
+        {
+            var validComms = Context.Communities.Keys.Intersect(commIDs);
+
+            if (validComms.Count() != commIDs.Count())
+            {
+                Debug.LogWarning($"Communities {string.Join(", ", commIDs.Except(validComms))} not found in subnetwork {-1}");
+            }
+
+            Context.SetSelectedComms(validComms, isSelected);
+        }
+
+        public IEnumerable<int> ToggleSelectedNodes(IEnumerable<int> nodeIDs)
+        {
+            var validNodes = Context.Nodes.Keys.Intersect(nodeIDs);
+
+            if (validNodes.Count() != nodeIDs.Count())
+            {
+                Debug.LogWarning($"Nodes {string.Join(", ", nodeIDs.Except(validNodes))} not found in subnetwork {-1}");
+            }
+
+            return Context.ToggleSelectedNodes(validNodes);
+        }
+
+        public IEnumerable<int> ToggleSelectedComms(IEnumerable<int> commIDs)
+        {
+            var validComms = Context.Communities.Keys.Intersect(commIDs);
+
+            if (validComms.Count() != commIDs.Count())
+            {
+                Debug.LogWarning($"Communities {string.Join(", ", commIDs.Except(validComms))} not found in subnetwork {-1}");
+            }
+
+            return Context.ToggleSelectedComms(validComms);
+        }
+
+        public void ClearSelection()
+        {
+            Context.ClearSelection();
+        }
+
+        public void BringNodes(IEnumerable<int> nodeIDs, Action onFinished = null)
         {
             _bringNodeTransformer.UpdateOnNextApply(nodeIDs);
 
-            TransformNetwork("bringNode", animated: true);
+            TransformNetwork("bringNode", animated: true, onFinished: onFinished);
         }
 
-        public void ReturnNodes(IEnumerable<int> nodeIDs)
+        public void ReturnNodes(IEnumerable<int> nodeIDs, Action onFinished = null)
         {
             _sphericalLayoutTransformer.UpdateNodesOnNextApply(nodeIDs);
 
-            TransformNetwork("spherical", animated: true);
+            TransformNetwork("spherical", animated: true, onFinished: onFinished);
         }
 
         public void StartNodeMove(int nodeID)
         {
-            CoroutineUtils.StopIfRunning(this, _curNodeMover);
-            _curNodeMover = StartCoroutine(CRMoveNode(nodeID, GetNodeTransform(nodeID)));
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
+            _curMover = StartCoroutine(CRMoveNode(nodeID));
         }
 
         public void StartNodesMove(IEnumerable<int> nodeIDs)
         {
-            CoroutineUtils.StopIfRunning(this, _curNodeMover);
-            _curNodeMover = StartCoroutine(CRMoveNodes(nodeIDs, nodeIDs.Select(nid => GetNodeTransform(nid))));
-        }
-
-        public void EndNodeMove(int nodeID)
-        {
-            CoroutineUtils.StopIfRunning(this, _curNodeMover);
-            UpdateNetwork(
-                updateCommunityProps: true,
-                updateStorage: true,
-                updateRenderElements: true
-            );
-
-
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
+            _curMover = StartCoroutine(CRMoveNodes(nodeIDs));
         }
 
         public void EndNodesMove()
         {
-            CoroutineUtils.StopIfRunning(this, _curNodeMover);
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
             UpdateNetwork(
                 updateCommunityProps: true,
                 updateStorage: true,
@@ -204,17 +234,19 @@ namespace VidiGraph
 
         public void StartCommMove(int commID)
         {
-            CoroutineUtils.StopIfRunning(this, _curCommMover);
-
-            var nodeIDs = _manager.NetworkGlobal.Communities[commID].Nodes.Select(n => n.ID);
-            var nodeTransforms = nodeIDs.Select(nid => GetNodeTransform(nid));
-
-            _curCommMover = StartCoroutine(CRMoveComm(GetCommTransform(commID), nodeIDs, nodeTransforms));
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
+            _curMover = StartCoroutine(CRMoveComm(commID));
         }
 
-        public void EndCommMove()
+        public void StartCommsMove(IEnumerable<int> commIDs)
         {
-            CoroutineUtils.StopIfRunning(this, _curCommMover);
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
+            _curMover = StartCoroutine(CRMoveComms(commIDs));
+        }
+
+        public void EndCommsMove()
+        {
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
             UpdateNetwork(
                 updateCommunityProps: true,
                 updateStorage: true,
@@ -625,7 +657,7 @@ namespace VidiGraph
 
         void InitInput()
         {
-            _input = GetComponent<NetworkInput>();
+            _input = GetComponent<MultiLayoutNetworkInput>();
             _input.Initialize();
         }
 
@@ -642,24 +674,13 @@ namespace VidiGraph
 
         void SetContextSettings()
         {
-            _context.ContextSettings.NodeScale = BaseSettings.NodeScale;
-            _context.ContextSettings.LinkWidth = BaseSettings.LinkWidth;
-            _context.ContextSettings.EdgeBundlingStrength = BaseSettings.EdgeBundlingStrength;
-            _context.ContextSettings.CommSelectColor = BaseSettings.CommSelectColor;
-            _context.ContextSettings.NodeSelectColor = BaseSettings.NodeSelectColor;
-            _context.ContextSettings.LinkSelectColor = BaseSettings.LinkSelectColor;
-            _context.ContextSettings.CommHoverColor = BaseSettings.CommHoverColor;
-            _context.ContextSettings.NodeHoverColor = BaseSettings.NodeHoverColor;
-            _context.ContextSettings.LinkHoverColor = BaseSettings.LinkHoverColor;
-            _context.ContextSettings.LinkMinimumAlpha = BaseSettings.LinkMinimumAlpha;
-            _context.ContextSettings.LinkNormalAlphaFactor = BaseSettings.LinkNormalAlphaFactor;
-            _context.ContextSettings.LinkContextAlphaFactor = BaseSettings.LinkContextAlphaFactor;
-            _context.ContextSettings.LinkContext2FocusAlphaFactor = BaseSettings.LinkContext2FocusAlphaFactor;
+            _context.ContextSettings = BaseSettings;
         }
 
         void InitTransformers()
         {
-            _transformers["hairball"] = GetComponentInChildren<HairballLayoutTransformer>();
+            _hairballLayoutTransformer = GetComponentInChildren<HairballLayoutTransformer>();
+            _transformers["hairball"] = _hairballLayoutTransformer;
             _transformers["hairball"].Initialize(_manager.NetworkGlobal, _context);
 
             _sphericalLayoutTransformer = GetComponentInChildren<SphericalLayoutTransformer>();
@@ -695,7 +716,7 @@ namespace VidiGraph
         {
             if (animated)
             {
-                if (CoroutineUtils.StopIfRunning(this, _curAnim))
+                if (CoroutineUtils.StopIfRunning(this, ref _curAnim))
                 {
                     // update network since we cancelled coroutine prematurely
 
@@ -741,11 +762,6 @@ namespace VidiGraph
             cb?.Invoke();
         }
 
-        void ClearCommunityState(int community)
-        {
-            _context.Communities[community].State = MultiLayoutContext.CommunityState.None;
-        }
-
         IEnumerator CRAnimateTransformation(string transformer, Action onFinished = null,
             bool updateCommunityProps = true, bool updateStorage = false, bool updateRenderElements = true)
         {
@@ -780,12 +796,15 @@ namespace VidiGraph
             onFinished?.Invoke();
         }
 
-        IEnumerator CRMoveNode(int nodeID, Transform toTrack)
+        IEnumerator CRMoveNode(int nodeID)
         {
+            var nodeTransform = GetNodeTransform(nodeID);
+
             while (true)
             {
-                _context.Nodes[nodeID].Position = toTrack.position;
+                _context.Nodes[nodeID].Position = nodeTransform.position;
                 _context.Nodes[nodeID].Dirty = true;
+                _context.Communities[_context.Nodes[nodeID].CommunityID].Dirty = true;
 
                 UpdateNetwork(
                     updateCommunityProps: true,
@@ -798,14 +817,17 @@ namespace VidiGraph
 
         }
 
-        IEnumerator CRMoveNodes(IEnumerable<int> nodeIDs, IEnumerable<Transform> toTracks)
+        IEnumerator CRMoveNodes(IEnumerable<int> nodeIDs)
         {
+            var nodeTransforms = nodeIDs.Select(nid => GetNodeTransform(nid));
+
             while (true)
             {
-                foreach (var (nodeID, toTrack) in nodeIDs.Zip(toTracks, Tuple.Create))
+                foreach (var (nodeID, nodeTransform) in nodeIDs.Zip(nodeTransforms, Tuple.Create))
                 {
-                    _context.Nodes[nodeID].Position = toTrack.position;
+                    _context.Nodes[nodeID].Position = nodeTransform.position;
                     _context.Nodes[nodeID].Dirty = true;
+                    _context.Communities[_context.Nodes[nodeID].CommunityID].Dirty = true;
                 }
 
                 // update network without updating the storage for performance reasons
@@ -820,10 +842,15 @@ namespace VidiGraph
             }
         }
 
-        IEnumerator CRMoveComm(Transform comm, IEnumerable<int> nodeIDs, IEnumerable<Transform> toMoves)
+        IEnumerator CRMoveComm(int commID)
         {
             Vector3 lastCommPosition = Vector3.positiveInfinity;
             Quaternion lastCommRotation = Quaternion.identity;
+
+            var comm = GetCommTransform(commID);
+
+            var nodeIDs = _context.Communities[commID].Nodes;
+            var nodeTransforms = nodeIDs.Select(nid => GetNodeTransform(nid));
 
             while (true)
             {
@@ -836,13 +863,71 @@ namespace VidiGraph
                     var diffRot = curRotation * Quaternion.Inverse(lastCommRotation);
                     diffRot.ToAngleAxis(out var angle, out var axis);
 
-                    foreach (var (nodeID, toMove) in nodeIDs.Zip(toMoves, Tuple.Create))
+                    foreach (var (nodeID, nodeTransform) in nodeIDs.Zip(nodeTransforms, Tuple.Create))
                     {
-                        toMove.RotateAround(lastCommPosition, axis, angle);
+                        nodeTransform.RotateAround(lastCommPosition, axis, angle);
 
-                        toMove.position += diff;
-                        _context.Nodes[nodeID].Position = toMove.position;
+                        nodeTransform.position += diff;
+                        _context.Nodes[nodeID].Position = nodeTransform.position;
                         _context.Nodes[nodeID].Dirty = true;
+                    }
+                }
+
+                _context.Communities[commID].Dirty = true;
+
+                lastCommPosition = curPosition;
+                lastCommRotation = curRotation;
+
+                // update network without updating the storage for performance reasons
+                UpdateNetwork(
+                    updateCommunityProps: true,
+                    updateStorage: false,
+                    updateRenderElements: true
+                );
+
+                yield return null;
+            }
+        }
+
+        IEnumerator CRMoveComms(IEnumerable<int> commIDs)
+        {
+            Vector3 lastCommPosition = Vector3.positiveInfinity;
+            Quaternion lastCommRotation = Quaternion.identity;
+
+            var commTransform = GetCommTransform(commIDs.First());
+
+            Dictionary<int, IEnumerable<int>> nodeIDs = new();
+            Dictionary<int, IEnumerable<Transform>> nodeTransforms = new();
+
+            foreach (var commID in commIDs)
+            {
+                nodeIDs[commID] = _context.Communities[commID].Nodes;
+                nodeTransforms[commID] = nodeIDs[commID].Select(nid => GetNodeTransform(nid));
+            }
+
+            while (true)
+            {
+                var curPosition = commTransform.position;
+                var curRotation = commTransform.rotation;
+
+                if (float.IsFinite(lastCommPosition.x))
+                {
+                    var diff = curPosition - lastCommPosition;
+                    var diffRot = curRotation * Quaternion.Inverse(lastCommRotation);
+                    diffRot.ToAngleAxis(out var angle, out var axis);
+
+                    foreach (var commID in commIDs)
+                    {
+                        foreach (var (nodeID, nodeTransform) in nodeIDs[commID].Zip(nodeTransforms[commID], Tuple.Create))
+                        {
+                            nodeTransform.RotateAround(lastCommPosition, axis, angle);
+
+                            nodeTransform.position += diff;
+                            _context.Nodes[nodeID].Position = nodeTransform.position;
+                            _context.Nodes[nodeID].Dirty = true;
+                        }
+
+                        _context.Communities[commID].Dirty = true;
                     }
                 }
 
@@ -869,7 +954,7 @@ namespace VidiGraph
 
         void UpdateCommunityProps()
         {
-            _context.RecomputeGeometricProps(_manager.NetworkGlobal);
+            _context.RecomputeCommProps(_manager.NetworkGlobal);
         }
     }
 }

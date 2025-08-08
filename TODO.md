@@ -1,14 +1,29 @@
 # TODO
 
+- merge
+- transfer selection to new subnetwork
+- make surface based off nodes
+- attaching nodes, average pos?
+- shells for subgraphs
+
+- too big buffer error at BSpineShaderWrapper:322
+- clean up transformer code and input code (less nesting!!!)
+
+- fix dupe glitch
+- update storage for subgraph data
+- remove communities from global
+- change all new inits to just new()
+- remove empty interpolators
+
 - replicate cluster/node
+    - community is global and contexted. main mlcontext is synced to global
+    - store all mlnetwork nodes
     - when asking to select nodes, does it select on subnetworks as well?
-- move multiple selections
 - optimize reflection: https://stackoverflow.com/questions/7999652/best-way-to-cache-a-reflection-property-getter-setter
 - parse all waves into one
-- attaching nodes, average pos?
 
 
-- general code cleanup
+- general code cleanup  
 - when splatting to surface, account for random nodes that are not part of same community
 - move control point calculation to a transformer
     - keep bspline count constant
@@ -59,6 +74,26 @@
     - update: GOTTA FIX
 - latency examine
 - change edit commands to use string color
+- move multiple selections
+- wrap community shape and subgraph shapes
+- when asking to select nodes, does it select on subnetworks as well? - no
+- how do i communicate subnetwork id across renderers and inputs? make it a part of subnetwork context, for a start. now for input...
+- reorganize code
+- reimplement options (so we can clean up and test out transformers)
+- shrink nodes
+- add surfaces
+- minimap is mini of world. have little avatar moving around
+    - TODO: check if node is virtual before applying context transformations
+    - then, double check that CRMoveNodes is no longer laggy as hell on surface move
+    - spawn surface minis
+- figure out options interface
+- fix surface icon placement on minimap
+- selection history with hue
+- small on non select
+- zoom
+- outline on hover
+- try group hulls and only show selected nodes
+- try make non selected nodes gray, transparent, or outline?
 
 ## Ignore
 - move node moving animation to mln

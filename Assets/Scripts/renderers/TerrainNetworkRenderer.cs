@@ -1,5 +1,9 @@
-using System;
-using System.Collections;
+/*
+*
+* TerrainNetworkRenderer is a terrain representation renderer for the minimap network.
+*
+*/
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -13,41 +17,30 @@ namespace VidiGraph
         public Transform NetworkTransform;
 
 
-        [SerializeField]
-        float _meshSize = 1f;
-        [SerializeField]
-        float _meshHeight = 1f;
+        [SerializeField] float _meshSize = 1f;
+        [SerializeField] float _meshHeight = 1f;
 
-        [SerializeField]
-        float _falloff = 1f;
+        [SerializeField] float _falloff = 1f;
 
-        [SerializeField]
-        float _lineColorIntensity = 0.2f;
+        [SerializeField] float _lineColorIntensity = 0.2f;
 
-        [SerializeField]
-        AnimationCurve _falloffShapeFunc = AnimationCurve.Linear(0, 0, 1, 1);
+        [SerializeField] AnimationCurve _falloffShapeFunc = AnimationCurve.Linear(0, 0, 1, 1);
 
-        [SerializeField]
-        AnimationCurve _peakHeightFunc = AnimationCurve.Linear(0, 0, 1, 1);
+        [SerializeField] AnimationCurve _peakHeightFunc = AnimationCurve.Linear(0, 0, 1, 1);
 
-        [SerializeField]
-        AnimationCurve _slackFunc = AnimationCurve.Linear(0, 0.5f, 1, 1);
+        [SerializeField] AnimationCurve _slackFunc = AnimationCurve.Linear(0, 0.5f, 1, 1);
 
-        [SerializeField]
-        float _curvatureRadius = 100f;
-        [SerializeField]
-        GameObject _communityPointPrefab;
-        [SerializeField]
-        float _communityPointSize = 0.1f;
+        [SerializeField] float _curvatureRadius = 100f;
+        [SerializeField] GameObject _communityPointPrefab;
+        [SerializeField] float _communityPointSize = 0.1f;
 
         Dictionary<int, GameObject> _commSpheres = new Dictionary<int, GameObject>();
         Dictionary<int, Renderer> _commSphereRends = new Dictionary<int, Renderer>();
-        NetworkGlobal _networkGlobal;
+        NetworkManager _networkManager;
         MinimapContext _networkContext;
         HeightMap _heightMap;
 
-        [SerializeField]
-        GameObject _meshPrefab;
+        [SerializeField] GameObject _meshPrefab;
 
         MeshFilter _meshFilter;
         MeshRenderer _meshRenderer;
@@ -80,7 +73,7 @@ namespace VidiGraph
         {
             Reset();
 
-            _networkGlobal = GameObject.Find("/Network Manager").GetComponent<NetworkGlobal>();
+            _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkContext = (MinimapContext)networkContext;
 
             GameObject linkObj = Instantiate(_meshPrefab, NetworkTransform);
@@ -95,7 +88,7 @@ namespace VidiGraph
             mMaterial.SetFloat("_CurvatureRadius", _curvatureRadius);
 
             var flatMesh = new FlatMesh(
-                networkGlobal: _networkGlobal,
+                networkGlobal: _networkManager.NetworkGlobal,
                 networkContext: _networkContext,
                 subdivideSunflower: 2000,
                 subdivideRidges: 50
@@ -149,9 +142,10 @@ namespace VidiGraph
 
         public override void UpdateRenderElements()
         {
-            foreach (var (communityID, community) in _networkGlobal.Communities)
+            foreach (var (communityID, community) in _networkManager.NetworkGlobal.Communities)
             {
-                if (community.Selected) _commSpheres[communityID].SetActive(true);
+                if (_networkManager.SubnSelectedCommunities(-1).Contains(communityID))
+                    _commSpheres[communityID].SetActive(true);
                 else _commSpheres[communityID].SetActive(false);
             }
         }
@@ -226,7 +220,7 @@ namespace VidiGraph
 
         void GenerateNodeColors()
         {
-            _nodeColTex = TerrainTextureUtils.GenerateNodeColsFromGraph(_networkGlobal, _networkContext, _heightMap, TEX_RES_ALBEDO, TEX_RES_ALBEDO);
+            _nodeColTex = TerrainTextureUtils.GenerateNodeColsFromGraph(_networkManager.NetworkGlobal, _networkContext, _heightMap, TEX_RES_ALBEDO, TEX_RES_ALBEDO);
         }
     }
 

@@ -1,7 +1,10 @@
-using System;
-using System.Collections;
+/*
+*
+* Node is NetworkGlobal's representation of a node.
+*
+*/
+
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace VidiGraph
 {
@@ -13,8 +16,6 @@ namespace VidiGraph
         public int IdxProcessed { get; set; }
 
         public int CommunityID { get; set; } = -1;
-        public string Color { get; set; }
-        public Color ColorParsed { get; set; }
         public double Degree { get; set; } = 0;
         public int Height { get; set; }
         public int[] ChildIDs { get; set; }
@@ -23,7 +24,6 @@ namespace VidiGraph
         public IList<int> AncIDsOrderList { get; set; } = new List<int>();
 
         public bool Dirty { get; set; } = false;
-        public bool Selected { get; set; } = false;
     }
 
 }

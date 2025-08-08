@@ -1,5 +1,10 @@
+/*
+*
+* DatabaseStorage saves network data to a neo4j database.
+*
+*/
+
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using Neo4j.Driver;
 using UnityEngine;
@@ -8,14 +13,10 @@ namespace VidiGraph
 {
     public class DatabaseStorage : NetworkStorage
     {
-        [SerializeField]
-        string _uri = "bolt://localhost:7687";
-        [SerializeField]
-        string _user = "neo4j";
-        [SerializeField]
-        string _password = "neoneoneo";
-        [SerializeField]
-        bool _convertWinPaths = true;
+        [SerializeField] string _uri = "bolt://localhost:7687";
+        [SerializeField] string _user = "neo4j";
+        [SerializeField] string _password = "neoneoneo";
+        [SerializeField] bool _convertWinPaths = true;
 
         IDriver _driver;
 
@@ -29,17 +30,19 @@ namespace VidiGraph
             _driver?.Dispose();
         }
 
-        public override void InitialStore(NetworkFileData networkFile, NetworkGlobal networkGlobal, MultiLayoutContext networkContext)
+        public override void InitialStore(NetworkFileData networkFile, NetworkGlobal networkGlobal,
+            MultiLayoutContext networkContext, IEnumerable<MultiLayoutContext> subnetworkContexts)
         {
             TimerUtils.StartTime("DatabaseStorage.InitialStore");
-            DatabaseStorageUtils.BulkInitNetwork(networkFile, networkGlobal, networkContext, _driver, _convertWinPaths);
+            DatabaseStorageUtils.BulkInitNetwork(networkFile, networkGlobal, networkContext, subnetworkContexts, _driver, _convertWinPaths);
             TimerUtils.EndTime("DatabaseStorage.InitialStore");
         }
 
-        public override void UpdateStore(NetworkGlobal networkGlobal, MultiLayoutContext networkContext)
+        public override void UpdateStore(NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
+            IEnumerable<MultiLayoutContext> subnetworkContexts)
         {
             TimerUtils.StartTime("DatabaseStorage.UpdateStore");
-            DatabaseStorageUtils.BulkUpdateNetwork(networkGlobal, networkContext, _driver, _convertWinPaths);
+            DatabaseStorageUtils.BulkUpdateNetwork(networkGlobal, networkContext, subnetworkContexts, _driver, _convertWinPaths);
             TimerUtils.EndTime("DatabaseStorage.UpdateStore");
         }
 

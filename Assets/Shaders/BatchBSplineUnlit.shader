@@ -8,20 +8,19 @@ Shader "Custom/Batch BSpline Unlit"
     {
         Tags { "RenderType"="Transparent" }
         LOD 200
-        BlendOp Add
-		Blend SrcAlpha OneMinusSrcAlpha
-	    ZWrite Off
+        Blend SrcAlpha OneMinusSrcAlpha
+        ZWrite Off
 
         Pass
         {
             CGPROGRAM
-			#pragma target 5.0
+            #pragma target 5.0
             #pragma vertex vert
             #pragma fragment frag
-           
+            
             #define SHADER_CODE
             #include "UnityCG.cginc"
-			#include "BSplineData.cginc"
+            #include "BSplineData.cginc"
 
             float _LineWidth; // Used to adjust the line thickness
 
@@ -43,7 +42,7 @@ Shader "Custom/Batch BSpline Unlit"
                     // Set some invalid values
                     // It does not matter as the fragment is going to be discarded anyway in the fragment stage
                     o.vertex = float4(0,0,0,1);
-                    o.color = float4(1,1,1,0);
+                    o.color = float4(1,1,1,1);
                     o.uv = float2(1,1);
                     return o;
                 }
@@ -54,16 +53,24 @@ Shader "Custom/Batch BSpline Unlit"
                 // another tangent for that follow-up point
                 // With this offset we control which points are picked for tangent calculation
                 int idxOffset = 0;
-                if (vid % 6 == 2 || vid % 6 == 4 || vid % 6 == 5) { // Checks if the vertex that vid indicates lies on the current or next point
+                if (vid % 6 == 1 || vid % 6 == 4 || vid % 6 == 5) { // Checks if the vertex that vid indicates lies on the current or next point
                     idxOffset = 1;
                 }
                 SplineSampleIdx += idxOffset;
-
+                
                 // Calculate the normal and from that the offset for the current line segment
                 float3 curr = OutSamplePointData[SplineSampleIdx].Position;
-                float3 prev = OutSamplePointData[SplineSampleIdx - 1].Position;
                 float3 next = OutSamplePointData[SplineSampleIdx + 1].Position;
-
+                float3 prev;
+                
+                if (SplineSampleIdx != 0)
+                {
+                    prev = OutSamplePointData[SplineSampleIdx - 1].Position;
+                }
+                else
+                {
+                    prev = curr;
+                }
 
                 float3 tangent = (next - prev);
                 float3 viewDir = normalize(curr.xyz - _WorldSpaceCameraPos.xyz);
@@ -73,15 +80,15 @@ Shader "Custom/Batch BSpline Unlit"
 
                 // Transform the point to ViewSpace and add the offset
                 curr = UnityObjectToViewPos(OutSamplePointData[SplineSampleIdx].Position);
-                if (vid % 6 == 0 || vid % 6 == 2 || vid % 6 == 5) { // Checks if the vertex that vid indicates lies on the bottom or top of the line
+                if (vid % 6 == 1 || vid % 6 == 2 || vid % 6 == 5) { // Checks if the vertex that vid indicates lies on the bottom or top of the line
                     curr -= offset;
-                } else {
+                    } else {
                     curr += offset;
                 }
                 
                 // Depending on the position get the correct sample point, apply the offset and get the color
                 // Here we render the segment from the current point to the next one using 2 tris
-             
+                
 
                 o.vertex = mul(UNITY_MATRIX_P, float4(curr, 1));
                 o.color = OutSamplePointData[SplineSampleIdx].ColorRGBA;
@@ -93,7 +100,7 @@ Shader "Custom/Batch BSpline Unlit"
             fixed4 frag (v2f i) : SV_Target
             {
                 // Discard line ends if the marker was set
-                if (i.uv.x == 1) {
+                if (i.color.a <= 0.001) {
                     discard;
                 }
                 return i.color;

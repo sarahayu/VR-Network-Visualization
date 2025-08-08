@@ -1,4 +1,10 @@
-using System;
+/*
+*
+* PointerVisualController is a custom pointer for XR controllers that extends to infinity (instead of shrinking sometimes).
+* This is taken and modified from XR Interaction Toolkit.
+*
+*/
+
 #if BURST_PRESENT
 using Unity.Burst;
 #endif
@@ -6,7 +12,6 @@ using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine.XR.Interaction.Toolkit.Utilities;
 using UnityEngine.XR.Interaction.Toolkit.Utilities.Curves;
-using UnityEngine.XR.Interaction.Toolkit.Utilities.Internal;
 
 namespace UnityEngine.XR.Interaction.Toolkit.Interactors.Visuals
 {

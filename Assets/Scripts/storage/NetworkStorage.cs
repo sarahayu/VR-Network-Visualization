@@ -1,17 +1,21 @@
-using System;
-using System.Collections;
+/*
+*
+* NetworkStorage is base class for classes that store network data somewhere.
+*
+*/
+
 using System.Collections.Generic;
-using System.Linq;
-using Neo4j.Driver;
 using UnityEngine;
 
 namespace VidiGraph
 {
     public abstract class NetworkStorage : MonoBehaviour
     {
-        public abstract void InitialStore(NetworkFileData networkFile, NetworkGlobal networkGlobal, MultiLayoutContext networkContext);
+        public abstract void InitialStore(NetworkFileData networkFile, NetworkGlobal networkGlobal,
+            MultiLayoutContext networkContext, IEnumerable<MultiLayoutContext> subnetworkContexts);
 
         // will not un-dirty elements; that will happen in renderer
-        public abstract void UpdateStore(NetworkGlobal networkGlobal, MultiLayoutContext networkContext);
+        public abstract void UpdateStore(NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
+            IEnumerable<MultiLayoutContext> subnetworkContexts);
     }
 }

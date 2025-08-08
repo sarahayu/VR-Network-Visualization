@@ -1,4 +1,9 @@
-using System.Collections;
+/*
+*
+* BasicNetworkRenderer is a basic node/link renderer for multilayout network (and subnetworks).
+*
+*/
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -79,7 +84,7 @@ namespace VidiGraph
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
                     var nodeProps = _networkProperties.Nodes[node.ID];
-                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, NetworkTransform, node, nodeProps, NodeScale);
+                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, NetworkTransform, node, nodeProps);
 
                     _nodeGameObjs[node.ID] = nodeObj;
                 }
@@ -102,7 +107,7 @@ namespace VidiGraph
             }
             // ...whereas this is concerned with the visible links between nodes in the graph
 
-            foreach (var link in _networkData.Links)
+            foreach (var link in _networkData.Links.Values)
             {
                 Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
                     endPos = _networkProperties.Nodes[link.TargetNodeID].Position;
@@ -119,7 +124,7 @@ namespace VidiGraph
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
                     var nodeProps = _networkProperties.Nodes[node.ID];
-                    NodeLinkRenderUtils.UpdateNode(NodePrefab, node, nodeProps, NodeScale);
+                    NodeLinkRenderUtils.UpdateNode(NodePrefab, node, nodeProps);
                 }
             }
         }
@@ -139,7 +144,7 @@ namespace VidiGraph
             }
             // ...whereas this is concerned with the visible links between nodes in the graph
 
-            foreach (var link in _networkData.Links)
+            foreach (var link in _networkData.Links.Values)
             {
                 Vector3 startPos = _networkProperties.Nodes[link.SourceNodeID].Position,
                     endPos = _networkProperties.Nodes[link.TargetNodeID].Position;

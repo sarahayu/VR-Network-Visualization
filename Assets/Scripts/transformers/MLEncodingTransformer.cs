@@ -12,7 +12,7 @@ namespace VidiGraph
     {
         NetworkGlobal _networkGlobal;
         MultiLayoutContext _networkContext;
-        MultiLayoutContextUtils _utils;
+        MultiLayoutNetworkReflector _utils;
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
@@ -20,25 +20,30 @@ namespace VidiGraph
             _networkContext = (MultiLayoutContext)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _utils = new MultiLayoutContextUtils(_networkContext, manager);
+            _utils = new MultiLayoutNetworkReflector(_networkContext, manager);
         }
 
         public override void ApplyTransformation()
         {
             TimerUtils.StartTime("MLEncodingTransformer.ApplyTransformation");
-            foreach (var node in _networkGlobal.Nodes)
+            foreach (var (nodeID, nodeContext) in _networkContext.Nodes)
             {
-                var nodeContext = _networkContext.Nodes[node.ID];
+                var node = _networkGlobal.Nodes[nodeID];
+                if (node.IsVirtualNode) continue;
 
                 nodeContext.Size = _networkContext.GetNodeSize(node);
                 nodeContext.Color = _networkContext.GetNodeColor(node);
 
                 nodeContext.Dirty = true;
+                _networkContext.Communities[nodeContext.CommunityID].Dirty = true;
             }
 
-            foreach (var link in _networkGlobal.Links)
+            foreach (var (linkID, linkContext) in _networkContext.Links)
             {
-                var linkContext = _networkContext.Links[link.ID];
+                var link = _networkGlobal.Links[linkID];
+
+                if (_networkGlobal.Nodes[link.SourceNodeID].IsVirtualNode
+                    || _networkGlobal.Nodes[link.TargetNodeID].IsVirtualNode) continue;
 
                 linkContext.Width = _networkContext.GetLinkWidth(link);
                 linkContext.BundlingStrength = _networkContext.GetLinkBundlingStrength(link);

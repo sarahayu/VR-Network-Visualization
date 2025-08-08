@@ -1,24 +1,20 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.PlayerLoop;
 
 namespace VidiGraph
 {
-
     public static class NodeLinkRenderUtils
     {
         public static GameObject MakeNode(GameObject prefab, Transform parent,
-            Node node, MultiLayoutContext.Node nodeProps, float nodeScale)
+            Node node, MultiLayoutContext.Node nodeProps)
         {
             GameObject nodeObj = UnityEngine.Object.Instantiate(prefab, parent);
 
-            // node won't be selected anyways so just set select color to transparent
-            return UpdateNode(nodeObj, node, nodeProps, nodeScale);
+            nodeObj.GetComponent<MeshFilter>().sharedMesh = IcoSphere.Create(radius: 0.5f, detail: 1);
+
+            return UpdateNode(nodeObj, node, nodeProps);
         }
         public static GameObject UpdateNode(GameObject nodeObj,
-            Node node, MultiLayoutContext.Node nodeProps, float nodeScale, Renderer renderer = null)
+            Node node, MultiLayoutContext.Node nodeProps, Renderer renderer = null)
         {
             nodeObj.transform.position = nodeProps.Position;
             nodeObj.transform.localScale = Vector3.one * nodeProps.Size;
