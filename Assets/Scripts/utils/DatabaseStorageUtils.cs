@@ -1,11 +1,8 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using Neo4j.Driver;
-using Neo4j.Driver.Mapping;
 using UnityEditor;
 using UnityEngine;
 
@@ -17,7 +14,22 @@ namespace VidiGraph
             MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
             IDriver driver, bool convertWinPaths)
         {
-            DumpNetwork(networkFile, networkGlobal, context, subnetworkContexts, out var fc, out var fn, out var fn2n);
+            UpdateNetwork(networkFile, networkGlobal, context, subnetworkContexts, driver, convertWinPaths);
+        }
+
+        public static void BulkUpdateNetwork(NetworkGlobal networkGlobal, MultiLayoutContext context,
+            IEnumerable<MultiLayoutContext> subnetworkContexts, IDriver driver, bool convertWinPaths)
+        {
+            UpdateNetwork(null, networkGlobal, context, subnetworkContexts, driver, convertWinPaths);
+        }
+        static void UpdateNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal,
+            MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
+            IDriver driver, bool convertWinPaths)
+        {
+            bool isInitialUpdate = networkFile != null;
+            bool onlyDirty = !isInitialUpdate;
+
+            DumpNetwork(networkFile, networkGlobal, context, subnetworkContexts, out var fs, out var fc, out var fn, out var fn2n, onlyDirty);
 
             bool shutdown = false;
 
@@ -25,49 +37,69 @@ namespace VidiGraph
             {
                 var sess = driver.Session();
 
+                var nfs = ConvertToNeoPath(fs, convertWinPaths);
                 var nfc = ConvertToNeoPath(fc, convertWinPaths);
                 var nfn = ConvertToNeoPath(fn, convertWinPaths);
                 var nfn2n = ConvertToNeoPath(fn2n, convertWinPaths);
 
-                sess.ExecuteWrite(
-                    tx =>
-                    {
-                        var result = tx.Run(
-                            "CREATE CONSTRAINT NodeID IF NOT EXISTS FOR (n:Node) REQUIRE n.nodeId IS UNIQUE "
-                            );
+                if (isInitialUpdate)
+                {
+                    sess.ExecuteWrite(
+                        tx =>
+                        {
+                            var result = tx.Run(
+                                "CREATE CONSTRAINT NodeID IF NOT EXISTS FOR (n:Node) REQUIRE n.render_UUID IS UNIQUE "
+                                );
 
-                        return "success";
-                    });
+                            return "success";
+                        });
 
-                sess.ExecuteWrite(
-                    tx =>
-                    {
-                        var result = tx.Run(
-                            "CREATE CONSTRAINT CommID IF NOT EXISTS FOR (c:Community) REQUIRE c.commId IS UNIQUE "
-                            );
+                    sess.ExecuteWrite(
+                        tx =>
+                        {
+                            var result = tx.Run(
+                                "CREATE CONSTRAINT CommID IF NOT EXISTS FOR (c:Community) REQUIRE c.render_UUID IS UNIQUE "
+                                );
 
-                        return "success";
-                    });
+                            return "success";
+                        });
 
-                sess.ExecuteWrite(
-                    tx =>
-                    {
-                        var result = tx.Run(
-                            "CREATE CONSTRAINT PointsTo IF NOT EXISTS FOR ()-[p:POINTS_TO]-() REQUIRE p.linkId IS UNIQUE "
-                            );
+                    sess.ExecuteWrite(
+                        tx =>
+                        {
+                            var result = tx.Run(
+                                "CREATE CONSTRAINT PointsTo IF NOT EXISTS FOR ()-[p:POINTS_TO]-() REQUIRE p.render_UUID IS UNIQUE "
+                                );
 
-                        return "success";
-                    });
+                            return "success";
+                        });
+                }
 
                 sess.Run(
                             "LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';'" +
                             "CALL (row) { " +
-                                "MERGE (c:Community { commId: toInteger(row.commId) }) " +
+                                "MERGE (s:Subnetwork { subnetworkId: toInteger(row.subnetworkId) }) " +
+                                "SET s.subnetworkId = toInteger(row.subnetworkId) " +
+                            "} IN TRANSACTIONS OF 500 ROWS",
+                            new
+                            {
+                                filename = nfs
+                            });
+
+                sess.Run(
+                            "LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';'" +
+                            "CALL (row) { " +
+                                "MERGE (c:Community { render_UUID: row.render_UUID }) " +
+                                "SET c.commId = toInteger(row.commId) " +
                                 "SET c.selected = toBoolean(row.selected) " +
+                                "SET c.render_UUID = row.render_UUID " +
                                 "SET c.render_mass = toFloat(row.render_mass) " +
                                 "SET c.render_massCenter = row.render_massCenter " +
                                 "SET c.render_size = toFloat(row.render_size) " +
                                 "SET c.render_state = row.render_state " +
+                                "WITH * " +
+                                "MATCH (s:Subnetwork { subnetworkId: toInteger(row.subnetworkId) }) " +
+                                "MERGE (c)-[:PART_OF]->(s) " +
                             "} IN TRANSACTIONS OF 500 ROWS",
                             new
                             {
@@ -77,16 +109,18 @@ namespace VidiGraph
                 sess.Run(
                             "LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';'" +
                             "CALL (row) { " +
-                                "MERGE (n:Node { nodeId: toInteger(row.nodeId) }) " +
+                                "MERGE (n:Node { render_UUID: row.render_UUID }) " +
+                                "SET n.nodeId = toInteger(row.nodeId) " +
                                 "SET n.label = row.label " +
                                 "SET n.degree = toFloat(row.degree) " +
                                 "SET n.selected = toBoolean(row.selected) " +
+                                "SET n.render_UUID = row.render_UUID " +
                                 "SET n.render_size = toFloat(row.render_size) " +
                                 "SET n.render_pos = row.render_pos " +
                                 "SET n.render_color = row.render_color " +
-                                ToQuery("n", networkFile.nodes[0].props) +
+                                (isInitialUpdate ? ToQuery("n", networkFile.nodes[0].props) : "") +
                                 "WITH * " +
-                                "MATCH (c:Community { commId: toInteger(row.commId) }) " +
+                                "MATCH (c:Community { render_UUID: row.commRenderUUID }) " +
                                 "MERGE (n)-[:PART_OF]->(c) " +
                             "} IN TRANSACTIONS OF 500 ROWS",
                             new
@@ -97,16 +131,18 @@ namespace VidiGraph
                 sess.Run(
                             "LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';'" +
                             "CALL (row) { " +
-                                "MATCH (from:Node { nodeId: toInteger(row.sourceNodeId) }) " +
-                                "MATCH (to:Node { nodeId: toInteger(row.targetNodeId) }) " +
-                                "MERGE (from)-[l:POINTS_TO { linkId: toInteger(row.linkId) } ]->(to) " +
+                                "MATCH (from:Node { render_UUID: row.sourceRenderUUID }) " +
+                                "MATCH (to:Node { render_UUID: row.targetRenderUUID }) " +
+                                "MERGE (from)-[l:POINTS_TO { render_UUID: row.render_UUID } ]->(to) " +
+                                "SET l.linkId = toInteger(row.linkId) " +
                                 "SET l.selected = toBoolean(row.selected) " +
+                                "SET l.render_UUID = row.render_UUID " +
                                 "SET l.render_bundlingStrength = toFloat(row.render_bundlingStrength) " +
                                 "SET l.render_width = toFloat(row.render_width) " +
                                 "SET l.render_colorStart = row.render_colorStart " +
                                 "SET l.render_colorEnd = row.render_colorEnd " +
                                 "SET l.render_alpha = toFloat(row.render_alpha) " +
-                                ToQuery("l", networkFile.links[0].props) +
+                                (isInitialUpdate ? ToQuery("l", networkFile.links[0].props) : "") +
                             "} IN TRANSACTIONS OF 500 ROWS",
                             new
                             {
@@ -148,122 +184,27 @@ namespace VidiGraph
             }
         }
 
-        public static void BulkUpdateNetwork(NetworkGlobal networkGlobal, MultiLayoutContext context,
-            IEnumerable<MultiLayoutContext> subnetworkContexts, IDriver driver, bool convertWinPaths)
-        {
-            DumpNetwork(null, networkGlobal, context, subnetworkContexts, out var fc, out var fn, out var fn2n, true);
-
-            bool shutdown = false;
-
-            try
-            {
-                var sess = driver.Session();
-
-                var nfc = ConvertToNeoPath(fc, convertWinPaths);
-                var nfn = ConvertToNeoPath(fn, convertWinPaths);
-                var nfn2n = ConvertToNeoPath(fn2n, convertWinPaths);
-
-                sess.Run(
-                            "LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';'" +
-                            "CALL (row) { " +
-                                "MERGE (c:Community { commId: toInteger(row.commId) }) " +
-                                "SET c.selected = toBoolean(row.selected) " +
-                                "SET c.render_mass = toFloat(row.render_mass) " +
-                                "SET c.render_massCenter = row.render_massCenter " +
-                                "SET c.render_size = toFloat(row.render_size) " +
-                                "SET c.render_state = row.render_state " +
-                            "} IN TRANSACTIONS OF 500 ROWS",
-                            new
-                            {
-                                filename = nfc
-                            });
-
-                sess.Run(
-                            "LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';'" +
-                            "CALL (row) { " +
-                                "MERGE (n:Node { nodeId: toInteger(row.nodeId) }) " +
-                                "SET n.label = row.label " +
-                                "SET n.degree = toFloat(row.degree) " +
-                                "SET n.selected = toBoolean(row.selected) " +
-                                "SET n.render_size = toFloat(row.render_size) " +
-                                "SET n.render_pos = row.render_pos " +
-                                "SET n.render_color = row.render_color " +
-                                "WITH * " +
-                                "MATCH (c:Community { commId: toInteger(row.commId) }) " +
-                                "MERGE (n)-[:PART_OF]->(c) " +
-                            "} IN TRANSACTIONS OF 500 ROWS",
-                            new
-                            {
-                                filename = nfn
-                            });
-
-                sess.Run(
-                            "LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';'" +
-                            "CALL (row) { " +
-                                "MATCH (from:Node { nodeId: toInteger(row.sourceNodeId) }) " +
-                                "MATCH (to:Node { nodeId: toInteger(row.targetNodeId) }) " +
-                                "MERGE (from)-[l:POINTS_TO { linkId: toInteger(row.linkId) } ]->(to) " +
-                                "SET l.selected = toBoolean(row.selected) " +
-                                "SET l.render_bundlingStrength = toFloat(row.render_bundlingStrength) " +
-                                "SET l.render_width = toFloat(row.render_width) " +
-                                "SET l.render_colorStart = row.render_colorStart " +
-                                "SET l.render_colorEnd = row.render_colorEnd " +
-                                "SET l.render_alpha = toFloat(row.render_alpha) " +
-                            "} IN TRANSACTIONS OF 500 ROWS",
-                            new
-                            {
-                                filename = nfn2n
-                            });
-
-                sess.Dispose();
-
-                Debug.Log("Updated to Neo4J database.");
-            }
-            catch (ServiceUnavailableException e)
-            {
-                Debug.LogError(e.Message);
-
-                shutdown = true;
-            }
-            catch (ClientException e)
-            {
-                Debug.LogError(e.Message);
-                Debug.LogError("Could not load files to Neo4J database. Did you remove the setting `server.directories.import`?\n" +
-                    "https://neo4j.com/docs/cypher-manual/current/clauses/load-csv/#_configuration_settings_for_file_urls");
-
-                shutdown = true;
-            }
-            finally
-            {
-                if (shutdown)
-                {
-#if UNITY_EDITOR
-                    EditorApplication.isPlaying = false;
-#elif UNITY_STANDALONE
-                    Application.Quit();
-#endif
-                }
-            }
-        }
-
         static void DumpNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal,
             MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
-            out string commFile, out string nodeFile, out string nodeToNodeFile, bool onlyDirty = false)
+            out string subnetworkFile, out string commFile, out string nodeFile, out string nodeToNodeFile, bool onlyDirty = false)
         {
+            subnetworkFile = FileUtil.GetUniqueTempPathInProject();
             commFile = FileUtil.GetUniqueTempPathInProject();
             nodeFile = FileUtil.GetUniqueTempPathInProject();
             nodeToNodeFile = FileUtil.GetUniqueTempPathInProject();
 
-            using (StreamWriter cFile = new StreamWriter(commFile, append: false),
+            using (StreamWriter sFile = new StreamWriter(subnetworkFile, append: false),
+                                    cFile = new StreamWriter(commFile, append: false),
                                     nFile = new StreamWriter(nodeFile, append: false),
                                     n2nFile = new StreamWriter(nodeToNodeFile, append: false))
             {
                 bool dumpProps = networkFile != null;
 
-                cFile.WriteLine("commId;selected;render_mass;render_massCenter;render_size;render_state");
+                sFile.WriteLine("subnetworkId");
+                cFile.WriteLine("commId;selected;subnetworkId;render_UUID;render_mass;render_massCenter;render_size;render_state");
 
-                string nodeHeaders = "nodeId;label;degree;selected;commId;render_size;render_pos;render_color";
-                string linkHeaders = "linkId;sourceNodeId;targetNodeId;selected;render_bundlingStrength;render_width;render_colorStart;render_colorEnd;render_alpha";
+                string nodeHeaders = "nodeId;label;degree;selected;commRenderUUID;render_UUID;render_size;render_pos;render_color";
+                string linkHeaders = "linkId;sourceRenderUUID;targetRenderUUID;selected;render_UUID;render_bundlingStrength;render_width;render_colorStart;render_colorEnd;render_alpha";
 
                 IEnumerable<string> nodeProps = null;
                 IEnumerable<string> linkProps = null;
@@ -280,77 +221,26 @@ namespace VidiGraph
                 nFile.WriteLine(nodeHeaders);
                 n2nFile.WriteLine(linkHeaders);
 
-                foreach (var (commID, commGlobal) in networkGlobal.Communities)
+                var allContexts = new HashSet<MultiLayoutContext>() { context }.Union(subnetworkContexts);
+
+                foreach (var subContext in allContexts)
                 {
-                    var commContext = context.Communities[commID];
+                    var dumper = new DatabaseDumper(
+                        sFile: sFile,
+                        cFile: cFile,
+                        nFile: nFile,
+                        n2nFile: n2nFile,
+                        networkFile: networkFile,
+                        nodeProps: nodeProps,
+                        linkProps: linkProps,
+                        onlyDirty: onlyDirty,
+                        dumpProps: dumpProps,
+                        networkContext: subContext,
+                        networkGlobal: networkGlobal);
 
-                    if (onlyDirty && !commGlobal.Dirty && !commContext.Dirty) continue;
-
-                    var commId = commID;
-                    var selected = false; //commGlobal.Selected;
-                    var render_mass = commContext.Mass;
-                    var render_massCenter = commContext.MassCenter;
-                    var render_size = commContext.Size;
-                    var render_state = commContext.State;
-
-                    cFile.WriteLine($"{commId};{selected};{render_mass};{render_massCenter};{render_size};{render_state}");
+                    dumper.Dump();
                 }
 
-                foreach (var nodeGlobal in networkGlobal.Nodes)
-                {
-                    var nodeID = nodeGlobal.ID;
-                    var nodeContext = context.Nodes[nodeID];
-
-                    if (nodeGlobal.IsVirtualNode) continue;
-                    if (onlyDirty && !nodeGlobal.Dirty && !nodeContext.Dirty) continue;
-
-                    var nodeId = nodeID;
-                    var label = nodeGlobal.Label;
-                    var degree = nodeGlobal.Degree;
-                    var selected = false; //nodeGlobal.Selected;
-                    var commId = nodeGlobal.CommunityID;
-                    var render_size = nodeContext.Size;
-                    var render_pos = nodeContext.Position.ToString();
-                    var render_color = nodeContext.Color.ToString();
-
-                    string values = $"{nodeId};{label};{degree};{selected};{commId};{render_size};{render_pos};{render_color}";
-                    if (dumpProps)
-                    {
-                        var props = ObjectUtils.AsDictionary(networkFile.nodes[nodeGlobal.IdxProcessed].props);
-                        values += ";" + string.Join(";", nodeProps.Select(p => (props[p] ?? "").ToString()));
-                    }
-
-                    nFile.WriteLine(values);
-                }
-
-                foreach (var linkGlobal in networkGlobal.Links.Values)
-                {
-                    var linkID = linkGlobal.ID;
-                    var linkContext = context.Links[linkID];
-
-                    if (linkGlobal.SourceNode.IsVirtualNode || linkGlobal.TargetNode.IsVirtualNode) continue;
-                    if (onlyDirty && !linkGlobal.Dirty && !linkContext.Dirty) continue;
-
-                    var linkId = linkID;
-                    var sourceNodeId = linkGlobal.SourceNodeID;
-                    var targetNodeId = linkGlobal.TargetNodeID;
-                    var selected = linkGlobal.Selected;
-                    var render_bundlingStrength = linkContext.BundlingStrength;
-                    var render_width = linkContext.Width;
-                    var render_colorStart = linkContext.ColorStart;
-                    var render_colorEnd = linkContext.ColorEnd;
-                    var render_alpha = linkContext.Alpha;
-
-                    string values = $"{linkId};{sourceNodeId};{targetNodeId};{selected};{render_bundlingStrength};{render_width};{render_colorStart};{render_colorEnd};{render_alpha}";
-                    if (dumpProps)
-                    {
-                        var props = ObjectUtils.AsDictionary(networkFile.links[linkGlobal.IdxProcessed].props);
-
-                        values += ";" + string.Join(";", linkProps.Select(p => (props[p] ?? "").ToString()));
-                    }
-
-                    n2nFile.WriteLine(values);
-                }
             }
         }
 
@@ -385,7 +275,7 @@ namespace VidiGraph
 
             foreach (var key in keys)
             {
-                query += $"SET {varname}.{key} = row.{key} ";
+                query += $"SET {varname}.{key} = row.{key}" + " ";
             }
 
             return query;
@@ -396,16 +286,16 @@ namespace VidiGraph
         static string ToQuery(string varname, BullyProps.Node obj)
         {
             string query = "" +
-                $"SET {varname}.type = row.type " +
-                $"SET {varname}.grade = toInteger(row.grade) " +
-                $"SET {varname}.bully_victim_ratio = toFloat(row.bully_victim_ratio) ";
+                $"SET {varname}.type = row.type" + " " +
+                $"SET {varname}.grade = toInteger(row.grade)" + " " +
+                $"SET {varname}.bully_victim_ratio = toFloat(row.bully_victim_ratio)" + " ";
 
             return query;
         }
         static string ToQuery(string varname, BullyProps.Link obj)
         {
             string query = "" +
-                $"SET {varname}.type = row.type ";
+                $"SET {varname}.type = row.type" + " ";
 
             return query;
         }
@@ -417,16 +307,18 @@ namespace VidiGraph
         static string ToQuery(string varname, SchoolProps.Node obj)
         {
             string query = "" +
-                $"SET {varname}.smoker = toBoolean(row.smoker) " +
-                $"SET {varname}.drinker = toBoolean(row.drinker) " +
-                $"SET {varname}.gpa = toFloat(row.gpa) " +
-                $"SET {varname}.grade = toInteger(row.grade)";
+                $"SET {varname}.sex = row.sex" + " " +
+                $"SET {varname}.smoker = toBoolean(row.smoker)" + " " +
+                $"SET {varname}.drinker = toBoolean(row.drinker)" + " " +
+                $"SET {varname}.gpa = toFloat(row.gpa)" + " " +
+                $"SET {varname}.grade = toInteger(row.grade)" + " ";
 
             return query;
         }
         static string ToQuery(string varname, SchoolProps.Link obj)
         {
-            string query = "";
+            string query = "" +
+                $"SET {varname}.type = row.type" + " ";
 
             return query;
         }

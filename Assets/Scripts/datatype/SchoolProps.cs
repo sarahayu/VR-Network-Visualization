@@ -10,6 +10,7 @@ namespace VidiGraph
         [Serializable]
         public class Node
         {
+            public string sex { get; set; } = null;
             public bool? smoker { get; set; } = null;
             public bool? drinker { get; set; } = null;
             public float? gpa { get; set; } = null;
@@ -19,6 +20,8 @@ namespace VidiGraph
         [Serializable]
         public class Link
         {
+            public int[] waves { get; set; } = null;
+            public string type { get; set; } = null;
         }
     }
 }

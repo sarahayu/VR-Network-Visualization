@@ -1,10 +1,13 @@
 # TODO
 
-- merge
+- fix database
+- reimplement tooltip
+
 - transfer selection to new subnetwork
 - make surface based off nodes
 - attaching nodes, average pos?
 - shells for subgraphs
+- show link directionality
 
 - too big buffer error at BSpineShaderWrapper:322
 - clean up transformer code and input code (less nesting!!!)
@@ -94,6 +97,7 @@
 - outline on hover
 - try group hulls and only show selected nodes
 - try make non selected nodes gray, transparent, or outline?
+- merge
 
 ## Ignore
 - move node moving animation to mln

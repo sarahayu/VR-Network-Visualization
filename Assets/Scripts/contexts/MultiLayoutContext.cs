@@ -33,6 +33,12 @@ namespace VidiGraph
 
         public class Node
         {
+            public Node()
+            {
+                UUID = Guid.NewGuid().ToString();
+            }
+
+            public string UUID { get; set; }       // unique for all Context.Nodes, since duplicate nodes with same IDs can exist on multiple subnetworks
             public float Size { get; set; } = 1f;
             public Vector3 Position { get; set; } = Vector3.zero;
             public Color Color { get; set; }
@@ -46,6 +52,12 @@ namespace VidiGraph
 
         public class Link
         {
+            public Link()
+            {
+                UUID = Guid.NewGuid().ToString();
+            }
+
+            public string UUID { get; set; }       // unique for all Context.Links, since duplicate links with same IDs can exist on multiple subnetworks
             public float BundlingStrength { get; set; } = 0f;
             public float Width { get; set; } = 1f;
             public Color ColorStart { get; set; }
@@ -61,6 +73,12 @@ namespace VidiGraph
 
         public class Community
         {
+            public Community()
+            {
+                UUID = Guid.NewGuid().ToString();
+            }
+
+            public string UUID { get; set; }       // unique for all Context.Communities, since duplicate communities with same IDs can exist on multiple subnetworks
             // we want to store ID because communities in context may be different from global
             public int ID { get; set; }
             public double Mass { get; set; }
