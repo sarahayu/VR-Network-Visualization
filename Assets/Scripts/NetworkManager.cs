@@ -66,9 +66,14 @@ namespace VidiGraph
             _storage?.InitialStore(_fileLoader.ClusterLayout, _networkGlobal,
                 _multiLayoutNetwork.Context, _subnetworks.Values.Select(sn => sn.Context));
 
-            _multiLayoutNetwork.SetStorageUpdateCallback(() =>
-                _storage?.UpdateStore(_networkGlobal, _multiLayoutNetwork.Context,
-                    _subnetworks.Values.Select(sn => sn.Context)));
+            _multiLayoutNetwork.SetStorageUpdateCallback(UpdateStorage);
+        }
+
+        void OnApplicationQuit()
+        {
+            print("Deleting database contents...");
+            _storage?.DeleteContents();
+            print("Deleted database contents!");
         }
 
         public void Initialize()
@@ -122,6 +127,11 @@ namespace VidiGraph
         public void UnpauseStorageUpdate()
         {
             _updatingStorage = true;
+            TriggerStorageUpdate();
+        }
+
+        public void TriggerStorageUpdate()
+        {
             _multiLayoutNetwork.UpdateStorage();
             foreach (var subn in _subnetworks.Values) subn.UpdateStorage();
         }
@@ -134,12 +144,14 @@ namespace VidiGraph
         public void UnpauseRenderUpdate()
         {
             _updatingRenderElements = true;
-            RenderUpdate();
+            TriggerRenderUpdate();
         }
 
         public void TriggerRenderUpdate()
         {
-            RenderUpdate();
+            _multiLayoutNetwork.UpdateRenderElements();
+            foreach (var subn in _subnetworks.Values) subn.UpdateRenderElements();
+            UpdateHandheld();
         }
 
         public void ToggleBigNetworkSphericalAndHairball(bool animated = true)
@@ -411,24 +423,28 @@ namespace VidiGraph
             }
         }
 
-        public void CreateSubnetwork(IEnumerable<int> nodeIDs, int subnetworkID = -1)
+        public void CreateSubnetwork(IEnumerable<int> nodeIDs, int sourceSubnetworkID = -1)
         {
             if (nodeIDs.Count() == 0) return;
 
-            if (subnetworkID == -1)
+            BasicSubnetwork subn;
+
+            if (sourceSubnetworkID == -1)
             {
-                var subn = BasicSubnetworkUtils.CreateBasicSubnetwork(_subnetworkPrefab, transform, nodeIDs,
+                subn = BasicSubnetworkUtils.CreateBasicSubnetwork(_subnetworkPrefab, transform, nodeIDs,
                     _multiLayoutNetwork.Context);
-                _subnetworks[subn.ID] = subn;
             }
             else
             {
-                var subn = BasicSubnetworkUtils.CreateBasicSubnetwork(_subnetworkPrefab, transform, nodeIDs,
-                    _subnetworks[subnetworkID].Context);
-                _subnetworks[subn.ID] = subn;
+                subn = BasicSubnetworkUtils.CreateBasicSubnetwork(_subnetworkPrefab, transform, nodeIDs,
+                    _subnetworks[sourceSubnetworkID].Context);
             }
 
-            RenderUpdate();
+            subn.SetStorageUpdateCallback(UpdateStorage);
+            _subnetworks[subn.ID] = subn;
+
+            TriggerStorageUpdate();
+            TriggerRenderUpdate();
         }
 
         public void SetMLNodesSize(IEnumerable<int> nodeIDs, float size, int subnetworkID = -1)
@@ -943,11 +959,10 @@ namespace VidiGraph
 
         /*=============== start private methods ===================*/
 
-        void RenderUpdate()
+        void UpdateStorage()
         {
-            _multiLayoutNetwork.UpdateRenderElements();
-            foreach (var subn in _subnetworks.Values) subn.UpdateRenderElements();
-            UpdateHandheld();
+            _storage?.UpdateStore(_fileLoader.ClusterLayout, _networkGlobal, _multiLayoutNetwork.Context,
+                    _subnetworks.Values.Select(sn => sn.Context));
         }
 
         // clears both nodes and communities

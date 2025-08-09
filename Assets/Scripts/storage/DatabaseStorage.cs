@@ -38,12 +38,17 @@ namespace VidiGraph
             TimerUtils.EndTime("DatabaseStorage.InitialStore");
         }
 
-        public override void UpdateStore(NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
-            IEnumerable<MultiLayoutContext> subnetworkContexts)
+        public override void UpdateStore(NetworkFileData networkFile, NetworkGlobal networkGlobal,
+            MultiLayoutContext networkContext, IEnumerable<MultiLayoutContext> subnetworkContexts)
         {
             TimerUtils.StartTime("DatabaseStorage.UpdateStore");
-            DatabaseStorageUtils.BulkUpdateNetwork(networkGlobal, networkContext, subnetworkContexts, _driver, _convertWinPaths);
+            DatabaseStorageUtils.BulkUpdateNetwork(networkFile, networkGlobal, networkContext, subnetworkContexts, _driver, _convertWinPaths);
             TimerUtils.EndTime("DatabaseStorage.UpdateStore");
+        }
+
+        public override void DeleteContents()
+        {
+            DatabaseStorageUtils.DeleteDatabaseContents(_driver);
         }
 
         public IEnumerable<Node> GetNodesFromStore(NetworkGlobal networkGlobal, string command)

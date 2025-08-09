@@ -14,22 +14,101 @@ namespace VidiGraph
             MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
             IDriver driver, bool convertWinPaths)
         {
-            UpdateNetwork(networkFile, networkGlobal, context, subnetworkContexts, driver, convertWinPaths);
+            DeleteDatabaseContents(driver);
+            CreateConstraints(driver);
+            UpdateNetwork(networkFile, networkGlobal, context, subnetworkContexts, driver, convertWinPaths, false);
         }
 
-        public static void BulkUpdateNetwork(NetworkGlobal networkGlobal, MultiLayoutContext context,
-            IEnumerable<MultiLayoutContext> subnetworkContexts, IDriver driver, bool convertWinPaths)
-        {
-            UpdateNetwork(null, networkGlobal, context, subnetworkContexts, driver, convertWinPaths);
-        }
-        static void UpdateNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal,
+        public static void BulkUpdateNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal,
             MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
             IDriver driver, bool convertWinPaths)
         {
-            bool isInitialUpdate = networkFile != null;
-            bool onlyDirty = !isInitialUpdate;
+            UpdateNetwork(networkFile, networkGlobal, context, subnetworkContexts, driver, convertWinPaths, true);
+        }
 
-            DumpNetwork(networkFile, networkGlobal, context, subnetworkContexts, out var fs, out var fc, out var fn, out var fn2n, onlyDirty);
+        public static void DeleteDatabaseContents(IDriver driver)
+        {
+            driver.Session().Run("MATCH (n) DETACH DELETE n");
+            DeleteConstraints(driver);
+        }
+
+        static void CreateConstraints(IDriver driver)
+        {
+            var sess = driver.Session();
+
+            sess.ExecuteWrite(
+                tx =>
+                {
+                    var result = tx.Run(
+                        "CREATE CONSTRAINT NodeID IF NOT EXISTS FOR (n:Node) REQUIRE n.render_UUID IS UNIQUE "
+                        );
+
+                    return "success";
+                });
+
+            sess.ExecuteWrite(
+                tx =>
+                {
+                    var result = tx.Run(
+                        "CREATE CONSTRAINT CommID IF NOT EXISTS FOR (c:Community) REQUIRE c.render_UUID IS UNIQUE "
+                        );
+
+                    return "success";
+                });
+
+            sess.ExecuteWrite(
+                tx =>
+                {
+                    var result = tx.Run(
+                        "CREATE CONSTRAINT PointsTo IF NOT EXISTS FOR ()-[p:POINTS_TO]-() REQUIRE p.render_UUID IS UNIQUE "
+                        );
+
+                    return "success";
+                });
+        }
+
+        static void DeleteConstraints(IDriver driver)
+        {
+            var sess = driver.Session();
+
+            sess.ExecuteWrite(
+                tx =>
+                {
+                    var result = tx.Run(
+                        "DROP CONSTRAINT NodeID IF EXISTS"
+                        );
+
+                    return "success";
+                });
+
+            sess.ExecuteWrite(
+                tx =>
+                {
+                    var result = tx.Run(
+                        "DROP CONSTRAINT CommID IF EXISTS"
+                        );
+
+                    return "success";
+                });
+
+            sess.ExecuteWrite(
+                tx =>
+                {
+                    var result = tx.Run(
+                        "DROP CONSTRAINT PointsTo IF EXISTS"
+                        );
+
+                    return "success";
+                });
+        }
+
+        static void UpdateNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal,
+            MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
+            IDriver driver, bool convertWinPaths, bool onlyDirty)
+        {
+            bool onOnlyDirty = onlyDirty;
+
+            DumpNetwork(networkFile, networkGlobal, context, subnetworkContexts, out var fs, out var fc, out var fn, out var fn2n, onOnlyDirty);
 
             bool shutdown = false;
 
@@ -41,39 +120,6 @@ namespace VidiGraph
                 var nfc = ConvertToNeoPath(fc, convertWinPaths);
                 var nfn = ConvertToNeoPath(fn, convertWinPaths);
                 var nfn2n = ConvertToNeoPath(fn2n, convertWinPaths);
-
-                if (isInitialUpdate)
-                {
-                    sess.ExecuteWrite(
-                        tx =>
-                        {
-                            var result = tx.Run(
-                                "CREATE CONSTRAINT NodeID IF NOT EXISTS FOR (n:Node) REQUIRE n.render_UUID IS UNIQUE "
-                                );
-
-                            return "success";
-                        });
-
-                    sess.ExecuteWrite(
-                        tx =>
-                        {
-                            var result = tx.Run(
-                                "CREATE CONSTRAINT CommID IF NOT EXISTS FOR (c:Community) REQUIRE c.render_UUID IS UNIQUE "
-                                );
-
-                            return "success";
-                        });
-
-                    sess.ExecuteWrite(
-                        tx =>
-                        {
-                            var result = tx.Run(
-                                "CREATE CONSTRAINT PointsTo IF NOT EXISTS FOR ()-[p:POINTS_TO]-() REQUIRE p.render_UUID IS UNIQUE "
-                                );
-
-                            return "success";
-                        });
-                }
 
                 sess.Run(
                             "LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';'" +
@@ -118,7 +164,7 @@ namespace VidiGraph
                                 "SET n.render_size = toFloat(row.render_size) " +
                                 "SET n.render_pos = row.render_pos " +
                                 "SET n.render_color = row.render_color " +
-                                (isInitialUpdate ? ToQuery("n", networkFile.nodes[0].props) : "") +
+                                ToQuery("n", networkFile.nodes[0].props) +
                                 "WITH * " +
                                 "MATCH (c:Community { render_UUID: row.commRenderUUID }) " +
                                 "MERGE (n)-[:PART_OF]->(c) " +
@@ -142,7 +188,7 @@ namespace VidiGraph
                                 "SET l.render_colorStart = row.render_colorStart " +
                                 "SET l.render_colorEnd = row.render_colorEnd " +
                                 "SET l.render_alpha = toFloat(row.render_alpha) " +
-                                (isInitialUpdate ? ToQuery("l", networkFile.links[0].props) : "") +
+                                ToQuery("l", networkFile.links[0].props) +
                             "} IN TRANSACTIONS OF 500 ROWS",
                             new
                             {

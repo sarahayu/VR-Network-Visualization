@@ -15,7 +15,9 @@ namespace VidiGraph
             MultiLayoutContext networkContext, IEnumerable<MultiLayoutContext> subnetworkContexts);
 
         // will not un-dirty elements; that will happen in renderer
-        public abstract void UpdateStore(NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
-            IEnumerable<MultiLayoutContext> subnetworkContexts);
+        public abstract void UpdateStore(NetworkFileData networkFile, NetworkGlobal networkGlobal,
+            MultiLayoutContext networkContext, IEnumerable<MultiLayoutContext> subnetworkContexts);
+
+        public abstract void DeleteContents();
     }
 }

@@ -64,6 +64,7 @@ namespace VidiGraph
             {
                 var commGlobal = _networkGlobal.Communities[commID];
 
+                if (commGlobal == null) continue;
                 if (_onlyDirty && !commGlobal.Dirty && !commContext.Dirty) continue;
 
                 var commId = commContext.ID;
