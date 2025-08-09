@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace VidiGraph
 {
-    public class FriendProps
+    public class SchoolProps
     {
         [Serializable]
         public class Node

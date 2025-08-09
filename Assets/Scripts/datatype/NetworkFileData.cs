@@ -13,7 +13,7 @@ namespace VidiGraph
     // uncomment to parse custom propdata inside file
 
     // using Props = BullyProps;
-    using Props = FriendProps;
+    using Props = SchoolProps;
 
     // using Props = DefaultProps;
 

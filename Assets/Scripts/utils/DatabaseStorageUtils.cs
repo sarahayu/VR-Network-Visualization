@@ -414,7 +414,7 @@ namespace VidiGraph
 
         ////////////////// start specialized functions for FriendProps ////////////////////
 
-        static string ToQuery(string varname, FriendProps.Node obj)
+        static string ToQuery(string varname, SchoolProps.Node obj)
         {
             string query = "" +
                 $"SET {varname}.smoker = toBoolean(row.smoker) " +
@@ -424,7 +424,7 @@ namespace VidiGraph
 
             return query;
         }
-        static string ToQuery(string varname, FriendProps.Link obj)
+        static string ToQuery(string varname, SchoolProps.Link obj)
         {
             string query = "";
 
