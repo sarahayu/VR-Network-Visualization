@@ -43,9 +43,9 @@ namespace VidiGraph
                 {
                     var result = tx.Run(
                         "MATCH (n:Node { nodeId: $ID }) " +
-                        "SET n.render_size = $Size " +
-                        "SET n.render_pos = $Position " +
-                        "SET n.render_color = $Color ",
+                        "SET n.size = $Size " +
+                        "SET n.pos = $Position " +
+                        "SET n.color = $Color ",
                         new
                         {
                             ID,
@@ -88,11 +88,11 @@ namespace VidiGraph
                 {
                     var result = tx.Run(
                         "MATCH (:Node)-[p:POINTS_TO { linkId: $ID } ]->(:Node) " +
-                        "SET p.render_bundlingStrength = $BundlingStrength " +
-                        "SET p.render_width = $Width " +
-                        "SET p.render_colorStart = $ColorStart " +
-                        "SET p.render_colorEnd = $ColorEnd " +
-                        "SET p.render_alpha = $Alpha ",
+                        "SET p.bundlingStrength = $BundlingStrength " +
+                        "SET p.width = $Width " +
+                        "SET p.colorStart = $ColorStart " +
+                        "SET p.colorEnd = $ColorEnd " +
+                        "SET p.alpha = $Alpha ",
                         new
                         {
                             ID = linkID,
@@ -132,10 +132,10 @@ namespace VidiGraph
                 {
                     var result = tx.Run(
                         "MATCH (n:Community { commId: $ID }) " +
-                        "SET n.render_mass = $Mass " +
-                        "SET n.render_massCenter = $MassCenter " +
-                        "SET n.render_size = $Size " +
-                        "SET n.render_state = $State ",
+                        "SET n.mass = $Mass " +
+                        "SET n.massCenter = $MassCenter " +
+                        "SET n.size = $Size " +
+                        "SET n.state = $State ",
                         new
                         {
                             ID,

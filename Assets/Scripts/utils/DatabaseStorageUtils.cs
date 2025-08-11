@@ -40,7 +40,7 @@ namespace VidiGraph
                 tx =>
                 {
                     var result = tx.Run(
-                        "CREATE CONSTRAINT NodeID IF NOT EXISTS FOR (n:Node) REQUIRE n.render_UUID IS UNIQUE "
+                        "CREATE CONSTRAINT NodeID IF NOT EXISTS FOR (n:Node) REQUIRE n.GUID IS UNIQUE "
                         );
 
                     return "success";
@@ -50,7 +50,7 @@ namespace VidiGraph
                 tx =>
                 {
                     var result = tx.Run(
-                        "CREATE CONSTRAINT CommID IF NOT EXISTS FOR (c:Community) REQUIRE c.render_UUID IS UNIQUE "
+                        "CREATE CONSTRAINT CommID IF NOT EXISTS FOR (c:Community) REQUIRE c.GUID IS UNIQUE "
                         );
 
                     return "success";
@@ -60,7 +60,7 @@ namespace VidiGraph
                 tx =>
                 {
                     var result = tx.Run(
-                        "CREATE CONSTRAINT PointsTo IF NOT EXISTS FOR ()-[p:POINTS_TO]-() REQUIRE p.render_UUID IS UNIQUE "
+                        "CREATE CONSTRAINT PointsTo IF NOT EXISTS FOR ()-[p:POINTS_TO]-() REQUIRE p.GUID IS UNIQUE "
                         );
 
                     return "success";
@@ -133,14 +133,14 @@ namespace VidiGraph
                 sess.Run(
                             "LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';'" +
                             "CALL (row) { " +
-                                "MERGE (c:Community { render_UUID: row.render_UUID }) " +
+                                "MERGE (c:Community { GUID: row.GUID }) " +
                                 "SET c.commId = toInteger(row.commId) " +
                                 "SET c.selected = toBoolean(row.selected) " +
-                                "SET c.render_UUID = row.render_UUID " +
-                                "SET c.render_mass = toFloat(row.render_mass) " +
-                                "SET c.render_massCenter = row.render_massCenter " +
-                                "SET c.render_size = toFloat(row.render_size) " +
-                                "SET c.render_state = row.render_state " +
+                                "SET c.GUID = row.GUID " +
+                                "SET c.mass = toFloat(row.mass) " +
+                                "SET c.massCenter = row.massCenter " +
+                                "SET c.size = toFloat(row.size) " +
+                                "SET c.state = row.state " +
                                 "WITH * " +
                                 "MATCH (s:Subnetwork { subnetworkId: toInteger(row.subnetworkId) }) " +
                                 "MERGE (c)-[:PART_OF]->(s) " +
@@ -153,18 +153,18 @@ namespace VidiGraph
                 sess.Run(
                             "LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';'" +
                             "CALL (row) { " +
-                                "MERGE (n:Node { render_UUID: row.render_UUID }) " +
+                                "MERGE (n:Node { GUID: row.GUID }) " +
                                 "SET n.nodeId = toInteger(row.nodeId) " +
                                 "SET n.label = row.label " +
                                 "SET n.degree = toFloat(row.degree) " +
                                 "SET n.selected = toBoolean(row.selected) " +
-                                "SET n.render_UUID = row.render_UUID " +
-                                "SET n.render_size = toFloat(row.render_size) " +
-                                "SET n.render_pos = row.render_pos " +
-                                "SET n.render_color = row.render_color " +
+                                "SET n.GUID = row.GUID " +
+                                "SET n.size = toFloat(row.size) " +
+                                "SET n.pos = row.pos " +
+                                "SET n.color = row.color " +
                                 ToQuery("n", networkFile.nodes[0].props) +
                                 "WITH * " +
-                                "MATCH (c:Community { render_UUID: row.commRenderUUID }) " +
+                                "MATCH (c:Community { GUID: row.commRenderGUID }) " +
                                 "MERGE (n)-[:PART_OF]->(c) " +
                             "} IN TRANSACTIONS OF 500 ROWS",
                             new
@@ -175,17 +175,17 @@ namespace VidiGraph
                 sess.Run(
                             "LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';'" +
                             "CALL (row) { " +
-                                "MATCH (from:Node { render_UUID: row.sourceRenderUUID }) " +
-                                "MATCH (to:Node { render_UUID: row.targetRenderUUID }) " +
-                                "MERGE (from)-[l:POINTS_TO { render_UUID: row.render_UUID } ]->(to) " +
+                                "MATCH (from:Node { GUID: row.sourceRenderGUID }) " +
+                                "MATCH (to:Node { GUID: row.targetRenderGUID }) " +
+                                "MERGE (from)-[l:POINTS_TO { GUID: row.GUID } ]->(to) " +
                                 "SET l.linkId = toInteger(row.linkId) " +
                                 "SET l.selected = toBoolean(row.selected) " +
-                                "SET l.render_UUID = row.render_UUID " +
-                                "SET l.render_bundlingStrength = toFloat(row.render_bundlingStrength) " +
-                                "SET l.render_width = toFloat(row.render_width) " +
-                                "SET l.render_colorStart = row.render_colorStart " +
-                                "SET l.render_colorEnd = row.render_colorEnd " +
-                                "SET l.render_alpha = toFloat(row.render_alpha) " +
+                                "SET l.GUID = row.GUID " +
+                                "SET l.bundlingStrength = toFloat(row.bundlingStrength) " +
+                                "SET l.width = toFloat(row.width) " +
+                                "SET l.colorStart = row.colorStart " +
+                                "SET l.colorEnd = row.colorEnd " +
+                                "SET l.alpha = toFloat(row.alpha) " +
                                 ToQuery("l", networkFile.links[0].props) +
                             "} IN TRANSACTIONS OF 500 ROWS",
                             new
@@ -245,10 +245,10 @@ namespace VidiGraph
                 bool dumpProps = networkFile != null;
 
                 sFile.WriteLine("subnetworkId");
-                cFile.WriteLine("commId;selected;subnetworkId;render_UUID;render_mass;render_massCenter;render_size;render_state");
+                cFile.WriteLine("commId;selected;subnetworkId;GUID;mass;massCenter;size;state");
 
-                string nodeHeaders = "nodeId;label;degree;selected;commRenderUUID;render_UUID;render_size;render_pos;render_color";
-                string linkHeaders = "linkId;sourceRenderUUID;targetRenderUUID;selected;render_UUID;render_bundlingStrength;render_width;render_colorStart;render_colorEnd;render_alpha";
+                string nodeHeaders = "nodeId;label;degree;selected;commRenderGUID;GUID;size;pos;color";
+                string linkHeaders = "linkId;sourceRenderGUID;targetRenderGUID;selected;GUID;bundlingStrength;width;colorStart;colorEnd;alpha";
 
                 IEnumerable<string> nodeProps = null;
                 IEnumerable<string> linkProps = null;

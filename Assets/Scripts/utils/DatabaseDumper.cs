@@ -70,13 +70,13 @@ namespace VidiGraph
                 var commId = commContext.ID;
                 var selected = false; //commGlobal.Selected;
                 var subnetworkId = _networkContext.SubnetworkID; //commGlobal.Selected;
-                var render_UUID = commContext.UUID;
-                var render_mass = commContext.Mass;
-                var render_massCenter = commContext.MassCenter;
-                var render_size = commContext.Size;
-                var render_state = commContext.State;
+                var GUID = commContext.GUID;
+                var mass = commContext.Mass;
+                var massCenter = commContext.MassCenter;
+                var size = commContext.Size;
+                var state = commContext.State;
 
-                _cFile.WriteLine($"{commId};{selected};{subnetworkId};{render_UUID};{render_mass};{render_massCenter};{render_size};{render_state}");
+                _cFile.WriteLine($"{commId};{selected};{subnetworkId};{GUID};{mass};{massCenter};{size};{state}");
             }
         }
 
@@ -93,13 +93,13 @@ namespace VidiGraph
                 var label = nodeGlobal.Label;
                 var degree = nodeGlobal.Degree;
                 var selected = false; //nodeGlobal.Selected;
-                var commRenderUUID = _networkContext.Communities[nodeContext.CommunityID].UUID;
-                var render_UUID = nodeContext.UUID;
-                var render_size = nodeContext.Size;
-                var render_pos = nodeContext.Position.ToString();
-                var render_color = nodeContext.Color.ToString();
+                var commRenderGUID = _networkContext.Communities[nodeContext.CommunityID].GUID;
+                var GUID = nodeContext.GUID;
+                var size = nodeContext.Size;
+                var pos = nodeContext.Position.ToString();
+                var color = nodeContext.Color.ToString();
 
-                string values = $"{nodeId};{label};{degree};{selected};{commRenderUUID};{render_UUID};{render_size};{render_pos};{render_color}";
+                string values = $"{nodeId};{label};{degree};{selected};{commRenderGUID};{GUID};{size};{pos};{color}";
                 if (_dumpProps)
                 {
                     var props = ObjectUtils.AsDictionary(_networkFile.nodes[nodeGlobal.IdxProcessed].props);
@@ -122,17 +122,17 @@ namespace VidiGraph
                 if (_onlyDirty && !linkGlobal.Dirty && !linkContext.Dirty) continue;
 
                 var linkId = linkID;
-                var sourceRenderUUID = _networkContext.Nodes[_networkGlobal.Links[linkID].SourceNodeID].UUID;
-                var targetRenderUUID = _networkContext.Nodes[_networkGlobal.Links[linkID].TargetNodeID].UUID;
+                var sourceRenderGUID = _networkContext.Nodes[_networkGlobal.Links[linkID].SourceNodeID].GUID;
+                var targetRenderGUID = _networkContext.Nodes[_networkGlobal.Links[linkID].TargetNodeID].GUID;
                 var selected = linkGlobal.Selected;
-                var render_UUID = linkContext.UUID;
-                var render_bundlingStrength = linkContext.BundlingStrength;
-                var render_width = linkContext.Width;
-                var render_colorStart = linkContext.ColorStart;
-                var render_colorEnd = linkContext.ColorEnd;
-                var render_alpha = linkContext.Alpha;
+                var GUID = linkContext.GUID;
+                var bundlingStrength = linkContext.BundlingStrength;
+                var width = linkContext.Width;
+                var colorStart = linkContext.ColorStart;
+                var colorEnd = linkContext.ColorEnd;
+                var alpha = linkContext.Alpha;
 
-                string values = $"{linkId};{sourceRenderUUID};{targetRenderUUID};{selected};{render_UUID};{render_bundlingStrength};{render_width};{render_colorStart};{render_colorEnd};{render_alpha}";
+                string values = $"{linkId};{sourceRenderGUID};{targetRenderGUID};{selected};{GUID};{bundlingStrength};{width};{colorStart};{colorEnd};{alpha}";
                 if (_dumpProps)
                 {
                     var props = ObjectUtils.AsDictionary(_networkFile.links[linkGlobal.IdxProcessed].props);

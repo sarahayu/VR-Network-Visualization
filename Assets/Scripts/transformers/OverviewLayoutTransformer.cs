@@ -38,7 +38,7 @@ namespace VidiGraph
                 foreach (var (nodeID, node) in context.Nodes)
                 {
                     if (_networkGlobal.Nodes[nodeID].IsVirtualNode) continue;
-                    _networkContext.NodeRenderables[node.UUID] = new MinimapContext.Node()
+                    _networkContext.NodeRenderables[node.GUID] = new MinimapContext.Node()
                     {
                         ID = nodeID,
                         Position = node.Position,
