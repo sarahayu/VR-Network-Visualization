@@ -124,7 +124,7 @@ namespace VidiGraph
         public HashSet<int> SelectedNodes { get { return _selectedNodes; } }
         public HashSet<int> SelectedCommunities { get { return _selectedComms; } }
 
-        int _subnetworkID;      // -1 means main multilayoutnetwork, 0 and up means subnetwork
+        int _subnetworkID;      // 0 means main multilayoutnetwork, 1 and up means subnetwork
 
         HashSet<int> _selectedNodes = new HashSet<int>();
         HashSet<int> _selectedComms = new HashSet<int>();
@@ -162,7 +162,7 @@ namespace VidiGraph
                 };
             }
 
-            _subnetworkID = -1;
+            _subnetworkID = 0;
 
             SetDefaultEncodings(networkGlobal, networkFile);
         }
@@ -228,7 +228,7 @@ namespace VidiGraph
             GetLinkAlpha = otherContext.GetLinkAlpha;
         }
 
-        // public void SetFromGlobal(NetworkGlobal networkGlobal, NetworkFileData networkFile, IEnumerable<int> nodeIDs, int subnetworkID = -1)
+        // public void SetFromGlobal(NetworkGlobal networkGlobal, NetworkFileData networkFile, IEnumerable<int> nodeIDs, int subnetworkID = 0)
         // {
         //     Nodes.Clear();
         //     Links.Clear();

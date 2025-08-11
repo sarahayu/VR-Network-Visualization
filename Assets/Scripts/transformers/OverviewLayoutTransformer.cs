@@ -66,7 +66,7 @@ namespace VidiGraph
             _subnetworks = subnetworks;
         }
 
-        public void PushSelectionEvent(IEnumerable<int> nodes, int subnetworkID = -1)
+        public void PushSelectionEvent(IEnumerable<int> nodes, int subnetworkID = 0)
         {
             if (!_nodeSelectionTimes.ContainsKey(subnetworkID)) _nodeSelectionTimes[subnetworkID] = new();
             foreach (var nodeID in _nodeSelectionTimes[subnetworkID].Keys.ToList()) _nodeSelectionTimes[subnetworkID][nodeID] += 1;

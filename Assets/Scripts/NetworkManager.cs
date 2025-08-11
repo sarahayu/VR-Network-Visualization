@@ -166,9 +166,9 @@ namespace VidiGraph
             foreach (var subn in _subnetworks.Values) subn.UpdateRenderElements();
         }
 
-        public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool selected, int subnetworkID = -1)
+        public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool selected, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.SetSelectedNodes(nodeIDs, selected);
                 _multiLayoutNetwork.UpdateSelectedElements();
@@ -186,10 +186,10 @@ namespace VidiGraph
             UpdateOptions();
         }
 
-        public void ToggleSelectedNodes(IEnumerable<int> nodeIDs, int subnetworkID = -1)
+        public void ToggleSelectedNodes(IEnumerable<int> nodeIDs, int subnetworkID = 0)
         {
             IEnumerable<int> newSelecteds;
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 newSelecteds = _multiLayoutNetwork.ToggleSelectedNodes(nodeIDs);
                 _multiLayoutNetwork.UpdateSelectedElements();
@@ -206,9 +206,9 @@ namespace VidiGraph
             UpdateOptions();
         }
 
-        public void StartMLNodeMove(int nodeID, int subnetworkID = -1)
+        public void StartMLNodeMove(int nodeID, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.StartNodeMove(nodeID);
             }
@@ -218,9 +218,9 @@ namespace VidiGraph
             }
         }
 
-        public void StartMLNodesMove(IEnumerable<int> nodeIDs, int subnetworkID = -1)
+        public void StartMLNodesMove(IEnumerable<int> nodeIDs, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.StartNodesMove(nodeIDs);
             }
@@ -230,9 +230,9 @@ namespace VidiGraph
             }
         }
 
-        public void EndMLNodesMove(int subnetworkID = -1)
+        public void EndMLNodesMove(int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.EndNodesMove();
             }
@@ -243,9 +243,9 @@ namespace VidiGraph
             UpdateHandheld();
         }
 
-        public void StartMLCommMove(int commID, int subnetworkID = -1)
+        public void StartMLCommMove(int commID, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.StartCommMove(commID);
             }
@@ -255,9 +255,9 @@ namespace VidiGraph
             }
         }
 
-        public void StartMLCommsMove(IEnumerable<int> commIDs, int subnetworkID = -1)
+        public void StartMLCommsMove(IEnumerable<int> commIDs, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.StartCommsMove(commIDs);
             }
@@ -267,9 +267,9 @@ namespace VidiGraph
             }
         }
 
-        public void EndMLCommsMove(int subnetworkID = -1)
+        public void EndMLCommsMove(int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.EndCommsMove();
             }
@@ -294,10 +294,10 @@ namespace VidiGraph
             foreach (var subn in _subnetworks.Values) subn.UpdateRenderElements();
         }
 
-        public void SetSelectedCommunities(IEnumerable<int> commIDs, bool selected, int subnetworkID = -1)
+        public void SetSelectedCommunities(IEnumerable<int> commIDs, bool selected, int subnetworkID = 0)
         {
             IEnumerable<int> selectedNodes = new List<int>();
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.SetSelectedComms(commIDs, selected);
                 _multiLayoutNetwork.UpdateSelectedElements();
@@ -321,10 +321,10 @@ namespace VidiGraph
             UpdateOptions();
         }
 
-        public void ToggleSelectedCommunities(IEnumerable<int> commIDs, int subnetworkID = -1)
+        public void ToggleSelectedCommunities(IEnumerable<int> commIDs, int subnetworkID = 0)
         {
             IEnumerable<int> selectedNodes;
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 var selectedComms = _multiLayoutNetwork.ToggleSelectedComms(commIDs);
                 _multiLayoutNetwork.UpdateSelectedElements();
@@ -355,21 +355,21 @@ namespace VidiGraph
 
         // layout = [spherical, cluster, floor]
         // TODO extend for subnetworks
-        public void SetMLLayout(IEnumerable<int> commIDs, string layout, int subnetworkID = -1)
+        public void SetMLLayout(IEnumerable<int> commIDs, string layout, int subnetworkID = 0)
         {
             _multiLayoutNetwork.SetLayout(commIDs, layout, UpdateHandheld);
         }
 
         // layout = [spherical, cluster, floor]
         // TODO extend for subnetworks
-        public void SetMLLayout(int commID, string layout, int subnetworkID = -1)
+        public void SetMLLayout(int commID, string layout, int subnetworkID = 0)
         {
             _multiLayoutNetwork.SetLayout(new int[] { commID }, layout, UpdateHandheld);
         }
 
-        public void BringMLNodes(IEnumerable<int> nodeIDs, int subnetworkID = -1)
+        public void BringMLNodes(IEnumerable<int> nodeIDs, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.BringNodes(nodeIDs, UpdateHandheld);
             }
@@ -379,9 +379,9 @@ namespace VidiGraph
             }
         }
 
-        public void ReturnMLNodes(IEnumerable<int> nodeIDs, int subnetworkID = -1)
+        public void ReturnMLNodes(IEnumerable<int> nodeIDs, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.ReturnNodes(nodeIDs, UpdateHandheld);
             }
@@ -392,9 +392,9 @@ namespace VidiGraph
             }
         }
 
-        public Transform GetMLNodeTransform(int nodeID, int subnetworkID = -1)
+        public Transform GetMLNodeTransform(int nodeID, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.GetNodeTransform(nodeID);
             }
@@ -404,9 +404,9 @@ namespace VidiGraph
             }
         }
 
-        public Transform GetMLCommTransform(int commID, int subnetworkID = -1)
+        public Transform GetMLCommTransform(int commID, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.GetCommTransform(commID);
             }
@@ -416,13 +416,13 @@ namespace VidiGraph
             }
         }
 
-        public void CreateSubnetwork(IEnumerable<int> nodeIDs, int sourceSubnetworkID = -1)
+        public void CreateSubnetwork(IEnumerable<int> nodeIDs, int sourceSubnetworkID = 0)
         {
             if (nodeIDs.Count() == 0) return;
 
             BasicSubnetwork subn;
 
-            if (sourceSubnetworkID == -1)
+            if (sourceSubnetworkID == 0)
             {
                 subn = BasicSubnetworkUtils.CreateBasicSubnetwork(_subnetworkPrefab, transform, nodeIDs,
                     _multiLayoutNetwork.Context);
@@ -443,9 +443,9 @@ namespace VidiGraph
             TriggerRenderUpdate();
         }
 
-        public void SetMLNodesSize(IEnumerable<int> nodeIDs, float size, int subnetworkID = -1)
+        public void SetMLNodesSize(IEnumerable<int> nodeIDs, float size, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.SetNodesSize(nodeIDs, size, _updatingStorage, _updatingRenderElements);
             }
@@ -455,9 +455,9 @@ namespace VidiGraph
             }
         }
 
-        public void SetMLNodesColor(IEnumerable<int> nodeIDs, string color, int subnetworkID = -1)
+        public void SetMLNodesColor(IEnumerable<int> nodeIDs, string color, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.SetNodesColor(nodeIDs, color, _updatingStorage, _updatingRenderElements);
             }
@@ -467,9 +467,9 @@ namespace VidiGraph
             }
         }
 
-        public void SetMLNodesPosition(IEnumerable<int> nodeIDs, Vector3 position, int subnetworkID = -1)
+        public void SetMLNodesPosition(IEnumerable<int> nodeIDs, Vector3 position, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.SetNodesPosition(nodeIDs, position, _updatingStorage, _updatingRenderElements);
             }
@@ -479,9 +479,9 @@ namespace VidiGraph
             }
         }
 
-        public void SetMLNodesPosition(IEnumerable<int> nodeIDs, IEnumerable<Vector3> positions, int subnetworkID = -1)
+        public void SetMLNodesPosition(IEnumerable<int> nodeIDs, IEnumerable<Vector3> positions, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.SetNodesPosition(nodeIDs, positions, _updatingStorage, _updatingRenderElements);
             }
@@ -491,9 +491,9 @@ namespace VidiGraph
             }
         }
 
-        public void SetMLLinksWidth(IEnumerable<int> linkIDs, float width, int subnetworkID = -1)
+        public void SetMLLinksWidth(IEnumerable<int> linkIDs, float width, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.SetLinksWidth(linkIDs, width, _updatingStorage, _updatingRenderElements);
             }
@@ -503,9 +503,9 @@ namespace VidiGraph
             }
         }
 
-        public void SetMLLinksColorStart(IEnumerable<int> linkIDs, string color, int subnetworkID = -1)
+        public void SetMLLinksColorStart(IEnumerable<int> linkIDs, string color, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.SetLinksColorStart(linkIDs, color, _updatingStorage, _updatingRenderElements);
             }
@@ -515,9 +515,9 @@ namespace VidiGraph
             }
         }
 
-        public void SetMLLinksColorEnd(IEnumerable<int> linkIDs, string color, int subnetworkID = -1)
+        public void SetMLLinksColorEnd(IEnumerable<int> linkIDs, string color, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.SetLinksColorEnd(linkIDs, color, _updatingStorage, _updatingRenderElements);
             }
@@ -527,9 +527,9 @@ namespace VidiGraph
             }
         }
 
-        public void SetMLLinksAlpha(IEnumerable<int> linkIDs, float alpha, int subnetworkID = -1)
+        public void SetMLLinksAlpha(IEnumerable<int> linkIDs, float alpha, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.SetLinksAlpha(linkIDs, alpha, _updatingStorage, _updatingRenderElements);
             }
@@ -539,9 +539,9 @@ namespace VidiGraph
             }
         }
 
-        public void SetMLLinksBundlingStrength(IEnumerable<int> linkIDs, float bundlingStrength, int subnetworkID = -1)
+        public void SetMLLinksBundlingStrength(IEnumerable<int> linkIDs, float bundlingStrength, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.SetLinksBundlingStrength(linkIDs, bundlingStrength, _updatingStorage, _updatingRenderElements);
             }
@@ -551,9 +551,9 @@ namespace VidiGraph
             }
         }
 
-        public void SetMLLinksBundleStart(IEnumerable<int> linkIDs, bool bundleStart, int subnetworkID = -1)
+        public void SetMLLinksBundleStart(IEnumerable<int> linkIDs, bool bundleStart, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.SetLinksBundleStart(linkIDs, bundleStart, _updatingStorage, _updatingRenderElements);
             }
@@ -563,9 +563,9 @@ namespace VidiGraph
             }
         }
 
-        public void SetMLLinksBundleEnd(IEnumerable<int> linkIDs, bool bundleEnd, int subnetworkID = -1)
+        public void SetMLLinksBundleEnd(IEnumerable<int> linkIDs, bool bundleEnd, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 _multiLayoutNetwork.SetLinksBundleEnd(linkIDs, bundleEnd, _updatingStorage, _updatingRenderElements);
             }
@@ -575,9 +575,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLNodeColorEncoding(string prop, float min = 0f, float max = 1f, string color = "#0000FF" /* blue */, int subnetworkID = -1)
+        public bool SetMLNodeColorEncoding(string prop, float min = 0f, float max = 1f, string color = "#0000FF" /* blue */, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetNodeColorEncoding(prop, min, max, color,
                     _updatingStorage, _updatingRenderElements);
@@ -589,9 +589,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLNodeColorEncoding(string prop, Dictionary<string, string> valueToColor, int subnetworkID = -1)
+        public bool SetMLNodeColorEncoding(string prop, Dictionary<string, string> valueToColor, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetNodeColorEncoding(prop, valueToColor,
                     _updatingStorage, _updatingRenderElements);
@@ -603,9 +603,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLNodeColorEncoding(string prop, Dictionary<bool?, string> valueToColor, int subnetworkID = -1)
+        public bool SetMLNodeColorEncoding(string prop, Dictionary<bool?, string> valueToColor, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetNodeColorEncoding(prop, valueToColor,
                     _updatingStorage, _updatingRenderElements);
@@ -617,9 +617,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLNodeSizeEncoding(string prop, float min = 0f, float max = 1f, int subnetworkID = -1)
+        public bool SetMLNodeSizeEncoding(string prop, float min = 0f, float max = 1f, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetNodeSizeEncoding(prop, min, max,
                     _updatingStorage, _updatingRenderElements);
@@ -631,9 +631,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLNodeSizeEncoding(string prop, Dictionary<string, float> valueToSize, int subnetworkID = -1)
+        public bool SetMLNodeSizeEncoding(string prop, Dictionary<string, float> valueToSize, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetNodeSizeEncoding(prop, valueToSize,
                     _updatingStorage, _updatingRenderElements);
@@ -645,9 +645,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLNodeSizeEncoding(string prop, Dictionary<bool?, float> valueToSize, int subnetworkID = -1)
+        public bool SetMLNodeSizeEncoding(string prop, Dictionary<bool?, float> valueToSize, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetNodeSizeEncoding(prop, valueToSize,
                     _updatingStorage, _updatingRenderElements);
@@ -659,9 +659,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLLinkWidthEncoding(string prop, float min = 0f, float max = 1f, int subnetworkID = -1)
+        public bool SetMLLinkWidthEncoding(string prop, float min = 0f, float max = 1f, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkWidthEncoding(prop, min, max,
                     _updatingStorage, _updatingRenderElements);
@@ -673,9 +673,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLLinkWidthEncoding(string prop, Dictionary<string, float> valueToWidth, int subnetworkID = -1)
+        public bool SetMLLinkWidthEncoding(string prop, Dictionary<string, float> valueToWidth, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkWidthEncoding(prop, valueToWidth,
                     _updatingStorage, _updatingRenderElements);
@@ -687,9 +687,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLLinkWidthEncoding(string prop, Dictionary<bool?, float> valueToWidth, int subnetworkID = -1)
+        public bool SetMLLinkWidthEncoding(string prop, Dictionary<bool?, float> valueToWidth, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkWidthEncoding(prop, valueToWidth,
                     _updatingStorage, _updatingRenderElements);
@@ -701,9 +701,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLLinkBundlingStrengthEncoding(string prop, float min = 0f, float max = 1f, int subnetworkID = -1)
+        public bool SetMLLinkBundlingStrengthEncoding(string prop, float min = 0f, float max = 1f, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkBundlingStrengthEncoding(prop, min, max,
                     _updatingStorage, _updatingRenderElements);
@@ -715,9 +715,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLLinkBundlingStrengthEncoding(string prop, Dictionary<string, float> valueToBundlingStrength, int subnetworkID = -1)
+        public bool SetMLLinkBundlingStrengthEncoding(string prop, Dictionary<string, float> valueToBundlingStrength, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkBundlingStrengthEncoding(prop, valueToBundlingStrength,
                     _updatingStorage, _updatingRenderElements);
@@ -729,9 +729,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLLinkBundlingStrengthEncoding(string prop, Dictionary<bool?, float> valueToBundlingStrength, int subnetworkID = -1)
+        public bool SetMLLinkBundlingStrengthEncoding(string prop, Dictionary<bool?, float> valueToBundlingStrength, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkBundlingStrengthEncoding(prop, valueToBundlingStrength,
                     _updatingStorage, _updatingRenderElements);
@@ -743,9 +743,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLLinkColorStartEncoding(string prop, float min = 0f, float max = 1f, string colorStart = "#FFFFFF" /* white */, int subnetworkID = -1)
+        public bool SetMLLinkColorStartEncoding(string prop, float min = 0f, float max = 1f, string colorStart = "#FFFFFF" /* white */, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkColorStartEncoding(prop, min, max, colorStart,
                     _updatingStorage, _updatingRenderElements);
@@ -757,9 +757,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLLinkColorStartEncoding(string prop, Dictionary<string, string> valueToColorStart, int subnetworkID = -1)
+        public bool SetMLLinkColorStartEncoding(string prop, Dictionary<string, string> valueToColorStart, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkColorStartEncoding(prop, valueToColorStart,
                     _updatingStorage, _updatingRenderElements);
@@ -771,9 +771,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLLinkColorStartEncoding(string prop, Dictionary<bool?, string> valueToColorStart, int subnetworkID = -1)
+        public bool SetMLLinkColorStartEncoding(string prop, Dictionary<bool?, string> valueToColorStart, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkColorStartEncoding(prop, valueToColorStart,
                     _updatingStorage, _updatingRenderElements);
@@ -785,9 +785,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLLinkColorEndEncoding(string prop, float min = 0f, float max = 1f, string colorEnd = "#FFFFFF" /* white */, int subnetworkID = -1)
+        public bool SetMLLinkColorEndEncoding(string prop, float min = 0f, float max = 1f, string colorEnd = "#FFFFFF" /* white */, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkColorEndEncoding(prop, min, max, colorEnd,
                     _updatingStorage, _updatingRenderElements);
@@ -799,9 +799,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLLinkColorEndEncoding(string prop, Dictionary<string, string> valueToColorEnd, int subnetworkID = -1)
+        public bool SetMLLinkColorEndEncoding(string prop, Dictionary<string, string> valueToColorEnd, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkColorEndEncoding(prop, valueToColorEnd,
                     _updatingStorage, _updatingRenderElements);
@@ -813,9 +813,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLLinkColorEndEncoding(string prop, Dictionary<bool?, string> valueToColorEnd, int subnetworkID = -1)
+        public bool SetMLLinkColorEndEncoding(string prop, Dictionary<bool?, string> valueToColorEnd, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkColorEndEncoding(prop, valueToColorEnd,
                     _updatingStorage, _updatingRenderElements);
@@ -828,9 +828,9 @@ namespace VidiGraph
         }
 
         // TODO untested
-        public bool SetMLLinkBundleStartEncoding(string prop, Dictionary<string, bool> valueToDoBundle, int subnetworkID = -1)
+        public bool SetMLLinkBundleStartEncoding(string prop, Dictionary<string, bool> valueToDoBundle, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkBundleStartEncoding(prop, valueToDoBundle,
                     _updatingStorage, _updatingRenderElements);
@@ -843,9 +843,9 @@ namespace VidiGraph
         }
 
         // TODO untested
-        public bool SetMLLinkBundleStartEncoding(string prop, Dictionary<bool?, bool> valueToDoBundle, int subnetworkID = -1)
+        public bool SetMLLinkBundleStartEncoding(string prop, Dictionary<bool?, bool> valueToDoBundle, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkBundleStartEncoding(prop, valueToDoBundle,
                     _updatingStorage, _updatingRenderElements);
@@ -858,9 +858,9 @@ namespace VidiGraph
         }
 
         // TODO untested
-        public bool SetMLLinkBundleEndEncoding(string prop, Dictionary<string, bool> valueToDoBundle, int subnetworkID = -1)
+        public bool SetMLLinkBundleEndEncoding(string prop, Dictionary<string, bool> valueToDoBundle, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkBundleEndEncoding(prop, valueToDoBundle,
                     _updatingStorage, _updatingRenderElements);
@@ -873,9 +873,9 @@ namespace VidiGraph
         }
 
         // TODO untested
-        public bool SetMLLinkBundleEndEncoding(string prop, Dictionary<bool?, bool> valueToDoBundle, int subnetworkID = -1)
+        public bool SetMLLinkBundleEndEncoding(string prop, Dictionary<bool?, bool> valueToDoBundle, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkBundleEndEncoding(prop, valueToDoBundle,
                     _updatingStorage, _updatingRenderElements);
@@ -887,9 +887,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLLinkAlphaEncoding(string prop, float min = 0f, float max = 1f, int subnetworkID = -1)
+        public bool SetMLLinkAlphaEncoding(string prop, float min = 0f, float max = 1f, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkAlphaEncoding(prop, min, max,
                     _updatingStorage, _updatingRenderElements);
@@ -901,9 +901,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLLinkAlphaEncoding(string prop, Dictionary<string, float> valueToAlpha, int subnetworkID = -1)
+        public bool SetMLLinkAlphaEncoding(string prop, Dictionary<string, float> valueToAlpha, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkAlphaEncoding(prop, valueToAlpha,
                     _updatingStorage, _updatingRenderElements);
@@ -915,9 +915,9 @@ namespace VidiGraph
             }
         }
 
-        public bool SetMLLinkAlphaEncoding(string prop, Dictionary<bool?, float> valueToAlpha, int subnetworkID = -1)
+        public bool SetMLLinkAlphaEncoding(string prop, Dictionary<bool?, float> valueToAlpha, int subnetworkID = 0)
         {
-            if (subnetworkID == -1)
+            if (subnetworkID == 0)
             {
                 return _multiLayoutNetwork.SetLinkAlphaEncoding(prop, valueToAlpha,
                     _updatingStorage, _updatingRenderElements);
@@ -931,25 +931,25 @@ namespace VidiGraph
 
         public HashSet<int> SubnSelectedNodes(int subnetworkID)
         {
-            if (subnetworkID == -1) return _multiLayoutNetwork.SelectedNodes;
+            if (subnetworkID == 0) return _multiLayoutNetwork.SelectedNodes;
             return _subnetworks[subnetworkID].SelectedNodes;
         }
 
         public HashSet<int> SubnSelectedCommunities(int subnetworkID)
         {
-            if (subnetworkID == -1) return _multiLayoutNetwork.SelectedCommunities;
+            if (subnetworkID == 0) return _multiLayoutNetwork.SelectedCommunities;
             return _subnetworks[subnetworkID].SelectedCommunities;
         }
 
         public bool IsNodeSelected(int nodeID, int subnetworkID)
         {
-            if (subnetworkID == -1) return _multiLayoutNetwork.SelectedNodes.Contains(nodeID);
+            if (subnetworkID == 0) return _multiLayoutNetwork.SelectedNodes.Contains(nodeID);
             return _subnetworks[subnetworkID].SelectedNodes.Contains(nodeID);
         }
 
         public bool IsCommSelected(int commID, int subnetworkID)
         {
-            if (subnetworkID == -1) return _multiLayoutNetwork.SelectedCommunities.Contains(commID);
+            if (subnetworkID == 0) return _multiLayoutNetwork.SelectedCommunities.Contains(commID);
             return _subnetworks[subnetworkID].SelectedCommunities.Contains(commID);
         }
 
@@ -975,22 +975,22 @@ namespace VidiGraph
 
         void UpdateOptions()
         {
-            int selectedSubnetworkForNodes = -2;
+            int selectedSubnetworkForNodes = -1;
             bool onlyOneSelectedForNodes = false;
 
-            int selectedSubnetworkForComms = -2;
+            int selectedSubnetworkForComms = -1;
             bool onlyOneSelectedForComms = false;
 
             Dictionary<int, HashSet<int>> subnToSelNodes = new();
             Dictionary<int, HashSet<int>> subnToSelComms = new();
 
-            int curSubn = -1;
+            int curSubn = 0;
             do
             {
                 var selNodes = SubnSelectedNodes(curSubn);
                 if (selNodes.Count != 0)
                 {
-                    if (selectedSubnetworkForNodes == -2)
+                    if (selectedSubnetworkForNodes == -1)
                     {
                         selectedSubnetworkForNodes = curSubn;
                         onlyOneSelectedForNodes = true;
@@ -1006,7 +1006,7 @@ namespace VidiGraph
                 var selComms = SubnSelectedCommunities(curSubn);
                 if (selComms.Count != 0)
                 {
-                    if (selectedSubnetworkForComms == -2)
+                    if (selectedSubnetworkForComms == -1)
                     {
                         selectedSubnetworkForComms = curSubn;
                         onlyOneSelectedForComms = true;
@@ -1020,7 +1020,7 @@ namespace VidiGraph
                 }
             } while (_subnetworks.ContainsKey(++curSubn));
 
-            if (selectedSubnetworkForNodes == -2)
+            if (selectedSubnetworkForNodes == -1)
             {
                 _optionsMenu.ClearOptions();
                 return;
@@ -1044,16 +1044,16 @@ namespace VidiGraph
                 }
             };
 
-            if (onlyOneSelectedForComms && selectedSubnetworkForComms == -1)
+            if (onlyOneSelectedForComms && selectedSubnetworkForComms == 0)
             {
                 callbacks["Focus comm."] = () =>
                 {
-                    SetMLLayout(subnToSelComms[-1], "cluster");
+                    SetMLLayout(subnToSelComms[0], "cluster");
                 };
 
                 callbacks["Project comm. floor"] = () =>
                 {
-                    SetMLLayout(subnToSelComms[-1], "floor");
+                    SetMLLayout(subnToSelComms[0], "floor");
                 };
             }
 

@@ -136,7 +136,7 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.GrabComm;
 
-                    var selComms = _networkManager.SubnSelectedCommunities(-1);
+                    var selComms = _networkManager.SubnSelectedCommunities(0);
 
                     if (selComms.Contains(community.ID))
                     {
@@ -231,7 +231,7 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.GrabNode;
 
-                    var selNodes = _networkManager.SubnSelectedNodes(-1);
+                    var selNodes = _networkManager.SubnSelectedNodes(0);
 
                     if (selNodes.Contains(node.ID))
                     {
@@ -294,7 +294,7 @@ namespace VidiGraph
             {
                 _xrManager.SelectExit(interactor, interactable);
 
-                _networkManager.CreateSubnetwork(_networkManager.SubnSelectedNodes(-1), -1);
+                _networkManager.CreateSubnetwork(_networkManager.SubnSelectedNodes(0), 0);
 
                 _inputManager.RightTriggerListener -= _dupeCB;
                 _dupeCB = null;

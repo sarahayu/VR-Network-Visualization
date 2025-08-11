@@ -40,7 +40,7 @@ namespace VidiGraph
         Coroutine _curAnim = null;
         Coroutine _curMover = null;
 
-        static int _idCounter = 0;
+        static int _idCounter = 1;
 
         int _id;
 

@@ -22,7 +22,7 @@ namespace VidiGraph
         MultiLayoutNetworkInput _input;
         NetworkRenderer _renderer;
 
-        MultiLayoutContext _context = new MultiLayoutContext(-1);
+        MultiLayoutContext _context = new MultiLayoutContext(0);
 
         Dictionary<string, NetworkContextTransformer> _transformers = new Dictionary<string, NetworkContextTransformer>();
 
@@ -149,7 +149,7 @@ namespace VidiGraph
 
             if (validNodes.Count() != nodeIDs.Count())
             {
-                Debug.LogWarning($"Nodes {string.Join(", ", nodeIDs.Except(validNodes))} not found in subnetwork {-1}");
+                Debug.LogWarning($"Nodes {string.Join(", ", nodeIDs.Except(validNodes))} not found in subnetwork {0}");
             }
 
             Context.SetSelectedNodes(updateNodes, isSelected);
@@ -161,7 +161,7 @@ namespace VidiGraph
 
             if (validComms.Count() != commIDs.Count())
             {
-                Debug.LogWarning($"Communities {string.Join(", ", commIDs.Except(validComms))} not found in subnetwork {-1}");
+                Debug.LogWarning($"Communities {string.Join(", ", commIDs.Except(validComms))} not found in subnetwork {0}");
             }
 
             Context.SetSelectedComms(validComms, isSelected);
@@ -173,7 +173,7 @@ namespace VidiGraph
 
             if (validNodes.Count() != nodeIDs.Count())
             {
-                Debug.LogWarning($"Nodes {string.Join(", ", nodeIDs.Except(validNodes))} not found in subnetwork {-1}");
+                Debug.LogWarning($"Nodes {string.Join(", ", nodeIDs.Except(validNodes))} not found in subnetwork {0}");
             }
 
             return Context.ToggleSelectedNodes(validNodes);
@@ -185,7 +185,7 @@ namespace VidiGraph
 
             if (validComms.Count() != commIDs.Count())
             {
-                Debug.LogWarning($"Communities {string.Join(", ", commIDs.Except(validComms))} not found in subnetwork {-1}");
+                Debug.LogWarning($"Communities {string.Join(", ", commIDs.Except(validComms))} not found in subnetwork {0}");
             }
 
             return Context.ToggleSelectedComms(validComms);
