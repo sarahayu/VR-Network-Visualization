@@ -24,6 +24,7 @@ namespace VidiGraph
                 NumStates,
             }
 
+            public int ID;
             public int Size = 1;
             public Color Color;
             public Vector3 Position;
@@ -39,7 +40,7 @@ namespace VidiGraph
 
         public Dictionary<Tuple<int, int>, Link> Links { get; } = new();
         public Dictionary<int, Node> CommunityNodes { get; } = new();
-        public Dictionary<int, Node> Nodes { get; } = new();
+        public Dictionary<string, Node> NodeRenderables { get; } = new();
         public Dictionary<int, Surface> Surfaces { get; } = new();
 
         // for now, update all nodes if any of them are dirty.

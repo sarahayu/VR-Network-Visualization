@@ -69,13 +69,6 @@ namespace VidiGraph
             _multiLayoutNetwork.SetStorageUpdateCallback(UpdateStorage);
         }
 
-        void OnApplicationQuit()
-        {
-            print("Deleting database contents...");
-            _storage?.DeleteContents();
-            print("Deleted database contents!");
-        }
-
         public void Initialize()
         {
             _fileLoader = GetComponent<NetworkFilesLoader>();
@@ -441,6 +434,9 @@ namespace VidiGraph
             }
 
             subn.SetStorageUpdateCallback(UpdateStorage);
+            // mark communities and nodes dirty to be registered in storage update
+            DirtySubnetworkElements(subn);
+
             _subnetworks[subn.ID] = subn;
 
             TriggerStorageUpdate();
@@ -1062,6 +1058,12 @@ namespace VidiGraph
             }
 
             _optionsMenu.SetOptions(callbacks);
+        }
+
+        void DirtySubnetworkElements(BasicSubnetwork subnetwork)
+        {
+            foreach (var comm in subnetwork.Context.Communities.Values) comm.Dirty = true;
+            foreach (var node in subnetwork.Context.Nodes.Values) node.Dirty = true;
         }
     }
 }

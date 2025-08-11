@@ -27,6 +27,7 @@ namespace VidiGraph
 
         void OnApplicationQuit()
         {
+            DeleteContents();
             _driver?.Dispose();
         }
 
@@ -48,7 +49,9 @@ namespace VidiGraph
 
         public override void DeleteContents()
         {
+            print("Deleting database contents...");
             DatabaseStorageUtils.DeleteDatabaseContents(_driver);
+            print("Deleted database contents!");
         }
 
         public IEnumerable<Node> GetNodesFromStore(NetworkGlobal networkGlobal, string command)

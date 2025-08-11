@@ -27,19 +27,25 @@ namespace VidiGraph
 
         public override void ApplyTransformation()
         {
-            _networkContext.Nodes.Clear();
+            _networkContext.NodeRenderables.Clear();
 
             _networkContext.NodesDirty = true;
 
-            foreach (var (nodeID, node) in _mlNetwork.Context.Nodes)
+            var allRenderContexts = new HashSet<MultiLayoutContext>() { _mlNetwork.Context }.Union(_subnetworks.Select(subn => subn.Context));
+
+            foreach (var context in allRenderContexts)
             {
-                if (_networkGlobal.Nodes[nodeID].IsVirtualNode) continue;
-                _networkContext.Nodes[nodeID] = new MinimapContext.Node()
+                foreach (var (nodeID, node) in context.Nodes)
                 {
-                    Position = node.Position,
-                    Color = GetNodeColor(nodeID, subnetworkID: -1),
-                    Size = GetNodeSize(nodeID, subnetworkID: -1)
-                };
+                    if (_networkGlobal.Nodes[nodeID].IsVirtualNode) continue;
+                    _networkContext.NodeRenderables[node.UUID] = new MinimapContext.Node()
+                    {
+                        ID = nodeID,
+                        Position = node.Position,
+                        Color = GetNodeColor(nodeID, subnetworkID: context.SubnetworkID),
+                        Size = GetNodeSize(nodeID, subnetworkID: context.SubnetworkID)
+                    };
+                }
             }
 
             _networkContext.Surfaces.Clear();

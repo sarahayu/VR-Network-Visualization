@@ -1,6 +1,5 @@
 # TODO
 
-- fix database
 - reimplement tooltip
 
 - transfer selection to new subnetwork
@@ -8,12 +7,14 @@
 - attaching nodes, average pos?
 - shells for subgraphs
 - show link directionality
+- fix dupe glitch
+- fix bug: overviewlayouttransformer update ALL subnetwork nodes
+    - change pushselectionevent to allow multiple subnetwork updates simult.
+- fix bug: overviewrenderer not showing hovers on all dupe subnetworks
 
 - too big buffer error at BSpineShaderWrapper:322
 - clean up transformer code and input code (less nesting!!!)
 
-- fix dupe glitch
-- update storage for subgraph data
 - remove communities from global
 - change all new inits to just new()
 - remove empty interpolators
@@ -23,7 +24,6 @@
     - store all mlnetwork nodes
     - when asking to select nodes, does it select on subnetworks as well?
 - optimize reflection: https://stackoverflow.com/questions/7999652/best-way-to-cache-a-reflection-property-getter-setter
-- parse all waves into one
 
 
 - general code cleanup  
@@ -98,6 +98,10 @@
 - try group hulls and only show selected nodes
 - try make non selected nodes gray, transparent, or outline?
 - merge
+- fix database
+- regenerate layout data and double check flat coords
+- update storage for subgraph data
+- parse all waves into one
 
 ## Ignore
 - move node moving animation to mln

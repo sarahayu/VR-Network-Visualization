@@ -106,9 +106,7 @@ namespace VidiGraph
             MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
             IDriver driver, bool convertWinPaths, bool onlyDirty)
         {
-            bool onOnlyDirty = onlyDirty;
-
-            DumpNetwork(networkFile, networkGlobal, context, subnetworkContexts, out var fs, out var fc, out var fn, out var fn2n, onOnlyDirty);
+            DumpNetwork(networkFile, networkGlobal, context, subnetworkContexts, out var fs, out var fc, out var fn, out var fn2n, onlyDirty);
 
             bool shutdown = false;
 

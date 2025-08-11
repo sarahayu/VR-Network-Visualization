@@ -118,7 +118,7 @@ namespace VidiGraph
 
         public override void UpdateRenderElements()
         {
-            var nodes = _networkContext.Nodes.Values.ToList();
+            var nodes = _networkContext.NodeRenderables.Values.ToList();
 
             var userPos = _wristTransform.position;
             userPos.y -= 1.36144f / 2;
@@ -137,7 +137,8 @@ namespace VidiGraph
                 _nodes[i].remainingLifetime = -1f;
             }
 
-            List<int> hoveredNodes = new();
+            HashSet<int> hoveredNodes = new();
+            List<MinimapContext.Node> hoveredNodeRenders = new();
 
             if (_networkGlobal.HoveredNode != null)
             {
@@ -145,15 +146,20 @@ namespace VidiGraph
             }
             else if (_networkGlobal.HoveredCommunity != null)
             {
-                hoveredNodes = hoveredNodes.Union(_networkGlobal.HoveredCommunity.Nodes.Select(n => n.ID)).ToList();
+                hoveredNodes.UnionWith(_networkGlobal.HoveredCommunity.Nodes.Select(n => n.ID));
             }
 
-            for (int i = 0; i < hoveredNodes.Count; i++)
+            foreach (var node in _networkContext.NodeRenderables.Values)
             {
-                var nid = hoveredNodes[i];
-                _nodeOutlines[i].position = (_networkContext.Nodes[nid].Position - userPos) / totScale;
+                if (hoveredNodes.Contains(node.ID)) hoveredNodeRenders.Add(node);
+            }
+
+            for (int i = 0; i < hoveredNodeRenders.Count; i++)
+            {
+                var node = hoveredNodeRenders[i];
+                _nodeOutlines[i].position = (node.Position - userPos) / totScale;
                 _nodeOutlines[i].startColor = Color.green;
-                _nodeOutlines[i].startSize = _nodeSize * _networkContext.Nodes[nid].Size * 1.5f;
+                _nodeOutlines[i].startSize = _nodeSize * node.Size * 1.5f;
                 _nodeOutlines[i].remainingLifetime = Mathf.Infinity;
             }
 

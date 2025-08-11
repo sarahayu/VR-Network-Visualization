@@ -22,7 +22,7 @@ namespace VidiGraph
         MultiLayoutNetworkInput _input;
         NetworkRenderer _renderer;
 
-        MultiLayoutContext _context = new MultiLayoutContext();
+        MultiLayoutContext _context = new MultiLayoutContext(-1);
 
         Dictionary<string, NetworkContextTransformer> _transformers = new Dictionary<string, NetworkContextTransformer>();
 

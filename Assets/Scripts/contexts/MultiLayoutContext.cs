@@ -124,16 +124,16 @@ namespace VidiGraph
         public HashSet<int> SelectedNodes { get { return _selectedNodes; } }
         public HashSet<int> SelectedCommunities { get { return _selectedComms; } }
 
-        int _subnetworkID = -1; // -1 means main multilayoutnetwork, 0 and up means subnetwork
-
-        static int _subnetworkCount = -1;
+        int _subnetworkID;      // -1 means main multilayoutnetwork, 0 and up means subnetwork
 
         HashSet<int> _selectedNodes = new HashSet<int>();
         HashSet<int> _selectedComms = new HashSet<int>();
 
-        public MultiLayoutContext()
+        public MultiLayoutContext(int subnetworkID)
         {
             // expose constructor
+
+            _subnetworkID = subnetworkID;
         }
 
         public void SetFromGlobal(NetworkGlobal networkGlobal, NetworkFileData networkFile)
@@ -211,12 +211,11 @@ namespace VidiGraph
                     Communities[community.ID] = new Community()
                     {
                         ID = community.ID,
-                        Nodes = intersectedNodes
+                        Nodes = intersectedNodes,
+                        Dirty = true,
                     };
                 }
             }
-
-            _subnetworkID = GetNextSubnetworkID();
 
             GetNodeSize = otherContext.GetNodeSize;
             GetNodeColor = otherContext.GetNodeColor;
@@ -389,11 +388,6 @@ namespace VidiGraph
             GetLinkBundleStart = _ => true;
             GetLinkBundleEnd = _ => true;
             GetLinkAlpha = _ => ContextSettings.LinkNormalAlphaFactor;
-        }
-
-        int GetNextSubnetworkID()
-        {
-            return ++_subnetworkCount;
         }
 
         Color GetColor(int commID, Dictionary<int, VidiGraph.Community> comms)
