@@ -70,7 +70,8 @@ namespace VidiGraph
                 }
             }
 
-            TransformNetwork(layout, animated);
+            if (animated) TransformNetworkFast(layout);
+            else TransformNetwork(layout, animated);
 
             _isSphericalLayout = newIsSphericalLayout;
         }
@@ -83,6 +84,30 @@ namespace VidiGraph
         }
 
         /*=============== start private methods ===================*/
+
+        void TransformNetworkFast(string transformer, Action onFinished = null,
+            bool updateCommunityProps = true, bool updateStorage = true, bool updateRenderElements = true)
+        {
+            if (CoroutineUtils.StopIfRunning(this, ref _curAnim))
+            {
+                // update network since we cancelled coroutine prematurely
+
+                UpdateNetwork(
+                    updateCommunityProps: true,
+                    updateStorage: false,
+                    updateRenderElements: true
+                );
+            }
+
+            _curAnim = StartCoroutine(CRAnimateTransformationFast(
+                transformer: transformer,
+                onFinished: onFinished,
+                updateCommunityProps: updateCommunityProps,
+                updateStorage: updateStorage,
+                updateRenderElements: updateRenderElements
+            ));
+
+        }
 
         protected override void QueueLayoutChange(int commID, string layout)
         {
@@ -116,6 +141,40 @@ namespace VidiGraph
             _floorLayoutTransformer = GetComponentInChildren<FloorLayoutTransformer>();
             _transformers["floor"] = _floorLayoutTransformer;
             _transformers["floor"].Initialize(_manager.NetworkGlobal, _context);
+        }
+
+        protected IEnumerator CRAnimateTransformationFast(string transformer, Action onFinished = null,
+            bool updateCommunityProps = true, bool updateStorage = false, bool updateRenderElements = true)
+        {
+            float dur = 1.0f;
+            var interpolator = _transformers[transformer]?.GetInterpolator();
+
+            if (interpolator == null) yield return null;
+
+            yield return AnimationUtils.Lerp(dur, t =>
+            {
+                interpolator.Interpolate(t);
+                // update network without updating the storage for performance reasons
+                // only update storage at the end
+
+                UpdateNetwork(
+                    updateCommunityProps: false,
+                    updateStorage: false,
+                    updateRenderElements: true
+                );
+            });
+
+            interpolator.Interpolate(1f);
+
+            UpdateNetwork(
+                updateCommunityProps: updateCommunityProps,
+                updateStorage: updateStorage,
+                updateRenderElements: updateRenderElements
+            );
+
+            _curAnim = null;
+
+            onFinished?.Invoke();
         }
     }
 }

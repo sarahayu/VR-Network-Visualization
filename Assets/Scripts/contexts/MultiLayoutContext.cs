@@ -174,6 +174,7 @@ namespace VidiGraph
                 {
                     ID = community.ID,
                     Nodes = community.Nodes.Select(n => n.ID),
+                    Mesh = IcoSphere.Create(0.1f),
                 };
 
                 CommunityGUIDToID[Communities[community.ID].GUID] = community.ID;
@@ -241,6 +242,7 @@ namespace VidiGraph
                     ID = community.ID,
                     Nodes = intersectedNodes,
                     Dirty = true,
+                    Mesh = IcoSphere.Create(0.1f),
                 };
 
                 CommunityGUIDToID[Communities[community.ID].GUID] = community.ID;
