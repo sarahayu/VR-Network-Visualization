@@ -54,9 +54,14 @@ namespace VidiGraph
             print("Deleted database contents!");
         }
 
-        public IEnumerable<Node> GetNodesFromStore(NetworkGlobal networkGlobal, string command)
+        public IEnumerable<string> GetNodesFromStore(NetworkGlobal networkGlobal, string command)
         {
             return DatabaseStorageUtils.GetNodesFromStore(networkGlobal, command, _driver, _convertWinPaths);
+        }
+
+        public IEnumerable<string> GetLinksFromStore(NetworkGlobal networkGlobal, string command)
+        {
+            return DatabaseStorageUtils.GetLinksFromStore(networkGlobal, command, _driver, _convertWinPaths);
         }
 
         public double GetValueFromStore(NetworkGlobal networkGlobal, string command)

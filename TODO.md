@@ -3,6 +3,7 @@
 - shells for subgraphs
 - transfer selection to new subnetwork
 - show link directionality
+- add updated schema types
 - color change
 
 - make surface based off nodes

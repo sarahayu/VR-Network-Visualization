@@ -33,19 +33,42 @@ clarify_prompt = ChatPromptTemplate.from_template(
 
 cypher_prompt = ChatPromptTemplate.from_template(
     "You are a Neo4j Cypher expert. Convert the user's request into a valid Cypher query. \
-    We have DB schema as below for your usage: \
+    We have DB schema for nodes as below for your usage: \
     :Node,\
     nodeId, (int)\
     label, (string)\
     degree, (float)\
     selected, (bool)\
-    render_size, (float)\
-    render_pos, (string)\
-    render_color (string)\
+    size, (float)\
+    pos, (string)\
+    color, (string)\
+    sex, (\"male\"|\"female\")\
     smoker, (bool)\
     drinker, (bool)\
     gpa (float)\
     grade (int) \n\n\
+    \
+    :Community,\
+    commId, (int)\
+    selected, (bool)\n\n\
+    \
+    :Subnetwork,\
+    subnetworkId, (int)\n\n\
+    \
+    We also have DB schema for links as below for your usage: \
+    :POINTS_TO,\
+    linkId, (int)\
+    selected, (bool)\
+    bundlingStrength, (float)\
+    width, (string)\
+    colorStart, (string)\
+    colorEnd, (string)\
+    alpha, (float)\
+    waves, (array[int])\
+    type (\"friendship\"|\"aggression\")\n\n\
+    \
+    :PART_OF,\
+    \
     Only return the valid Cypher query, no explanations. Do not format the result into a code block. \n\n User Request: {input}"
 )
 
@@ -54,9 +77,9 @@ action_prompt = ChatPromptTemplate.from_template(
     Return only a list of user intents in order, no other words. \
     Each intent should be a two-item list: [action, parameters]. \
     Classify the action into the certain list,\
-    Actions can be 'select', 'deselect', 'move', 'color', 'layout', 'arithmetic'. \
+    Actions can be 'selectNode', 'selectLink', 'deselect', 'move', 'colorNode', 'colorLink', 'layout', 'arithmetic'. \
     Synonyms like 'highlight' = 'select' = 'show' = 'present', 'bring' = 'move' and so on. \
-    For example: [['select', ''], ['move', '']], ['color', '#FF0000'] \
+    For example: [['selectNode', ''], ['selectLink', ''], ['move', '']], ['colorNode', '#FF0000'], ['colorLink', '#FF0000'] \
     Also there is layout command with layout types 'floor', 'cluster' and 'spherical', return things such as ['layout', 'floor'] \
     As for the arithmetic, return the corresponding value, such as 'what's the degree of the selected node?'\
     should be [['arithmetic', '']]. \

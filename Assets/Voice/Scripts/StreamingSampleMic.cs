@@ -209,12 +209,19 @@ namespace Whisper.Samples
 
                         switch (action[0][0])
                         {
-                            case "select":
+                            case "selectNode":
                                 Debug.Log("Selecting nodes with query: " + query[0]);
                                 var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query[0]);
                                 TimerUtils.StartTime("SetSelectedNodes");
-                                _networkManager.SetSelectedNodes(nodes.Select(n => n.ID), true);
+                                _networkManager.SetSelectedNodes(nodes, true);
                                 TimerUtils.EndTime("SetSelectedNodes");
+                                break;
+                            case "selectLink":
+                                Debug.Log("Selecting links with query: " + query[0]);
+                                var links = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, query[0]);
+                                TimerUtils.StartTime("SetSelectedLinks");
+                                _networkManager.SetSelectedLinks(links, true);
+                                TimerUtils.EndTime("SetSelectedLinks");
                                 break;
                             case "deselect":
                                 Debug.Log("Deselecting nodes");
@@ -236,11 +243,19 @@ namespace Whisper.Samples
                                 _networkManager.SetMLLayout(comms, action[0][1]);
                                 TimerUtils.EndTime("Layout Change");
                                 break;
-                            case "color":
+                            case "colorNode":
                                 Debug.Log("Changing color of selected nodes to: " + action[0][1]);
                                 var nodes_color = _networkManager.SelectedNodeGUIDs;
                                 TimerUtils.StartTime("SetColor");
                                 _networkManager.SetMLNodesColor(nodes_color, "#FF0000"); // Hardcoded to red for now
+                                TimerUtils.EndTime("SetColor");
+                                break;
+                            case "colorLink":
+                                Debug.Log("Changing color of selected links to: " + action[0][1]);
+                                var links_color = _networkManager.SelectedLinkGUIDs;
+                                TimerUtils.StartTime("SetColor");
+                                _networkManager.SetMLLinksColorStart(links_color, "#FF0000"); // Hardcoded to red for now
+                                _networkManager.SetMLLinksColorEnd(links_color, "#FF0000"); // Hardcoded to red for now
                                 TimerUtils.EndTime("SetColor");
                                 break;
                             case "arithmetic":
