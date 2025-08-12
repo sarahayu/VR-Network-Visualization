@@ -68,7 +68,7 @@ namespace VidiGraph
 
         public void PushSelectionEvent(IEnumerable<string> nodes)
         {
-            foreach (var nodeGUID in _nodeSelectionTimes.Keys) _nodeSelectionTimes[nodeGUID] += 1;
+            foreach (var nodeGUID in _nodeSelectionTimes.Keys.ToList()) _nodeSelectionTimes[nodeGUID] += 1;
             foreach (var nodeGUID in nodes) _nodeSelectionTimes[nodeGUID] = 0;
         }
 

@@ -3,7 +3,6 @@
 - shells for subgraphs
 - transfer selection to new subnetwork
 - show link directionality
-- relayout graph, spatially based on friendship only and then add aggression later
 - color change
 
 - make surface based off nodes
@@ -104,7 +103,7 @@
 - update storage for subgraph data
 - parse all waves into one
 - reimplement tooltip
-- figure out selection system for link and node
+- relayout graph, spatially based on friendship only and then add aggression later
 
 ## Ignore
 - move node moving animation to mln
