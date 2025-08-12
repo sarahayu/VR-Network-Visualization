@@ -45,6 +45,7 @@ namespace VidiGraph
 
         Coroutine _clickWindowCR = null;
         Coroutine _transformMoverCR = null;
+        Action _dupeCB = null;
 
         int _subnetworkID;
 
@@ -193,6 +194,12 @@ namespace VidiGraph
 
                     CoroutineUtils.StopIfRunning(this, ref _unhoverCommCR);
                     _unhoverCommCR = StartCoroutine(CRDelayUnhoverComm());
+
+                    if (_dupeCB != null)
+                    {
+                        _inputManager.RightTriggerListener -= _dupeCB;
+                        _dupeCB = null;
+                    }
                 }
             }
         }
@@ -285,6 +292,12 @@ namespace VidiGraph
 
                     CoroutineUtils.StopIfRunning(this, ref _unhoverNodeCR);
                     _unhoverNodeCR = StartCoroutine(CRDelayUnhoverNode());
+
+                    if (_dupeCB != null)
+                    {
+                        _inputManager.RightTriggerListener -= _dupeCB;
+                        _dupeCB = null;
+                    }
                 }
             }
         }
@@ -323,15 +336,14 @@ namespace VidiGraph
         // listen for trigger press that triggers a duplication
         void DupeListen(IXRSelectInteractor interactor, IXRSelectInteractable interactable)
         {
-            Action act = null;
-
-            _inputManager.RightTriggerListener += act = () =>
+            _inputManager.RightTriggerListener += _dupeCB = () =>
             {
                 _xrManager.SelectExit(interactor, interactable);
 
                 _networkManager.CreateSubnetwork(_networkManager.SubnSelectedNodes(_subnetworkID), _subnetworkID);
 
-                _inputManager.RightTriggerListener -= act;
+                _inputManager.RightTriggerListener -= _dupeCB;
+                _dupeCB = null;
             };
         }
 
