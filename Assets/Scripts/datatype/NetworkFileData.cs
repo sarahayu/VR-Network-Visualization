@@ -48,7 +48,6 @@ namespace VidiGraph
     public class LinkFileData
     {
         public bool spline = true;
-        public int linkIdx;
         public int sourceIdx;
         public int targetIdx;
 

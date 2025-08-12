@@ -29,7 +29,6 @@ namespace VidiGraph
             Link link = new Link();
 
             link.IsSpline = fileLink.spline;
-            link.ID = fileLink.linkIdx;
             link.SourceNodeID = fileLink.sourceIdx;
             link.TargetNodeID = fileLink.targetIdx;
 
