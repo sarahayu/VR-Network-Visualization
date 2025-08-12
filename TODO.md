@@ -1,14 +1,13 @@
 # TODO
 
-- figure out selection system for link and node
+- shells for subgraphs
+- transfer selection to new subnetwork
 - show link directionality
 - relayout graph, spatially based on friendship only and then add aggression later
 - color change
 
-- transfer selection to new subnetwork
 - make surface based off nodes
 - attaching nodes, average pos?
-- shells for subgraphs
 - fix dupe glitch
 - fix bug: overviewlayouttransformer update ALL subnetwork nodes
     - change pushselectionevent to allow multiple subnetwork updates simult.
@@ -105,6 +104,7 @@
 - update storage for subgraph data
 - parse all waves into one
 - reimplement tooltip
+- figure out selection system for link and node
 
 ## Ignore
 - move node moving animation to mln

@@ -66,6 +66,8 @@ namespace VidiGraph
 
             public bool BundleStart { get; set; } = false;
             public bool BundleEnd { get; set; } = false;
+            // TODO restrict modification access
+            public bool Selected { get; set; }          // DONT MODIFY DIRECTLY, use SetSelectedNodes/Communities
 
             // detect if link needs to be rerendered
             public bool Dirty { get; set; } = false;
@@ -109,6 +111,13 @@ namespace VidiGraph
         public Dictionary<int, Link> Links = new Dictionary<int, Link>();
         public Dictionary<int, Community> Communities = new Dictionary<int, Community>();
 
+        public Dictionary<string, int> NodeGUIDToID = new();
+        public Dictionary<string, int> LinkGUIDToID = new();
+        public Dictionary<string, int> CommunityGUIDToID = new();
+
+        public Dictionary<int, List<int>> NodeLinkMatrixDir = new();
+        public Dictionary<int, List<int>> NodeLinkMatrixUndir = new();
+
         public Func<VidiGraph.Node, float> GetNodeSize = null;
         public Func<VidiGraph.Node, Color> GetNodeColor = null;
         public Func<VidiGraph.Link, float> GetLinkWidth = null;
@@ -122,11 +131,13 @@ namespace VidiGraph
         public int SubnetworkID { get { return _subnetworkID; } }
 
         public HashSet<int> SelectedNodes { get { return _selectedNodes; } }
+        public HashSet<int> SelectedLinks { get { return _selectedLinks; } }
         public HashSet<int> SelectedCommunities { get { return _selectedComms; } }
 
         int _subnetworkID;      // 0 means main multilayoutnetwork, 1 and up means subnetwork
 
         HashSet<int> _selectedNodes = new HashSet<int>();
+        HashSet<int> _selectedLinks = new HashSet<int>();
         HashSet<int> _selectedComms = new HashSet<int>();
 
         public MultiLayoutContext(int subnetworkID)
@@ -146,11 +157,15 @@ namespace VidiGraph
             {
                 Nodes[node.ID] = new Node();
                 Nodes[node.ID].CommunityID = node.CommunityID;
+
+                NodeGUIDToID[Nodes[node.ID].GUID] = node.ID;
             }
 
             foreach (var link in networkGlobal.Links.Values)
             {
                 Links[link.ID] = new Link();
+
+                LinkGUIDToID[Links[link.ID].GUID] = link.ID;
             }
 
             foreach (var community in networkGlobal.Communities.Values)
@@ -160,7 +175,17 @@ namespace VidiGraph
                     ID = community.ID,
                     Nodes = community.Nodes.Select(n => n.ID),
                 };
+
+                CommunityGUIDToID[Communities[community.ID].GUID] = community.ID;
             }
+
+            var dir = networkGlobal.NodeLinkMatrixDir;
+            var undir = networkGlobal.NodeLinkMatrixUndir;
+
+            NodeLinkMatrixDir = dir.Keys
+                .ToDictionary(nid => nid, nid => dir[nid].Select(l => l.ID).ToList());
+            NodeLinkMatrixUndir = undir.Keys
+                .ToDictionary(nid => nid, nid => undir[nid].Select(l => l.ID).ToList());
 
             _subnetworkID = 0;
 
@@ -183,39 +208,57 @@ namespace VidiGraph
                     Position = otherContext.Nodes[nodeID].Position,
                     Dirty = true,
                 };
+
+                NodeGUIDToID[Nodes[nodeID].GUID] = nodeID;
             }
 
             foreach (var link in otherContext.Links.Keys.Select(lid => networkGlobal.Links[lid]))
             {
-                if (nodeIDs.Contains(link.SourceNodeID) && nodeIDs.Contains(link.TargetNodeID))
+                if (!nodeIDs.Contains(link.SourceNodeID) || !nodeIDs.Contains(link.TargetNodeID)) continue;
+
+                Links[link.ID] = new Link()
                 {
-                    Links[link.ID] = new Link()
-                    {
-                        Width = otherContext.Links[link.ID].Width,
-                        BundlingStrength = otherContext.Links[link.ID].BundlingStrength,
-                        ColorStart = otherContext.Links[link.ID].ColorStart,
-                        ColorEnd = otherContext.Links[link.ID].ColorEnd,
-                        BundleStart = otherContext.Links[link.ID].BundleStart,
-                        BundleEnd = otherContext.Links[link.ID].BundleEnd,
-                        Alpha = otherContext.Links[link.ID].Alpha,
-                        Dirty = true,
-                    };
-                }
+                    Width = otherContext.Links[link.ID].Width,
+                    BundlingStrength = otherContext.Links[link.ID].BundlingStrength,
+                    ColorStart = otherContext.Links[link.ID].ColorStart,
+                    ColorEnd = otherContext.Links[link.ID].ColorEnd,
+                    BundleStart = otherContext.Links[link.ID].BundleStart,
+                    BundleEnd = otherContext.Links[link.ID].BundleEnd,
+                    Alpha = otherContext.Links[link.ID].Alpha,
+                    Dirty = true,
+                };
+
+                LinkGUIDToID[Links[link.ID].GUID] = link.ID;
             }
 
             foreach (var community in otherContext.Communities.Values)
             {
                 var intersectedNodes = community.Nodes.ToHashSet().Intersect(nodeIDs);
-                if (intersectedNodes.Count() != 0)
+                if (intersectedNodes.Count() == 0) continue;
+
+                Communities[community.ID] = new Community()
                 {
-                    Communities[community.ID] = new Community()
-                    {
-                        ID = community.ID,
-                        Nodes = intersectedNodes,
-                        Dirty = true,
-                    };
-                }
+                    ID = community.ID,
+                    Nodes = intersectedNodes,
+                    Dirty = true,
+                };
+
+                CommunityGUIDToID[Communities[community.ID].GUID] = community.ID;
             }
+
+            var dir = networkGlobal.NodeLinkMatrixDir;
+            var undir = networkGlobal.NodeLinkMatrixUndir;
+
+            NodeLinkMatrixDir = dir.Keys.Intersect(nodeIDs)
+                .ToDictionary(nid => nid, nid => dir[nid]
+                    .Select(l => l.ID)
+                    .Intersect(Links.Keys)
+                    .ToList());
+            NodeLinkMatrixUndir = undir.Keys.Intersect(nodeIDs)
+                .ToDictionary(nid => nid, nid => undir[nid]
+                    .Select(l => l.ID)
+                    .Intersect(Links.Keys)
+                    .ToList());
 
             GetNodeSize = otherContext.GetNodeSize;
             GetNodeColor = otherContext.GetNodeColor;
@@ -282,17 +325,39 @@ namespace VidiGraph
             }
         }
 
+        // also selects connected links and fully selected communities
         public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool isSelected)
         {
             foreach (var nodeID in nodeIDs)
             {
                 Nodes[nodeID].Selected = isSelected;
                 Nodes[nodeID].Dirty = true;
+
+                foreach (var linkID in NodeLinkMatrixUndir[nodeID])
+                {
+                    if (Links[linkID].Selected != isSelected)
+                    {
+                        Links[linkID].Selected = isSelected;
+                        Links[linkID].Dirty = true;
+                    }
+                }
             }
 
             RecomputeSelecteds();
         }
 
+        public void SetSelectedLinks(IEnumerable<int> linkIDs, bool isSelected)
+        {
+            foreach (var linkID in linkIDs)
+            {
+                Links[linkID].Selected = isSelected;
+                Links[linkID].Dirty = true;
+            }
+
+            RecomputeSelecteds();
+        }
+
+        // also selects connected links (internal and external) and nodes inside communities
         public void SetSelectedComms(IEnumerable<int> commIDs, bool isSelected)
         {
             foreach (var commID in commIDs)
@@ -316,6 +381,19 @@ namespace VidiGraph
             return newSelNodes;
         }
 
+        // returns linkIDs that are now selected
+        public IEnumerable<int> ToggleSelectedLinks(IEnumerable<int> linkIDs)
+        {
+            var selLinks = SelectedLinks;
+            var newSelLinks = linkIDs.Except(selLinks);
+            var newUnselLinks = linkIDs.Intersect(selLinks);
+
+            SetSelectedLinks(newSelLinks, true);
+            SetSelectedLinks(newUnselLinks, false);
+
+            return newSelLinks;
+        }
+
         // returns commIDs that are now selected
         public IEnumerable<int> ToggleSelectedComms(IEnumerable<int> commIDs)
         {
@@ -331,8 +409,9 @@ namespace VidiGraph
 
         public void ClearSelection()
         {
-            SetSelectedComms(SelectedCommunities, false);
             SetSelectedNodes(SelectedNodes, false);
+            SetSelectedLinks(SelectedLinks, false);
+            SetSelectedComms(SelectedCommunities, false);
         }
 
         /*=============== start private methods ===================*/
@@ -398,6 +477,7 @@ namespace VidiGraph
         void RecomputeSelecteds()
         {
             _selectedNodes = Nodes.Keys.Where(nid => Nodes[nid].Selected).ToHashSet();
+            _selectedLinks = Links.Keys.Where(nid => Links[nid].Selected).ToHashSet();
             _selectedComms = Communities.Keys
                 .Where(cid => Communities[cid].Nodes
                     .All(nid => Nodes[nid].Selected))

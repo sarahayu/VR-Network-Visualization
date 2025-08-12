@@ -73,9 +73,9 @@ namespace VidiGraph
             Draw();
         }
 
-        public void PushSelectionEvent(IEnumerable<int> nodes, int subnetworkID)
+        public void PushSelectionEvent(IEnumerable<string> nodes)
         {
-            _transformer.PushSelectionEvent(nodes, subnetworkID);
+            _transformer.PushSelectionEvent(nodes);
         }
 
 

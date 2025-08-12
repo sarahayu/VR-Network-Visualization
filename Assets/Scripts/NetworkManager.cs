@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using UnityEngine;
 
@@ -25,7 +24,37 @@ namespace VidiGraph
         public NetworkFilesLoader FileLoader { get { return _fileLoader; } }
         public NetworkGlobal NetworkGlobal { get { return _networkGlobal; } }
 
-        [Obsolete("SelectedNodes is deprecated, please use SubnSelectedNodes().")]
+        public HashSet<string> SelectedNodeGUIDs
+        {
+            get
+            {
+                return GetSelNodeGUIDs().Values
+                    .SelectMany(i => i)
+                    .ToHashSet();
+            }
+        }
+
+        public HashSet<string> SelectedLinkGUIDs
+        {
+            get
+            {
+                return GetSelLinkGUIDs().Values
+                    .SelectMany(i => i)
+                    .ToHashSet();
+            }
+        }
+
+        public HashSet<string> SelectedCommunityGUIDs
+        {
+            get
+            {
+                return GetSelCommGUIDs().Values
+                    .SelectMany(i => i)
+                    .ToHashSet();
+            }
+        }
+
+        [Obsolete("SelectedNodes is deprecated, please use SubnSelectedNodes() or SelectedNodeGUIDs.")]
         public HashSet<int> SelectedNodes
         {
             get
@@ -37,7 +66,7 @@ namespace VidiGraph
             }
         }
 
-        [Obsolete("SelectedCommunities is deprecated, please use SubnSelectedCommunities().")]
+        [Obsolete("SelectedCommunities is deprecated, please use SubnSelectedCommunities() or SelectedCommunityGUIDs.")]
         public HashSet<int> SelectedCommunities
         {
             get
@@ -45,7 +74,7 @@ namespace VidiGraph
                 return _allNetworks.Values
                     .Select(subn => subn.SelectedCommunities)
                     .SelectMany(i => i)
-                    .ToHashSet().ToHashSet();
+                    .ToHashSet();
             }
         }
 
@@ -98,13 +127,13 @@ namespace VidiGraph
         {
             HashSet<string> opts = new HashSet<string>();
 
-            if (SelectedNodes.Count > 0)
+            if (SelectedNodeGUIDs.Count > 0)
             {
                 opts.Add("Bring Node");
                 opts.Add("Reset Node(s)");
             }
 
-            if (SelectedCommunities.Count > 0)
+            if (SelectedCommunityGUIDs.Count > 0)
             {
                 opts.Add("Focus Comm.");
                 opts.Add("Project Comm. Floor");
@@ -163,13 +192,49 @@ namespace VidiGraph
             TriggerRenderUpdate();
         }
 
-        public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool selected, int subnetworkID = 0)
+        public void SetSelectedNodes(IEnumerable<string> nodeGUIDs, bool selected)
         {
-            _allNetworks[subnetworkID].SetSelectedNodes(nodeIDs, selected);
-            _allNetworks[subnetworkID].UpdateSelectedElements();
+            foreach (var (subnID, nodeIDs) in SortNodeGUIDs(nodeGUIDs))
+            {
+                _allNetworks[subnID].SetSelectedNodes(nodeIDs, selected);
+                _allNetworks[subnID].UpdateSelectedElements();
+            }
 
             if (selected)
-                _handheldNetwork.PushSelectionEvent(nodeIDs, subnetworkID);
+                _handheldNetwork.PushSelectionEvent(nodeGUIDs);
+
+            UpdateHandheld();
+            UpdateOptions();
+        }
+
+        public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool selected, int subnetworkID = 0)
+        {
+            var subnetwork = _allNetworks[subnetworkID];
+            subnetwork.SetSelectedNodes(nodeIDs, selected);
+            subnetwork.UpdateSelectedElements();
+
+            if (selected)
+                _handheldNetwork.PushSelectionEvent(NodeIDsToNodeGUIDs(nodeIDs, subnetworkID));
+
+            UpdateHandheld();
+            UpdateOptions();
+        }
+
+        public void ToggleSelectedNodes(IEnumerable<string> nodeGUIDs)
+        {
+            HashSet<string> newSelecteds = new();
+
+            foreach (var (subnID, nodeIDs) in SortNodeGUIDs(nodeGUIDs))
+            {
+                var subnetwork = _allNetworks[subnID];
+
+                var newSelected = subnetwork.ToggleSelectedNodes(nodeIDs);
+                subnetwork.UpdateSelectedElements();
+
+                newSelecteds.UnionWith(NodeIDsToNodeGUIDs(newSelected, subnID));
+            }
+
+            _handheldNetwork.PushSelectionEvent(newSelecteds);
 
             UpdateHandheld();
             UpdateOptions();
@@ -177,14 +242,58 @@ namespace VidiGraph
 
         public void ToggleSelectedNodes(IEnumerable<int> nodeIDs, int subnetworkID = 0)
         {
-            IEnumerable<int> newSelecteds = _allNetworks[subnetworkID].ToggleSelectedNodes(nodeIDs);
+            var subnetwork = _allNetworks[subnetworkID];
 
-            _allNetworks[subnetworkID].UpdateSelectedElements();
+            IEnumerable<int> newSelecteds = subnetwork.ToggleSelectedNodes(nodeIDs);
+            subnetwork.UpdateSelectedElements();
 
-            _handheldNetwork.PushSelectionEvent(newSelecteds, subnetworkID);
+            _handheldNetwork.PushSelectionEvent(NodeIDsToNodeGUIDs(newSelecteds, subnetworkID));
 
             UpdateHandheld();
             UpdateOptions();
+        }
+
+        public void SetSelectedLinks(IEnumerable<string> linkGUIDs, bool selected)
+        {
+            // TODO diff implement
+        }
+
+        public void SetSelectedLinks(IEnumerable<int> linkIDs, bool selected, int subnetworkID = 0)
+        {
+            _allNetworks[subnetworkID].SetSelectedLinks(linkIDs, selected);
+            _allNetworks[subnetworkID].UpdateSelectedElements();
+
+            if (selected)
+                _handheldNetwork.PushSelectionEvent(LinkIDsToLinkGUIDs(linkIDs, subnetworkID));
+
+            UpdateHandheld();
+            UpdateOptions();
+        }
+
+        public void ToggleSelectedLinks(IEnumerable<string> linkGUIDs)
+        {
+            foreach (var (subnID, linkIDs) in SortLinkGUIDs(linkGUIDs))
+            {
+                _allNetworks[subnID].ToggleSelectedLinks(linkIDs);
+                _allNetworks[subnID].UpdateSelectedElements();
+            }
+
+            UpdateHandheld();
+            UpdateOptions();
+        }
+
+        public void ToggleSelectedLinks(IEnumerable<int> linkIDs, int subnetworkID = 0)
+        {
+            _allNetworks[subnetworkID].ToggleSelectedLinks(linkIDs);
+            _allNetworks[subnetworkID].UpdateSelectedElements();
+
+            UpdateHandheld();
+            UpdateOptions();
+        }
+
+        public void StartMLNodeMove(string nodeGUID)
+        {
+            StartMLNodesMove(new string[] { nodeGUID });
         }
 
         public void StartMLNodeMove(int nodeID, int subnetworkID = 0)
@@ -192,9 +301,19 @@ namespace VidiGraph
             _allNetworks[subnetworkID].StartNodeMove(nodeID);
         }
 
+        public void StartMLNodesMove(IEnumerable<string> nodeGUIDs)
+        {
+            foreach (var (subnID, nodeIDs) in SortNodeGUIDs(nodeGUIDs)) StartMLNodesMove(nodeIDs, subnID);
+        }
+
         public void StartMLNodesMove(IEnumerable<int> nodeIDs, int subnetworkID = 0)
         {
             _allNetworks[subnetworkID].StartNodesMove(nodeIDs);
+        }
+
+        public void EndMLNodesMove()
+        {
+            foreach (var subn in _allNetworks.Values) subn.EndNodesMove();
         }
 
         public void EndMLNodesMove(int subnetworkID = 0)
@@ -203,14 +322,29 @@ namespace VidiGraph
             UpdateHandheld();
         }
 
+        public void StartMLCommMove(string commGUID)
+        {
+            StartMLCommsMove(new string[] { commGUID });
+        }
+
         public void StartMLCommMove(int commID, int subnetworkID = 0)
         {
             _allNetworks[subnetworkID].StartCommMove(commID);
         }
 
+        public void StartMLCommsMove(IEnumerable<string> commGUIDs)
+        {
+            foreach (var (subnID, commIDs) in SortCommunityGUIDs(commGUIDs)) StartMLCommsMove(commIDs, subnID);
+        }
+
         public void StartMLCommsMove(IEnumerable<int> commIDs, int subnetworkID = 0)
         {
             _allNetworks[subnetworkID].StartCommsMove(commIDs);
+        }
+
+        public void EndMLCommsMove()
+        {
+            foreach (var subn in _allNetworks.Values) subn.EndCommsMove();
         }
 
         public void EndMLCommsMove(int subnetworkID = 0)
@@ -231,16 +365,47 @@ namespace VidiGraph
             TriggerRenderUpdate();
         }
 
+        public void SetSelectedCommunities(IEnumerable<string> commGUIDs, bool selected)
+        {
+            foreach (var (subnID, commIDs) in SortCommunityGUIDs(commGUIDs))
+            {
+                _allNetworks[subnID].SetSelectedComms(commIDs, selected);
+                _allNetworks[subnID].UpdateSelectedElements();
+            }
+
+            if (selected)
+                _handheldNetwork.PushSelectionEvent(commGUIDs);
+
+            UpdateHandheld();
+            UpdateOptions();
+        }
+
         public void SetSelectedCommunities(IEnumerable<int> commIDs, bool selected, int subnetworkID = 0)
         {
             _allNetworks[subnetworkID].SetSelectedComms(commIDs, selected);
             _allNetworks[subnetworkID].UpdateSelectedElements();
 
             if (selected)
+                _handheldNetwork.PushSelectionEvent(CommIDToNodeGUIDs(commIDs, subnetworkID));
+
+            UpdateHandheld();
+            UpdateOptions();
+        }
+
+        public void ToggleSelectedCommunities(IEnumerable<string> commGUIDs)
+        {
+            HashSet<string> newSelecteds = new();
+
+            foreach (var (subnID, commIDs) in SortCommunityGUIDs(commGUIDs))
             {
-                var selectedNodes = commIDs.Select(cid => _allNetworks[subnetworkID].Context.Communities[cid].Nodes).SelectMany(i => i);
-                _handheldNetwork.PushSelectionEvent(selectedNodes, subnetworkID);
+                var subnetwork = _allNetworks[subnID];
+                var selectedComms = subnetwork.ToggleSelectedComms(commIDs);
+                subnetwork.UpdateSelectedElements();
+
+                newSelecteds.UnionWith(CommIDToNodeGUIDs(selectedComms, subnID));
             }
+
+            _handheldNetwork.PushSelectionEvent(newSelecteds);
 
             UpdateHandheld();
             UpdateOptions();
@@ -251,8 +416,7 @@ namespace VidiGraph
             var selectedComms = _allNetworks[subnetworkID].ToggleSelectedComms(commIDs);
             _allNetworks[subnetworkID].UpdateSelectedElements();
 
-            var selectedNodes = selectedComms.Select(cid => _allNetworks[subnetworkID].Context.Communities[cid].Nodes).SelectMany(i => i);
-            _handheldNetwork.PushSelectionEvent(selectedNodes, subnetworkID);
+            _handheldNetwork.PushSelectionEvent(CommIDToNodeGUIDs(selectedComms, subnetworkID));
 
             UpdateHandheld();
             UpdateOptions();
@@ -268,17 +432,38 @@ namespace VidiGraph
         }
 
         // layout = [spherical, cluster, floor]
+
+        public void SetMLLayout(IEnumerable<string> commGUIDs, string layout)
+        {
+            foreach (var (subnID, commIDs) in SortCommunityGUIDs(commGUIDs)) SetMLLayout(commIDs, layout, subnID);
+        }
+
         // TODO extend for subnetworks
         public void SetMLLayout(IEnumerable<int> commIDs, string layout, int subnetworkID = 0)
         {
-            _multiLayoutNetwork.SetLayout(commIDs, layout, UpdateHandheld);
+            _allNetworks[subnetworkID].SetLayout(commIDs, layout, UpdateHandheld);
         }
 
         // layout = [spherical, cluster, floor]
+        public void SetMLLayout(string commGUID, string layout)
+        {
+            var res = SortCommunityGUIDs(new string[] { commGUID }).First();
+
+            var subnID = res.Key;
+            var commID = res.Value.First();
+
+            SetMLLayout(commID, layout, subnID);
+        }
+
         // TODO extend for subnetworks
         public void SetMLLayout(int commID, string layout, int subnetworkID = 0)
         {
-            _multiLayoutNetwork.SetLayout(new int[] { commID }, layout, UpdateHandheld);
+            _allNetworks[subnetworkID].SetLayout(new int[] { commID }, layout, UpdateHandheld);
+        }
+
+        public void BringMLNodes(IEnumerable<string> nodeGUIDs)
+        {
+            foreach (var (subnID, nodeIDs) in SortNodeGUIDs(nodeGUIDs)) BringMLNodes(nodeIDs, subnID);
         }
 
         public void BringMLNodes(IEnumerable<int> nodeIDs, int subnetworkID = 0)
@@ -286,14 +471,39 @@ namespace VidiGraph
             _allNetworks[subnetworkID].BringNodes(nodeIDs, UpdateHandheld);
         }
 
+        public void ReturnMLNodes(IEnumerable<string> nodeGUIDs)
+        {
+            foreach (var (subnID, nodeIDs) in SortNodeGUIDs(nodeGUIDs)) ReturnMLNodes(nodeIDs, subnID);
+        }
+
         public void ReturnMLNodes(IEnumerable<int> nodeIDs, int subnetworkID = 0)
         {
             _allNetworks[subnetworkID].ReturnNodes(nodeIDs);
         }
 
+        public Transform GetMLNodeTransform(string nodeGUID)
+        {
+            var res = SortNodeGUIDs(new string[] { nodeGUID }).First();
+
+            var subnID = res.Key;
+            var nodeID = res.Value.First();
+
+            return GetMLNodeTransform(nodeID, subnID);
+        }
+
         public Transform GetMLNodeTransform(int nodeID, int subnetworkID = 0)
         {
             return _allNetworks[subnetworkID].GetNodeTransform(nodeID);
+        }
+
+        public Transform GetMLCommTransform(string commGUID)
+        {
+            var res = SortCommunityGUIDs(new string[] { commGUID }).First();
+
+            var subnID = res.Key;
+            var commID = res.Value.First();
+
+            return GetMLCommTransform(commID, subnID);
         }
 
         public Transform GetMLCommTransform(int commID, int subnetworkID = 0)
@@ -319,9 +529,19 @@ namespace VidiGraph
             TriggerRenderUpdate();
         }
 
+        public void SetMLNodesSize(IEnumerable<string> nodeGUIDs, float size)
+        {
+            foreach (var (subnID, nodeIDs) in SortNodeGUIDs(nodeGUIDs)) SetMLNodesSize(nodeIDs, size, subnID);
+        }
+
         public void SetMLNodesSize(IEnumerable<int> nodeIDs, float size, int subnetworkID = 0)
         {
             _allNetworks[subnetworkID].SetNodesSize(nodeIDs, size, _updatingStorage, _updatingRenderElements);
+        }
+
+        public void SetMLNodesColor(IEnumerable<string> nodeGUIDs, string color)
+        {
+            foreach (var (subnID, nodeIDs) in SortNodeGUIDs(nodeGUIDs)) SetMLNodesColor(nodeIDs, color, subnID);
         }
 
         public void SetMLNodesColor(IEnumerable<int> nodeIDs, string color, int subnetworkID = 0)
@@ -329,9 +549,19 @@ namespace VidiGraph
             _allNetworks[subnetworkID].SetNodesColor(nodeIDs, color, _updatingStorage, _updatingRenderElements);
         }
 
+        public void SetMLNodesPosition(IEnumerable<string> nodeGUIDs, Vector3 position)
+        {
+            foreach (var (subnID, nodeIDs) in SortNodeGUIDs(nodeGUIDs)) SetMLNodesPosition(nodeIDs, position, subnID);
+        }
+
         public void SetMLNodesPosition(IEnumerable<int> nodeIDs, Vector3 position, int subnetworkID = 0)
         {
             _allNetworks[subnetworkID].SetNodesPosition(nodeIDs, position, _updatingStorage, _updatingRenderElements);
+        }
+
+        public void SetMLNodesPosition(IEnumerable<string> nodeGUIDs, IEnumerable<Vector3> positions)
+        {
+            foreach (var (subnID, nodeIDs) in SortNodeGUIDs(nodeGUIDs)) SetMLNodesPosition(nodeIDs, positions, subnID);
         }
 
         public void SetMLNodesPosition(IEnumerable<int> nodeIDs, IEnumerable<Vector3> positions, int subnetworkID = 0)
@@ -339,9 +569,19 @@ namespace VidiGraph
             _allNetworks[subnetworkID].SetNodesPosition(nodeIDs, positions, _updatingStorage, _updatingRenderElements);
         }
 
+        public void SetMLLinksWidth(IEnumerable<string> linkGUIDs, float width)
+        {
+            foreach (var (subnID, linkIDs) in SortLinkGUIDs(linkGUIDs)) SetMLLinksWidth(linkIDs, width, subnID);
+        }
+
         public void SetMLLinksWidth(IEnumerable<int> linkIDs, float width, int subnetworkID = 0)
         {
             _allNetworks[subnetworkID].SetLinksWidth(linkIDs, width, _updatingStorage, _updatingRenderElements);
+        }
+
+        public void SetMLLinksColorStart(IEnumerable<string> linkGUIDs, string color)
+        {
+            foreach (var (subnID, linkIDs) in SortLinkGUIDs(linkGUIDs)) SetMLLinksColorStart(linkIDs, color, subnID);
         }
 
         public void SetMLLinksColorStart(IEnumerable<int> linkIDs, string color, int subnetworkID = 0)
@@ -349,9 +589,19 @@ namespace VidiGraph
             _allNetworks[subnetworkID].SetLinksColorStart(linkIDs, color, _updatingStorage, _updatingRenderElements);
         }
 
+        public void SetMLLinksColorEnd(IEnumerable<string> linkGUIDs, string color)
+        {
+            foreach (var (subnID, linkIDs) in SortLinkGUIDs(linkGUIDs)) SetMLLinksColorEnd(linkIDs, color, subnID);
+        }
+
         public void SetMLLinksColorEnd(IEnumerable<int> linkIDs, string color, int subnetworkID = 0)
         {
             _allNetworks[subnetworkID].SetLinksColorEnd(linkIDs, color, _updatingStorage, _updatingRenderElements);
+        }
+
+        public void SetMLLinksAlpha(IEnumerable<string> linkGUIDs, float alpha)
+        {
+            foreach (var (subnID, linkIDs) in SortLinkGUIDs(linkGUIDs)) SetMLLinksAlpha(linkIDs, alpha, subnID);
         }
 
         public void SetMLLinksAlpha(IEnumerable<int> linkIDs, float alpha, int subnetworkID = 0)
@@ -359,14 +609,29 @@ namespace VidiGraph
             _allNetworks[subnetworkID].SetLinksAlpha(linkIDs, alpha, _updatingStorage, _updatingRenderElements);
         }
 
+        public void SetMLLinksBundlingStrength(IEnumerable<string> linkGUIDs, float bundlingStrength)
+        {
+            foreach (var (subnID, linkIDs) in SortLinkGUIDs(linkGUIDs)) SetMLLinksBundlingStrength(linkIDs, bundlingStrength, subnID);
+        }
+
         public void SetMLLinksBundlingStrength(IEnumerable<int> linkIDs, float bundlingStrength, int subnetworkID = 0)
         {
             _allNetworks[subnetworkID].SetLinksBundlingStrength(linkIDs, bundlingStrength, _updatingStorage, _updatingRenderElements);
         }
 
+        public void SetMLLinksBundleStart(IEnumerable<string> linkGUIDs, bool bundleStart)
+        {
+            foreach (var (subnID, linkIDs) in SortLinkGUIDs(linkGUIDs)) SetMLLinksBundleStart(linkIDs, bundleStart, subnID);
+        }
+
         public void SetMLLinksBundleStart(IEnumerable<int> linkIDs, bool bundleStart, int subnetworkID = 0)
         {
             _allNetworks[subnetworkID].SetLinksBundleStart(linkIDs, bundleStart, _updatingStorage, _updatingRenderElements);
+        }
+
+        public void SetMLLinksBundleEnd(IEnumerable<string> linkGUIDs, bool bundleEnd)
+        {
+            foreach (var (subnID, linkIDs) in SortLinkGUIDs(linkGUIDs)) SetMLLinksBundleEnd(linkIDs, bundleEnd, subnID);
         }
 
         public void SetMLLinksBundleEnd(IEnumerable<int> linkIDs, bool bundleEnd, int subnetworkID = 0)
@@ -482,28 +747,28 @@ namespace VidiGraph
                 _updatingStorage, _updatingRenderElements);
         }
 
-        // TODO untested
+
         public bool SetMLLinkBundleStartEncoding(string prop, Dictionary<string, bool> valueToDoBundle, int subnetworkID = 0)
         {
             return _allNetworks[subnetworkID].SetLinkBundleStartEncoding(prop, valueToDoBundle,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        // TODO untested
+
         public bool SetMLLinkBundleStartEncoding(string prop, Dictionary<bool?, bool> valueToDoBundle, int subnetworkID = 0)
         {
             return _allNetworks[subnetworkID].SetLinkBundleStartEncoding(prop, valueToDoBundle,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        // TODO untested
+
         public bool SetMLLinkBundleEndEncoding(string prop, Dictionary<string, bool> valueToDoBundle, int subnetworkID = 0)
         {
             return _allNetworks[subnetworkID].SetLinkBundleEndEncoding(prop, valueToDoBundle,
                 _updatingStorage, _updatingRenderElements);
         }
 
-        // TODO untested
+
         public bool SetMLLinkBundleEndEncoding(string prop, Dictionary<bool?, bool> valueToDoBundle, int subnetworkID = 0)
         {
             return _allNetworks[subnetworkID].SetLinkBundleEndEncoding(prop, valueToDoBundle,
@@ -533,6 +798,11 @@ namespace VidiGraph
             return _allNetworks[subnetworkID].SelectedNodes;
         }
 
+        public HashSet<int> SubnSelectedLinks(int subnetworkID)
+        {
+            return _allNetworks[subnetworkID].SelectedLinks;
+        }
+
         public HashSet<int> SubnSelectedCommunities(int subnetworkID)
         {
             return _allNetworks[subnetworkID].SelectedCommunities;
@@ -541,6 +811,11 @@ namespace VidiGraph
         public bool IsNodeSelected(int nodeID, int subnetworkID)
         {
             return _allNetworks[subnetworkID].SelectedNodes.Contains(nodeID);
+        }
+
+        public bool IsLinkSelected(int linkID, int subnetworkID)
+        {
+            return _allNetworks[subnetworkID].SelectedLinks.Contains(linkID);
         }
 
         public bool IsCommSelected(int commID, int subnetworkID)
@@ -657,6 +932,97 @@ namespace VidiGraph
         {
             foreach (var comm in subnetwork.Context.Communities.Values) comm.Dirty = true;
             foreach (var node in subnetwork.Context.Nodes.Values) node.Dirty = true;
+        }
+
+        Dictionary<int, HashSet<string>> GetSelNodeGUIDs()
+        {
+            return _allNetworks.Keys.ToDictionary(
+                subnID => subnID,
+                subnID => _allNetworks[subnID].SelectedNodeGUIDs
+            );
+        }
+
+        Dictionary<int, HashSet<string>> GetSelLinkGUIDs()
+        {
+            return _allNetworks.Keys.ToDictionary(
+                subnID => subnID,
+                subnID => _allNetworks[subnID].SelectedLinkGUIDs
+            );
+        }
+
+        Dictionary<int, HashSet<string>> GetSelCommGUIDs()
+        {
+            return _allNetworks.Keys.ToDictionary(
+                subnID => subnID,
+                subnID => _allNetworks[subnID].SelectedCommunityGUIDs
+            );
+        }
+
+        Dictionary<int, HashSet<int>> SortNodeGUIDs(IEnumerable<string> nodeGUIDs)
+        {
+            Dictionary<int, HashSet<int>> sorted = new();
+
+            foreach (var subnID in _allNetworks.Keys)
+            {
+                var guidToId = _allNetworks[subnID].Context.NodeGUIDToID;
+                var nodeIDs = guidToId.Keys.Intersect(nodeGUIDs).Select(guid => guidToId[guid]).ToHashSet();
+
+                if (nodeIDs.Count != 0)
+                    sorted[subnID] = nodeIDs;
+            }
+
+            return sorted;
+        }
+
+        Dictionary<int, HashSet<int>> SortLinkGUIDs(IEnumerable<string> linkGUIDs)
+        {
+            Dictionary<int, HashSet<int>> sorted = new();
+
+            foreach (var subnID in _allNetworks.Keys)
+            {
+                var guidToId = _allNetworks[subnID].Context.LinkGUIDToID;
+                var linkIDs = guidToId.Keys.Intersect(linkGUIDs).Select(guid => guidToId[guid]).ToHashSet();
+
+                if (linkIDs.Count != 0)
+                    sorted[subnID] = linkIDs;
+            }
+
+            return sorted;
+        }
+
+        Dictionary<int, HashSet<int>> SortCommunityGUIDs(IEnumerable<string> communityGUIDs)
+        {
+            Dictionary<int, HashSet<int>> sorted = new();
+
+            foreach (var subnID in _allNetworks.Keys)
+            {
+                var guidToId = _allNetworks[subnID].Context.CommunityGUIDToID;
+                var commIDs = guidToId.Keys.Intersect(communityGUIDs).Select(guid => guidToId[guid]).ToHashSet();
+
+                if (commIDs.Count != 0)
+                    sorted[subnID] = commIDs;
+            }
+
+            return sorted;
+        }
+
+        IEnumerable<string> CommIDToNodeGUIDs(IEnumerable<int> commIDs, int subnetworkID)
+        {
+            return commIDs.Select(cid =>
+            {
+                var ctx = _allNetworks[subnetworkID].Context;
+                return ctx.Communities[cid].Nodes.Select(nid => ctx.Nodes[nid].GUID);
+            }).SelectMany(i => i);
+        }
+
+        IEnumerable<string> NodeIDsToNodeGUIDs(IEnumerable<int> nodeIDs, int subnetworkID)
+        {
+            return nodeIDs.Select(nid => _allNetworks[subnetworkID].Context.Nodes[nid].GUID);
+        }
+
+        IEnumerable<string> LinkIDsToLinkGUIDs(IEnumerable<int> linkIDs, int subnetworkID)
+        {
+            return linkIDs.Select(nid => _allNetworks[subnetworkID].Context.Links[nid].GUID);
         }
     }
 }

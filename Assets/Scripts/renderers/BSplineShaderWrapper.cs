@@ -172,6 +172,7 @@ namespace VidiGraph
             foreach (var (linkID, linkContext) in networkContext.Links)
             {
                 networkGlobal.Links[linkID].Dirty = false;
+                linkContext.Dirty = false;
 
                 var cp = controlPoints[linkID];
 
@@ -222,7 +223,7 @@ namespace VidiGraph
                 spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkHoverColor;
             }
 
-            if (selNodes.Contains(link.SourceNodeID) || selNodes.Contains(link.TargetNodeID))
+            if (contextLink.Selected)
             {
                 spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkSelectColor;
             }

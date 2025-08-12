@@ -224,21 +224,21 @@ namespace Whisper.Samples
                                 break;
                             case "move":
                                 Debug.Log("Moving selected nodes");
-                                var nodes_move = _networkManager.SelectedNodes;
+                                var nodes_move = _networkManager.SelectedNodeGUIDs;
                                 TimerUtils.StartTime("Move Nodes");
                                 _networkManager.BringMLNodes(nodes_move);
                                 TimerUtils.EndTime("Move Nodes");
                                 break;
                             case "layout":
                                 Debug.Log("Changing layout to: " + action[0][1]);
-                                var comms = _networkManager.SelectedCommunities;
+                                var comms = _networkManager.SelectedCommunityGUIDs;
                                 TimerUtils.StartTime("Layout Change");
                                 _networkManager.SetMLLayout(comms, action[0][1]);
                                 TimerUtils.EndTime("Layout Change");
                                 break;
                             case "color":
                                 Debug.Log("Changing color of selected nodes to: " + action[0][1]);
-                                var nodes_color = _networkManager.SelectedNodes;
+                                var nodes_color = _networkManager.SelectedNodeGUIDs;
                                 TimerUtils.StartTime("SetColor");
                                 _networkManager.SetMLNodesColor(nodes_color, "#FF0000"); // Hardcoded to red for now
                                 TimerUtils.EndTime("SetColor");

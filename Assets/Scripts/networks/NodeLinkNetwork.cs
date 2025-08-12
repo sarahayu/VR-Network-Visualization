@@ -16,7 +16,24 @@ namespace VidiGraph
         public MultiLayoutContext Context { get { return _context; } }
 
         public HashSet<int> SelectedNodes { get { return Context.SelectedNodes; } }
+        public HashSet<int> SelectedLinks { get { return Context.SelectedLinks; } }
         public HashSet<int> SelectedCommunities { get { return Context.SelectedCommunities; } }
+
+        public HashSet<string> SelectedNodeGUIDs
+        {
+            get { return Context.SelectedNodes.Select(nid => Context.Nodes[nid].GUID).ToHashSet(); }
+        }
+
+        public HashSet<string> SelectedLinkGUIDs
+        {
+            get { return Context.SelectedLinks.Select(nid => Context.Links[nid].GUID).ToHashSet(); }
+        }
+
+        public HashSet<string> SelectedCommunityGUIDs
+        {
+            get { return Context.SelectedCommunities.Select(nid => Context.Communities[nid].GUID).ToHashSet(); }
+        }
+
 
         protected NetworkManager _manager;
         protected NetworkRenderer _renderer;
@@ -85,6 +102,19 @@ namespace VidiGraph
             Context.SetSelectedNodes(updateNodes, isSelected);
         }
 
+        public void SetSelectedLinks(IEnumerable<int> linkIDs, bool isSelected)
+        {
+            var validLinks = Context.Links.Keys.Intersect(linkIDs);
+            var updateLinks = linkIDs.Except(SelectedLinks);        // only update necessary links
+
+            if (validLinks.Count() != linkIDs.Count())
+            {
+                Debug.LogWarning($"Links {string.Join(", ", linkIDs.Except(validLinks))} not found in subnetwork {_id}");
+            }
+
+            Context.SetSelectedLinks(updateLinks, isSelected);
+        }
+
         public void SetSelectedComms(IEnumerable<int> commIDs, bool isSelected)
         {
             var validComms = Context.Communities.Keys.Intersect(commIDs);
@@ -107,6 +137,18 @@ namespace VidiGraph
             }
 
             return Context.ToggleSelectedNodes(validNodes);
+        }
+
+        public IEnumerable<int> ToggleSelectedLinks(IEnumerable<int> linkIDs)
+        {
+            var validLinks = Context.Links.Keys.Intersect(linkIDs);
+
+            if (validLinks.Count() != linkIDs.Count())
+            {
+                Debug.LogWarning($"Links {string.Join(", ", linkIDs.Except(validLinks))} not found in subnetwork {_id}");
+            }
+
+            return Context.ToggleSelectedLinks(validLinks);
         }
 
         public IEnumerable<int> ToggleSelectedComms(IEnumerable<int> commIDs)

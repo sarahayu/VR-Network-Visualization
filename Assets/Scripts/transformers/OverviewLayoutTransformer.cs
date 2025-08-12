@@ -15,7 +15,7 @@ namespace VidiGraph
         MultiLayoutNetwork _mlNetwork;
         IEnumerable<BasicSubnetwork> _subnetworks;
 
-        Dictionary<int, Dictionary<int, float>> _nodeSelectionTimes = new();
+        Dictionary<string, float> _nodeSelectionTimes = new();
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
@@ -42,8 +42,8 @@ namespace VidiGraph
                     {
                         ID = nodeID,
                         Position = node.Position,
-                        Color = GetNodeColor(nodeID, subnetworkID: context.SubnetworkID),
-                        Size = GetNodeSize(nodeID, subnetworkID: context.SubnetworkID)
+                        Color = GetNodeColor(node.GUID),
+                        Size = GetNodeSize(node.GUID)
                     };
                 }
             }
@@ -66,35 +66,24 @@ namespace VidiGraph
             _subnetworks = subnetworks;
         }
 
-        public void PushSelectionEvent(IEnumerable<int> nodes, int subnetworkID = 0)
+        public void PushSelectionEvent(IEnumerable<string> nodes)
         {
-            if (!_nodeSelectionTimes.ContainsKey(subnetworkID)) _nodeSelectionTimes[subnetworkID] = new();
-            foreach (var nodeID in _nodeSelectionTimes[subnetworkID].Keys.ToList()) _nodeSelectionTimes[subnetworkID][nodeID] += 1;
-            foreach (var nodeID in nodes) _nodeSelectionTimes[subnetworkID][nodeID] = 0;
+            foreach (var nodeGUID in _nodeSelectionTimes.Keys) _nodeSelectionTimes[nodeGUID] += 1;
+            foreach (var nodeGUID in nodes) _nodeSelectionTimes[nodeGUID] = 0;
         }
 
-        Color GetNodeColor(int nodeID, int subnetworkID)
+        Color GetNodeColor(string nodeGUID)
         {
-            if (!_nodeSelectionTimes.ContainsKey(subnetworkID))
+            if (!_nodeSelectionTimes.ContainsKey(nodeGUID))
                 return Color.gray;
 
-            var subNodeTimes = _nodeSelectionTimes[subnetworkID];
-
-            if (!subNodeTimes.ContainsKey(nodeID))
-                return Color.gray;
-
-            var lerped = Mathf.Min(1, subNodeTimes[nodeID] / MAX_NODE_SELECT_AGE);
+            var lerped = Mathf.Min(1, _nodeSelectionTimes[nodeGUID] / MAX_NODE_SELECT_AGE);
             return Color.Lerp(Color.blue, Color.white, lerped);
         }
 
-        int GetNodeSize(int nodeID, int subnetworkID)
+        int GetNodeSize(string nodeGUID)
         {
-            if (!_nodeSelectionTimes.ContainsKey(subnetworkID))
-                return 1;
-
-            var subNodeTimes = _nodeSelectionTimes[subnetworkID];
-
-            if (!subNodeTimes.ContainsKey(nodeID))
+            if (!_nodeSelectionTimes.ContainsKey(nodeGUID))
                 return 1;
 
             return 3;
