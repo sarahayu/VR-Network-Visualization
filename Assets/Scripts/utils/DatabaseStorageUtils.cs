@@ -382,7 +382,7 @@ namespace VidiGraph
                 TimerUtils.EndTime("session.Run");
 
                 TimerUtils.StartTime("res.Select");
-                var nodes = res.Select(r => r[0].As<INode>().Properties["guid"].As<string>());
+                var nodes = res.Select(r => r[0].As<INode>().Properties["GUID"].As<string>());
                 TimerUtils.EndTime("res.Select");
 
                 return nodes;
@@ -408,7 +408,7 @@ namespace VidiGraph
                 TimerUtils.EndTime("session.Run");
 
                 TimerUtils.StartTime("res.Select");
-                var links = res.Select(r => r[0].As<IRelationship>().Properties["guid"].As<string>());
+                var links = res.Select(r => r[0].As<IRelationship>().Properties["GUID"].As<string>());
                 TimerUtils.EndTime("res.Select");
 
                 return links;

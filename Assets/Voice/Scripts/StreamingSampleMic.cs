@@ -247,15 +247,15 @@ namespace Whisper.Samples
                                 Debug.Log("Changing color of selected nodes to: " + action[0][1]);
                                 var nodes_color = _networkManager.SelectedNodeGUIDs;
                                 TimerUtils.StartTime("SetColor");
-                                _networkManager.SetMLNodesColor(nodes_color, "#FF0000"); // Hardcoded to red for now
+                                _networkManager.SetMLNodesColor(nodes_color, action[0][1]); // Hardcoded to red for now
                                 TimerUtils.EndTime("SetColor");
                                 break;
                             case "colorLink":
                                 Debug.Log("Changing color of selected links to: " + action[0][1]);
                                 var links_color = _networkManager.SelectedLinkGUIDs;
                                 TimerUtils.StartTime("SetColor");
-                                _networkManager.SetMLLinksColorStart(links_color, "#FF0000"); // Hardcoded to red for now
-                                _networkManager.SetMLLinksColorEnd(links_color, "#FF0000"); // Hardcoded to red for now
+                                _networkManager.SetMLLinksColorStart(links_color, action[0][1]); // Hardcoded to red for now
+                                _networkManager.SetMLLinksColorEnd(links_color, action[0][1]); // Hardcoded to red for now
                                 TimerUtils.EndTime("SetColor");
                                 break;
                             case "arithmetic":

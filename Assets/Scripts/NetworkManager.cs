@@ -255,16 +255,20 @@ namespace VidiGraph
 
         public void SetSelectedLinks(IEnumerable<string> linkGUIDs, bool selected)
         {
-            // TODO diff implement
+            foreach (var (subnID, linkIDs) in SortLinkGUIDs(linkGUIDs))
+            {
+                _allNetworks[subnID].SetSelectedLinks(linkIDs, selected);
+                _allNetworks[subnID].UpdateSelectedElements();
+            }
+
+            UpdateHandheld();
+            UpdateOptions();
         }
 
         public void SetSelectedLinks(IEnumerable<int> linkIDs, bool selected, int subnetworkID = 0)
         {
             _allNetworks[subnetworkID].SetSelectedLinks(linkIDs, selected);
             _allNetworks[subnetworkID].UpdateSelectedElements();
-
-            if (selected)
-                _handheldNetwork.PushSelectionEvent(LinkIDsToLinkGUIDs(linkIDs, subnetworkID));
 
             UpdateHandheld();
             UpdateOptions();
@@ -962,10 +966,18 @@ namespace VidiGraph
         {
             Dictionary<int, HashSet<int>> sorted = new();
 
-            foreach (var subnID in _allNetworks.Keys)
+            var nguids = nodeGUIDs.ToList();
+
+            foreach (var subnID in _allNetworks.Keys.ToList())
             {
                 var guidToId = _allNetworks[subnID].Context.NodeGUIDToID;
-                var nodeIDs = guidToId.Keys.Intersect(nodeGUIDs).Select(guid => guidToId[guid]).ToHashSet();
+                var nodeIDs = guidToId.Keys.Intersect(nguids).Select(guid => guidToId[guid]).ToHashSet();
+
+                var nids = String.Join(" and ", nodeIDs.Select(nid => nid.ToString()));
+                Debug.Log($"{subnID} with {guidToId.Count} has {nids}");
+                var a = nguids.First();
+                var b = _allNetworks[subnID].Context.Nodes[5].GUID;
+                Debug.Log($"{a} with {b} is {a == b}");
 
                 if (nodeIDs.Count != 0)
                     sorted[subnID] = nodeIDs;
@@ -978,10 +990,11 @@ namespace VidiGraph
         {
             Dictionary<int, HashSet<int>> sorted = new();
 
-            foreach (var subnID in _allNetworks.Keys)
+            var lguids = linkGUIDs.ToList();
+            foreach (var subnID in _allNetworks.Keys.ToList())
             {
                 var guidToId = _allNetworks[subnID].Context.LinkGUIDToID;
-                var linkIDs = guidToId.Keys.Intersect(linkGUIDs).Select(guid => guidToId[guid]).ToHashSet();
+                var linkIDs = guidToId.Keys.Intersect(lguids).Select(guid => guidToId[guid]).ToHashSet();
 
                 if (linkIDs.Count != 0)
                     sorted[subnID] = linkIDs;
@@ -994,10 +1007,11 @@ namespace VidiGraph
         {
             Dictionary<int, HashSet<int>> sorted = new();
 
+            var cguids = communityGUIDs.ToList();
             foreach (var subnID in _allNetworks.Keys)
             {
                 var guidToId = _allNetworks[subnID].Context.CommunityGUIDToID;
-                var commIDs = guidToId.Keys.Intersect(communityGUIDs).Select(guid => guidToId[guid]).ToHashSet();
+                var commIDs = guidToId.Keys.Intersect(cguids).Select(guid => guidToId[guid]).ToHashSet();
 
                 if (commIDs.Count != 0)
                     sorted[subnID] = commIDs;

@@ -49,9 +49,9 @@ namespace VidiGraph
 
         public override void DeleteContents()
         {
-            print("Deleting database contents...");
-            DatabaseStorageUtils.DeleteDatabaseContents(_driver);
-            print("Deleted database contents!");
+            // print("Deleting database contents...");
+            // DatabaseStorageUtils.DeleteDatabaseContents(_driver);
+            // print("Deleted database contents!");
         }
 
         public IEnumerable<string> GetNodesFromStore(NetworkGlobal networkGlobal, string command)
