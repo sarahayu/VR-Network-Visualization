@@ -1,6 +1,6 @@
 /*
 *
-* MultiLayoutNetworkInput takes care of input logic for elements of the main multilayout.
+* NodeLinkNetworkInput takes care of input logic for elements of MultiLayoutNetwork and BasicSubnetwork.
 *
 */
 
@@ -16,7 +16,7 @@ using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 namespace VidiGraph
 {
-    public class MultiLayoutNetworkInput : NetworkInput
+    public class NodeLinkNetworkInput : NetworkInput
     {
         NetworkManager _networkManager;
         InputManager _inputManager;
@@ -24,9 +24,11 @@ namespace VidiGraph
 
         Community _hoveredCommunity = null;
         Node _hoveredNode = null;
+        bool _hoveredNetwork = false;
 
         Coroutine _unhoverNodeCR = null;
         Coroutine _unhoverCommCR = null;
+        Coroutine _unhoverNetworkCR = null;
 
         enum ActionState
         {
@@ -38,6 +40,10 @@ namespace VidiGraph
             UnhoverComm,
             GrabComm,
             UngrabComm,
+            HoverNetwork,
+            UnhoverNetwork,
+            GrabNetwork,
+            UngrabNetwork,
             None,
         }
 
@@ -46,12 +52,15 @@ namespace VidiGraph
         Coroutine _clickWindowCR = null;
         Coroutine _transformMoverCR = null;
         Action _dupeCB = null;
+        int _subnetworkID;
 
-        public void Initialize()
+        public void Initialize(int subnetworkID)
         {
             _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _inputManager = GameObject.Find("/Input Manager").GetComponent<InputManager>();
             _xrManager = GameObject.Find("/XR Interaction Manager").GetComponent<XRInteractionManager>();
+
+            _subnetworkID = subnetworkID;
 
             var renderer = GetComponentInChildren<NetworkRenderer>();
 
@@ -66,6 +75,12 @@ namespace VidiGraph
 
             renderer.OnNodeGrabEnter += OnNodeGrabEnter;
             renderer.OnNodeGrabExit += OnNodeGrabExit;
+
+            renderer.OnNetworkHoverEnter += OnNetworkHoverEnter;
+            renderer.OnNetworkHoverExit += OnNetworkHoverExit;
+
+            renderer.OnNetworkGrabEnter += OnNetworkGrabEnter;
+            renderer.OnNetworkGrabExit += OnNetworkGrabExit;
         }
 
         void Update()
@@ -83,6 +98,12 @@ namespace VidiGraph
                 _networkManager.UnhoverCommunity(_hoveredCommunity.ID);
                 _hoveredCommunity = null;
             }
+
+            if (IsUnhoverNetwork(_lastState) && _hoveredNetwork)
+            {
+                _networkManager.UnhoverNetwork(_subnetworkID);
+                _hoveredNetwork = false;
+            }
         }
 
         static bool IsUnhoverNode(ActionState state)
@@ -92,7 +113,12 @@ namespace VidiGraph
 
         static bool IsUnhoverComm(ActionState state)
         {
-            return state == ActionState.UnhoverComm || state == ActionState.HoverNode;
+            return state == ActionState.UnhoverComm || state == ActionState.HoverNode || state == ActionState.HoverNetwork;
+        }
+
+        static bool IsUnhoverNetwork(ActionState state)
+        {
+            return state == ActionState.UnhoverNetwork || state == ActionState.HoverComm;
         }
 
         void OnCommunityHoverEnter(Community community, HoverEnterEventArgs evt)
@@ -103,7 +129,7 @@ namespace VidiGraph
             {
                 CoroutineUtils.StopIfRunning(this, ref _unhoverCommCR);
 
-                if (_lastState == ActionState.None || _lastState == ActionState.UnhoverComm || _lastState == ActionState.UnhoverNode)
+                if (_lastState == ActionState.None || _lastState == ActionState.UnhoverComm || _lastState == ActionState.UnhoverNode || _lastState == ActionState.UnhoverNetwork)
                 {
                     _lastState = ActionState.HoverComm;
 
@@ -136,7 +162,7 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.GrabComm;
 
-                    var selComms = _networkManager.SubnSelectedCommunities(0);
+                    var selComms = _networkManager.SubnSelectedCommunities(_subnetworkID);
 
                     if (selComms.Contains(community.ID))
                     {
@@ -231,7 +257,7 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.GrabNode;
 
-                    var selNodes = _networkManager.SubnSelectedNodes(0);
+                    var selNodes = _networkManager.SubnSelectedNodes(_subnetworkID);
 
                     if (selNodes.Contains(node.ID))
                     {
@@ -287,6 +313,103 @@ namespace VidiGraph
             }
         }
 
+        void OnNetworkHoverEnter(NetworkContext network, HoverEnterEventArgs evt)
+        {
+            if (!Enabled) return;
+
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                CoroutineUtils.StopIfRunning(this, ref _unhoverNetworkCR);
+
+                if (_lastState == ActionState.None || _lastState == ActionState.UnhoverNetwork || _lastState == ActionState.UnhoverComm)
+                {
+                    _lastState = ActionState.HoverNetwork;
+
+                    _networkManager.HoverNetwork(_subnetworkID);
+                    _hoveredNetwork = true;
+                }
+            }
+        }
+
+        void OnNetworkHoverExit(NetworkContext network, HoverExitEventArgs evt)
+        {
+            if (!Enabled) return;
+
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                if (_lastState == ActionState.HoverNetwork || _lastState == ActionState.UngrabNetwork)
+                {
+                    _lastState = ActionState.UnhoverNetwork;
+                }
+            }
+        }
+
+        void OnNetworkGrabEnter(NetworkContext network, SelectEnterEventArgs evt)
+        {
+            if (!Enabled) return;
+
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                if (_lastState == ActionState.HoverNetwork || _lastState == ActionState.UngrabNetwork)
+                {
+                    _lastState = ActionState.GrabNetwork;
+
+                    // TODO support multiple selected subgraph movement? would have to figure out cross-graph node/comm movement...
+                    // if (_networkManager.SelectedNetworks.Contains(mlc.SubnetworkID))
+                    // {
+                    //     _transformMoverCR = StartCoroutine(CRAllSelectedNetworks(mlc.SubnetworkID, _networkManager.SelectedNetworks));
+                    //     _networkManager.StartMLNetworksMove(_networkManager.SelectedNetworks);
+
+                    //     _clickWindowCR = StartCoroutine(CRSelectionWindow());
+
+                    //     DupeListen(evt.interactorObject, evt.interactableObject);
+                    // }
+                    if (false) { }
+                    else
+                    {
+                        _networkManager.StartMLNetworkMove(_subnetworkID);
+                        _clickWindowCR = StartCoroutine(CRSelectionWindow());
+
+                        DupeListen(evt.interactorObject, evt.interactableObject);
+
+                    }
+
+                }
+            }
+        }
+
+        void OnNetworkGrabExit(NetworkContext network, SelectExitEventArgs evt)
+        {
+            if (!Enabled) return;
+
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                if (_lastState == ActionState.GrabNetwork)
+                {
+                    _lastState = ActionState.UngrabNetwork;
+
+                    _networkManager.EndMLNetworksMove();
+                    CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
+
+                    if (_clickWindowCR != null)
+                    {
+                        _networkManager.ToggleSelectedNetworks(new List<int> { _subnetworkID });
+
+                        CoroutineUtils.StopIfRunning(this, ref _clickWindowCR);
+                    }
+
+                    CoroutineUtils.StopIfRunning(this, ref _unhoverNetworkCR);
+                    _unhoverNetworkCR = StartCoroutine(CRDelayUnhoverNetwork());
+
+                    if (_dupeCB != null)
+                    {
+                        _inputManager.RightTriggerListener -= _dupeCB;
+                        _dupeCB = null;
+                    }
+                }
+            }
+        }
+
         // listen for trigger press that triggers a duplication
         void DupeListen(IXRSelectInteractor interactor, IXRSelectInteractable interactable)
         {
@@ -294,7 +417,7 @@ namespace VidiGraph
             {
                 _xrManager.SelectExit(interactor, interactable);
 
-                _networkManager.CreateSubnetwork(_networkManager.SubnSelectedNodes(0), 0);
+                _networkManager.CreateSubnetwork(_networkManager.SubnSelectedNodes(_subnetworkID), _subnetworkID);
 
                 _inputManager.RightTriggerListener -= _dupeCB;
                 _dupeCB = null;
@@ -322,6 +445,16 @@ namespace VidiGraph
             _lastState = ActionState.UnhoverComm;
 
             _unhoverCommCR = null;
+        }
+
+        // same thing as above, but with network
+        IEnumerator CRDelayUnhoverNetwork()
+        {
+            yield return new WaitForSeconds(0.1f);
+
+            _lastState = ActionState.UnhoverNetwork;
+
+            _unhoverNetworkCR = null;
         }
 
         // simple way to detect if we did a click instead of drag

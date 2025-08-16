@@ -103,6 +103,12 @@ namespace VidiGraph
             // nothing to implement
             return transform;
         }
+
+        public override Transform GetNetworkTransform()
+        {
+            // nothing to implement
+            return transform;
+        }
     }
 
 }

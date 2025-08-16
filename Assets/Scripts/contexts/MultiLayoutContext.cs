@@ -139,6 +139,9 @@ namespace VidiGraph
         HashSet<int> _selectedNodes = new HashSet<int>();
         HashSet<int> _selectedLinks = new HashSet<int>();
         HashSet<int> _selectedComms = new HashSet<int>();
+        public Mesh Mesh { get; set; } = new();
+        // TODO restrict modification access
+        public bool Selected { get; set; }          // DONT MODIFY DIRECTLY, use SetSelectedNodes/Communities
 
         public MultiLayoutContext(int subnetworkID)
         {
@@ -189,6 +192,7 @@ namespace VidiGraph
                 .ToDictionary(nid => nid, nid => undir[nid].Select(l => l.ID).ToList());
 
             _subnetworkID = 0;
+            Mesh = IcoSphere.Create(1f);
 
             SetDefaultEncodings(networkGlobal, networkFile);
         }
@@ -325,6 +329,8 @@ namespace VidiGraph
                 contextCommunity.Size = size;
                 contextCommunity.Mesh = MultiLayoutContextUtils.GenerateConvexHull(contextCommunity, nodes.Select(n => Nodes[n.ID]), ContextSettings.NodeScale);
             }
+
+            Mesh = MultiLayoutContextUtils.GenerateConvexHull(this, ContextSettings.NodeScale);
         }
 
         // also selects connected links and fully selected communities
@@ -332,8 +338,11 @@ namespace VidiGraph
         {
             foreach (var nodeID in nodeIDs)
             {
-                Nodes[nodeID].Selected = isSelected;
-                Nodes[nodeID].Dirty = true;
+                if (Nodes[nodeID].Selected != isSelected)
+                {
+                    Nodes[nodeID].Selected = isSelected;
+                    Nodes[nodeID].Dirty = true;
+                }
 
                 foreach (var linkID in NodeLinkMatrixUndir[nodeID])
                 {
@@ -352,8 +361,11 @@ namespace VidiGraph
         {
             foreach (var linkID in linkIDs)
             {
-                Links[linkID].Selected = isSelected;
-                Links[linkID].Dirty = true;
+                if (Links[linkID].Selected != isSelected)
+                {
+                    Links[linkID].Selected = isSelected;
+                    Links[linkID].Dirty = true;
+                }
             }
 
             RecomputeSelecteds();
@@ -368,6 +380,13 @@ namespace VidiGraph
             }
 
             SetSelectedNodes(GetNodesFromCommunities(commIDs), isSelected);
+        }
+
+        // also selects connected links and fully selected communities
+        public void SetSelectedNetwork(bool isSelected)
+        {
+            SetSelectedComms(Communities.Keys, isSelected);
+
         }
 
         // returns nodeIDs that are now selected
@@ -409,11 +428,19 @@ namespace VidiGraph
             return newSelComms;
         }
 
+        public bool ToggleSelectedNetwork()
+        {
+            var newSelected = !Selected;
+            SetSelectedNetwork(newSelected);
+            return newSelected;
+        }
+
         public void ClearSelection()
         {
-            SetSelectedNodes(SelectedNodes, false);
-            SetSelectedLinks(SelectedLinks, false);
-            SetSelectedComms(SelectedCommunities, false);
+            // SetSelectedNodes(SelectedNodes, false);
+            // SetSelectedLinks(SelectedLinks, false);
+            // SetSelectedComms(SelectedCommunities, false);
+            SetSelectedNetwork(false);
         }
 
         /*=============== start private methods ===================*/
@@ -484,6 +511,8 @@ namespace VidiGraph
                 .Where(cid => Communities[cid].Nodes
                     .All(nid => Nodes[nid].Selected))
                 .ToHashSet();
+
+            Selected = Communities.Keys.Except(_selectedComms).Count() == 0;
         }
 
         HashSet<int> GetNodesFromCommunities(IEnumerable<int> commIDs)

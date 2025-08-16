@@ -20,6 +20,7 @@ namespace VidiGraph
 
         public abstract Transform GetNodeTransform(int nodeID);
         public abstract Transform GetCommTransform(int commID);
+        public abstract Transform GetNetworkTransform();
 
         // start events
 
@@ -77,6 +78,34 @@ namespace VidiGraph
         protected void CallNodeSelectExit(Node node, SelectExitEventArgs evt)
         {
             OnNodeGrabExit(node, evt);
+        }
+
+        public delegate void NetworkHoverEnterEvent(NetworkContext network, HoverEnterEventArgs evt);
+        public event NetworkHoverEnterEvent OnNetworkHoverEnter;
+        protected void CallNetworkHoverEnter(NetworkContext network, HoverEnterEventArgs evt)
+        {
+            OnNetworkHoverEnter(network, evt);
+        }
+
+        public delegate void NetworkHoverExitEvent(NetworkContext network, HoverExitEventArgs evt);
+        public event NetworkHoverExitEvent OnNetworkHoverExit;
+        protected void CallNetworkHoverExit(NetworkContext network, HoverExitEventArgs evt)
+        {
+            OnNetworkHoverExit(network, evt);
+        }
+
+        public delegate void NetworkSelectEnterEvent(NetworkContext network, SelectEnterEventArgs evt);
+        public event NetworkSelectEnterEvent OnNetworkGrabEnter;
+        protected void CallNetworkSelectEnter(NetworkContext network, SelectEnterEventArgs evt)
+        {
+            OnNetworkGrabEnter(network, evt);
+        }
+
+        public delegate void NetworkSelectExitEvent(NetworkContext network, SelectExitEventArgs evt);
+        public event NetworkSelectExitEvent OnNetworkGrabExit;
+        protected void CallNetworkSelectExit(NetworkContext network, SelectExitEventArgs evt)
+        {
+            OnNetworkGrabExit(network, evt);
         }
     }
 

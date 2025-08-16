@@ -19,11 +19,16 @@ namespace VidiGraph
             {
                 mass += node.Degree + 0.01;
                 massCenter += nodeContexts[node.ID].Position;
+            }
+
+            massCenter /= nodes.Count();
+
+            foreach (var node in nodes)
+            {
                 var dist = Vector3.Distance(massCenter, nodeContexts[node.ID].Position);
                 size = Math.Max(dist, size);
             }
 
-            massCenter /= nodes.Count();
         }
 
 
@@ -61,6 +66,47 @@ namespace VidiGraph
             catch (ArgumentException)
             {
                 return IcoSphere.Create((float)commProps.Size);
+            }
+        }
+
+
+        public static Mesh GenerateConvexHull(MultiLayoutContext mlContext, float nodeScale)
+        {
+            var calc = new ConvexHullCalculator();
+            var verts = new List<Vector3>();
+            var tris = new List<int>();
+            var normals = new List<Vector3>();
+
+            var points = new List<Vector3>();
+
+            foreach (var (commID, comm) in mlContext.Communities)
+            {
+                var nodeRadius = (float)comm.Size / 2;
+                var buffer = 0.3f;
+                var pos = comm.MassCenter;
+
+                points.Add(pos + Vector3.forward * (nodeRadius + buffer * nodeScale));
+                points.Add(pos + Vector3.back * (nodeRadius + buffer * nodeScale));
+                points.Add(pos + Vector3.up * (nodeRadius + buffer * nodeScale));
+                points.Add(pos + Vector3.down * (nodeRadius + buffer * nodeScale));
+                points.Add(pos + Vector3.left * (nodeRadius + buffer * nodeScale));
+                points.Add(pos + Vector3.right * (nodeRadius + buffer * nodeScale));
+            }
+
+            try
+            {
+                calc.GenerateHull(points, true, ref verts, ref tris, ref normals);
+
+                var mesh = new Mesh();
+                mesh.SetVertices(verts);
+                mesh.SetTriangles(tris, 0);
+                mesh.SetNormals(normals);
+
+                return mesh;
+            }
+            catch (ArgumentException)
+            {
+                return IcoSphere.Create(1f);
             }
         }
     }

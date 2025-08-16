@@ -23,12 +23,14 @@ namespace VidiGraph
         Dictionary<int, GameObject> _nodeGameObjs = new Dictionary<int, GameObject>();
         Dictionary<int, GameObject> _linkGameObjs = new Dictionary<int, GameObject>();
         Dictionary<int, GameObject> _communityGameObjs = new Dictionary<int, GameObject>();
+        GameObject _networkGameObj;
         Dictionary<int, List<Vector3>> _controlPointsMap = new Dictionary<int, List<Vector3>>();
         Material _batchSplineMaterial;
 
 
         Dictionary<int, Renderer> _nodeRenderers = new Dictionary<int, Renderer>();
         Dictionary<int, Renderer> _commRenderers = new Dictionary<int, Renderer>();
+        Renderer _networkRenderer;
 
         BSplineShaderWrapper _shaderWrapper = new BSplineShaderWrapper();
         NetworkManager _networkManager;
@@ -67,6 +69,7 @@ namespace VidiGraph
             CreateCommunities();
             CreateMeshLinks();
             CreateGPULinks();
+            CreateShell();
 
             UpdateRenderElements();
         }
@@ -77,6 +80,7 @@ namespace VidiGraph
             UpdateCommunities();
             UpdateMeshLinks();
             UpdateGPULinks();
+            UpdateShell();
         }
 
         public override void Draw()
@@ -92,6 +96,11 @@ namespace VidiGraph
         public override Transform GetCommTransform(int commID)
         {
             return _communityGameObjs[commID].transform;
+        }
+
+        public override Transform GetNetworkTransform()
+        {
+            return _networkGameObj.transform;
         }
 
         void InitializeShaders()
@@ -153,6 +162,16 @@ namespace VidiGraph
         {
             ComputeControlPoints();
             PrepareBuffers();
+        }
+
+        void CreateShell()
+        {
+            var nwObj = CommunityRenderUtils.MakeNetwork(CommunityPrefab, transform, _networkContext);
+
+            _networkGameObj = nwObj;
+            _networkRenderer = nwObj.GetComponentInChildren<Renderer>();
+
+            AddNetworkInteraction(nwObj, _networkContext);
         }
 
         void ComputeControlPoints()
@@ -284,6 +303,31 @@ namespace VidiGraph
                 _controlPointsMap);
         }
 
+        void UpdateShell()
+        {
+            if (_networkManager.HoveredNetwork == _networkContext.SubnetworkID)
+            {
+                var hoverCol = _networkContext.ContextSettings.CommHoverColor;
+                CommunityRenderUtils.SetNetworkColor(_networkGameObj, hoverCol, _networkRenderer);
+            }
+
+            if (true /* always update for now */)
+            {
+                CommunityRenderUtils.UpdateNetwork(_networkGameObj, _networkContext,
+                    _networkContext.Selected, _networkContext.ContextSettings.CommSelectColor, _networkRenderer);
+
+                if (_networkManager.HoveredNetwork == _networkContext.SubnetworkID)
+                {
+                    var hoverCol = _networkContext.ContextSettings.CommHoverColor;
+                    CommunityRenderUtils.SetNetworkColor(_networkGameObj, hoverCol, _networkRenderer);
+                }
+
+                if (_networkContext.Selected)
+                    CommunityRenderUtils.SetNetworkColor(_networkGameObj, _networkContext.ContextSettings.CommSelectColor, _networkRenderer);
+            }
+
+        }
+
         bool NodeNeedsRenderUpdate(int nodeID)
         {
             var globalNode = _networkGlobal.Nodes[nodeID];
@@ -291,15 +335,15 @@ namespace VidiGraph
 
             return globalNode.Dirty
                 || contextNode.Dirty
-                || _lastHoveredNode == nodeID
-                || _lastHoveredComm == globalNode.CommunityID;
+                || _lastHoveredNode != nodeID
+                || _lastHoveredComm != globalNode.CommunityID;
         }
 
         bool CommNeedsRenderUpdate(int commID)
         {
             return _networkGlobal.Communities[commID].Dirty
                 || _networkContext.Communities[commID].Dirty
-                || _lastHoveredComm == commID;
+                || _lastHoveredComm != commID;
         }
 
         void BookkeepHoverNode()
@@ -374,6 +418,31 @@ namespace VidiGraph
             xrInteractable.selectExited.AddListener(evt =>
             {
                 CallNodeSelectExit(node, evt);
+            });
+        }
+
+        void AddNetworkInteraction(GameObject gameObject, MultiLayoutContext network)
+        {
+            XRGrabInteractable xrInteractable = gameObject.GetComponentInChildren<XRGrabInteractable>();
+
+            xrInteractable.hoverEntered.AddListener(evt =>
+            {
+                CallNetworkHoverEnter(network, evt);
+            });
+
+            xrInteractable.hoverExited.AddListener(evt =>
+            {
+                CallNetworkHoverExit(network, evt);
+            });
+
+            xrInteractable.selectEntered.AddListener(evt =>
+            {
+                CallNetworkSelectEnter(network, evt);
+            });
+
+            xrInteractable.selectExited.AddListener(evt =>
+            {
+                CallNetworkSelectExit(network, evt);
             });
         }
 

@@ -106,13 +106,21 @@ namespace VidiGraph
             _nodeParticleOutlines.SetParticles(_nodeOutlines, _nodeOutlines.Length);
         }
 
-        public override Transform GetCommTransform(int commID)
+        public override Transform GetNodeTransform(int nodeID)
         {
+            // nothing to implement
             return transform;
         }
 
-        public override Transform GetNodeTransform(int nodeID)
+        public override Transform GetCommTransform(int commID)
         {
+            // nothing to implement
+            return transform;
+        }
+
+        public override Transform GetNetworkTransform()
+        {
+            // nothing to implement
             return transform;
         }
 

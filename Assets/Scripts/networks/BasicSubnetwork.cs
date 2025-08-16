@@ -9,7 +9,7 @@ namespace VidiGraph
     public class BasicSubnetwork : NodeLinkNetwork
     {
 
-        BasicSubnetworkInput _input;
+        NodeLinkNetworkInput _input;
 
         static int _idCounter = 1;
 
@@ -60,7 +60,7 @@ namespace VidiGraph
 
         void InitInput()
         {
-            _input = GetComponent<BasicSubnetworkInput>();
+            _input = GetComponent<NodeLinkNetworkInput>();
             _input.Initialize(ID);
         }
     }

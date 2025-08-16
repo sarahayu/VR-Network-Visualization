@@ -1,6 +1,7 @@
 # TODO
 
-- shells for subgraphs
+- add position to subgraph context
+- new prefab for subgraph
 - transfer selection to new subnetwork
 - show link directionality
 - add updated schema types
@@ -105,6 +106,7 @@
 - parse all waves into one
 - reimplement tooltip
 - relayout graph, spatially based on friendship only and then add aggression later
+- shells for subgraphs
 
 ## Ignore
 - move node moving animation to mln

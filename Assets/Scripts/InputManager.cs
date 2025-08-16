@@ -29,7 +29,7 @@ public class InputManager : MonoBehaviour
     [SerializeField] XRInputValueReader<Vector2> _rightJoystick = new XRInputValueReader<Vector2>("RightJoystick");
     [SerializeField] XRInputButtonReader _rightJoystickClick = new XRInputButtonReader("RightJoystickClick");
 
-    [SerializeField] MultiLayoutNetworkInput _mlInput;
+    [SerializeField] NodeLinkNetworkInput _mlInput;
 
     public XRInputButtonReader LeftGrip { get => _leftGrip; }
     public XRInputButtonReader LeftTrigger { get => _leftTrigger; }
@@ -57,7 +57,6 @@ public class InputManager : MonoBehaviour
 
     NetworkManager _networkManager;
     SurfaceManager _surfaceManager;
-    Dictionary<int, BasicSubnetworkInput> _subnInput = new();
 
     void OnEnable()
     {
@@ -84,16 +83,6 @@ public class InputManager : MonoBehaviour
     void Update()
     {
         HandleInput().Invoke();
-    }
-
-    public void RegisterSubnetworkInput(BasicSubnetworkInput input, int subnID)
-    {
-        _subnInput[subnID] = input;
-    }
-
-    public void UnregisterSubnetworkInput(int subnID)
-    {
-        _subnInput.Remove(subnID);
     }
 
     Action HandleInput()

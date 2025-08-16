@@ -167,6 +167,12 @@ namespace VidiGraph
             return transform;
         }
 
+        public override Transform GetNetworkTransform()
+        {
+            // nothing to implement
+            return transform;
+        }
+
         void GenerateTerrainLowQuality(FlatMesh meshCalculator)
         {
             // make mesh from heightmap

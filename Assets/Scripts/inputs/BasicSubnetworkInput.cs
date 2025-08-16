@@ -57,8 +57,6 @@ namespace VidiGraph
 
             _subnetworkID = subnetworkID;
 
-            _inputManager.RegisterSubnetworkInput(GetComponent<BasicSubnetworkInput>(), _subnetworkID);
-
             var renderer = GetComponentInChildren<NetworkRenderer>();
 
             renderer.OnCommunityHoverEnter += OnCommunityHoverEnter;
@@ -89,11 +87,6 @@ namespace VidiGraph
                 _networkManager.UnhoverCommunity(_hoveredCommunity.ID);
                 _hoveredCommunity = null;
             }
-        }
-
-        void OnDestroy()
-        {
-            _inputManager.UnregisterSubnetworkInput(_subnetworkID);
         }
 
         static bool IsUnhoverNode(ActionState state)

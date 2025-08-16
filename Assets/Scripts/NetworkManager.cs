@@ -23,6 +23,8 @@ namespace VidiGraph
 
         public NetworkFilesLoader FileLoader { get { return _fileLoader; } }
         public NetworkGlobal NetworkGlobal { get { return _networkGlobal; } }
+        public int? HoveredNetwork { get; private set; }
+        public HashSet<int> SelectedNetworks { get; } = new();
 
         public HashSet<string> SelectedNodeGUIDs
         {
@@ -180,6 +182,50 @@ namespace VidiGraph
             _multiLayoutNetwork.ToggleSphericalAndHairball(animated);
         }
 
+        public void HoverNetwork(int subnetworkID)
+        {
+            HoveredNetwork = subnetworkID;
+            TriggerRenderUpdate();
+        }
+
+        public void UnhoverNetwork(int networkID)
+        {
+            HoveredNetwork = null;
+            TriggerRenderUpdate();
+        }
+
+        public void SetSelectedNetworks(IEnumerable<int> networkIDs, bool selected)
+        {
+            foreach (var subnID in networkIDs)
+            {
+                var subnetwork = _allNetworks[subnID];
+                subnetwork.SetSelectedNetwork(selected);
+                subnetwork.UpdateSelectedElements();
+            }
+
+            // if (selected)
+            //     _handheldNetwork.PushSelectionEvent(NetworkIDsToNetworkGUIDs(networkIDs, subnetworkID));
+
+            // UpdateHandheld();
+            UpdateOptions();
+        }
+
+        public void ToggleSelectedNetworks(IEnumerable<int> networkIDs)
+        {
+            foreach (var subnID in networkIDs)
+            {
+                var subnetwork = _allNetworks[subnID];
+
+                bool newSelected = subnetwork.ToggleSelectedNetwork();
+                subnetwork.UpdateSelectedElements();
+            }
+
+            // _handheldNetwork.PushSelectionEvent(NetworkIDsToNetworkGUIDs(newSelecteds, subnetworkID));
+
+            // UpdateHandheld();
+            UpdateOptions();
+        }
+
         public void HoverNode(int nodeID)
         {
             _networkGlobal.HoveredNode = _networkGlobal.Nodes[nodeID];
@@ -318,6 +364,7 @@ namespace VidiGraph
         public void EndMLNodesMove()
         {
             foreach (var subn in _allNetworks.Values) subn.EndNodesMove();
+            UpdateHandheld();
         }
 
         public void EndMLNodesMove(int subnetworkID = 0)
@@ -349,11 +396,33 @@ namespace VidiGraph
         public void EndMLCommsMove()
         {
             foreach (var subn in _allNetworks.Values) subn.EndCommsMove();
+            UpdateHandheld();
         }
 
         public void EndMLCommsMove(int subnetworkID = 0)
         {
             _allNetworks[subnetworkID].EndCommsMove();
+            UpdateHandheld();
+        }
+
+        public void StartMLNetworkMove(int subnetworkID)
+        {
+            _allNetworks[subnetworkID].StartNetworkMove();
+        }
+
+        public void StartMLNetworksMove(IEnumerable<int> subnetworkIDs)
+        {
+            foreach (var subn in subnetworkIDs) _allNetworks[subn].StartNetworkMove();
+        }
+
+        public void EndMLNetworksMove()
+        {
+            foreach (var subn in _allNetworks.Values) subn.EndNetworkMove();
+        }
+
+        public void EndMLNetworksMove(int subnetworkID = 0)
+        {
+            _allNetworks[subnetworkID].EndNetworkMove();
             UpdateHandheld();
         }
 

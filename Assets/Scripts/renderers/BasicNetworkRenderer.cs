@@ -67,11 +67,16 @@ namespace VidiGraph
 
         public override Transform GetNodeTransform(int nodeID)
         {
+            return _nodeGameObjs[nodeID].transform;
+        }
+
+        public override Transform GetCommTransform(int commID)
+        {
             // nothing to implement
             return transform;
         }
 
-        public override Transform GetCommTransform(int commID)
+        public override Transform GetNetworkTransform()
         {
             // nothing to implement
             return transform;

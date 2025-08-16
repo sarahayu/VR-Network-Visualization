@@ -9,7 +9,7 @@ namespace VidiGraph
 {
     public class MultiLayoutNetwork : NodeLinkNetwork
     {
-        MultiLayoutNetworkInput _input;
+        NodeLinkNetworkInput _input;
 
         // keep a reference to sphericallayout to focus on individual communities
         SphericalLayoutTransformer _sphericalLayoutTransformer;
@@ -122,8 +122,8 @@ namespace VidiGraph
 
         void InitInput()
         {
-            _input = GetComponent<MultiLayoutNetworkInput>();
-            _input.Initialize();
+            _input = GetComponent<NodeLinkNetworkInput>();
+            _input.Initialize(0);
         }
 
         new void InitTransformers()

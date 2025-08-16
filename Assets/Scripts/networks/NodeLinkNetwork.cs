@@ -18,6 +18,7 @@ namespace VidiGraph
         public HashSet<int> SelectedNodes { get { return Context.SelectedNodes; } }
         public HashSet<int> SelectedLinks { get { return Context.SelectedLinks; } }
         public HashSet<int> SelectedCommunities { get { return Context.SelectedCommunities; } }
+        public bool Selected { get { return Context.Selected; } }
 
         public HashSet<string> SelectedNodeGUIDs
         {
@@ -87,6 +88,16 @@ namespace VidiGraph
             }
 
             TransformNetwork(layout, animated: true, onFinished: onFinished);
+        }
+
+        public void SetSelectedNetwork(bool isSelected)
+        {
+            Context.SetSelectedNetwork(isSelected);
+        }
+
+        public bool ToggleSelectedNetwork()
+        {
+            return Context.ToggleSelectedNetwork();
         }
 
         public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool isSelected)
@@ -224,6 +235,22 @@ namespace VidiGraph
             );
         }
 
+        public void StartNetworkMove()
+        {
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
+            _curMover = StartCoroutine(CRMoveNetwork());
+        }
+
+        public void EndNetworkMove()
+        {
+            CoroutineUtils.StopIfRunning(this, ref _curMover);
+            UpdateNetwork(
+                updateCommunityProps: true,
+                updateStorage: true,
+                updateRenderElements: true
+            );
+        }
+
         public Transform GetNodeTransform(int nodeID)
         {
             return _renderer.GetNodeTransform(nodeID);
@@ -232,6 +259,11 @@ namespace VidiGraph
         public Transform GetCommTransform(int commID)
         {
             return _renderer.GetCommTransform(commID);
+        }
+
+        public Transform GetNetworkTransform()
+        {
+            return _renderer.GetNetworkTransform();
         }
 
         public void SetNodesSize(IEnumerable<int> nodeIDs, float size, bool updateStorage, bool updateRenderElements)
@@ -886,6 +918,53 @@ namespace VidiGraph
 
                 lastCommPosition = curPosition;
                 lastCommRotation = curRotation;
+
+                // update network without updating the storage for performance reasons
+                UpdateNetwork(
+                    updateCommunityProps: true,
+                    updateStorage: false,
+                    updateRenderElements: true
+                );
+
+                yield return null;
+            }
+        }
+
+        protected IEnumerator CRMoveNetwork()
+        {
+            Vector3 lastNetwPosition = Vector3.positiveInfinity;
+            Quaternion lastNetwRotation = Quaternion.identity;
+
+            var netw = GetNetworkTransform();
+
+            var nodeIDs = _context.Nodes.Keys.Where(nid => !_manager.NetworkGlobal.Nodes[nid].IsVirtualNode);
+            var nodeTransforms = nodeIDs.Select(nid => GetNodeTransform(nid));
+
+            while (true)
+            {
+                var curPosition = netw.transform.position;
+                var curRotation = netw.transform.rotation;
+
+                if (float.IsFinite(lastNetwPosition.x))
+                {
+                    var diff = curPosition - lastNetwPosition;
+                    var diffRot = curRotation * Quaternion.Inverse(lastNetwRotation);
+                    diffRot.ToAngleAxis(out var angle, out var axis);
+
+                    foreach (var (nodeID, nodeTransform) in nodeIDs.Zip(nodeTransforms, Tuple.Create))
+                    {
+                        nodeTransform.RotateAround(lastNetwPosition, axis, angle);
+
+                        nodeTransform.position += diff;
+                        _context.Nodes[nodeID].Position = nodeTransform.position;
+                        _context.Nodes[nodeID].Dirty = true;
+                    }
+                }
+
+                foreach (var comm in _context.Communities.Values) comm.Dirty = true;
+
+                lastNetwPosition = curPosition;
+                lastNetwRotation = curRotation;
 
                 // update network without updating the storage for performance reasons
                 UpdateNetwork(
