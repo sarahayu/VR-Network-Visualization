@@ -167,12 +167,15 @@ namespace VidiGraph
 
         void CreateShell()
         {
-            var nwObj = CommunityRenderUtils.MakeNetwork(NetworkPrefab, transform, _networkContext);
+            if (_networkContext.UseShell)
+            {
+                var nwObj = CommunityRenderUtils.MakeNetwork(NetworkPrefab, transform, _networkContext);
 
-            _networkGameObj = nwObj;
-            _networkRenderer = nwObj.GetComponentInChildren<Renderer>();
+                _networkGameObj = nwObj;
+                _networkRenderer = nwObj.GetComponentInChildren<Renderer>();
 
-            AddNetworkInteraction(nwObj, _networkContext);
+                AddNetworkInteraction(nwObj, _networkContext);
+            }
         }
 
         void ComputeControlPoints()
@@ -306,6 +309,8 @@ namespace VidiGraph
 
         void UpdateShell()
         {
+            if (!_networkContext.UseShell) return;
+
             if (_networkManager.HoveredNetwork == _networkContext.SubnetworkID)
             {
                 var hoverCol = _networkContext.ContextSettings.CommHoverColor;

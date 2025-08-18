@@ -1,8 +1,8 @@
 # TODO
 
-- select subgraph nodes
 - make surface based off nodes
 - show link directionality
+- trash can/optinons
 
 - make shells have facets, easier distance judgement
 - try to change shell to fit subgraph more
@@ -11,7 +11,7 @@
 - fix bug: overviewlayouttransformer update ALL subnetwork nodes
     - change pushselectionevent to allow multiple subnetwork updates simult.
 - fix bug: overviewrenderer not showing hovers on all dupe subnetworks
-- transfer selection to new subnetwork
+- fix bug: duplicating network deselects all network
 
 - too big buffer error at BSpineShaderWrapper:322
 - clean up transformer code and input code (less nesting!!!)
@@ -110,6 +110,8 @@
 - add updated schema types
 - color change
 - new prefab for subgraph
+- select subgraph nodes
+- transfer selection to new subnetwork
 
 ## Ignore
 - move node moving animation to mln

@@ -28,6 +28,8 @@ public class InputManager : MonoBehaviour
     [SerializeField] XRInputButtonReader _rightSecondary = new XRInputButtonReader("RightSecondary");
     [SerializeField] XRInputValueReader<Vector2> _rightJoystick = new XRInputValueReader<Vector2>("RightJoystick");
     [SerializeField] XRInputButtonReader _rightJoystickClick = new XRInputButtonReader("RightJoystickClick");
+    [SerializeField] GameObject _rightController;
+    [SerializeField] GameObject _leftController;
 
     [SerializeField] NodeLinkNetworkInput _mlInput;
 
@@ -43,6 +45,8 @@ public class InputManager : MonoBehaviour
     public XRInputButtonReader RightSecondary { get => _rightSecondary; }
     public XRInputValueReader<Vector2> RightJoystick { get => _rightJoystick; }
     public XRInputButtonReader RightJoystickClick { get => _rightJoystickClick; }
+    public GameObject RightController { get => _rightController; }
+    public GameObject LeftController { get => _leftController; }
 
     public event Action LeftGripListener;
     public event Action LeftTriggerListener;
@@ -137,7 +141,8 @@ public class InputManager : MonoBehaviour
         RightGripListener?.Invoke();
 
         if (_networkManager.NetworkGlobal.HoveredCommunity == null
-            && _networkManager.NetworkGlobal.HoveredNode == null)
+            && _networkManager.NetworkGlobal.HoveredNode == null
+            && _networkManager.HoveredNetwork == null)
         {
             _networkManager.ClearSelection();
         }

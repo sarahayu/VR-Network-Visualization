@@ -584,9 +584,14 @@ namespace VidiGraph
             return _allNetworks[subnetworkID].GetCommTransform(commID);
         }
 
-        public void CreateSubnetwork(IEnumerable<int> nodeIDs, int sourceSubnetworkID = 0)
+        public Transform GetMLNetworkTransform(int subnetworkID)
         {
-            if (nodeIDs.Count() == 0) return;
+            return _allNetworks[subnetworkID]?.GetNetworkTransform();
+        }
+
+        public MultiLayoutContext CreateSubnetwork(IEnumerable<int> nodeIDs, int sourceSubnetworkID = 0)
+        {
+            if (nodeIDs.Count() == 0) return null;
 
             var subn = BasicSubnetworkUtils.CreateBasicSubnetwork(_subnetworkPrefab, transform, nodeIDs,
                     _allNetworks[sourceSubnetworkID].Context);
@@ -600,6 +605,8 @@ namespace VidiGraph
 
             TriggerStorageUpdate();
             TriggerRenderUpdate();
+
+            return subn.Context;
         }
 
         public void SetMLNodesSize(IEnumerable<string> nodeGUIDs, float size)

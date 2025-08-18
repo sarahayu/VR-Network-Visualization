@@ -53,7 +53,7 @@ namespace VidiGraph
 
         void InitContext(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext)
         {
-            _context = new MultiLayoutContext(_id);
+            _context = new MultiLayoutContext(subnetworkID: _id, useShell: true);
             _context.SetFromContext(_manager.NetworkGlobal, sourceContext, nodeIDs);
             _context.ContextSettings = BaseSettings;
         }

@@ -140,15 +140,17 @@ namespace VidiGraph
         HashSet<int> _selectedLinks = new HashSet<int>();
         HashSet<int> _selectedComms = new HashSet<int>();
         public Vector3 MassCenter { get; set; }
-        public Mesh Mesh { get; set; } = new();
+        public Mesh Mesh { get; set; } = null;
+        public bool UseShell { get; private set; } = true;
         // TODO restrict modification access
         public bool Selected { get; set; }          // DONT MODIFY DIRECTLY, use SetSelectedNodes/Communities
 
-        public MultiLayoutContext(int subnetworkID)
+        public MultiLayoutContext(int subnetworkID, bool useShell = true)
         {
             // expose constructor
 
             _subnetworkID = subnetworkID;
+            UseShell = useShell;
         }
 
         public void SetFromGlobal(NetworkGlobal networkGlobal, NetworkFileData networkFile)
@@ -193,7 +195,9 @@ namespace VidiGraph
                 .ToDictionary(nid => nid, nid => undir[nid].Select(l => l.ID).ToList());
 
             _subnetworkID = 0;
-            Mesh = IcoSphere.Create(1f);
+
+            if (UseShell)
+                Mesh = IcoSphere.Create(1f);
 
             SetDefaultEncodings(networkGlobal, networkFile);
         }
@@ -331,10 +335,13 @@ namespace VidiGraph
                 contextCommunity.Mesh = MultiLayoutContextUtils.GenerateConvexHull(contextCommunity, nodes.Select(n => Nodes[n.ID]), ContextSettings.NodeScale);
             }
 
-            MultiLayoutContextUtils.ComputeProperties(Nodes.Keys.Select(nid => networkGlobal.Nodes[nid]), Nodes,
-                out var mass, out var massCenter, out var size);
-            MassCenter = massCenter;
-            Mesh = MultiLayoutContextUtils.GenerateConvexHull(this, ContextSettings.NodeScale);
+            if (UseShell)
+            {
+                MultiLayoutContextUtils.ComputeProperties(Nodes.Keys.Select(nid => networkGlobal.Nodes[nid]), Nodes,
+                    out var mass, out var massCenter, out var size);
+                MassCenter = massCenter;
+                Mesh = MultiLayoutContextUtils.GenerateConvexHull(this, ContextSettings.NodeScale);
+            }
         }
 
         // also selects connected links and fully selected communities

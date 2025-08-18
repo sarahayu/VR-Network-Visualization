@@ -658,7 +658,7 @@ namespace VidiGraph
 
         protected void InitContext()
         {
-            _context = new MultiLayoutContext(subnetworkID: 0);
+            _context = new MultiLayoutContext(subnetworkID: 0, useShell: false);
             _context.SetFromGlobal(_manager.NetworkGlobal, _manager.FileLoader.SphericalLayout);
             _context.ContextSettings = BaseSettings;
         }

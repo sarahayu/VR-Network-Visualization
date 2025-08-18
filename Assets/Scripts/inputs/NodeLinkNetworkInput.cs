@@ -184,7 +184,7 @@ namespace VidiGraph
 
                         _clickWindowCR = StartCoroutine(CRSelectionWindow());
 
-                        DupeListen(evt.interactorObject, evt.interactableObject);
+                        DupeListen(evt.interactorObject, evt.interactableObject, DoCommunityGrabExit);
                     }
                     else
                     {
@@ -205,26 +205,7 @@ namespace VidiGraph
             {
                 if (_lastState == ActionState.GrabComm)
                 {
-                    _lastState = ActionState.UngrabComm;
-
-                    _networkManager.EndMLCommsMove();
-                    CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
-
-                    if (_clickWindowCR != null)
-                    {
-                        _networkManager.ToggleSelectedCommunities(new List<int> { _hoveredCommunity.ID }, _subnetworkID);
-
-                        CoroutineUtils.StopIfRunning(this, ref _clickWindowCR);
-                    }
-
-                    CoroutineUtils.StopIfRunning(this, ref _unhoverCommCR);
-                    _unhoverCommCR = StartCoroutine(CRDelayUnhoverComm());
-
-                    if (_dupeCB != null)
-                    {
-                        _inputManager.RightTriggerListener -= _dupeCB;
-                        _dupeCB = null;
-                    }
+                    DoCommunityGrabExit();
                 }
             }
         }
@@ -279,14 +260,14 @@ namespace VidiGraph
 
                         _clickWindowCR = StartCoroutine(CRSelectionWindow());
 
-                        DupeListen(evt.interactorObject, evt.interactableObject);
+                        DupeListen(evt.interactorObject, evt.interactableObject, DoNodeGrabExit);
                     }
                     else
                     {
                         _networkManager.StartMLNodeMove(node.ID, _subnetworkID);
                         _clickWindowCR = StartCoroutine(CRSelectionWindow());
 
-                        DupeListen(evt.interactorObject, evt.interactableObject);
+                        DupeListen(evt.interactorObject, evt.interactableObject, DoNodeGrabExit);
 
                     }
 
@@ -302,26 +283,7 @@ namespace VidiGraph
             {
                 if (_lastState == ActionState.GrabNode)
                 {
-                    _lastState = ActionState.UngrabNode;
-
-                    _networkManager.EndMLNodesMove();
-                    CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
-
-                    if (_clickWindowCR != null)
-                    {
-                        _networkManager.ToggleSelectedNodes(new List<int> { _hoveredNode.ID }, _subnetworkID);
-
-                        CoroutineUtils.StopIfRunning(this, ref _clickWindowCR);
-                    }
-
-                    CoroutineUtils.StopIfRunning(this, ref _unhoverNodeCR);
-                    _unhoverNodeCR = StartCoroutine(CRDelayUnhoverNode());
-
-                    if (_dupeCB != null)
-                    {
-                        _inputManager.RightTriggerListener -= _dupeCB;
-                        _dupeCB = null;
-                    }
+                    DoNodeGrabExit();
                 }
             }
         }
@@ -383,7 +345,7 @@ namespace VidiGraph
                         _networkManager.StartMLNetworkMove(_subnetworkID);
                         _clickWindowCR = StartCoroutine(CRSelectionWindow());
 
-                        DupeListen(evt.interactorObject, evt.interactableObject);
+                        DupeListen(evt.interactorObject, evt.interactableObject, DoNetworkGrabExit);
 
                     }
 
@@ -399,38 +361,107 @@ namespace VidiGraph
             {
                 if (_lastState == ActionState.GrabNetwork)
                 {
-                    _lastState = ActionState.UngrabNetwork;
-
-                    _networkManager.EndMLNetworksMove();
-                    CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
-
-                    if (_clickWindowCR != null)
-                    {
-                        _networkManager.ToggleSelectedNetworks(new List<int> { _subnetworkID });
-
-                        CoroutineUtils.StopIfRunning(this, ref _clickWindowCR);
-                    }
-
-                    CoroutineUtils.StopIfRunning(this, ref _unhoverNetworkCR);
-                    _unhoverNetworkCR = StartCoroutine(CRDelayUnhoverNetwork());
-
-                    if (_dupeCB != null)
-                    {
-                        _inputManager.RightTriggerListener -= _dupeCB;
-                        _dupeCB = null;
-                    }
+                    DoNetworkGrabExit();
                 }
             }
         }
 
+        void DoCommunityGrabExit()
+        {
+            _lastState = ActionState.UngrabComm;
+
+            _networkManager.EndMLCommsMove();
+            CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
+
+            if (_clickWindowCR != null)
+            {
+                _networkManager.ToggleSelectedCommunities(new List<int> { _hoveredCommunity.ID }, _subnetworkID);
+
+                CoroutineUtils.StopIfRunning(this, ref _clickWindowCR);
+            }
+
+            CoroutineUtils.StopIfRunning(this, ref _unhoverCommCR);
+            _unhoverCommCR = StartCoroutine(CRDelayUnhoverComm());
+
+            if (_dupeCB != null)
+            {
+                _inputManager.RightTriggerListener -= _dupeCB;
+                _dupeCB = null;
+            }
+        }
+
+        void DoNodeGrabExit()
+        {
+            _lastState = ActionState.UngrabNode;
+
+            _networkManager.EndMLNodesMove();
+            CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
+
+            if (_clickWindowCR != null)
+            {
+                _networkManager.ToggleSelectedNodes(new List<int> { _hoveredNode.ID }, _subnetworkID);
+
+                CoroutineUtils.StopIfRunning(this, ref _clickWindowCR);
+            }
+
+            CoroutineUtils.StopIfRunning(this, ref _unhoverNodeCR);
+            _unhoverNodeCR = StartCoroutine(CRDelayUnhoverNode());
+
+            if (_dupeCB != null)
+            {
+                _inputManager.RightTriggerListener -= _dupeCB;
+                _dupeCB = null;
+            }
+        }
+
+        void DoNetworkGrabExit()
+        {
+            _lastState = ActionState.UngrabNetwork;
+
+            _networkManager.EndMLNetworksMove();
+            CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
+
+            if (_clickWindowCR != null)
+            {
+                _networkManager.ToggleSelectedNetworks(new List<int> { _subnetworkID });
+
+                CoroutineUtils.StopIfRunning(this, ref _clickWindowCR);
+            }
+
+            CoroutineUtils.StopIfRunning(this, ref _unhoverNetworkCR);
+            _unhoverNetworkCR = StartCoroutine(CRDelayUnhoverNetwork());
+
+            if (_dupeCB != null)
+            {
+                _inputManager.RightTriggerListener -= _dupeCB;
+                _dupeCB = null;
+            }
+        }
+
         // listen for trigger press that triggers a duplication
-        void DupeListen(IXRSelectInteractor interactor, IXRSelectInteractable interactable)
+        void DupeListen(IXRSelectInteractor interactor, IXRSelectInteractable interactable, Action unselect)
         {
             _inputManager.RightTriggerListener += _dupeCB = () =>
             {
-                _xrManager.SelectExit(interactor, interactable);
+                var selecteds = _networkManager.SubnSelectedNodes(_subnetworkID);
 
-                _networkManager.CreateSubnetwork(_networkManager.SubnSelectedNodes(_subnetworkID), _subnetworkID);
+                unselect.Invoke();
+
+                var newSubnetworkID = _networkManager.CreateSubnetwork(selecteds, _subnetworkID).SubnetworkID;
+
+                var subnInteractable = _networkManager
+                    .GetMLNetworkTransform(newSubnetworkID)
+                    .gameObject
+                    .GetComponent<XRGrabInteractable>();
+
+                var rightCont = _inputManager.RightController.GetComponentInChildren<NearFarInteractor>();
+
+                _networkManager.SetSelectedNodes(selecteds, true, newSubnetworkID);
+                _xrManager.HoverEnter(rightCont, (IXRHoverInteractable)subnInteractable);
+                _xrManager.SelectEnter(rightCont, (IXRSelectInteractable)subnInteractable);
+
+                // have to do selectexit for the original object last to avoid the above selectenter to not yank the selectable to the controller
+                _xrManager.SelectExit(interactor, interactable);
 
                 _inputManager.RightTriggerListener -= _dupeCB;
                 _dupeCB = null;
