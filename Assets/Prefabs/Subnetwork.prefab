@@ -440,6 +440,7 @@ MonoBehaviour:
   NodePrefab: {fileID: 8073032549276498647, guid: d7c24cc782664d146afcfbbf76f5af2d, type: 3}
   CommunityPrefab: {fileID: 7189928348330134299, guid: 477fa35fc15e877498862c915f0c1243, type: 3}
   StraightLinkPrefab: {fileID: 5471069533965261189, guid: c0f9315c94ccd184fad0db27738431f4, type: 3}
+  NetworkPrefab: {fileID: 7189928348330134299, guid: 31c026d3142e22e43af9587a79df0c0d, type: 3}
   DrawVirtualNodes: 0
   DrawTreeStructure: 0
   SplineComputeShader: {fileID: 7200000, guid: 1a3b401b2a2ca204a82ad879966f7845, type: 3}
@@ -541,7 +542,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6483065758137488903}
   - component: {fileID: 9084455385304497309}
-  - component: {fileID: 2981207483158408740}
+  - component: {fileID: 2633296179673668189}
   m_Layer: 0
   m_Name: Subnetwork
   m_TagString: Untagged
@@ -592,7 +593,7 @@ MonoBehaviour:
     LinkNormalAlphaFactor: 0.198
     LinkContextAlphaFactor: 0.5
     LinkContext2FocusAlphaFactor: 0.101
---- !u!114 &2981207483158408740
+--- !u!114 &2633296179673668189
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -601,6 +602,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 8340558493629312128}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 34ab3d8c365e2eb4f9a0f13782f38125, type: 3}
+  m_Script: {fileID: 11500000, guid: 0eab6d05346a89b4989f6773e7e3e651, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 

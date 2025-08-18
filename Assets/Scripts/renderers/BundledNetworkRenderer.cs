@@ -12,13 +12,14 @@ namespace VidiGraph
 {
     public class BundledNetworkRenderer : NetworkRenderer
     {
-        public GameObject NodePrefab;
-        public GameObject CommunityPrefab;
-        public GameObject StraightLinkPrefab;
+        [SerializeField] GameObject NodePrefab;
+        [SerializeField] GameObject CommunityPrefab;
+        [SerializeField] GameObject StraightLinkPrefab;
+        [SerializeField] GameObject NetworkPrefab;
 
-        public bool DrawVirtualNodes = true;
-        public bool DrawTreeStructure = false;
-        public ComputeShader SplineComputeShader;
+        [SerializeField] bool DrawVirtualNodes = true;
+        [SerializeField] bool DrawTreeStructure = false;
+        [SerializeField] ComputeShader SplineComputeShader;
 
         Dictionary<int, GameObject> _nodeGameObjs = new Dictionary<int, GameObject>();
         Dictionary<int, GameObject> _linkGameObjs = new Dictionary<int, GameObject>();
@@ -166,7 +167,7 @@ namespace VidiGraph
 
         void CreateShell()
         {
-            var nwObj = CommunityRenderUtils.MakeNetwork(CommunityPrefab, transform, _networkContext);
+            var nwObj = CommunityRenderUtils.MakeNetwork(NetworkPrefab, transform, _networkContext);
 
             _networkGameObj = nwObj;
             _networkRenderer = nwObj.GetComponentInChildren<Renderer>();

@@ -1,18 +1,13 @@
 # TODO
 
-- add position to subgraph context
-- new prefab for subgraph
-- transfer selection to new subnetwork
-- show link directionality
-- add updated schema types
-- color change
-
 - make surface based off nodes
+- show link directionality
+
 - attaching nodes, average pos?
-- fix dupe glitch
 - fix bug: overviewlayouttransformer update ALL subnetwork nodes
     - change pushselectionevent to allow multiple subnetwork updates simult.
 - fix bug: overviewrenderer not showing hovers on all dupe subnetworks
+- transfer selection to new subnetwork
 
 - too big buffer error at BSpineShaderWrapper:322
 - clean up transformer code and input code (less nesting!!!)
@@ -107,10 +102,15 @@
 - reimplement tooltip
 - relayout graph, spatially based on friendship only and then add aggression later
 - shells for subgraphs
+- fix dupe glitch
+- add updated schema types
+- color change
+- new prefab for subgraph
 
 ## Ignore
 - move node moving animation to mln
 - fix priority select: probably there's a max to hovered items, and further items just don't get registered. solution: minimize number of possible hoverables, in this case, shrinkwrapping cluster size
+- add position to subgraph context
 
 ## Troubleshooting
 

@@ -30,6 +30,19 @@ namespace VidiGraph
         Coroutine _unhoverCommCR = null;
         Coroutine _unhoverNetworkCR = null;
 
+        // We need a state system because xrinteraction input is wacky.
+        // When hovering to a community, then hovering to a node within, then back to the enclosing community, it follows the following events:
+        //     1. hover over community: CommunityHoverEnter
+        //     2. hover to the node inside: CommunityHoverExit -> NodeHoverEnter
+        //     3. hover back to enclosing community: NodeHoverExit -> CommunityHoverEnter
+        // HOWEVER, when switching from hovering a node to grabbing it, it follows the following:
+        //     1. hover over node: NodeHoverEnter
+        //     2. grab the hovered node: NodeGrabEnter -> NodeHoverExit
+        //     3. ungrab the node: NodeHoverEnter -> NodeGrabExit
+        // Notice that in step 2, GrabEnter precedes HoverExit, which is COUNTERINTUITIVE to hovering community -> hovering node event sequence,
+        //     where NodeHoverExit precedes CommunityHoverEnter.
+        // So, we'll use action states to keep track of the order of actions (e.g. step 2, hovering a node immediately after grabbing it wouldn't make sense)
+
         enum ActionState
         {
             HoverNode,
@@ -89,6 +102,7 @@ namespace VidiGraph
 
             if (IsUnhoverNode(_lastState) && _hoveredNode != null)
             {
+                Debug.Log("Unhover node");
                 _networkManager.UnhoverNode(_hoveredNode.ID);
                 _hoveredNode = null;
             }
