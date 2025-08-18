@@ -81,16 +81,13 @@ namespace VidiGraph
 
             foreach (var (commID, comm) in mlContext.Communities)
             {
-                var nodeRadius = (float)comm.Size / 2;
-                var buffer = 0.3f;
-                var pos = comm.MassCenter;
+                var nodeRadius = (float)comm.Size;
+                var buffer = 1f;
+                var pos = comm.MassCenter - mlContext.MassCenter;
 
-                points.Add(pos + Vector3.forward * (nodeRadius + buffer * nodeScale));
-                points.Add(pos + Vector3.back * (nodeRadius + buffer * nodeScale));
-                points.Add(pos + Vector3.up * (nodeRadius + buffer * nodeScale));
-                points.Add(pos + Vector3.down * (nodeRadius + buffer * nodeScale));
-                points.Add(pos + Vector3.left * (nodeRadius + buffer * nodeScale));
-                points.Add(pos + Vector3.right * (nodeRadius + buffer * nodeScale));
+                var mesh = IcoSphere.Create(radius: nodeRadius + buffer * nodeScale);
+
+                points.AddRange(mesh.vertices.Select(v => v + pos));
             }
 
             try

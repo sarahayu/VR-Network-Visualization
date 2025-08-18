@@ -74,6 +74,7 @@ namespace VidiGraph
         public static GameObject UpdateNetwork(GameObject commObj, MultiLayoutContext network,
             bool selected, Color selectColor, Renderer renderer = null)
         {
+            commObj.transform.localPosition = network.MassCenter;
             commObj.transform.localScale = Vector3.one;
 
             if (!renderer)

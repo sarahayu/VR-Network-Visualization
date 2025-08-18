@@ -139,6 +139,7 @@ namespace VidiGraph
         HashSet<int> _selectedNodes = new HashSet<int>();
         HashSet<int> _selectedLinks = new HashSet<int>();
         HashSet<int> _selectedComms = new HashSet<int>();
+        public Vector3 MassCenter { get; set; }
         public Mesh Mesh { get; set; } = new();
         // TODO restrict modification access
         public bool Selected { get; set; }          // DONT MODIFY DIRECTLY, use SetSelectedNodes/Communities
@@ -322,14 +323,17 @@ namespace VidiGraph
                 var nodes = contextCommunity.Nodes.Select(nid => networkGlobal.Nodes[nid]);
 
                 MultiLayoutContextUtils.ComputeProperties(nodes, Nodes,
-                    out var mass, out var massCenter, out var size);
+                    out var cmass, out var cmassCenter, out var csize);
 
-                contextCommunity.Mass = mass;
-                contextCommunity.MassCenter = massCenter;
-                contextCommunity.Size = size;
+                contextCommunity.Mass = cmass;
+                contextCommunity.MassCenter = cmassCenter;
+                contextCommunity.Size = csize;
                 contextCommunity.Mesh = MultiLayoutContextUtils.GenerateConvexHull(contextCommunity, nodes.Select(n => Nodes[n.ID]), ContextSettings.NodeScale);
             }
 
+            MultiLayoutContextUtils.ComputeProperties(Nodes.Keys.Select(nid => networkGlobal.Nodes[nid]), Nodes,
+                out var mass, out var massCenter, out var size);
+            MassCenter = massCenter;
             Mesh = MultiLayoutContextUtils.GenerateConvexHull(this, ContextSettings.NodeScale);
         }
 

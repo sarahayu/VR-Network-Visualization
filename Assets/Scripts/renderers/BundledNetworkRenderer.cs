@@ -336,15 +336,15 @@ namespace VidiGraph
 
             return globalNode.Dirty
                 || contextNode.Dirty
-                || _lastHoveredNode != nodeID
-                || _lastHoveredComm != globalNode.CommunityID;
+                || _lastHoveredNode == nodeID
+                || _lastHoveredComm == globalNode.CommunityID;
         }
 
         bool CommNeedsRenderUpdate(int commID)
         {
             return _networkGlobal.Communities[commID].Dirty
                 || _networkContext.Communities[commID].Dirty
-                || _lastHoveredComm != commID;
+                || _lastHoveredComm == commID;
         }
 
         void BookkeepHoverNode()

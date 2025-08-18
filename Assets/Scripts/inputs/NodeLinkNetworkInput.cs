@@ -102,7 +102,6 @@ namespace VidiGraph
 
             if (IsUnhoverNode(_lastState) && _hoveredNode != null)
             {
-                Debug.Log("Unhover node");
                 _networkManager.UnhoverNode(_hoveredNode.ID);
                 _hoveredNode = null;
             }
@@ -181,7 +180,7 @@ namespace VidiGraph
                     if (selComms.Contains(community.ID))
                     {
                         _transformMoverCR = StartCoroutine(CRAllSelectedComms(community.ID, selComms));
-                        _networkManager.StartMLCommsMove(selComms);
+                        _networkManager.StartMLCommsMove(selComms, _subnetworkID);
 
                         _clickWindowCR = StartCoroutine(CRSelectionWindow());
 
@@ -189,7 +188,7 @@ namespace VidiGraph
                     }
                     else
                     {
-                        _networkManager.StartMLCommMove(community.ID);
+                        _networkManager.StartMLCommMove(community.ID, _subnetworkID);
                         _clickWindowCR = StartCoroutine(CRSelectionWindow());
                     }
 
@@ -213,7 +212,7 @@ namespace VidiGraph
 
                     if (_clickWindowCR != null)
                     {
-                        _networkManager.ToggleSelectedCommunities(new List<int> { _hoveredCommunity.ID });
+                        _networkManager.ToggleSelectedCommunities(new List<int> { _hoveredCommunity.ID }, _subnetworkID);
 
                         CoroutineUtils.StopIfRunning(this, ref _clickWindowCR);
                     }
@@ -276,7 +275,7 @@ namespace VidiGraph
                     if (selNodes.Contains(node.ID))
                     {
                         _transformMoverCR = StartCoroutine(CRAllSelectedNodes(node.ID, selNodes));
-                        _networkManager.StartMLNodesMove(selNodes);
+                        _networkManager.StartMLNodesMove(selNodes, _subnetworkID);
 
                         _clickWindowCR = StartCoroutine(CRSelectionWindow());
 
@@ -284,7 +283,7 @@ namespace VidiGraph
                     }
                     else
                     {
-                        _networkManager.StartMLNodeMove(node.ID);
+                        _networkManager.StartMLNodeMove(node.ID, _subnetworkID);
                         _clickWindowCR = StartCoroutine(CRSelectionWindow());
 
                         DupeListen(evt.interactorObject, evt.interactableObject);
@@ -310,7 +309,7 @@ namespace VidiGraph
 
                     if (_clickWindowCR != null)
                     {
-                        _networkManager.ToggleSelectedNodes(new List<int> { _hoveredNode.ID });
+                        _networkManager.ToggleSelectedNodes(new List<int> { _hoveredNode.ID }, _subnetworkID);
 
                         CoroutineUtils.StopIfRunning(this, ref _clickWindowCR);
                     }
@@ -484,8 +483,8 @@ namespace VidiGraph
             Vector3 lastSurfPosition = Vector3.positiveInfinity;
             Quaternion lastSurfRotation = Quaternion.identity;
 
-            var grabbedTransform = _networkManager.GetMLNodeTransform(grabbedID);
-            var otherTransforms = nodeIDs.Where(nid => nid != grabbedID).Select(nid => _networkManager.GetMLNodeTransform(nid));
+            var grabbedTransform = _networkManager.GetMLNodeTransform(grabbedID, _subnetworkID);
+            var otherTransforms = nodeIDs.Where(nid => nid != grabbedID).Select(nid => _networkManager.GetMLNodeTransform(nid, _subnetworkID));
 
             while (true)
             {
@@ -517,8 +516,8 @@ namespace VidiGraph
             Vector3 lastSurfPosition = Vector3.positiveInfinity;
             Quaternion lastSurfRotation = Quaternion.identity;
 
-            var grabbedTransform = _networkManager.GetMLCommTransform(grabbedID);
-            var otherTransforms = commIDs.Where(cid => cid != grabbedID).Select(cid => _networkManager.GetMLCommTransform(cid));
+            var grabbedTransform = _networkManager.GetMLCommTransform(grabbedID, _subnetworkID);
+            var otherTransforms = commIDs.Where(cid => cid != grabbedID).Select(cid => _networkManager.GetMLCommTransform(cid, _subnetworkID));
 
             while (true)
             {

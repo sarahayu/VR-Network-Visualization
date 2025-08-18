@@ -1,7 +1,11 @@
 # TODO
 
+- select subgraph nodes
 - make surface based off nodes
 - show link directionality
+
+- make shells have facets, easier distance judgement
+- try to change shell to fit subgraph more
 
 - attaching nodes, average pos?
 - fix bug: overviewlayouttransformer update ALL subnetwork nodes
