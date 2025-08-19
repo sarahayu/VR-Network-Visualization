@@ -20,7 +20,7 @@ namespace VidiGraph
     public class SurfaceManager : MonoBehaviour
     {
         [SerializeField] GameObject _surfacePrefab;
-        [SerializeField] float _surfaceAttractionDist = 0.1f;
+        [SerializeField] float _surfaceAttractionDist = 0.025f;
         [SerializeField] Color _highlightCol = Color.green;
         [SerializeField] Vector3 _surfSpawnOffset = Vector3.zero;
         [SerializeField] Transform _spawnOrigin;
@@ -35,12 +35,12 @@ namespace VidiGraph
             public int ID;
             public GameObject GameObject;
             public Renderer Renderer;
-            public Dictionary<int, Transform> Nodes = new Dictionary<int, Transform>();
+            public Dictionary<string, Transform> Nodes = new();
         }
 
         Dictionary<int, Surface> _surfaces = new Dictionary<int, Surface>();
         Dictionary<int, Collider> _colliders = new Dictionary<int, Collider>();
-        Dictionary<int, int> _nodeToSurf = new Dictionary<int, int>();
+        Dictionary<string, int> _nodeToSurf = new();
 
         int _curID = 0;
         int _curHoveredSurface = -1;
@@ -61,15 +61,79 @@ namespace VidiGraph
         void Start()
         {
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-            _mlRenderer = GameObject.Find("/MultiLayout Network").GetComponentInChildren<NetworkRenderer>();
-            _mlSettings = GameObject.Find("/MultiLayout Network").GetComponent<MultiLayoutNetwork>().BaseSettings;
+
+            var mlNetwork = GameObject.Find("/MultiLayout Network");
+            _mlRenderer = mlNetwork.GetComponentInChildren<NetworkRenderer>();
+            _mlSettings = mlNetwork.GetComponent<MultiLayoutNetwork>().BaseSettings;
 
             _userPos = GameObject.FindWithTag("MainCamera").transform;
 
-            _mlRenderer.OnNodeGrabEnter += OnNodeGrabEnter;
-            _mlRenderer.OnNodeGrabExit += OnNodeGrabExit;
-            _mlRenderer.OnCommunityGrabEnter += OnCommunityGrabEnter;
-            _mlRenderer.OnCommunityGrabExit += OnCommunityGrabExit;
+            AttachListeners(mlNetwork.GetComponent<NodeLinkNetwork>());
+
+            _manager.OnSubnetworkCreate += subn => AttachListeners(subn);
+            _manager.OnSubnetworkDestroy += subn => DetachListeners(subn);
+
+            var tablePos = GameObject.Find("/Table/Top").transform.position;
+            var surfOffset = new Vector3(0, 0.2f, 0.5f);
+            float surfAngle = 3f;
+
+            SpawnSurface(tablePos + surfOffset, Quaternion.AngleAxis(-surfAngle, Vector3.right));
+        }
+
+        class Listeners
+        {
+            public NetworkRenderer.NodeSelectEnterEvent NodeGrabEnter;
+            public NetworkRenderer.NodeSelectExitEvent NodeGrabExit;
+            public NetworkRenderer.CommunitySelectEnterEvent CommGrabEnter;
+            public NetworkRenderer.CommunitySelectExitEvent CommGrabExit;
+            public NetworkRenderer.NetworkSelectEnterEvent NetworkGrabEnter;
+            public NetworkRenderer.NetworkSelectExitEvent NetworkGrabExit;
+        }
+
+        Dictionary<int, Listeners> _subnListeners = new();
+
+        public void AttachListeners(NodeLinkNetwork network)
+        {
+            var renderer = network.GetComponentInChildren<NetworkRenderer>();
+            var listeners = CreateListeners(network);
+
+            renderer.OnNodeGrabEnter += listeners.NodeGrabEnter;
+            renderer.OnNodeGrabExit += listeners.NodeGrabExit;
+            renderer.OnCommunityGrabEnter += listeners.CommGrabEnter;
+            renderer.OnCommunityGrabExit += listeners.CommGrabExit;
+            renderer.OnNetworkGrabEnter += listeners.NetworkGrabEnter;
+            renderer.OnNetworkGrabExit += listeners.NetworkGrabExit;
+
+            _subnListeners[network.ID] = listeners;
+        }
+
+        public void DetachListeners(NodeLinkNetwork network)
+        {
+            var renderer = network.GetComponentInChildren<NetworkRenderer>();
+            var listeners = _subnListeners[network.ID];
+
+            renderer.OnNodeGrabEnter -= listeners.NodeGrabEnter;
+            renderer.OnNodeGrabExit -= listeners.NodeGrabExit;
+            renderer.OnCommunityGrabEnter -= listeners.CommGrabEnter;
+            renderer.OnCommunityGrabExit -= listeners.CommGrabExit;
+            renderer.OnNetworkGrabEnter -= listeners.NetworkGrabEnter;
+            renderer.OnNetworkGrabExit -= listeners.NetworkGrabExit;
+
+            _subnListeners.Remove(network.ID);
+        }
+
+        Listeners CreateListeners(NodeLinkNetwork network)
+        {
+            Listeners listeners = new();
+
+            listeners.NodeGrabEnter = (node, args) => OnNodeGrabEnter(node, network.ID, args);
+            listeners.NodeGrabExit = (node, args) => OnNodeGrabExit(node, network.ID, args);
+            listeners.CommGrabEnter = (comm, args) => OnCommunityGrabEnter(comm, network.ID, args);
+            listeners.CommGrabExit = (comm, args) => OnCommunityGrabExit(comm, network.ID, args);
+            listeners.NetworkGrabEnter = (network, args) => OnNetworkGrabEnter(network, ((MultiLayoutContext)network).SubnetworkID, args);
+            listeners.NetworkGrabExit = (network, args) => OnNetworkGrabExit(network, ((MultiLayoutContext)network).SubnetworkID, args);
+
+            return listeners;
         }
 
         // return surface ID
@@ -81,7 +145,7 @@ namespace VidiGraph
 
             surfObject.transform.SetPositionAndRotation(position, rotation);
             TextMeshPro text = surfObject.GetComponentInChildren<TextMeshPro>();
-            text.SetText(id.ToString());
+            text.SetText($"Surface {id}");
 
             AddSurfaceInteraction(surfObject, id);
 
@@ -139,66 +203,83 @@ namespace VidiGraph
         }
 
         // return ID of closest surface
-        public int TryAttachNode(int nodeID)
+        public int TryAttachNode(string nodeGUID)
         {
             // check distance
             // attach if distance less than threshold
 
-            var closest = GetClosestSurface(_manager.GetMLNodeTransform(nodeID).position);
+            var closest = GetClosestSurface(_manager.GetMLNodeTransform(nodeGUID).position);
 
-            if (closest != -1) AttachNodes(new List<int>() { nodeID }, closest);
-            else DetachNodes(new List<int>() { nodeID });
+            if (closest != -1) AttachNodes(new List<string>() { nodeGUID }, closest);
+            else DetachNodes(new List<string>() { nodeGUID });
 
             return closest;
         }
 
         // return ID of closest surface
-        public int TryAttachNodes(IEnumerable<int> nodeIDs)
+        public int TryAttachNodes(IEnumerable<string> nodeGUIDs)
         {
             // check distance
             // attach if distance less than threshold
 
-            // TODO use midpoint of points instead
-            var closest = GetClosestSurface(_manager.GetMLCommTransform(_manager.NetworkGlobal.Nodes[nodeIDs.First()].CommunityID).position);
+            var nGUIDs = nodeGUIDs.ToList();
 
-            if (closest != -1) AttachNodes(nodeIDs, closest);
-            else DetachNodes(nodeIDs);
+            var closest = GetClosestSurface(GetMidpoint(nGUIDs));
+
+            if (closest != -1) AttachNodes(nGUIDs, closest);
+            else DetachNodes(nGUIDs);
 
             return closest;
         }
 
-        public void AttachNodes(IEnumerable<int> nodeIDs, int surfID)
+        Vector3 GetMidpoint(IEnumerable<string> nodeGUIDs)
+        {
+            Vector3 pos = Vector3.zero;
+            int count = 0;
+
+            foreach (var nGUID in nodeGUIDs)
+            {
+                pos += _manager.GetMLNodeTransform(nGUID).position;
+                count += 1;
+            }
+
+            return count != 0 ? pos / count : pos;
+        }
+
+        public void AttachNodes(IEnumerable<string> nodeGUIDs, int surfID)
         {
             if (!_surfaces.ContainsKey(surfID)) return;
 
-            DetachNodes(nodeIDs);
+            var nGUIDs = nodeGUIDs.ToList();
 
-            foreach (var nodeID in nodeIDs)
+            DetachNodes(nGUIDs);
+
+            foreach (var nodeGUID in nGUIDs)
             {
-                _surfaces[surfID].Nodes[nodeID] = _manager.GetMLNodeTransform(nodeID);
-                _nodeToSurf[nodeID] = surfID;
+                _surfaces[surfID].Nodes[nodeGUID] = _manager.GetMLNodeTransform(nodeGUID);
+                _nodeToSurf[nodeGUID] = surfID;
             }
 
             _manager.PauseStorageUpdate();
             _manager.PauseRenderUpdate();
 
-            GetInterAndOuterLinks(_surfaces[surfID].Nodes.Keys, out var interLinks, out var outerLinks, out var isStartOuterLinks);
-            _manager.SetMLLinksBundlingStrength(interLinks, 0f);
+            _manager.GetInnerAndOuterLinks(_surfaces[surfID].Nodes.Keys, out var innerLinks, out var outerLinks, out var isStartOuterLinks);
+            _manager.SetMLLinksBundlingStrength(innerLinks, 0f);
             _manager.SetMLLinksBundleStart(outerLinks.Where((_, idx) => isStartOuterLinks[idx]), false);
             _manager.SetMLLinksBundleEnd(outerLinks.Where((_, idx) => !isStartOuterLinks[idx]), false);
 
-            _manager.SetMLLinksAlpha(interLinks, _mlSettings.LinkNormalAlphaFactor);
+            _manager.SetMLLinksAlpha(innerLinks, _mlSettings.LinkContextAlphaFactor);
             _manager.SetMLLinksAlpha(outerLinks, _mlSettings.LinkContext2FocusAlphaFactor);
 
             _manager.UnpauseRenderUpdate();
             // don't unpause storage update, it'll be updated at the end of animation
 
-            StartAttachAnim(nodeIDs, surfID);
+            StartAttachAnim(nGUIDs, surfID);
         }
 
-        public void DetachNodes(IEnumerable<int> nodeIDs)
+        public void DetachNodes(IEnumerable<string> nodeGUIDs)
         {
-            foreach (var nodeID in nodeIDs)
+            foreach (var nodeID in nodeGUIDs)
             {
                 if (_nodeToSurf.ContainsKey(nodeID))
                 {
@@ -212,14 +293,14 @@ namespace VidiGraph
 
         /*=============== start private methods ===================*/
 
-        void StartAttachAnim(IEnumerable<int> nodeIDs, int surfID)
+        void StartAttachAnim(IEnumerable<string> nodeGUIDs, int surfID)
         {
             CoroutineUtils.StopIfRunning(this, ref _attachAnimation);
 
-            var startPositions = nodeIDs.Select(nid => _manager.GetMLNodeTransform(nid).position);
-            var endPositions = SurfaceManagerUtils.CalcProjected(surfID, nodeIDs.Select(nid => _manager.NetworkGlobal.Nodes[nid]), this, _manager);
+            var startPositions = nodeGUIDs.Select(nid => _manager.GetMLNodeTransform(nid).position);
+            var endPositions = SurfaceManagerUtils.CalcProjected(surfID, nodeGUIDs, this, _manager);
 
-            _attachAnimation = StartCoroutine(CRAnimateNodesAttach(nodeIDs, startPositions, endPositions));
+            _attachAnimation = StartCoroutine(CRAnimateNodesAttach(nodeGUIDs, startPositions, endPositions));
         }
 
         void AddSurfaceInteraction(GameObject gameObject, int id)
@@ -263,41 +344,93 @@ namespace VidiGraph
             }
         }
 
-        void OnNodeGrabExit(Node node, SelectExitEventArgs evt)
+        void OnNodeGrabExit(Node node, int subnetworkID, SelectExitEventArgs evt)
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 CoroutineUtils.StopIfRunning(this, ref _surfaceHighlighter);
-                TryAttachNode(node.ID);
+
+                var nodeGUID = _manager.NodeIDsToNodeGUIDs(new int[] { node.ID }, subnetworkID).First();
+
+                if (_manager.SelectedNodeGUIDs.Contains(nodeGUID))
+                {
+                    TryAttachNodes(_manager.SelectedNodeGUIDs);
+                }
+                else
+                {
+                    TryAttachNode(nodeGUID);
+                }
+
                 UnhighlightSurfaces();
             }
         }
 
-        void OnNodeGrabEnter(Node node, SelectEnterEventArgs evt)
+        void OnNodeGrabEnter(Node node, int subnetworkID, SelectEnterEventArgs evt)
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 CoroutineUtils.StopIfRunning(this, ref _surfaceHighlighter);
-                _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLNodeTransform(node.ID)));
+                _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLNodeTransform(node.ID, subnetworkID)));
             }
         }
 
-        void OnCommunityGrabExit(Community community, SelectExitEventArgs evt)
+        void OnCommunityGrabExit(Community community, int subnetworkID, SelectExitEventArgs evt)
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 CoroutineUtils.StopIfRunning(this, ref _surfaceHighlighter);
-                TryAttachNodes(community.Nodes.Select(n => n.ID));
+
+                var communityGUID = _manager.CommIDsToCommGUIDs(new int[] { community.ID }, subnetworkID).First();
+
+                if (_manager.SelectedCommunityGUIDs.Contains(communityGUID))
+                {
+                    TryAttachNodes(_manager.SelectedNodeGUIDs);
+                }
+                else
+                {
+                    TryAttachNodes(_manager.NodeIDsToNodeGUIDs(community.Nodes.Select(n => n.ID), subnetworkID));
+                }
+
                 UnhighlightSurfaces();
             }
         }
 
-        void OnCommunityGrabEnter(Community community, SelectEnterEventArgs evt)
+        void OnCommunityGrabEnter(Community community, int subnetworkID, SelectEnterEventArgs evt)
         {
             if (evt.interactorObject.handedness == InteractorHandedness.Right)
             {
                 CoroutineUtils.StopIfRunning(this, ref _surfaceHighlighter);
-                _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLCommTransform(community.ID)));
+                _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLCommTransform(community.ID, subnetworkID)));
+            }
+        }
+
+        void OnNetworkGrabExit(NetworkContext network, int subnetworkID, SelectExitEventArgs evt)
+        {
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                CoroutineUtils.StopIfRunning(this, ref _surfaceHighlighter);
+
+                if (_manager.SelectedNetworks.Contains(subnetworkID))
+                {
+                    TryAttachNodes(_manager.SelectedNodeGUIDs);
+
+                }
+                else
+                {
+                    var mlc = (MultiLayoutContext)network;
+                    TryAttachNodes(_manager.NodeIDsToNodeGUIDs(mlc.Nodes.Keys, subnetworkID));
+                }
+
+                UnhighlightSurfaces();
+            }
+        }
+
+        void OnNetworkGrabEnter(NetworkContext network, int subnetworkID, SelectEnterEventArgs evt)
+        {
+            if (evt.interactorObject.handedness == InteractorHandedness.Right)
+            {
+                CoroutineUtils.StopIfRunning(this, ref _surfaceHighlighter);
+                _surfaceHighlighter = StartCoroutine(CRHighlightClosestSurface(_manager.GetMLNetworkTransform(subnetworkID)));
             }
         }
 
@@ -376,7 +509,7 @@ namespace VidiGraph
             }
         }
 
-        IEnumerator CRAnimateNodesAttach(IEnumerable<int> nodeIDs, IEnumerable<Vector3> startPositions, IEnumerable<Vector3> endPositions)
+        IEnumerator CRAnimateNodesAttach(IEnumerable<string> nodeGUIDs, IEnumerable<Vector3> startPositions, IEnumerable<Vector3> endPositions)
         {
             float dur = 1.0f;
 
@@ -387,56 +520,15 @@ namespace VidiGraph
                 var positions = startPositions.Zip(endPositions, Tuple.Create)
                     .Select((se, i) => Vector3.Lerp(se.Item1, se.Item2, Mathf.SmoothStep(0f, 1f, t)));
 
-                _manager.SetMLNodesPosition(nodeIDs, positions);
+                _manager.SetMLNodesPosition(nodeGUIDs, positions);
             });
 
-            _manager.SetMLNodesPosition(nodeIDs, endPositions);
+            _manager.SetMLNodesPosition(nodeGUIDs, endPositions);
 
             _manager.TriggerRenderUpdate();
             _manager.UnpauseStorageUpdate();
 
             _attachAnimation = null;
-        }
-
-        void GetInterAndOuterLinks(IEnumerable<int> nodeIDs, out List<int> interLinks, out List<int> outerLinks, out List<bool> isStartOuterLinks)
-        {
-            interLinks = new List<int>();
-            outerLinks = new List<int>();
-            isStartOuterLinks = new List<bool>();
-
-            foreach (var nodeID in nodeIDs)
-            {
-                foreach (var link in _manager.NetworkGlobal.NodeLinkMatrixUndir[nodeID])
-                {
-                    // check other node of this link
-                    if (nodeID == link.SourceNodeID)
-                    {
-                        // check targetnode of link
-                        if (nodeIDs.Contains(link.TargetNodeID))
-                        {
-                            interLinks.Add(link.ID);
-                        }
-                        else
-                        {
-                            outerLinks.Add(link.ID);
-                            isStartOuterLinks.Add(true);
-                        }
-                    }
-                    else
-                    {
-                        // check sourcenode of link
-                        if (nodeIDs.Contains(link.SourceNodeID))
-                        {
-                            interLinks.Add(link.ID);
-                        }
-                        else
-                        {
-                            outerLinks.Add(link.ID);
-                            isStartOuterLinks.Add(false);
-                        }
-                    }
-                }
-            }
         }
     }
 

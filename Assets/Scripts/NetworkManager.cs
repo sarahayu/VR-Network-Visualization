@@ -5,6 +5,7 @@
 */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -24,7 +25,25 @@ namespace VidiGraph
         public NetworkFilesLoader FileLoader { get { return _fileLoader; } }
         public NetworkGlobal NetworkGlobal { get { return _networkGlobal; } }
         public int? HoveredNetwork { get; private set; }
-        public HashSet<int> SelectedNetworks { get; } = new();
+        public HashSet<int> SelectedNetworks
+        {
+            get
+            {
+                return _allNetworks.Values.Where(subn => subn.Selected).Select(subn => subn.ID).ToHashSet();
+            }
+        }
+
+        // tuple is (subnetworkID, <node|link|community>ID)
+        public Dictionary<string, Tuple<int, int>> NodeGUIDToID { get; } = new();
+        public Dictionary<string, Tuple<int, int>> LinkGUIDToID { get; } = new();
+        public Dictionary<string, Tuple<int, int>> CommunityGUIDToID { get; } = new();
+
+        // tuple is (subnetworkID, <node|link|community>ID)
+        public Dictionary<Tuple<int, int>, string> NodeIDToGUID { get; } = new();
+        public Dictionary<Tuple<int, int>, string> LinkIDToGUID { get; } = new();
+        public Dictionary<Tuple<int, int>, string> CommunityIDToGUID { get; } = new();
+
+        Coroutine _transformMoverCR;
 
         public HashSet<string> SelectedNodeGUIDs
         {
@@ -80,10 +99,17 @@ namespace VidiGraph
             }
         }
 
+        public delegate void SubnetworkCreateEvent(BasicSubnetwork subnetwork);
+        public event SubnetworkCreateEvent OnSubnetworkCreate;
+
+        public delegate void SubnetworkDestroyEvent(BasicSubnetwork subnetwork);
+        public event SubnetworkDestroyEvent OnSubnetworkDestroy;
+
         NetworkGlobal _networkGlobal = new();
 
         NetworkFilesLoader _fileLoader;
         NetworkStorage _storage;
+        SurfaceManager _surfaceManager;
 
         bool _updatingStorage = true;
         bool _updatingRenderElements = true;
@@ -97,6 +123,8 @@ namespace VidiGraph
                 _multiLayoutNetwork.Context, _subnetworks.Values.Select(sn => sn.Context));
 
             _multiLayoutNetwork.SetStorageUpdateCallback(UpdateStorage);
+
+            _surfaceManager = GameObject.Find("Surface Manager").GetComponent<SurfaceManager>();
         }
 
         public void Initialize()
@@ -106,17 +134,69 @@ namespace VidiGraph
             _fileLoader.LoadFiles();
             _networkGlobal.InitNetwork(_fileLoader);
 
-            _multiLayoutNetwork.Initialize();
+            InitMultiLayoutNetwork();
             _handheldNetwork?.Initialize(_multiLayoutNetwork, _subnetworks);
 
             _allNetworks[_multiLayoutNetwork.Context.SubnetworkID /* 0 */] = _multiLayoutNetwork;
 
-            PauseRenderUpdate();
+            // PauseRenderUpdate();
 
-            SetMLNodeColorEncoding("Degree", 0, 0.1f, "#00FF00");
-            SetMLNodeSizeEncoding("Degree", -0.01f, 0.1f);
+            // SetMLNodeColorEncoding("Degree", 0, 0.1f, "#00FF00");
+            // SetMLNodeSizeEncoding("Degree", -0.01f, 0.1f);
 
-            UnpauseRenderUpdate();
+            // UnpauseRenderUpdate();
+        }
+
+        void InitMultiLayoutNetwork()
+        {
+            _multiLayoutNetwork.Initialize();
+
+            AddToGUIDMaps(_multiLayoutNetwork);
+        }
+
+        void AddToGUIDMaps(NodeLinkNetwork network)
+        {
+            foreach (var (nodeID, node) in network.Context.Nodes)
+            {
+                var tup = Tuple.Create(network.ID, nodeID);
+                NodeGUIDToID[node.GUID] = tup;
+                NodeIDToGUID[tup] = node.GUID;
+            }
+
+            foreach (var (linkID, link) in network.Context.Links)
+            {
+                var tup = Tuple.Create(network.ID, linkID);
+                LinkGUIDToID[link.GUID] = tup;
+                LinkIDToGUID[tup] = link.GUID;
+            }
+
+            foreach (var (communityID, community) in network.Context.Communities)
+            {
+                var tup = Tuple.Create(network.ID, communityID);
+                CommunityGUIDToID[community.GUID] = tup;
+                CommunityIDToGUID[tup] = community.GUID;
+            }
+        }
+
+        void RemoveFromGUIDMaps(NodeLinkNetwork network)
+        {
+            foreach (var (nodeID, node) in network.Context.Nodes)
+            {
+                NodeGUIDToID.Remove(node.GUID);
+                NodeIDToGUID.Remove(Tuple.Create(network.ID, nodeID));
+            }
+
+            foreach (var (linkID, link) in network.Context.Links)
+            {
+                LinkGUIDToID.Remove(link.GUID);
+                LinkIDToGUID.Remove(Tuple.Create(network.ID, linkID));
+            }
+
+            foreach (var (communityID, community) in network.Context.Communities)
+            {
+                CommunityGUIDToID.Remove(community.GUID);
+                CommunityIDToGUID.Remove(Tuple.Create(network.ID, communityID));
+            }
         }
 
         public void DrawPreview()
@@ -373,6 +453,16 @@ namespace VidiGraph
             UpdateHandheld();
         }
 
+        public void StartMLNodesFollow(string toFollowGUID, IEnumerable<string> nodeGUIDs)
+        {
+            _transformMoverCR = StartCoroutine(CRNodesFollow(toFollowGUID, nodeGUIDs));
+        }
+
+        public void EndMLNodesFollow()
+        {
+            CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
+        }
+
         public void StartMLCommMove(string commGUID)
         {
             StartMLCommsMove(new string[] { commGUID });
@@ -405,6 +495,16 @@ namespace VidiGraph
             UpdateHandheld();
         }
 
+        public void StartMLCommsFollow(string toFollowGUID, IEnumerable<string> commGUIDs)
+        {
+            _transformMoverCR = StartCoroutine(CRCommsFollow(toFollowGUID, commGUIDs));
+        }
+
+        public void EndMLCommsFollow()
+        {
+            CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
+        }
+
         public void StartMLNetworkMove(int subnetworkID)
         {
             _allNetworks[subnetworkID].StartNetworkMove();
@@ -424,6 +524,16 @@ namespace VidiGraph
         {
             _allNetworks[subnetworkID].EndNetworkMove();
             UpdateHandheld();
+        }
+
+        public void StartMLNetworksFollow(int toFollowID, IEnumerable<int> networkIDs)
+        {
+            _transformMoverCR = StartCoroutine(CRNetworksFollow(toFollowID, networkIDs));
+        }
+
+        public void EndMLNetworksFollow()
+        {
+            CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
         }
 
         public void HoverCommunity(int commID)
@@ -602,11 +712,115 @@ namespace VidiGraph
 
             _subnetworks[subn.ID] = subn;
             _allNetworks[subn.ID] = subn;
+            AddToGUIDMaps(subn);
 
             TriggerStorageUpdate();
             TriggerRenderUpdate();
 
+            OnSubnetworkCreate?.Invoke(subn);
+
             return subn.Context;
+        }
+
+        public void DeleteSubnetwork(int subnetworkID)
+        {
+            // RemoveFromGUIDMaps(subn);
+            throw new NotImplementedException();
+        }
+
+        public MultiLayoutContext CreateSurfSubnetwork(IEnumerable<int> nodeIDs, out int surfaceID, int sourceSubnetworkID = 0)
+        {
+            surfaceID = -1;
+
+            if (nodeIDs.Count() == 0) return null;
+
+            var subn = BasicSubnetworkUtils.CreateBasicSubnetwork(_subnetworkPrefab, transform, nodeIDs,
+                    _allNetworks[sourceSubnetworkID].Context);
+
+            subn.SetStorageUpdateCallback(UpdateStorage);
+            // mark communities and nodes dirty to be registered in storage update
+            DirtySubnetworkElements(subn);
+
+            _subnetworks[subn.ID] = subn;
+            _allNetworks[subn.ID] = subn;
+            AddToGUIDMaps(subn);
+
+            TriggerStorageUpdate();
+            TriggerRenderUpdate();
+
+            OnSubnetworkCreate?.Invoke(subn);
+
+            var surfID = _surfaceManager.SpawnSurfaceFromPointer();
+
+            // TODO only unselect originally selected nodes
+            // SetSelectedNodes(nodeIDs, false, sourceSubnetworkID);
+            ClearSelection();
+
+            _surfaceManager.AttachNodes(subn.Context.NodeGUIDToID.Keys, surfID);
+
+            return subn.Context;
+        }
+
+        public void DeleteSurfSubnetwork(int subnetworkID)
+        {
+            // RemoveFromGUIDMaps(subn);
+            throw new NotImplementedException();
+        }
+
+        // TODO perhaps move this somewhere else, or at least move to util file
+        public void GetInnerAndOuterLinks(IEnumerable<string> nodeGUIDs, out List<string> innerLinks, out List<string> outerLinks, out List<bool> isStartOuterLinks)
+        {
+            innerLinks = new();
+            outerLinks = new();
+            isStartOuterLinks = new();
+
+            Dictionary<int, List<int>> subnAndInnerLinks = new();
+            Dictionary<int, List<int>> subnAndOuterLinks = new();
+
+            foreach (var (subnetworkID, nodeIDs) in SortNodeGUIDs(nodeGUIDs))
+            {
+                subnAndInnerLinks[subnetworkID] = new();
+                subnAndOuterLinks[subnetworkID] = new();
+
+                foreach (var nodeID in nodeIDs)
+                {
+                    foreach (var link in NetworkGlobal.NodeLinkMatrixUndir[nodeID])
+                    {
+                        if (!_allNetworks[subnetworkID].Context.Links.Keys.Contains(link.ID)) continue;
+
+                        // check other node of this link
+                        if (nodeID == link.SourceNodeID)
+                        {
+                            // check targetnode of link
+                            if (nodeIDs.Contains(link.TargetNodeID))
+                            {
+                                subnAndInnerLinks[subnetworkID].Add(link.ID);
+                            }
+                            else
+                            {
+                                subnAndOuterLinks[subnetworkID].Add(link.ID);
+                                isStartOuterLinks.Add(true);
+                            }
+                        }
+                        else
+                        {
+                            // check sourcenode of link
+                            if (nodeIDs.Contains(link.SourceNodeID))
+                            {
+                                subnAndInnerLinks[subnetworkID].Add(link.ID);
+                            }
+                            else
+                            {
+                                subnAndOuterLinks[subnetworkID].Add(link.ID);
+                                isStartOuterLinks.Add(false);
+                            }
+                        }
+                    }
+                }
+            }
+
+            innerLinks = LinkIDsToLinkGUIDs(subnAndInnerLinks).ToList();
+            outerLinks = LinkIDsToLinkGUIDs(subnAndOuterLinks).ToList();
         }
 
         public void SetMLNodesSize(IEnumerable<string> nodeGUIDs, float size)
@@ -903,6 +1117,103 @@ namespace VidiGraph
             return _allNetworks[subnetworkID].SelectedCommunities.Contains(commID);
         }
 
+        // returns map of subnetworkIDs and an array of its nodeIDs
+        public Dictionary<int, HashSet<int>> SortNodeGUIDs(IEnumerable<string> nodeGUIDs)
+        {
+            Dictionary<int, HashSet<int>> sorted = new();
+
+            var nguids = nodeGUIDs.ToList();
+
+            foreach (var subnID in _allNetworks.Keys.ToList())
+            {
+                var guidToId = _allNetworks[subnID].Context.NodeGUIDToID;
+                var nodeIDs = guidToId.Keys.Intersect(nguids).Select(guid => guidToId[guid]).ToHashSet();
+
+                if (nodeIDs.Count != 0)
+                    sorted[subnID] = nodeIDs;
+            }
+
+            return sorted;
+        }
+
+        // returns map of subnetworkIDs and an array of its linkIDs
+        public Dictionary<int, HashSet<int>> SortLinkGUIDs(IEnumerable<string> linkGUIDs)
+        {
+            Dictionary<int, HashSet<int>> sorted = new();
+
+            var lguids = linkGUIDs.ToList();
+            foreach (var subnID in _allNetworks.Keys.ToList())
+            {
+                var guidToId = _allNetworks[subnID].Context.LinkGUIDToID;
+                var linkIDs = guidToId.Keys.Intersect(lguids).Select(guid => guidToId[guid]).ToHashSet();
+
+                if (linkIDs.Count != 0)
+                    sorted[subnID] = linkIDs;
+            }
+
+            return sorted;
+        }
+
+        // returns map of subnetworkIDs and an array of its communityIDs
+        public Dictionary<int, HashSet<int>> SortCommunityGUIDs(IEnumerable<string> communityGUIDs)
+        {
+            Dictionary<int, HashSet<int>> sorted = new();
+
+            var cguids = communityGUIDs.ToList();
+            foreach (var subnID in _allNetworks.Keys)
+            {
+                var guidToId = _allNetworks[subnID].Context.CommunityGUIDToID;
+                var commIDs = guidToId.Keys.Intersect(cguids).Select(guid => guidToId[guid]).ToHashSet();
+
+                if (commIDs.Count != 0)
+                    sorted[subnID] = commIDs;
+            }
+
+            return sorted;
+        }
+
+        // reverse of SortNodeGUIDs
+        public IEnumerable<string> NodeIDsToNodeGUIDs(Dictionary<int, List<int>> subnNodeIDs)
+        {
+            return subnNodeIDs
+                .Select(subnAndNodes =>
+                    NodeIDsToNodeGUIDs(subnAndNodes.Value, subnAndNodes.Key))
+                .SelectMany(i => i);
+        }
+
+        // reverse of SortLinkGUIDs
+        public IEnumerable<string> LinkIDsToLinkGUIDs(Dictionary<int, List<int>> subnLinkIDs)
+        {
+            return subnLinkIDs
+                .Select(subnAndLinks =>
+                    LinkIDsToLinkGUIDs(subnAndLinks.Value, subnAndLinks.Key))
+                .SelectMany(i => i);
+        }
+
+        // reverse of SortCommunityGUIDs
+        public IEnumerable<string> CommIDsToCommGUIDs(Dictionary<int, List<int>> subnCommIDs)
+        {
+            return subnCommIDs
+                .Select(subnAndComms =>
+                    CommIDsToCommGUIDs(subnAndComms.Value, subnAndComms.Key))
+                .SelectMany(i => i);
+        }
+
+        public IEnumerable<string> NodeIDsToNodeGUIDs(IEnumerable<int> nodeIDs, int subnetworkID)
+        {
+            return nodeIDs.Select(nid => NodeIDToGUID[Tuple.Create(subnetworkID, nid)]);
+        }
+
+        public IEnumerable<string> LinkIDsToLinkGUIDs(IEnumerable<int> linkIDs, int subnetworkID)
+        {
+            return linkIDs.Select(lid => LinkIDToGUID[Tuple.Create(subnetworkID, lid)]);
+        }
+
+        public IEnumerable<string> CommIDsToCommGUIDs(IEnumerable<int> commIDs, int subnetworkID)
+        {
+            return commIDs.Select(cid => CommunityIDToGUID[Tuple.Create(subnetworkID, cid)]);
+        }
+
         /*=============== start private methods ===================*/
 
         void UpdateStorage()
@@ -992,6 +1303,12 @@ namespace VidiGraph
                 }
             };
 
+            callbacks["Create subgraph"] = () =>
+            {
+                // TODO consider scenario of nodes from different subgraphs?
+                CreateSurfSubnetwork(subnToSelNodes.Values.First(), out var _, subnToSelNodes.Keys.First());
+            };
+
             if (onlyOneSelectedForComms && selectedSubnetworkForComms == 0)
             {
                 callbacks["Focus comm."] = () =>
@@ -1038,64 +1355,6 @@ namespace VidiGraph
             );
         }
 
-        Dictionary<int, HashSet<int>> SortNodeGUIDs(IEnumerable<string> nodeGUIDs)
-        {
-            Dictionary<int, HashSet<int>> sorted = new();
-
-            var nguids = nodeGUIDs.ToList();
-
-            foreach (var subnID in _allNetworks.Keys.ToList())
-            {
-                var guidToId = _allNetworks[subnID].Context.NodeGUIDToID;
-                var nodeIDs = guidToId.Keys.Intersect(nguids).Select(guid => guidToId[guid]).ToHashSet();
-
-                var nids = String.Join(" and ", nodeIDs.Select(nid => nid.ToString()));
-                Debug.Log($"{subnID} with {guidToId.Count} has {nids}");
-                var a = nguids.First();
-                var b = _allNetworks[subnID].Context.Nodes[5].GUID;
-                Debug.Log($"{a} with {b} is {a == b}");
-
-                if (nodeIDs.Count != 0)
-                    sorted[subnID] = nodeIDs;
-            }
-
-            return sorted;
-        }
-
-        Dictionary<int, HashSet<int>> SortLinkGUIDs(IEnumerable<string> linkGUIDs)
-        {
-            Dictionary<int, HashSet<int>> sorted = new();
-
-            var lguids = linkGUIDs.ToList();
-            foreach (var subnID in _allNetworks.Keys.ToList())
-            {
-                var guidToId = _allNetworks[subnID].Context.LinkGUIDToID;
-                var linkIDs = guidToId.Keys.Intersect(lguids).Select(guid => guidToId[guid]).ToHashSet();
-
-                if (linkIDs.Count != 0)
-                    sorted[subnID] = linkIDs;
-            }
-
-            return sorted;
-        }
-
-        Dictionary<int, HashSet<int>> SortCommunityGUIDs(IEnumerable<string> communityGUIDs)
-        {
-            Dictionary<int, HashSet<int>> sorted = new();
-
-            var cguids = communityGUIDs.ToList();
-            foreach (var subnID in _allNetworks.Keys)
-            {
-                var guidToId = _allNetworks[subnID].Context.CommunityGUIDToID;
-                var commIDs = guidToId.Keys.Intersect(cguids).Select(guid => guidToId[guid]).ToHashSet();
-
-                if (commIDs.Count != 0)
-                    sorted[subnID] = commIDs;
-            }
-
-            return sorted;
-        }
-
         IEnumerable<string> CommIDToNodeGUIDs(IEnumerable<int> commIDs, int subnetworkID)
         {
             return commIDs.Select(cid =>
@@ -1105,14 +1364,103 @@ namespace VidiGraph
             }).SelectMany(i => i);
         }
 
-        IEnumerable<string> NodeIDsToNodeGUIDs(IEnumerable<int> nodeIDs, int subnetworkID)
+        IEnumerator CRNodesFollow(string toFollowGUID, IEnumerable<string> nodeGUIDs)
         {
-            return nodeIDs.Select(nid => _allNetworks[subnetworkID].Context.Nodes[nid].GUID);
+            Vector3 prevPosition = Vector3.positiveInfinity;
+            Quaternion prevRotation = Quaternion.identity;
+
+            var grabbedTransform = GetMLNodeTransform(toFollowGUID);
+            var otherTransforms = nodeGUIDs.Where(nguid => nguid != toFollowGUID).Select(nguid => GetMLNodeTransform(nguid));
+
+            while (true)
+            {
+                var curPosition = grabbedTransform.position;
+                var curRotation = grabbedTransform.rotation;
+
+                if (float.IsFinite(prevPosition.x))
+                {
+                    var diff = curPosition - prevPosition;
+                    var diffRot = curRotation * Quaternion.Inverse(prevRotation);
+                    diffRot.ToAngleAxis(out var angle, out var axis);
+
+                    foreach (var child in otherTransforms)
+                    {
+                        child.RotateAround(prevPosition, axis, angle);
+
+                        child.position += diff;
+                    }
+                }
+
+                prevPosition = curPosition;
+                prevRotation = curRotation;
+                yield return null;
+            }
         }
 
-        IEnumerable<string> LinkIDsToLinkGUIDs(IEnumerable<int> linkIDs, int subnetworkID)
+        IEnumerator CRCommsFollow(string toFollowGUID, IEnumerable<string> commGUIDs)
         {
-            return linkIDs.Select(nid => _allNetworks[subnetworkID].Context.Links[nid].GUID);
+            Vector3 prevPosition = Vector3.positiveInfinity;
+            Quaternion prevRotation = Quaternion.identity;
+
+            var grabbedTransform = GetMLCommTransform(toFollowGUID);
+            var otherTransforms = commGUIDs.Where(cguid => cguid != toFollowGUID).Select(cguid => GetMLCommTransform(cguid));
+
+            while (true)
+            {
+                var curPosition = grabbedTransform.position;
+                var curRotation = grabbedTransform.rotation;
+
+                if (float.IsFinite(prevPosition.x))
+                {
+                    var diff = curPosition - prevPosition;
+                    var diffRot = curRotation * Quaternion.Inverse(prevRotation);
+                    diffRot.ToAngleAxis(out var angle, out var axis);
+
+                    foreach (var child in otherTransforms)
+                    {
+                        child.RotateAround(prevPosition, axis, angle);
+
+                        child.position += diff;
+                    }
+                }
+
+                prevPosition = curPosition;
+                prevRotation = curRotation;
+                yield return null;
+            }
+        }
+
+        IEnumerator CRNetworksFollow(int toFollowID, IEnumerable<int> networkIDs)
+        {
+            Vector3 prevPosition = Vector3.positiveInfinity;
+            Quaternion prevRotation = Quaternion.identity;
+
+            var grabbedTransform = GetMLNetworkTransform(toFollowID);
+            var otherTransforms = networkIDs.Where(cid => cid != toFollowID).Select(cid => GetMLNetworkTransform(cid));
+
+            while (true)
+            {
+                var curPosition = grabbedTransform.position;
+                var curRotation = grabbedTransform.rotation;
+
+                if (float.IsFinite(prevPosition.x))
+                {
+                    var diff = curPosition - prevPosition;
+                    var diffRot = curRotation * Quaternion.Inverse(prevRotation);
+                    diffRot.ToAngleAxis(out var angle, out var axis);
+
+                    foreach (var child in otherTransforms)
+                    {
+                        child.RotateAround(prevPosition, axis, angle);
+
+                        child.position += diff;
+                    }
+                }
+
+                prevPosition = curPosition;
+                prevRotation = curRotation;
+                yield return null;
+            }
         }
     }
 }

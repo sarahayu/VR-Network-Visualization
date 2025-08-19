@@ -7,25 +7,45 @@ namespace VidiGraph
 {
     public static class SurfaceManagerUtils
     {
-        public static List<Vector3> CalcProjected(int surfaceID, IEnumerable<Node> nodes, SurfaceManager surfaceManager, NetworkManager networkManager)
+        public static List<Vector3> CalcProjected(int surfaceID, IEnumerable<string> nodeGUIDs, SurfaceManager surfaceManager, NetworkManager networkManager)
         {
             var surface = surfaceManager.Surfaces[surfaceID].gameObject.transform;
             var flatNodes = networkManager.FileLoader.FlatLayout.nodes;
 
             var projecteds = new List<Vector3>();
 
-            foreach (var node in nodes)
+            var midpoint = GetMidpoint(nodeGUIDs, networkManager);
+
+            foreach (var (subnID, nodeIDs) in networkManager.SortNodeGUIDs(nodeGUIDs))
             {
-                int commID = networkManager.NetworkGlobal.Nodes[node.ID].CommunityID;
+                foreach (var nodeID in nodeIDs)
+                {
+                    var nodeGlobal = networkManager.NetworkGlobal.Nodes[nodeID];
+                    int commID = nodeGlobal.CommunityID;
 
-                var pos2D = flatNodes[node.IdxProcessed]._position3D;
-                var currentCommPos = networkManager.GetMLCommTransform(commID).position;
+                    var pos2D = flatNodes[nodeGlobal.IdxProcessed]._position3D;
 
-                projecteds.Add(CalcProjected(currentCommPos, surface, pos2D));
+                    projecteds.Add(CalcProjected(midpoint, surface, pos2D));
+                }
+
             }
 
             return projecteds;
 
+        }
+
+        static Vector3 GetMidpoint(IEnumerable<string> nodeGUIDs, NetworkManager networkManager)
+        {
+            Vector3 pos = Vector3.zero;
+            int count = 0;
+
+            foreach (var nGUID in nodeGUIDs)
+            {
+                pos += networkManager.GetMLNodeTransform(nGUID).position;
+                count += 1;
+            }
+
+            return count != 0 ? pos / count : pos;
         }
 
         public static void SetSurfaceColor(Renderer renderer, Color color)
@@ -51,7 +71,7 @@ namespace VidiGraph
 
         static Vector3 CalcProjected(Vector3 point, Transform surface, Vector3 pos2D)
         {
-            Vector3 planePoint = surface.position + surface.up * 0.001f;
+            Vector3 planePoint = surface.position + surface.up * 0.01f;
             Vector3 normal = surface.up;
 
             Vector3 projCommPos = point - Vector3.Dot(normal, point - planePoint) * normal;

@@ -1,6 +1,5 @@
 # TODO
 
-- make surface based off nodes
 - show link directionality
 - trash can/optinons
 
@@ -112,6 +111,7 @@
 - new prefab for subgraph
 - select subgraph nodes
 - transfer selection to new subnetwork
+- make surface based off nodes
 
 ## Ignore
 - move node moving animation to mln

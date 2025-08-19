@@ -23,6 +23,7 @@ namespace VidiGraph
         public abstract Transform GetNetworkTransform();
 
         // start events
+        // TODO replace params with network contexts, not network globals
 
         public delegate void CommunityHoverEnterEvent(Community community, HoverEnterEventArgs evt);
         public event CommunityHoverEnterEvent OnCommunityHoverEnter;

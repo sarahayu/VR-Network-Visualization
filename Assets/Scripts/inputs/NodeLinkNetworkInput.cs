@@ -63,7 +63,6 @@ namespace VidiGraph
         ActionState _lastState = ActionState.None;
 
         Coroutine _clickWindowCR = null;
-        Coroutine _transformMoverCR = null;
         Action _dupeCB = null;
         int _subnetworkID;
 
@@ -175,12 +174,14 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.GrabComm;
 
-                    var selComms = _networkManager.SubnSelectedCommunities(_subnetworkID);
+                    var commGUID = _networkManager.CommunityIDToGUID[Tuple.Create(_subnetworkID, community.ID)];
 
-                    if (selComms.Contains(community.ID))
+                    if (_networkManager.SelectedCommunityGUIDs.Contains(commGUID))
                     {
-                        _transformMoverCR = StartCoroutine(CRAllSelectedComms(community.ID, selComms));
-                        _networkManager.StartMLCommsMove(selComms, _subnetworkID);
+                        _networkManager.StartMLCommsFollow(
+                            commGUID,
+                            _networkManager.SelectedCommunityGUIDs);
+                        _networkManager.StartMLCommsMove(_networkManager.SelectedCommunityGUIDs);
 
                         _clickWindowCR = StartCoroutine(CRSelectionWindow());
 
@@ -251,12 +252,14 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.GrabNode;
 
-                    var selNodes = _networkManager.SubnSelectedNodes(_subnetworkID);
+                    var nodeGUID = _networkManager.NodeIDToGUID[Tuple.Create(_subnetworkID, node.ID)];
 
-                    if (selNodes.Contains(node.ID))
+                    if (_networkManager.SelectedNodeGUIDs.Contains(nodeGUID))
                     {
-                        _transformMoverCR = StartCoroutine(CRAllSelectedNodes(node.ID, selNodes));
-                        _networkManager.StartMLNodesMove(selNodes, _subnetworkID);
+                        _networkManager.StartMLNodesFollow(
+                            nodeGUID,
+                            _networkManager.SelectedNodeGUIDs);
+                        _networkManager.StartMLNodesMove(_networkManager.SelectedNodeGUIDs);
 
                         _clickWindowCR = StartCoroutine(CRSelectionWindow());
 
@@ -264,7 +267,7 @@ namespace VidiGraph
                     }
                     else
                     {
-                        _networkManager.StartMLNodeMove(node.ID, _subnetworkID);
+                        _networkManager.StartMLNodeMove(nodeGUID);
                         _clickWindowCR = StartCoroutine(CRSelectionWindow());
 
                         DupeListen(evt.interactorObject, evt.interactableObject, DoNodeGrabExit);
@@ -330,16 +333,18 @@ namespace VidiGraph
                     _lastState = ActionState.GrabNetwork;
 
                     // TODO support multiple selected subgraph movement? would have to figure out cross-graph node/comm movement...
-                    // if (_networkManager.SelectedNetworks.Contains(mlc.SubnetworkID))
-                    // {
-                    //     _transformMoverCR = StartCoroutine(CRAllSelectedNetworks(mlc.SubnetworkID, _networkManager.SelectedNetworks));
-                    //     _networkManager.StartMLNetworksMove(_networkManager.SelectedNetworks);
+                    if (_networkManager.SelectedNetworks.Contains(_subnetworkID))
+                    {
 
-                    //     _clickWindowCR = StartCoroutine(CRSelectionWindow());
+                        _networkManager.StartMLNetworksFollow(
+                            _subnetworkID,
+                            _networkManager.SelectedNetworks);
+                        _networkManager.StartMLNetworksMove(_networkManager.SelectedNetworks);
 
-                    //     DupeListen(evt.interactorObject, evt.interactableObject);
-                    // }
-                    if (false) { }
+                        _clickWindowCR = StartCoroutine(CRSelectionWindow());
+
+                        DupeListen(evt.interactorObject, evt.interactableObject, DoNetworkGrabExit);
+                    }
                     else
                     {
                         _networkManager.StartMLNetworkMove(_subnetworkID);
@@ -370,8 +375,8 @@ namespace VidiGraph
         {
             _lastState = ActionState.UngrabComm;
 
+            _networkManager.EndMLCommsFollow();
             _networkManager.EndMLCommsMove();
-            CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
 
             if (_clickWindowCR != null)
             {
@@ -394,8 +399,8 @@ namespace VidiGraph
         {
             _lastState = ActionState.UngrabNode;
 
+            _networkManager.EndMLNodesFollow();
             _networkManager.EndMLNodesMove();
-            CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
 
             if (_clickWindowCR != null)
             {
@@ -418,8 +423,8 @@ namespace VidiGraph
         {
             _lastState = ActionState.UngrabNetwork;
 
+            _networkManager.EndMLNetworksFollow();
             _networkManager.EndMLNetworksMove();
-            CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
 
             if (_clickWindowCR != null)
             {
@@ -455,6 +460,10 @@ namespace VidiGraph
                     .GetComponent<XRGrabInteractable>();
 
                 var rightCont = _inputManager.RightController.GetComponentInChildren<NearFarInteractor>();
+
+                // TODO only deselect the ones that were originally selected...
+                _networkManager.ClearSelection();
+                // _networkManager.SetSelectedNodes(selecteds, false, _subnetworkID);
 
                 _networkManager.SetSelectedNodes(selecteds, true, newSubnetworkID);
                 _xrManager.HoverEnter(rightCont, (IXRHoverInteractable)subnInteractable);
@@ -507,72 +516,6 @@ namespace VidiGraph
             yield return new WaitForSeconds(0.25f);
 
             _clickWindowCR = null;
-        }
-
-        IEnumerator CRAllSelectedNodes(int grabbedID, IEnumerable<int> nodeIDs)
-        {
-            Vector3 lastSurfPosition = Vector3.positiveInfinity;
-            Quaternion lastSurfRotation = Quaternion.identity;
-
-            var grabbedTransform = _networkManager.GetMLNodeTransform(grabbedID, _subnetworkID);
-            var otherTransforms = nodeIDs.Where(nid => nid != grabbedID).Select(nid => _networkManager.GetMLNodeTransform(nid, _subnetworkID));
-
-            while (true)
-            {
-                var curPosition = grabbedTransform.position;
-                var curRotation = grabbedTransform.rotation;
-
-                if (float.IsFinite(lastSurfPosition.x))
-                {
-                    var diff = curPosition - lastSurfPosition;
-                    var diffRot = curRotation * Quaternion.Inverse(lastSurfRotation);
-                    diffRot.ToAngleAxis(out var angle, out var axis);
-
-                    foreach (var child in otherTransforms)
-                    {
-                        child.RotateAround(lastSurfPosition, axis, angle);
-
-                        child.position += diff;
-                    }
-                }
-
-                lastSurfPosition = curPosition;
-                lastSurfRotation = curRotation;
-                yield return null;
-            }
-        }
-
-        IEnumerator CRAllSelectedComms(int grabbedID, IEnumerable<int> commIDs)
-        {
-            Vector3 lastSurfPosition = Vector3.positiveInfinity;
-            Quaternion lastSurfRotation = Quaternion.identity;
-
-            var grabbedTransform = _networkManager.GetMLCommTransform(grabbedID, _subnetworkID);
-            var otherTransforms = commIDs.Where(cid => cid != grabbedID).Select(cid => _networkManager.GetMLCommTransform(cid, _subnetworkID));
-
-            while (true)
-            {
-                var curPosition = grabbedTransform.position;
-                var curRotation = grabbedTransform.rotation;
-
-                if (float.IsFinite(lastSurfPosition.x))
-                {
-                    var diff = curPosition - lastSurfPosition;
-                    var diffRot = curRotation * Quaternion.Inverse(lastSurfRotation);
-                    diffRot.ToAngleAxis(out var angle, out var axis);
-
-                    foreach (var child in otherTransforms)
-                    {
-                        child.RotateAround(lastSurfPosition, axis, angle);
-
-                        child.position += diff;
-                    }
-                }
-
-                lastSurfPosition = curPosition;
-                lastSurfRotation = curRotation;
-                yield return null;
-            }
         }
     }
 

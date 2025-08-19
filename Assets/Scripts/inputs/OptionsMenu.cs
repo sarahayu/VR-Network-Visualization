@@ -25,15 +25,16 @@ namespace VidiGraph
 
         void OnEnable()
         {
+        }
+
+        void Start()
+        {
             var inputManager = GameObject.Find("/Input Manager").GetComponent<InputManager>();
 
             _rightJoystick = inputManager.RightJoystick;
 
             inputManager.RightJoystickClickListener += Click;
-        }
 
-        void Start()
-        {
             ClearOptions();
         }
 

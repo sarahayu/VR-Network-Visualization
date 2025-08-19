@@ -9,7 +9,7 @@ Shader "Custom/Batch BSpline Unlit"
         Tags { "RenderType"="Transparent" }
         LOD 200
         Blend SrcAlpha OneMinusSrcAlpha
-        ZWrite Off
+        // ZWrite Off
 
         Pass
         {
