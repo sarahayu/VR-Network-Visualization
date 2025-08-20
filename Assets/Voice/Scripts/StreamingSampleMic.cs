@@ -63,7 +63,6 @@ namespace Whisper.Samples
 
 
             CommandPress.EnableDirectActionIfModeUsed();
-            microphoneRecord.StartRecord();
 
         }
 
@@ -73,6 +72,7 @@ namespace Whisper.Samples
             {
                 Debug.Log("calling on button press");
                 // Start listening
+                microphoneRecord.StartRecord();
                 _stream.StartStream();
                 whisperStartTime = Time.time; // record start time
 
@@ -88,6 +88,7 @@ namespace Whisper.Samples
                 Debug.Log("calling on button release");
                 // Stop listening
                 _stream.StopStream();
+                microphoneRecord.StopRecord();
 
                 MaterialPropertyBlock props = new MaterialPropertyBlock();
 
@@ -131,6 +132,8 @@ namespace Whisper.Samples
         {
             // This is partial text as it’s recognized
             // Debug.Log($"Segment updated: {segment.Result}");
+            if (segment.Result != "")
+                text.text = segment.Result;
         }
 
         private void OnSegmentFinished(WhisperResult segment)
@@ -205,12 +208,11 @@ namespace Whisper.Samples
                         Debug.Log("Action: " + action);
                         Debug.Log("Cypher Query: " + query);
 
-                        Debug.Log(action.Count());
-
                         switch (action[0][0])
                         {
                             case "selectNode":
                                 Debug.Log("Selecting nodes with query: " + query[0]);
+                                text.text += $"\n<size=18><color=#aaa>{query[0]}</color></size>";
                                 var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query[0]);
                                 TimerUtils.StartTime("SetSelectedNodes");
                                 _networkManager.SetSelectedNodes(nodes, true);
@@ -218,6 +220,7 @@ namespace Whisper.Samples
                                 break;
                             case "selectLink":
                                 Debug.Log("Selecting links with query: " + query[0]);
+                                text.text += $"\n<size=18><color=#aaa>{query[0]}</color></size>";
                                 var links = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, query[0]);
                                 TimerUtils.StartTime("SetSelectedLinks");
                                 _networkManager.SetSelectedLinks(links, true);

@@ -28,9 +28,9 @@ namespace VidiGraph
             InitTransformers();
 
             // apply initial transformations before first render so we don't get a weird jump
-            TransformNetworkNoRender("encoding");
+            // TransformNetworkNoRender("encoding");
             SetLinksBundlingStrength(_context.Links.Keys, 0f, updateStorage: true, updateRenderElements: false);
-            TransformNetworkNoRender("edit");
+            // TransformNetworkNoRender("edit");
 
             InitRenderer();
         }

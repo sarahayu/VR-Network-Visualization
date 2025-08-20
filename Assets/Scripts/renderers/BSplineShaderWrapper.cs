@@ -18,10 +18,10 @@ namespace VidiGraph
         /*
          * Compute Shader Buffers
          */
-        ComputeBuffer _inSplineData;
-        ComputeBuffer _inSplineSegmentData;
-        ComputeBuffer _inSplineControlPointData;
-        ComputeBuffer _outSampleControlPointData;
+        ComputeBuffer _inSplineData = null;
+        ComputeBuffer _inSplineSegmentData = null;
+        ComputeBuffer _inSplineControlPointData = null;
+        ComputeBuffer _outSampleControlPointData = null;
 
         /*
          * Data Sources for Compute Shader Buffers
@@ -82,6 +82,8 @@ namespace VidiGraph
         {
             int kernel = _batchComputeShader.FindKernel("CSMain");
 
+            if (_inSplineData == null) return;
+
             _batchComputeShader.SetBuffer(kernel, "InSplineData", _inSplineData);
             _batchComputeShader.SetBuffer(kernel, "InSplineControlPointData", _inSplineControlPointData);
             _batchComputeShader.SetBuffer(kernel, "InSplineSegmentData", _inSplineSegmentData);
@@ -89,8 +91,9 @@ namespace VidiGraph
 
             _batchComputeShader.Dispatch(kernel, Math.Max(1, _splineSegments.Count / 32), 1, 1);
 
+            // TODO don't render ghost links
             Graphics.DrawProcedural(_splineMaterial, new Bounds(Vector3.zero, Vector3.one * 500),
-                MeshTopology.Triangles, _outSampleControlPointData.count * 6);
+                MeshTopology.Triangles, _splineSegments.Count * BSplineSamplesPerSegment * 6);
         }
 
         void InitBufferData(MultiLayoutContext networkContext, Dictionary<int, List<Vector3>> linksToCP)

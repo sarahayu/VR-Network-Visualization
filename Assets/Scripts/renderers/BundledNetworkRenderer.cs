@@ -212,6 +212,7 @@ namespace VidiGraph
 
         void PrepareBuffers()
         {
+            if (_controlPointsMap.Count == 0) return;
             _shaderWrapper.PrepareBuffers(_networkGlobal, _networkContext, _controlPointsMap);
         }
 
@@ -302,6 +303,7 @@ namespace VidiGraph
         void UpdateGPULinks()
         {
             ComputeControlPoints();
+            if (_controlPointsMap.Count == 0) return;
             _shaderWrapper.UpdateBuffers(_networkGlobal, _networkContext,
                 _networkContext.SelectedNodes,
                 _controlPointsMap);
