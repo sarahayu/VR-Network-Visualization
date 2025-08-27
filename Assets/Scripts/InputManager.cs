@@ -182,7 +182,6 @@ public class InputManager : MonoBehaviour
 
     void RightJoystickClickAction()
     {
-        Debug.Log("right joystick click");
         RightJoystickClickListener?.Invoke();
 
     }

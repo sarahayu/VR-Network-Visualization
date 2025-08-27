@@ -72,12 +72,6 @@ namespace VidiGraph
 
             _manager.OnSubnetworkCreate += subn => AttachListeners(subn);
             _manager.OnSubnetworkDestroy += subn => DetachListeners(subn);
-
-            var tablePos = GameObject.Find("/Table/Top").transform.position;
-            var surfOffset = new Vector3(0, 0.2f, 0.5f);
-            float surfAngle = 3f;
-
-            SpawnSurface(tablePos + surfOffset, Quaternion.AngleAxis(-surfAngle, Vector3.right));
         }
 
         class Listeners

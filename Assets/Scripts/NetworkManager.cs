@@ -1236,7 +1236,6 @@ namespace VidiGraph
         void UpdateOptions()
         {
             int selectedSubnetworkForNodes = -1;
-            bool onlyOneSelectedForNodes = false;
 
             int selectedSubnetworkForComms = -1;
             bool onlyOneSelectedForComms = false;
@@ -1252,11 +1251,6 @@ namespace VidiGraph
                     if (selectedSubnetworkForNodes == -1)
                     {
                         selectedSubnetworkForNodes = curSubn;
-                        onlyOneSelectedForNodes = true;
-                    }
-                    else
-                    {
-                        onlyOneSelectedForNodes = false;
                     }
 
                     subnToSelNodes[curSubn] = selNodes;
