@@ -1,7 +1,14 @@
 # TODO
 
-- show link directionality
+- call selection and dupe to space
+- when user creates subgraph, hang 2d on wall as picture
+- picture goes to the right, then next picture goes to the right, history track (make sure to include arrows/lines to show sequence)
+- description/summary beneath pictures
+- user can select picture and blow it up into 3d version
 - trash can/optinons
+- option for 3d pictures
+
+- show link directionality
 
 - make shells have facets, easier distance judgement
 - try to change shell to fit subgraph more
@@ -112,6 +119,12 @@
 - select subgraph nodes
 - transfer selection to new subnetwork
 - make surface based off nodes
+- wood floor
+    - 3 walls
+    - 1 spherical wall for spherical view
+    - ceiling (with fake light)
+    - room metaphor
+- instructions poster
 
 ## Ignore
 - move node moving animation to mln
