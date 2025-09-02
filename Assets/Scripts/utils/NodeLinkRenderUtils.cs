@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit.Transformers;
 
 namespace VidiGraph
 {
@@ -10,6 +11,9 @@ namespace VidiGraph
             GameObject nodeObj = UnityEngine.Object.Instantiate(prefab, parent);
 
             nodeObj.GetComponent<MeshFilter>().sharedMesh = IcoSphere.Create(radius: 0.5f, detail: 1);
+
+            if (nodeProps.Moveable) nodeObj.GetComponent<XRGeneralGrabTransformer>().enabled = true;
+            else nodeObj.GetComponent<XRGeneralGrabTransformer>().enabled = false;
 
             return UpdateNode(nodeObj, node, nodeProps);
         }

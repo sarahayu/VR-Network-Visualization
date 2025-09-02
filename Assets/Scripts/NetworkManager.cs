@@ -262,6 +262,16 @@ namespace VidiGraph
             _multiLayoutNetwork.ToggleSphericalAndHairball(animated);
         }
 
+        public void SetWorkingSubgraph(IEnumerable<int> nodeIDs)
+        {
+            // TODO delete subnetwork
+            
+            _multiLayoutNetwork.SetSelectedNodes(nodeIDs, true);
+            _multiLayoutNetwork.UpdateSelectedElements();
+
+            CreateSubnetwork(nodeIDs, _multiLayoutNetwork.ID);
+        }
+
         public void HoverNetwork(int subnetworkID)
         {
             HoveredNetwork = subnetworkID;
@@ -1225,7 +1235,7 @@ namespace VidiGraph
         // clears both nodes and communities
         void ClearSelectedItems()
         {
-            foreach (var subn in _allNetworks.Values) subn.ClearSelection();
+            foreach (var subn in _subnetworks.Values) subn.ClearSelection();
         }
 
         void UpdateHandheld()
@@ -1297,11 +1307,11 @@ namespace VidiGraph
                 }
             };
 
-            callbacks["Create subgraph"] = () =>
-            {
-                // TODO consider scenario of nodes from different subgraphs?
-                CreateSurfSubnetwork(subnToSelNodes.Values.First(), out var _, subnToSelNodes.Keys.First());
-            };
+            // callbacks["Create subgraph"] = () =>
+            // {
+            //     // TODO consider scenario of nodes from different subgraphs?
+            //     CreateSurfSubnetwork(subnToSelNodes.Values.First(), out var _, subnToSelNodes.Keys.First());
+            // };
 
             if (onlyOneSelectedForComms && selectedSubnetworkForComms == 0)
             {

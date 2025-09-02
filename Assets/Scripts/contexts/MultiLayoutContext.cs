@@ -43,6 +43,7 @@ namespace VidiGraph
             public Vector3 Position { get; set; } = Vector3.zero;
             public Color Color { get; set; }
             public int CommunityID { get; set; }
+            public bool Moveable { get; set; } = true;
             // TODO restrict modification access
             public bool Selected { get; set; }          // DONT MODIFY DIRECTLY, use SetSelectedNodes/Communities
 
@@ -90,6 +91,7 @@ namespace VidiGraph
             public CommunityState State { get; set; } = CommunityState.None;
             public Mesh Mesh { get; set; } = new();
             public IEnumerable<int> Nodes { get; set; }
+            public bool Moveable { get; set; } = true;
 
             // detect if link needs to be rerendered
             public bool Dirty { get; set; } = false;
@@ -161,8 +163,11 @@ namespace VidiGraph
 
             foreach (var node in networkGlobal.Nodes)
             {
-                Nodes[node.ID] = new Node();
-                Nodes[node.ID].CommunityID = node.CommunityID;
+                Nodes[node.ID] = new Node
+                {
+                    CommunityID = node.CommunityID,
+                    Moveable = false
+                };
 
                 NodeGUIDToID[Nodes[node.ID].GUID] = node.ID;
             }
@@ -181,6 +186,7 @@ namespace VidiGraph
                     ID = community.ID,
                     Nodes = community.Nodes.Select(n => n.ID),
                     Mesh = IcoSphere.Create(0.1f),
+                    Moveable = false
                 };
 
                 CommunityGUIDToID[Communities[community.ID].GUID] = community.ID;
@@ -217,6 +223,7 @@ namespace VidiGraph
                     Color = otherContext.Nodes[nodeID].Color,
                     Position = otherContext.Nodes[nodeID].Position,
                     Dirty = true,
+                    Moveable = true,
                 };
 
                 NodeGUIDToID[Nodes[nodeID].GUID] = nodeID;
@@ -252,6 +259,7 @@ namespace VidiGraph
                     Nodes = intersectedNodes,
                     Dirty = true,
                     Mesh = IcoSphere.Create(0.1f),
+                    Moveable = true,
                 };
 
                 CommunityGUIDToID[Communities[community.ID].GUID] = community.ID;

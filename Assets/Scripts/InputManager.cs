@@ -61,6 +61,8 @@ public class InputManager : MonoBehaviour
 
     NetworkManager _networkManager;
     SurfaceManager _surfaceManager;
+    DatabaseStorage _databaseStorage;
+
 
     void OnEnable()
     {
@@ -82,6 +84,7 @@ public class InputManager : MonoBehaviour
     {
         _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
         _surfaceManager = GameObject.Find("/Surface Manager").GetComponent<SurfaceManager>();
+        _databaseStorage = GameObject.Find("/Database").GetComponent<DatabaseStorage>();
     }
 
     void Update()
@@ -157,16 +160,50 @@ public class InputManager : MonoBehaviour
     void RightPrimaryAction()
     {
         RightPrimaryListener?.Invoke();
+        
+        CallTestingFunctionWork1();
 
-        if (_surfaceManager.CurHoveredSurface == -1)
-            _surfaceManager.SpawnSurfaceFromPointer();
-        else
-            _surfaceManager.DeleteSurface(_surfaceManager.CurHoveredSurface);
+        // if (_surfaceManager.CurHoveredSurface == -1)
+        //     _surfaceManager.SpawnSurfaceFromPointer();
+        // else
+        //     _surfaceManager.DeleteSurface(_surfaceManager.CurHoveredSurface);
     }
 
     void RightSecondaryAction()
     {
         RightSecondaryListener?.Invoke();
+
+        CallTestingFunctionWork2();
+    }
+
+    void RightJoystickClickAction()
+    {
+        RightJoystickClickListener?.Invoke();
+
+    }
+
+    void CallTestingFunctionWork1()
+    {
+        string query = "MATCH (n: Node {smoker: TRUE}) return n";
+
+        var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
+        TimerUtils.StartTime("SetWorkingSubgraph");
+        _networkManager.SetWorkingSubgraph(_networkManager.SortNodeGUIDs(nodes)[0]);
+        TimerUtils.EndTime("SetWorkingSubgraph");
+    }
+
+    void CallTestingFunctionWork2()
+    {
+        string query = "MATCH (n: Node {sex: \"female\"}) return n";
+
+        var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
+        TimerUtils.StartTime("SetWorkingSubgraph");
+        _networkManager.SetWorkingSubgraph(_networkManager.SortNodeGUIDs(nodes)[0]);
+        TimerUtils.EndTime("SetWorkingSubgraph");
+    }
+
+    void CallTestingFunctionSelect()
+    {
         var nodeIDs1 = _networkManager.NetworkGlobal.RealNodes.GetRange(0, 10);
         var nodeIDs2 = _networkManager.NetworkGlobal.RealNodes.GetRange(10, 10);
         var linkIDs1 = _networkManager.NetworkGlobal.Links.Values.ToList().GetRange(0, 10).Select(l => l.ID);
@@ -179,11 +216,4 @@ public class InputManager : MonoBehaviour
         _networkManager.SetMLLinksColorEnd(linkIDs1, "#00FFFF");
         _networkManager.SetMLLinksAlpha(linkIDs2, 0.4f);
     }
-
-    void RightJoystickClickAction()
-    {
-        RightJoystickClickListener?.Invoke();
-
-    }
-
 }
