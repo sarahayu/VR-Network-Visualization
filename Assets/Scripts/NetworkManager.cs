@@ -1132,12 +1132,10 @@ namespace VidiGraph
         {
             Dictionary<int, HashSet<int>> sorted = new();
 
-            var nguids = nodeGUIDs.ToList();
-
             foreach (var subnID in _allNetworks.Keys.ToList())
             {
                 var guidToId = _allNetworks[subnID].Context.NodeGUIDToID;
-                var nodeIDs = guidToId.Keys.Intersect(nguids).Select(guid => guidToId[guid]).ToHashSet();
+                var nodeIDs = guidToId.Keys.Intersect(nodeGUIDs).Select(guid => guidToId[guid]).ToHashSet();
 
                 if (nodeIDs.Count != 0)
                     sorted[subnID] = nodeIDs;
@@ -1151,11 +1149,10 @@ namespace VidiGraph
         {
             Dictionary<int, HashSet<int>> sorted = new();
 
-            var lguids = linkGUIDs.ToList();
             foreach (var subnID in _allNetworks.Keys.ToList())
             {
                 var guidToId = _allNetworks[subnID].Context.LinkGUIDToID;
-                var linkIDs = guidToId.Keys.Intersect(lguids).Select(guid => guidToId[guid]).ToHashSet();
+                var linkIDs = guidToId.Keys.Intersect(linkGUIDs).Select(guid => guidToId[guid]).ToHashSet();
 
                 if (linkIDs.Count != 0)
                     sorted[subnID] = linkIDs;
@@ -1169,11 +1166,10 @@ namespace VidiGraph
         {
             Dictionary<int, HashSet<int>> sorted = new();
 
-            var cguids = communityGUIDs.ToList();
             foreach (var subnID in _allNetworks.Keys)
             {
                 var guidToId = _allNetworks[subnID].Context.CommunityGUIDToID;
-                var commIDs = guidToId.Keys.Intersect(cguids).Select(guid => guidToId[guid]).ToHashSet();
+                var commIDs = guidToId.Keys.Intersect(communityGUIDs).Select(guid => guidToId[guid]).ToHashSet();
 
                 if (commIDs.Count != 0)
                     sorted[subnID] = commIDs;
