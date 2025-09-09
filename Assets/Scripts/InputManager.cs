@@ -84,7 +84,7 @@ public class InputManager : MonoBehaviour
     {
         _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
         _surfaceManager = GameObject.Find("/Surface Manager").GetComponent<SurfaceManager>();
-        _databaseStorage = GameObject.Find("/Database").GetComponent<DatabaseStorage>();
+        _databaseStorage = GameObject.Find("/Database")?.GetComponent<DatabaseStorage>();
     }
 
     void Update()
@@ -184,7 +184,11 @@ public class InputManager : MonoBehaviour
 
     void CallTestingFunctionWork1()
     {
+        if (_databaseStorage == null) return;
+
         string query = "MATCH (n: Node {smoker: TRUE}) return n";
+
+        Debug.Log("Selecting nodes with query: " + query);
 
         var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
         TimerUtils.StartTime("SetWorkingSubgraph");
@@ -194,7 +198,11 @@ public class InputManager : MonoBehaviour
 
     void CallTestingFunctionWork2()
     {
+        if (_databaseStorage == null) return;
+
         string query = "MATCH (n: Node {sex: \"female\"}) return n";
+
+        Debug.Log("Selecting nodes with query: " + query);
 
         var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
         TimerUtils.StartTime("SetWorkingSubgraph");
