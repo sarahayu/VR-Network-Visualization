@@ -31,7 +31,6 @@ namespace VidiGraph
             }
 
             return projecteds;
-
         }
 
         static Vector3 GetMidpoint(IEnumerable<string> nodeGUIDs, NetworkManager networkManager)
@@ -50,22 +49,16 @@ namespace VidiGraph
 
         public static void SetSurfaceColor(Renderer renderer, Color color)
         {
-            MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-            renderer.GetPropertyBlock(props);
-            props.SetColor("_Color", color);
-            renderer.SetPropertyBlock(props);
+            GameObjectUtils.SetColor(renderer, color);
         }
 
         public static void HighlightSurface(Renderer renderer, Color highlightCol)
         {
             SetSurfaceColor(renderer, highlightCol);
-
         }
 
         public static void UnhighlightSurface(Renderer renderer)
         {
-
             SetSurfaceColor(renderer, Color.clear);
         }
 

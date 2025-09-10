@@ -26,11 +26,7 @@ namespace VidiGraph
             if (!renderer)
                 renderer = nodeObj.GetComponentInChildren<Renderer>();
 
-            MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-            renderer.GetPropertyBlock(props);
-            props.SetColor("_Color", nodeProps.Color);
-            renderer.SetPropertyBlock(props);
+            GameObjectUtils.SetColor(renderer, nodeProps.Color);
 
             return nodeObj;
         }
@@ -39,11 +35,7 @@ namespace VidiGraph
             if (!renderer)
                 renderer = nodeObj.GetComponentInChildren<Renderer>();
 
-            MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-            renderer.GetPropertyBlock(props);
-            props.SetColor("_Color", color);
-            renderer.SetPropertyBlock(props);
+            GameObjectUtils.SetColor(renderer, color);
 
             return nodeObj;
         }
@@ -63,11 +55,7 @@ namespace VidiGraph
             if (!renderer)
                 renderer = nodeObj.GetComponentInChildren<Renderer>();
 
-            MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-            renderer.GetPropertyBlock(props);
-            props.SetColor("_Color", nodeProps.Color);
-            renderer.SetPropertyBlock(props);
+            GameObjectUtils.SetColor(renderer, nodeProps.Color);
 
             return nodeObj;
         }
