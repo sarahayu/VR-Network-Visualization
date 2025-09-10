@@ -653,6 +653,7 @@ namespace VidiGraph
 
         protected void GetManager()
         {
+            Debug.Log(GameObject.Find("/Network Manager"));
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
         }
 

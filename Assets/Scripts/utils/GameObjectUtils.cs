@@ -33,5 +33,25 @@ namespace VidiGraph
             toLerp.position = Vector3.Lerp(start.position, end.position, t);
             toLerp.scale = Vector3.Lerp(start.scale, end.scale, t);
         }
+
+        public static void SetColor(GameObject gameObject, Color color)
+        {
+            SetColor(gameObject.GetComponent<Renderer>(), color);
+        }
+
+        public static void SetColor(Renderer renderer, Color color)
+        {
+            renderer.material.color = color;
+        }
+
+        public static Color GetColor(GameObject gameObject)
+        {
+            return GetColor(gameObject.GetComponent<Renderer>());
+        }
+
+        public static Color GetColor(Renderer renderer)
+        {
+            return renderer.material.color;
+        }
     }
 }

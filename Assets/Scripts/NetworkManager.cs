@@ -18,6 +18,7 @@ namespace VidiGraph
         [SerializeField] HandheldNetwork _handheldNetwork;
         [SerializeField] GameObject _subnetworkPrefab;
         [SerializeField] OptionsMenu _optionsMenu;
+        [SerializeField] FramesArea _framesArea;
 
         Dictionary<int, BasicSubnetwork> _subnetworks = new();
         Dictionary<int, NodeLinkNetwork> _allNetworks = new();
@@ -44,6 +45,8 @@ namespace VidiGraph
         public Dictionary<Tuple<int, int>, string> CommunityIDToGUID { get; } = new();
 
         Coroutine _transformMoverCR;
+
+        int _curWorkingSubgraph = -1;
 
         public HashSet<string> SelectedNodeGUIDs
         {
@@ -264,12 +267,24 @@ namespace VidiGraph
 
         public void SetWorkingSubgraph(IEnumerable<int> nodeIDs)
         {
-            // TODO delete subnetwork
-            
+            if (_curWorkingSubgraph != -1) HideSubnetwork(_curWorkingSubgraph);
+
+            _multiLayoutNetwork.ClearSelection();
             _multiLayoutNetwork.SetSelectedNodes(nodeIDs, true);
             _multiLayoutNetwork.UpdateSelectedElements();
 
-            CreateSubnetwork(nodeIDs, _multiLayoutNetwork.ID);
+            var newSubnID = CreateSubnetwork(nodeIDs, _multiLayoutNetwork.ID).SubnetworkID;
+
+            _framesArea.AddFrame(
+                ID: newSubnID,
+                displayName: $"{newSubnID}",
+                onClick: _ =>
+                {
+                    SwitchToSubnetwork(newSubnID);
+                }
+            );
+
+            SwitchToSubnetwork(newSubnID);
         }
 
         public void HoverNetwork(int subnetworkID)
@@ -714,7 +729,7 @@ namespace VidiGraph
             if (nodeIDs.Count() == 0) return null;
 
             var subn = BasicSubnetworkUtils.CreateBasicSubnetwork(_subnetworkPrefab, transform, nodeIDs,
-                    _allNetworks[sourceSubnetworkID].Context);
+                    _allNetworks[sourceSubnetworkID].Context, out var gameObj);
 
             subn.SetStorageUpdateCallback(UpdateStorage);
             // mark communities and nodes dirty to be registered in storage update
@@ -734,8 +749,46 @@ namespace VidiGraph
 
         public void DeleteSubnetwork(int subnetworkID)
         {
-            // RemoveFromGUIDMaps(subn);
-            throw new NotImplementedException();
+            var subn = _subnetworks[subnetworkID];
+
+            OnSubnetworkDestroy?.Invoke(subn);
+
+            // mark communities and nodes dirty to be registered in storage update
+            DirtySubnetworkElements(subn);
+
+            TriggerStorageUpdate();
+            TriggerRenderUpdate();
+
+            RemoveFromGUIDMaps(subn);
+
+            _subnetworks.Remove(subn.ID);
+            _allNetworks.Remove(subn.ID);
+
+            subn.Destroy();
+        }
+
+        public void HideSubnetwork(int subnetworkID)
+        {
+            _subnetworks[subnetworkID].gameObject.SetActive(false);
+        }
+
+        public void ShowSubnetwork(int subnetworkID)
+        {
+            _subnetworks[subnetworkID].gameObject.SetActive(true);
+        }
+
+        public void SwitchToSubnetwork(int subnetworkID)
+        {
+            if (_curWorkingSubgraph != -1)
+            {
+                HideSubnetwork(_curWorkingSubgraph);
+                _framesArea.Frames[_curWorkingSubgraph].SetSelect(false);
+            }
+
+            ShowSubnetwork(subnetworkID);
+            _framesArea.Frames[subnetworkID].SetSelect(true);
+
+            _curWorkingSubgraph = subnetworkID;
         }
 
         public MultiLayoutContext CreateSurfSubnetwork(IEnumerable<int> nodeIDs, out int surfaceID, int sourceSubnetworkID = 0)
@@ -745,7 +798,7 @@ namespace VidiGraph
             if (nodeIDs.Count() == 0) return null;
 
             var subn = BasicSubnetworkUtils.CreateBasicSubnetwork(_subnetworkPrefab, transform, nodeIDs,
-                    _allNetworks[sourceSubnetworkID].Context);
+                    _allNetworks[sourceSubnetworkID].Context, out var gameObj);
 
             subn.SetStorageUpdateCallback(UpdateStorage);
             // mark communities and nodes dirty to be registered in storage update

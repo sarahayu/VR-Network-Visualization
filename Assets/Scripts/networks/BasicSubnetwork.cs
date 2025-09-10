@@ -35,6 +35,12 @@ namespace VidiGraph
             InitRenderer();
         }
 
+        public void Destroy()
+        {
+            _renderer.Destroy();
+            _input.Destroy();
+        }
+
         public override void ReturnNodes(IEnumerable<int> nodeIDs, Action onFinished = null)
         {
             Debug.Log("not implemented yet");

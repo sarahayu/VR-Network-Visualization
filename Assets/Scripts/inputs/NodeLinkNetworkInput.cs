@@ -95,6 +95,30 @@ namespace VidiGraph
             renderer.OnNetworkGrabExit += OnNetworkGrabExit;
         }
 
+        public void Destroy()
+        {
+
+            var renderer = GetComponentInChildren<NetworkRenderer>();
+
+            renderer.OnCommunityHoverEnter -= OnCommunityHoverEnter;
+            renderer.OnCommunityHoverExit -= OnCommunityHoverExit;
+
+            renderer.OnNodeHoverEnter -= OnNodeHoverEnter;
+            renderer.OnNodeHoverExit -= OnNodeHoverExit;
+
+            renderer.OnCommunityGrabEnter -= OnCommunityGrabEnter;
+            renderer.OnCommunityGrabExit -= OnCommunityGrabExit;
+
+            renderer.OnNodeGrabEnter -= OnNodeGrabEnter;
+            renderer.OnNodeGrabExit -= OnNodeGrabExit;
+
+            renderer.OnNetworkHoverEnter -= OnNetworkHoverEnter;
+            renderer.OnNetworkHoverExit -= OnNetworkHoverExit;
+
+            renderer.OnNetworkGrabEnter -= OnNetworkGrabEnter;
+            renderer.OnNetworkGrabExit -= OnNetworkGrabExit;
+        }
+
         void Update()
         {
             if (!Enabled) return;

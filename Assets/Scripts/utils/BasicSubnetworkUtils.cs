@@ -9,11 +9,11 @@ namespace VidiGraph
     public static class BasicSubnetworkUtils
     {
         public static BasicSubnetwork CreateBasicSubnetwork(GameObject prefab, Transform transform,
-            IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext)
+            IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext, out GameObject gameObj)
         {
-            GameObject subnetworkGO = UnityEngine.Object.Instantiate(prefab, transform);
+            gameObj = UnityEngine.Object.Instantiate(prefab, transform);
 
-            BasicSubnetwork retVal = subnetworkGO.GetComponent<BasicSubnetwork>();
+            BasicSubnetwork retVal = gameObj.GetComponent<BasicSubnetwork>();
 
             retVal.Initialize(nodeIDs, sourceContext);
 
