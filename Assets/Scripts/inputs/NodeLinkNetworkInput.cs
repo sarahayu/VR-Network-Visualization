@@ -476,7 +476,7 @@ namespace VidiGraph
 
                 unselect.Invoke();
 
-                var newSubnetworkID = _networkManager.CreateSubnetwork(selecteds, _subnetworkID).SubnetworkID;
+                var newSubnetworkID = _networkManager.CreateSubnetwork(selecteds, useShell: true, sourceSubnetworkID: _subnetworkID).SubnetworkID;
 
                 var subnInteractable = _networkManager
                     .GetMLNetworkTransform(newSubnetworkID)

@@ -1,11 +1,11 @@
 # TODO
 
-- call selection and dupe to space
 - when user creates subgraph, hang 2d on wall as picture
-- picture goes to the right, then next picture goes to the right, history track (make sure to include arrows/lines to show sequence)
-- description/summary beneath pictures
-- user can select picture and blow it up into 3d version
+- disable selecting on main network
 - trash can/optinons
+- forcedir
+- footprint and more spherical wall (offset center of room)
+- description/summary beneath pictures
 - option for 3d pictures
 
 - show link directionality
@@ -33,7 +33,7 @@
 - optimize reflection: https://stackoverflow.com/questions/7999652/best-way-to-cache-a-reflection-property-getter-setter
 
 
-- general code cleanup  
+- general code cleanup
 - when splatting to surface, account for random nodes that are not part of same community
 - move control point calculation to a transformer
     - keep bspline count constant
@@ -125,6 +125,9 @@
     - ceiling (with fake light)
     - room metaphor
 - instructions poster
+- user can select picture and blow it up into 3d version
+- call selection and dupe to space
+- picture goes to the right, then next picture goes to the right, history track (make sure to include arrows/lines to show sequence)
 
 ## Ignore
 - move node moving animation to mln

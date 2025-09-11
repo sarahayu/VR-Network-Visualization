@@ -265,15 +265,15 @@ namespace VidiGraph
             _multiLayoutNetwork.ToggleSphericalAndHairball(animated);
         }
 
-        public void SetWorkingSubgraph(IEnumerable<int> nodeIDs)
+        // also sets current working subgraph
+        public void CreateWorkingSubgraph(IEnumerable<int> nodeIDs)
         {
             if (_curWorkingSubgraph != -1) HideSubnetwork(_curWorkingSubgraph);
 
-            _multiLayoutNetwork.ClearSelection();
-            _multiLayoutNetwork.SetSelectedNodes(nodeIDs, true);
-            _multiLayoutNetwork.UpdateSelectedElements();
-
-            var newSubnID = CreateSubnetwork(nodeIDs, _multiLayoutNetwork.ID).SubnetworkID;
+            var newSubnID = CreateSubnetwork(nodeIDs,
+                    useShell: false,
+                    sourceSubnetworkID: _multiLayoutNetwork.ID)
+                .SubnetworkID;
 
             _framesArea.AddFrame(
                 ID: newSubnID,
@@ -285,6 +285,8 @@ namespace VidiGraph
             );
 
             SwitchToSubnetwork(newSubnID);
+
+            SetMLLayout("forcedDir", newSubnID);
         }
 
         public void HoverNetwork(int subnetworkID)
@@ -639,20 +641,20 @@ namespace VidiGraph
             UpdateOptions();
         }
 
-        // layout = [spherical, cluster, floor]
-
+        // layout for MultiLayoutNetwork = [spherical, cluster, floor]
+        // layout for BasicSubnetwork = [forceddir]
         public void SetMLLayout(IEnumerable<string> commGUIDs, string layout)
         {
             foreach (var (subnID, commIDs) in SortCommunityGUIDs(commGUIDs)) SetMLLayout(commIDs, layout, subnID);
         }
 
-        // TODO extend for subnetworks
         public void SetMLLayout(IEnumerable<int> commIDs, string layout, int subnetworkID = 0)
         {
             _allNetworks[subnetworkID].SetLayout(commIDs, layout, UpdateHandheld);
         }
 
-        // layout = [spherical, cluster, floor]
+        // layout for MultiLayoutNetwork = [spherical, cluster, floor]
+        // layout for BasicSubnetwork = [forceddir]
         public void SetMLLayout(string commGUID, string layout)
         {
             var res = SortCommunityGUIDs(new string[] { commGUID }).First();
@@ -663,10 +665,14 @@ namespace VidiGraph
             SetMLLayout(commID, layout, subnID);
         }
 
-        // TODO extend for subnetworks
         public void SetMLLayout(int commID, string layout, int subnetworkID = 0)
         {
             _allNetworks[subnetworkID].SetLayout(new int[] { commID }, layout, UpdateHandheld);
+        }
+
+        public void SetMLLayout(string layout, int subnetworkID = 0)
+        {
+            _allNetworks[subnetworkID].SetLayout(new int[] {}, layout, UpdateHandheld);
         }
 
         public void BringMLNodes(IEnumerable<string> nodeGUIDs)
@@ -724,12 +730,12 @@ namespace VidiGraph
             return _allNetworks[subnetworkID]?.GetNetworkTransform();
         }
 
-        public MultiLayoutContext CreateSubnetwork(IEnumerable<int> nodeIDs, int sourceSubnetworkID = 0)
+        public MultiLayoutContext CreateSubnetwork(IEnumerable<int> nodeIDs, bool useShell = true, int sourceSubnetworkID = 0)
         {
             if (nodeIDs.Count() == 0) return null;
 
             var subn = BasicSubnetworkUtils.CreateBasicSubnetwork(_subnetworkPrefab, transform, nodeIDs,
-                    _allNetworks[sourceSubnetworkID].Context, out var gameObj);
+                    _allNetworks[sourceSubnetworkID].Context, useShell, out var gameObj);
 
             subn.SetStorageUpdateCallback(UpdateStorage);
             // mark communities and nodes dirty to be registered in storage update
@@ -785,6 +791,10 @@ namespace VidiGraph
                 _framesArea.Frames[_curWorkingSubgraph].SetSelect(false);
             }
 
+            _multiLayoutNetwork.ClearSelection();
+            _multiLayoutNetwork.SetSelectedNodes(_subnetworks[subnetworkID].Context.Nodes.Keys, true);
+            _multiLayoutNetwork.UpdateSelectedElements();
+
             ShowSubnetwork(subnetworkID);
             _framesArea.Frames[subnetworkID].SetSelect(true);
 
@@ -798,7 +808,7 @@ namespace VidiGraph
             if (nodeIDs.Count() == 0) return null;
 
             var subn = BasicSubnetworkUtils.CreateBasicSubnetwork(_subnetworkPrefab, transform, nodeIDs,
-                    _allNetworks[sourceSubnetworkID].Context, out var gameObj);
+                    _allNetworks[sourceSubnetworkID].Context, false, out var gameObj);
 
             subn.SetStorageUpdateCallback(UpdateStorage);
             // mark communities and nodes dirty to be registered in storage update

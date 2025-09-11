@@ -77,7 +77,8 @@ namespace VidiGraph
             TransformNetwork("highlight", animated: false);
         }
 
-        // layout = [spherical, cluster, floor]
+        // layout for MultiLayoutNetwork = [spherical, cluster, floor]
+        // layout for BasicSubnetwork = [forceddir]
         public void SetLayout(IEnumerable<int> commIDs, string layout, Action onFinished = null)
         {
             foreach (var commID in commIDs)

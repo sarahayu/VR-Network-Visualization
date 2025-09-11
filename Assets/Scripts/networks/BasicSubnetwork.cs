@@ -18,14 +18,15 @@ namespace VidiGraph
             Draw();
         }
 
-        public void Initialize(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext)
+        public void Initialize(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext, bool useShell = true)
         {
             _id = _idCounter++;
             GetManager();
 
-            InitContext(nodeIDs, sourceContext);
+            InitContext(nodeIDs, sourceContext, useShell);
             InitInput();
             InitTransformers();
+            InitSubnetworkTransformers();
 
             // apply initial transformations before first render so we don't get a weird jump
             // TransformNetworkNoRender("encoding");
@@ -52,14 +53,14 @@ namespace VidiGraph
         {
             switch (layout)
             {
-                case "hairball": _hairballLayoutTransformer.UpdateOnNextApply(commID); break;
+                case "forcedDir": /*do nothing*/ break;
                 default: break;
             }
         }
 
-        void InitContext(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext)
+        void InitContext(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext, bool useShell)
         {
-            _context = new MultiLayoutContext(subnetworkID: _id, useShell: true);
+            _context = new MultiLayoutContext(subnetworkID: _id, useShell);
             _context.SetFromContext(_manager.NetworkGlobal, sourceContext, nodeIDs);
             _context.ContextSettings = BaseSettings;
         }
@@ -68,6 +69,12 @@ namespace VidiGraph
         {
             _input = GetComponent<NodeLinkNetworkInput>();
             _input.Initialize(ID);
+        }
+
+        void InitSubnetworkTransformers()
+        {
+            _transformers["forcedDir"] = GetComponentInChildren<ForcedDirLayoutTransformer>();
+            _transformers["forcedDir"].Initialize(_manager.NetworkGlobal, _context);
         }
     }
 }
