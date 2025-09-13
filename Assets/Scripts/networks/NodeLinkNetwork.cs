@@ -696,6 +696,9 @@ namespace VidiGraph
 
             _transformers["highlight"] = GetComponentInChildren<HighlightTransformer>();
             _transformers["highlight"].Initialize(_manager.NetworkGlobal, _context);
+
+            _transformers["forcedDir"] = GetComponentInChildren<ForcedDirLayoutTransformer>();
+            _transformers["forcedDir"].Initialize(_manager.NetworkGlobal, _context);
         }
 
         protected void TransformNetwork(string transformer, bool animated = true, Action onFinished = null,

@@ -15,7 +15,7 @@ namespace VidiGraph
         public static GameObject MakeCommunity(GameObject prefab, Transform transform,
             MultiLayoutContext.Community commProps)
         {
-            GameObject commObj = UnityEngine.Object.Instantiate(prefab, transform);            
+            GameObject commObj = UnityEngine.Object.Instantiate(prefab, transform);
 
             if (commProps.Moveable) commObj.GetComponent<XRGeneralGrabTransformer>().enabled = true;
             else commObj.GetComponent<XRGeneralGrabTransformer>().enabled = false;

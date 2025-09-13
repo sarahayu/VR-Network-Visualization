@@ -46,7 +46,7 @@ namespace VidiGraph
         {
             Reset();
 
-            _networkData = GameObject.Find("/Network Manager").GetComponent<NetworkGlobal>();
+            _networkData = GameObject.Find("/Network Manager").GetComponent<NetworkManager>().NetworkGlobal;
             _networkProperties = (MultiLayoutContext)networkContext;
 
             CreateNodes();

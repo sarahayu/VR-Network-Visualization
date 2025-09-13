@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,13 +25,15 @@ namespace VidiGraph
 
         public override void ApplyTransformation()
         {
-            foreach (var (nodeID, nodeContext) in _networkContext.Nodes)
+            var positions = ForceDirectUtils.CalculateLayout(_networkContext, _networkGlobal);
+
+            foreach (var (nodeID, pos) in _networkContext.Nodes.Keys.Zip(positions, Tuple.Create))
             {
-                var nodeGlobal = _networkGlobal.Nodes[nodeID];
+                if (_networkGlobal.Nodes[nodeID].IsVirtualNode) continue;
 
-                if (nodeGlobal.IsVirtualNode) continue;
+                var nodeContext = _networkContext.Nodes[nodeID];
 
-                nodeContext.Position = _ForcedDirTransform.TransformPoint(UnityEngine.Random.insideUnitSphere);
+                nodeContext.Position = _ForcedDirTransform.TransformPoint(pos);
                 nodeContext.Dirty = true;
 
                 _networkContext.Communities[nodeContext.CommunityID].Dirty = true;
@@ -54,12 +57,14 @@ namespace VidiGraph
         {
             _networkContext = networkContext;
 
-            foreach (var (nodeID, nodeContext) in _networkContext.Nodes)
+            var positions = ForceDirectUtils.CalculateLayout(networkContext, networkGlobal);
+
+            foreach (var (nodeID, pos) in _networkContext.Nodes.Keys.Zip(positions, Tuple.Create))
             {
                 if (networkGlobal.Nodes[nodeID].IsVirtualNode) continue;
 
-                _startPositions[nodeID] = nodeContext.Position;
-                _endPositions[nodeID] = endingContextTransform.TransformPoint(UnityEngine.Random.insideUnitSphere);
+                _startPositions[nodeID] = _networkContext.Nodes[nodeID].Position;
+                _endPositions[nodeID] = endingContextTransform.TransformPoint(pos);
             }
         }
 

@@ -26,7 +26,6 @@ namespace VidiGraph
             InitContext(nodeIDs, sourceContext, useShell);
             InitInput();
             InitTransformers();
-            InitSubnetworkTransformers();
 
             // apply initial transformations before first render so we don't get a weird jump
             // TransformNetworkNoRender("encoding");
@@ -69,12 +68,6 @@ namespace VidiGraph
         {
             _input = GetComponent<NodeLinkNetworkInput>();
             _input.Initialize(ID);
-        }
-
-        void InitSubnetworkTransformers()
-        {
-            _transformers["forcedDir"] = GetComponentInChildren<ForcedDirLayoutTransformer>();
-            _transformers["forcedDir"].Initialize(_manager.NetworkGlobal, _context);
         }
     }
 }

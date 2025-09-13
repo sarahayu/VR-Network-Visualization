@@ -66,7 +66,7 @@ namespace VidiGraph
         Action _dupeCB = null;
         int _subnetworkID;
 
-        public void Initialize(int subnetworkID)
+        public virtual void Initialize(int subnetworkID)
         {
             _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _inputManager = GameObject.Find("/Input Manager").GetComponent<InputManager>();
@@ -95,9 +95,8 @@ namespace VidiGraph
             renderer.OnNetworkGrabExit += OnNetworkGrabExit;
         }
 
-        public void Destroy()
+        public virtual void Destroy()
         {
-
             var renderer = GetComponentInChildren<NetworkRenderer>();
 
             renderer.OnCommunityHoverEnter -= OnCommunityHoverEnter;
