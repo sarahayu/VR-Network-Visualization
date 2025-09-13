@@ -275,7 +275,7 @@ namespace VidiGraph
                     sourceSubnetworkID: _multiLayoutNetwork.ID)
                 .SubnetworkID;
 
-            _framesArea.AddFrame(
+            var frame = _framesArea.AddFrame(
                 ID: newSubnID,
                 displayName: $"{newSubnID}",
                 onClick: _ =>
@@ -286,7 +286,10 @@ namespace VidiGraph
 
             SwitchToSubnetwork(newSubnID);
 
-            SetMLLayout("forcedDir", newSubnID);
+            _allNetworks[newSubnID].SetLayout(new int[] { }, "forcedDir", () =>
+            {
+                frame.GetComponentInChildren<FrameNetwork>().Initialize(_allNetworks[newSubnID].Context, false);
+            });
         }
 
         public void HoverNetwork(int subnetworkID)

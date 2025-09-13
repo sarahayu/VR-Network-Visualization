@@ -83,7 +83,7 @@ namespace VidiGraph
             {
                 _context.Communities[commID].State = MultiLayoutContext.StrToState(layout);
 
-                QueueLayoutChange(commID, layout);
+                PreprocLayoutChange(commID, layout);
             }
 
             TransformNetwork(layout, animated: true, onFinished: onFinished);
@@ -645,7 +645,7 @@ namespace VidiGraph
 
         /*=============== start protected methods ===================*/
 
-        protected virtual void QueueLayoutChange(int commID, string layout)
+        protected virtual void PreprocLayoutChange(int commID, string layout)
         {
             // override as needed
         }
@@ -671,7 +671,7 @@ namespace VidiGraph
 
         protected void Draw()
         {
-            _renderer.Draw();
+            _renderer?.Draw();
         }
 
         protected void InitTransformers()

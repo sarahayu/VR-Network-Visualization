@@ -1,12 +1,11 @@
 # TODO
 
-- when user creates subgraph, hang 2d on wall as picture
-- disable selecting on main network
 - trash can/optinons
-- forcedir
 - footprint and more spherical wall (offset center of room)
 - description/summary beneath pictures
 - option for 3d pictures
+- update wall frames on subnetwork update
+- don't register main subnetwork and frame network in database
 
 - show link directionality
 
@@ -128,6 +127,9 @@
 - user can select picture and blow it up into 3d version
 - call selection and dupe to space
 - picture goes to the right, then next picture goes to the right, history track (make sure to include arrows/lines to show sequence)
+- forcedir
+- when user creates subgraph, hang 2d on wall as picture
+- disable selecting on main network
 
 ## Ignore
 - move node moving animation to mln

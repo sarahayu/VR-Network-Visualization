@@ -53,7 +53,7 @@ namespace VidiGraph
             {
                 foreach (var commID in _context.Communities.Keys)
                 {
-                    QueueLayoutChange(commID, "spherical");
+                    PreprocLayoutChange(commID, "spherical");
                     _context.Communities[commID].State = MultiLayoutContext.CommunityState.None;
                 }
             }
@@ -106,7 +106,7 @@ namespace VidiGraph
 
         }
 
-        protected override void QueueLayoutChange(int commID, string layout)
+        protected override void PreprocLayoutChange(int commID, string layout)
         {
             switch (layout)
             {

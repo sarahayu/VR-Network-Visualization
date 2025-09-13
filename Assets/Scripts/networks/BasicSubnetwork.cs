@@ -8,8 +8,6 @@ namespace VidiGraph
 {
     public class BasicSubnetwork : NodeLinkNetwork
     {
-        static int _idCounter = 1;
-
         void Update()
         {
             Draw();
@@ -17,7 +15,6 @@ namespace VidiGraph
 
         public void Initialize(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext, bool useShell = true)
         {
-            _id = _idCounter++;
             GetManager();
 
             InitContext(nodeIDs, sourceContext, useShell);
@@ -42,15 +39,6 @@ namespace VidiGraph
         }
 
         /*=============== start private methods ===================*/
-
-        protected override void QueueLayoutChange(int commID, string layout)
-        {
-            switch (layout)
-            {
-                case "forcedDir": /*do nothing*/ break;
-                default: break;
-            }
-        }
 
         void InitContext(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext, bool useShell)
         {

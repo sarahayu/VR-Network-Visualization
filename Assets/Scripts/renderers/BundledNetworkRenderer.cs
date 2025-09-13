@@ -228,20 +228,36 @@ namespace VidiGraph
                         && !_networkContext.SelectedNodes.Contains(nodeID))
                     {
                         var hoverCol = _networkContext.ContextSettings.NodeHoverColor;
-                        NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], hoverCol, _nodeRenderers[nodeID]);
+                        NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], Color.Lerp(hoverCol, contextNode.Color, 0.5f), _nodeRenderers[nodeID]);
                     }
 
                     if (NodeNeedsRenderUpdate(nodeID))
                     {
                         NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[nodeID], globalNode, contextNode, _nodeRenderers[nodeID]);
 
-                        if (nodeID == _networkGlobal.HoveredNode?.ID)
+                        bool hovered = nodeID == _networkGlobal.HoveredNode?.ID;
+                        bool selected = _networkContext.SelectedNodes.Contains(nodeID);
+
+                        var hoverCol = _networkContext.ContextSettings.NodeHoverColor;
+                        var selectCol = _networkContext.ContextSettings.NodeSelectColor;
+
+                        Color finalColor = contextNode.Color;
+
+                        if (hovered && selected)
                         {
-                            var hoverCol = _networkContext.ContextSettings.NodeHoverColor;
-                            NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], hoverCol, _nodeRenderers[nodeID]);
+                            finalColor = Color.Lerp(Color.Lerp(hoverCol, contextNode.Color, 0.5f), selectCol, 0.67f);
                         }
-                        if (_networkContext.SelectedNodes.Contains(nodeID))
-                            NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], _networkContext.ContextSettings.NodeSelectColor, _nodeRenderers[nodeID]);
+                        else if (hovered)
+                        {
+                            finalColor = Color.Lerp(hoverCol, contextNode.Color, 0.5f);
+                        }
+                        else if (selected)
+                        {
+                            finalColor = Color.Lerp(selectCol, contextNode.Color, 0.5f);
+                        }
+
+                        NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], finalColor, _nodeRenderers[nodeID]);
+
                         globalNode.Dirty = contextNode.Dirty = false;
                     }
                 }

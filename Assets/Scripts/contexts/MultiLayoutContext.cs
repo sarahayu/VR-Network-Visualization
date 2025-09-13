@@ -18,8 +18,10 @@ namespace VidiGraph
             public float LinkWidth = 0.0025f;
             public float EdgeBundlingStrength = 0.8f;
 
+            public Color NodeDefaultColor;
             public Color NodeSelectColor;
             public Color CommSelectColor;
+            public Color LinkDefaultColor;
             public Color LinkSelectColor;
             public Color NodeHoverColor;
             public Color CommHoverColor;
@@ -507,11 +509,11 @@ namespace VidiGraph
 
 
             GetNodeSize = _ => ContextSettings.NodeScale;
-            GetNodeColor = _ => Color.gray;
+            GetNodeColor = _ => ContextSettings.NodeDefaultColor;
             GetLinkWidth = _ => ContextSettings.LinkWidth;
             GetLinkBundlingStrength = _ => ContextSettings.EdgeBundlingStrength;
-            GetLinkColorStart = _ => Color.white;
-            GetLinkColorEnd = _ => Color.white;
+            GetLinkColorStart = _ => ContextSettings.LinkDefaultColor;
+            GetLinkColorEnd = _ => ContextSettings.LinkDefaultColor;
             GetLinkBundleStart = _ => true;
             GetLinkBundleEnd = _ => true;
             GetLinkAlpha = _ => ContextSettings.LinkNormalAlphaFactor;

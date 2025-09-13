@@ -221,15 +221,33 @@ namespace VidiGraph
             spline.StartColorRGBA.a *= contextLink.Alpha;
             spline.EndColorRGBA.a *= contextLink.Alpha;
 
-            if (networkGlobal.HoveredNode?.ID == link.SourceNodeID || networkGlobal.HoveredNode?.ID == link.TargetNodeID)
+            bool hovered = networkGlobal.HoveredNode?.ID == link.SourceNodeID || networkGlobal.HoveredNode?.ID == link.TargetNodeID;
+            bool selected = contextLink.Selected;
+
+            var hoverCol = networkContext.ContextSettings.LinkHoverColor;
+            var selectCol = networkContext.ContextSettings.LinkSelectColor;
+
+            Color finalStartColor = spline.StartColorRGBA;
+            Color finalEndColor = spline.EndColorRGBA;
+
+            if (hovered && selected)
             {
-                spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkHoverColor;
+                finalStartColor = Color.Lerp(Color.Lerp(hoverCol, finalStartColor, 0.5f), selectCol, 0.67f);
+                finalEndColor = Color.Lerp(Color.Lerp(hoverCol, finalEndColor, 0.5f), selectCol, 0.67f);
+            }
+            else if (hovered)
+            {
+                finalStartColor = Color.Lerp(hoverCol, finalStartColor, 0.5f);
+                finalEndColor = Color.Lerp(hoverCol, finalEndColor, 0.5f);
+            }
+            else if (selected)
+            {
+                finalStartColor = Color.Lerp(selectCol, finalStartColor, 0.5f);
+                finalEndColor = Color.Lerp(selectCol, finalEndColor, 0.5f);
             }
 
-            if (contextLink.Selected)
-            {
-                spline.StartColorRGBA = spline.EndColorRGBA = networkContext.ContextSettings.LinkSelectColor;
-            }
+            spline.StartColorRGBA = finalStartColor;
+            spline.EndColorRGBA = finalEndColor;
 
             int NumSegments = ControlPointsToSegmentCount(cp); //NumControlPoints + Degree - 2 (First/Last Point)
 
