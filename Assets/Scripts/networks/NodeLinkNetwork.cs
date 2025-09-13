@@ -9,7 +9,6 @@ namespace VidiGraph
 {
     public class NodeLinkNetwork : Network
     {
-        public int ID { get { return _id; } }
         public MultiLayoutContext.Settings BaseSettings;
 
         // TODO restrict edit access
@@ -56,7 +55,6 @@ namespace VidiGraph
         protected Coroutine _curAnim = null;
         protected Coroutine _curMover = null;
 
-        protected int _id;
 
         void Update()
         {

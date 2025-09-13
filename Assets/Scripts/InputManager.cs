@@ -31,7 +31,7 @@ public class InputManager : MonoBehaviour
     [SerializeField] GameObject _rightController;
     [SerializeField] GameObject _leftController;
 
-    [SerializeField] NodeLinkNetworkInteraction _mlInput;
+    [SerializeField] TactileEditInteraction _mlInput;
 
     public XRInputButtonReader LeftGrip { get => _leftGrip; }
     public XRInputButtonReader LeftTrigger { get => _leftTrigger; }
@@ -112,7 +112,7 @@ public class InputManager : MonoBehaviour
     void LeftGripAction()
     {
         LeftGripListener?.Invoke();
-        _networkManager.ToggleBigNetworkSphericalAndHairball();
+        // _networkManager.ToggleBigNetworkSphericalAndHairball();
     }
 
     void LeftTriggerAction()

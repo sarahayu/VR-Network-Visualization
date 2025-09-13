@@ -8,9 +8,6 @@ namespace VidiGraph
 {
     public class BasicSubnetwork : NodeLinkNetwork
     {
-
-        NodeLinkNetworkInteraction _input;
-
         static int _idCounter = 1;
 
         void Update()
@@ -24,7 +21,6 @@ namespace VidiGraph
             GetManager();
 
             InitContext(nodeIDs, sourceContext, useShell);
-            InitInput();
             InitTransformers();
 
             // apply initial transformations before first render so we don't get a weird jump
@@ -38,7 +34,6 @@ namespace VidiGraph
         public void Destroy()
         {
             _renderer.Destroy();
-            _input.Destroy();
         }
 
         public override void ReturnNodes(IEnumerable<int> nodeIDs, Action onFinished = null)
@@ -62,12 +57,6 @@ namespace VidiGraph
             _context = new MultiLayoutContext(subnetworkID: _id, useShell);
             _context.SetFromContext(_manager.NetworkGlobal, sourceContext, nodeIDs);
             _context.ContextSettings = BaseSettings;
-        }
-
-        void InitInput()
-        {
-            _input = GetComponent<NodeLinkNetworkInteraction>();
-            _input.Initialize(ID);
         }
     }
 }

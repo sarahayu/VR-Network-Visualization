@@ -672,7 +672,7 @@ namespace VidiGraph
 
         public void SetMLLayout(string layout, int subnetworkID = 0)
         {
-            _allNetworks[subnetworkID].SetLayout(new int[] {}, layout, UpdateHandheld);
+            _allNetworks[subnetworkID].SetLayout(new int[] { }, layout, UpdateHandheld);
         }
 
         public void BringMLNodes(IEnumerable<string> nodeGUIDs)
@@ -1350,21 +1350,21 @@ namespace VidiGraph
 
             Dictionary<string, Action> callbacks = new();
 
-            callbacks["Reset node(s)"] = () =>
-            {
-                foreach (var (subn, subnNodes) in subnToSelNodes)
-                {
-                    if (subnNodes.Count != 0) ReturnMLNodes(subnNodes, subn);
-                }
-            };
+            // callbacks["Reset node(s)"] = () =>
+            // {
+            //     foreach (var (subn, subnNodes) in subnToSelNodes)
+            //     {
+            //         if (subnNodes.Count != 0) ReturnMLNodes(subnNodes, subn);
+            //     }
+            // };
 
-            callbacks["Bring node(s)"] = () =>
-            {
-                foreach (var (subn, subnNodes) in subnToSelNodes)
-                {
-                    if (subnNodes.Count != 0) BringMLNodes(subnNodes, subn);
-                }
-            };
+            // callbacks["Bring node(s)"] = () =>
+            // {
+            //     foreach (var (subn, subnNodes) in subnToSelNodes)
+            //     {
+            //         if (subnNodes.Count != 0) BringMLNodes(subnNodes, subn);
+            //     }
+            // };
 
             // callbacks["Create subgraph"] = () =>
             // {
@@ -1372,18 +1372,18 @@ namespace VidiGraph
             //     CreateSurfSubnetwork(subnToSelNodes.Values.First(), out var _, subnToSelNodes.Keys.First());
             // };
 
-            if (onlyOneSelectedForComms && selectedSubnetworkForComms == 0)
-            {
-                callbacks["Focus comm."] = () =>
-                {
-                    SetMLLayout(subnToSelComms[0], "cluster");
-                };
+            // if (onlyOneSelectedForComms && selectedSubnetworkForComms == 0)
+            // {
+            //     callbacks["Focus comm."] = () =>
+            //     {
+            //         SetMLLayout(subnToSelComms[0], "cluster");
+            //     };
 
-                callbacks["Project comm. floor"] = () =>
-                {
-                    SetMLLayout(subnToSelComms[0], "floor");
-                };
-            }
+            //     callbacks["Project comm. floor"] = () =>
+            //     {
+            //         SetMLLayout(subnToSelComms[0], "floor");
+            //     };
+            // }
 
             _optionsMenu.SetOptions(callbacks);
         }

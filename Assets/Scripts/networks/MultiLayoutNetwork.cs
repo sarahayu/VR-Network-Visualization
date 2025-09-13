@@ -9,8 +9,6 @@ namespace VidiGraph
 {
     public class MultiLayoutNetwork : NodeLinkNetwork
     {
-        NodeLinkNetworkInteraction _input;
-
         // keep a reference to sphericallayout to focus on individual communities
         SphericalLayoutTransformer _sphericalLayoutTransformer;
 
@@ -34,7 +32,6 @@ namespace VidiGraph
             GetManager();
 
             InitContext();
-            InitInput();
             InitTransformers();
 
             // apply initial transformations before first render so we don't get a weird jump
@@ -118,12 +115,6 @@ namespace VidiGraph
                 case "spherical": _sphericalLayoutTransformer.UpdateCommOnNextApply(commID); break;
                 default: break;
             }
-        }
-
-        void InitInput()
-        {
-            _input = GetComponent<NodeLinkNetworkInteraction>();
-            _input.Initialize(0);
         }
 
         new void InitTransformers()
