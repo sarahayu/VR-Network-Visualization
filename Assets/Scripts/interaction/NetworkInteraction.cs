@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace VidiGraph
 {
-    public abstract class NetworkInput : MonoBehaviour
+    public abstract class NetworkInteraction : MonoBehaviour
     {
         public bool Enabled { get; set; } = true;
     }

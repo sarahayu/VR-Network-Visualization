@@ -1,6 +1,6 @@
 /*
 *
-* NodeLinkNetworkInput takes care of input logic for elements of MultiLayoutNetwork and BasicSubnetwork.
+* NodeLinkNetworkInteraction takes care of interaction logic for elements of MultiLayoutNetwork and BasicSubnetwork.
 *
 */
 
@@ -16,7 +16,7 @@ using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 namespace VidiGraph
 {
-    public class NodeLinkNetworkInput : NetworkInput
+    public class NodeLinkNetworkInteraction : NetworkInteraction
     {
         NetworkManager _networkManager;
         InputManager _inputManager;

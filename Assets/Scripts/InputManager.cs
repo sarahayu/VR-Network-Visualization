@@ -31,7 +31,7 @@ public class InputManager : MonoBehaviour
     [SerializeField] GameObject _rightController;
     [SerializeField] GameObject _leftController;
 
-    [SerializeField] NodeLinkNetworkInput _mlInput;
+    [SerializeField] NodeLinkNetworkInteraction _mlInput;
 
     public XRInputButtonReader LeftGrip { get => _leftGrip; }
     public XRInputButtonReader LeftTrigger { get => _leftTrigger; }
@@ -160,7 +160,7 @@ public class InputManager : MonoBehaviour
     void RightPrimaryAction()
     {
         RightPrimaryListener?.Invoke();
-        
+
         CallTestingFunctionWork1();
 
         // if (_surfaceManager.CurHoveredSurface == -1)
