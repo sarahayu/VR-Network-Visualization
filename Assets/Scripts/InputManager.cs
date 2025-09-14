@@ -83,7 +83,7 @@ public class InputManager : MonoBehaviour
     void Start()
     {
         _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-        _surfaceManager = GameObject.Find("/Surface Manager").GetComponent<SurfaceManager>();
+        _surfaceManager = GameObject.Find("/Surface Manager")?.GetComponent<SurfaceManager>();
         _databaseStorage = GameObject.Find("/Database")?.GetComponent<DatabaseStorage>();
     }
 

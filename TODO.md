@@ -7,6 +7,7 @@
 - update wall frames on subnetwork update
 - don't register main subnetwork and frame network in database
 
+- figure out a system to exclude main graph from normal graph operations
 - show link directionality
 
 - make shells have facets, easier distance judgement

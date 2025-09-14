@@ -790,6 +790,7 @@ namespace VidiGraph
 
             while (true)
             {
+                if (!_context.Nodes[nodeID].Moveable) continue;
                 _context.Nodes[nodeID].Position = nodeTransform.position;
                 _context.Nodes[nodeID].Dirty = true;
                 _context.Communities[_context.Nodes[nodeID].CommunityID].Dirty = true;
@@ -813,6 +814,7 @@ namespace VidiGraph
             {
                 foreach (var (nodeID, nodeTransform) in nodeIDs.Zip(nodeTransforms, Tuple.Create))
                 {
+                    if (!_context.Nodes[nodeID].Moveable) continue;
                     _context.Nodes[nodeID].Position = nodeTransform.position;
                     _context.Nodes[nodeID].Dirty = true;
                     _context.Communities[_context.Nodes[nodeID].CommunityID].Dirty = true;
@@ -853,6 +855,7 @@ namespace VidiGraph
 
                     foreach (var (nodeID, nodeTransform) in nodeIDs.Zip(nodeTransforms, Tuple.Create))
                     {
+                        if (!_context.Nodes[nodeID].Moveable) continue;
                         nodeTransform.RotateAround(lastCommPosition, axis, angle);
 
                         nodeTransform.position += diff;
@@ -908,6 +911,7 @@ namespace VidiGraph
                     {
                         foreach (var (nodeID, nodeTransform) in nodeIDs[commID].Zip(nodeTransforms[commID], Tuple.Create))
                         {
+                            if (!_context.Nodes[nodeID].Moveable) continue;
                             nodeTransform.RotateAround(lastCommPosition, axis, angle);
 
                             nodeTransform.position += diff;
@@ -956,6 +960,7 @@ namespace VidiGraph
 
                     foreach (var (nodeID, nodeTransform) in nodeIDs.Zip(nodeTransforms, Tuple.Create))
                     {
+                        if (!_context.Nodes[nodeID].Moveable) continue;
                         nodeTransform.RotateAround(lastNetwPosition, axis, angle);
 
                         nodeTransform.position += diff;

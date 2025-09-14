@@ -127,7 +127,7 @@ namespace VidiGraph
 
             _multiLayoutNetwork.SetStorageUpdateCallback(UpdateStorage);
 
-            _surfaceManager = GameObject.Find("Surface Manager").GetComponent<SurfaceManager>();
+            _surfaceManager = GameObject.Find("Surface Manager")?.GetComponent<SurfaceManager>();
         }
 
         public void Initialize()
@@ -451,6 +451,7 @@ namespace VidiGraph
             UpdateOptions();
         }
 
+        // TODO figure out a system to exclude main graph from normal graph operations
         public void StartMLNodeMove(string nodeGUID)
         {
             StartMLNodesMove(new string[] { nodeGUID });
@@ -533,6 +534,7 @@ namespace VidiGraph
         public void EndMLCommsFollow()
         {
             CoroutineUtils.StopIfRunning(this, ref _transformMoverCR);
+            UpdateHandheld();
         }
 
         public void StartMLNetworkMove(int subnetworkID)
@@ -548,6 +550,7 @@ namespace VidiGraph
         public void EndMLNetworksMove()
         {
             foreach (var subn in _allNetworks.Values) subn.EndNetworkMove();
+            UpdateHandheld();
         }
 
         public void EndMLNetworksMove(int subnetworkID = 0)
@@ -826,13 +829,17 @@ namespace VidiGraph
 
             OnSubnetworkCreate?.Invoke(subn);
 
-            var surfID = _surfaceManager.SpawnSurfaceFromPointer();
+            // only create a surface if we're using surfaces
+            if (_surfaceManager != null)
+            {
+                var surfID = _surfaceManager.SpawnSurfaceFromPointer();
 
-            // TODO only unselect originally selected nodes
-            // SetSelectedNodes(nodeIDs, false, sourceSubnetworkID);
-            ClearSelection();
+                // TODO only unselect originally selected nodes
+                // SetSelectedNodes(nodeIDs, false, sourceSubnetworkID);
+                ClearSelection();
 
-            _surfaceManager.AttachNodes(subn.Context.NodeGUIDToID.Keys, surfID);
+                _surfaceManager.AttachNodes(subn.Context.NodeGUIDToID.Keys, surfID);
+            }
 
             return subn.Context;
         }
@@ -1315,7 +1322,7 @@ namespace VidiGraph
             Dictionary<int, HashSet<int>> subnToSelNodes = new();
             Dictionary<int, HashSet<int>> subnToSelComms = new();
 
-            for (int curSubn = 0; curSubn < _allNetworks.Count; curSubn++)
+            foreach (var curSubn in _allNetworks.Keys)
             {
                 var selNodes = SubnSelectedNodes(curSubn);
                 if (selNodes.Count != 0)
@@ -1430,13 +1437,34 @@ namespace VidiGraph
             }).SelectMany(i => i);
         }
 
+        IEnumerable<string> GetMoveableNodes(IEnumerable<string> nodeGUIDs)
+        {
+            List<string> moveableNodeGUIDs = new();
+
+            foreach (var (netwID, nodeIDs) in SortNodeGUIDs(nodeGUIDs))
+            {
+                foreach (var nodeID in nodeIDs)
+                {
+                    var node = _allNetworks[netwID].Context.Nodes[nodeID];
+                    if (node.Moveable)
+                    {
+                        moveableNodeGUIDs.Add(node.GUID);
+                    }
+                }
+            }
+
+            return moveableNodeGUIDs;
+        }
+
         IEnumerator CRNodesFollow(string toFollowGUID, IEnumerable<string> nodeGUIDs)
         {
             Vector3 prevPosition = Vector3.positiveInfinity;
             Quaternion prevRotation = Quaternion.identity;
 
             var grabbedTransform = GetMLNodeTransform(toFollowGUID);
-            var otherTransforms = nodeGUIDs.Where(nguid => nguid != toFollowGUID).Select(nguid => GetMLNodeTransform(nguid));
+            var moveableNodeGUIDs = GetMoveableNodes(nodeGUIDs.Where(nguid => nguid != toFollowGUID));
+            var otherTransforms = moveableNodeGUIDs.Select(nguid => GetMLNodeTransform(nguid));
+
 
             while (true)
             {
