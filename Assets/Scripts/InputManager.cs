@@ -192,7 +192,7 @@ public class InputManager : MonoBehaviour
 
         var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
         TimerUtils.StartTime("SetWorkingSubgraph");
-        _networkManager.CreateWorkingSubgraph(_networkManager.SortNodeGUIDs(nodes)[0]);
+        _networkManager.CreateWorkingSubgraph(_networkManager.SortNodeGUIDs(nodes)[0], "Select smokers", "Select smokers");
         TimerUtils.EndTime("SetWorkingSubgraph");
     }
 
@@ -206,7 +206,7 @@ public class InputManager : MonoBehaviour
 
         var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
         TimerUtils.StartTime("SetWorkingSubgraph");
-        _networkManager.CreateWorkingSubgraph(_networkManager.SortNodeGUIDs(nodes)[0]);
+        _networkManager.CreateWorkingSubgraph(_networkManager.SortNodeGUIDs(nodes)[0], "Select females", "Select females");
         TimerUtils.EndTime("SetWorkingSubgraph");
     }
 

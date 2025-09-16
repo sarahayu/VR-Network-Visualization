@@ -217,6 +217,7 @@ def classify():
 
         print_colored(f"Result from langgraph: {result}", 'green')
         return jsonify({
+            "input": result.get("input", ""),
             "queries": result.get("code_list", []),
             "actions": result.get("action_queue", []),
             "clarify": result.get("clarify", ""),

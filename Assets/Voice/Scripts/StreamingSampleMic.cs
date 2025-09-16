@@ -215,7 +215,17 @@ namespace Whisper.Samples
                                 text.text += $"\n<size=18><color=#aaa>{query[0]}</color></size>";
                                 var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query[0]);
                                 TimerUtils.StartTime("SetSelectedNodes");
-                                _networkManager.SetSelectedNodes(nodes, true);
+                                if (_networkManager.OnQueryMode)
+                                {
+                                    // have to convert GUIDs to IDs to create a working subgraph
+                                    var nodeIDs = _networkManager.SortNodeGUIDs(nodes)[NetworkManager.MainNetworkID];
+                                    _networkManager.CreateWorkingSubgraph(nodeIDs, classification.input, classification.input);
+                                    _networkManager.SetQueryMode(false);
+                                }
+                                else
+                                {
+                                    _networkManager.SetWorkingSelectedNodes(nodes, true);
+                                }
                                 TimerUtils.EndTime("SetSelectedNodes");
                                 break;
                             case "selectLink":
@@ -223,7 +233,7 @@ namespace Whisper.Samples
                                 text.text += $"\n<size=18><color=#aaa>{query[0]}</color></size>";
                                 var links = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, query[0]);
                                 TimerUtils.StartTime("SetSelectedLinks");
-                                _networkManager.SetSelectedLinks(links, true);
+                                _networkManager.SetWorkingSelectedLinks(links, true);
                                 TimerUtils.EndTime("SetSelectedLinks");
                                 break;
                             case "deselect":
@@ -234,28 +244,28 @@ namespace Whisper.Samples
                                 break;
                             case "move":
                                 Debug.Log("Moving selected nodes");
-                                var nodes_move = _networkManager.SelectedNodeGUIDs;
+                                var nodes_move = _networkManager.WorkingSelectedNodeGUIDs;
                                 TimerUtils.StartTime("Move Nodes");
                                 _networkManager.BringMLNodes(nodes_move);
                                 TimerUtils.EndTime("Move Nodes");
                                 break;
                             case "layout":
                                 Debug.Log("Changing layout to: " + action[0][1]);
-                                var comms = _networkManager.SelectedCommunityGUIDs;
+                                var comms = _networkManager.WorkingSelectedCommunityGUIDs;
                                 TimerUtils.StartTime("Layout Change");
                                 _networkManager.SetMLLayout(comms, action[0][1]);
                                 TimerUtils.EndTime("Layout Change");
                                 break;
                             case "colorNode":
                                 Debug.Log("Changing color of selected nodes to: " + action[0][1]);
-                                var nodes_color = _networkManager.SelectedNodeGUIDs;
+                                var nodes_color = _networkManager.WorkingSelectedNodeGUIDs;
                                 TimerUtils.StartTime("SetColor");
                                 _networkManager.SetMLNodesColor(nodes_color, action[0][1]); // Hardcoded to red for now
                                 TimerUtils.EndTime("SetColor");
                                 break;
                             case "colorLink":
                                 Debug.Log("Changing color of selected links to: " + action[0][1]);
-                                var links_color = _networkManager.SelectedLinkGUIDs;
+                                var links_color = _networkManager.WorkingSelectedLinkGUIDs;
                                 TimerUtils.StartTime("SetColor");
                                 _networkManager.SetMLLinksColorStart(links_color, action[0][1]); // Hardcoded to red for now
                                 _networkManager.SetMLLinksColorEnd(links_color, action[0][1]); // Hardcoded to red for now
@@ -298,6 +308,7 @@ public class ClassificationRequest
 [System.Serializable]
 public class ClassificationResponse
 {
+    public string input;
     public string[] queries;
     public string clarify;
     public Timing timings;

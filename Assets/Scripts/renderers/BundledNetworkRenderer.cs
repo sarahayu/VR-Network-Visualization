@@ -75,6 +75,16 @@ namespace VidiGraph
             UpdateRenderElements();
         }
 
+        public override void Destroy()
+        {
+            GameObjectUtils.ChildrenDestroy(transform);
+            _nodeGameObjs.Clear();
+            _linkGameObjs.Clear();
+            _communityGameObjs.Clear();
+
+            // TODO release shader resources
+        }
+
         public override void UpdateRenderElements()
         {
             UpdateNodes();

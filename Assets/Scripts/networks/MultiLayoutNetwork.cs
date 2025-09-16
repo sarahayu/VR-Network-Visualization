@@ -9,6 +9,9 @@ namespace VidiGraph
 {
     public class MultiLayoutNetwork : NodeLinkNetwork
     {
+        // for now, only one multilayoutnetwork shall exist and it is the main network in the scene
+        public const int InstanceID = 0;
+
         // keep a reference to sphericallayout to focus on individual communities
         SphericalLayoutTransformer _sphericalLayoutTransformer;
 
@@ -28,7 +31,7 @@ namespace VidiGraph
 
         public void Initialize()
         {
-            _id = 0;
+            _id = InstanceID;
             GetManager();
 
             InitContext();

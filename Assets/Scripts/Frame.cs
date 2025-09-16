@@ -15,8 +15,6 @@ namespace VidiGraph
         void Start()
         {
             OrigColor = GameObjectUtils.GetColor(gameObject.GetNamedChild("Wood"));
-
-            Debug.Log(OrigColor.ToString());
         }
 
         public void SetColor(Color color, float alpha = -1)

@@ -1,11 +1,8 @@
 # TODO
 
 - trash can/optinons
-- footprint and more spherical wall (offset center of room)
-- description/summary beneath pictures
 - option for 3d pictures
 - update wall frames on subnetwork update
-- don't register main subnetwork and frame network in database
 
 - figure out a system to exclude main graph from normal graph operations
 - show link directionality
@@ -131,11 +128,14 @@
 - forcedir
 - when user creates subgraph, hang 2d on wall as picture
 - disable selecting on main network
+- footprint and more spherical wall (offset center of room)
+- description/summary beneath pictures
 
 ## Ignore
 - move node moving animation to mln
 - fix priority select: probably there's a max to hovered items, and further items just don't get registered. solution: minimize number of possible hoverables, in this case, shrinkwrapping cluster size
 - add position to subgraph context
+- don't register main subnetwork and frame network in database
 
 ## Troubleshooting
 
