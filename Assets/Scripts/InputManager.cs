@@ -161,7 +161,7 @@ public class InputManager : MonoBehaviour
     {
         RightPrimaryListener?.Invoke();
 
-        CallTestingFunctionWork1();
+        // CallTestingFunctionWork1();
 
         // if (_surfaceManager.CurHoveredSurface == -1)
         //     _surfaceManager.SpawnSurfaceFromPointer();
@@ -173,7 +173,7 @@ public class InputManager : MonoBehaviour
     {
         RightSecondaryListener?.Invoke();
 
-        CallTestingFunctionWork2();
+        // CallTestingFunctionWork2();
     }
 
     void RightJoystickClickAction()

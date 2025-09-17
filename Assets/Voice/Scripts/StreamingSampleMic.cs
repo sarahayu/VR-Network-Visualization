@@ -60,6 +60,7 @@ namespace Whisper.Samples
 
             microphoneRecord.OnRecordStop += OnRecordStop;
             button.onClick.AddListener(OnButtonPressed);
+                microphoneRecord.StartRecord();
 
 
             CommandPress.EnableDirectActionIfModeUsed();
@@ -72,7 +73,6 @@ namespace Whisper.Samples
             {
                 Debug.Log("calling on button press");
                 // Start listening
-                microphoneRecord.StartRecord();
                 _stream.StartStream();
                 whisperStartTime = Time.time; // record start time
 
@@ -88,7 +88,6 @@ namespace Whisper.Samples
                 Debug.Log("calling on button release");
                 // Stop listening
                 _stream.StopStream();
-                microphoneRecord.StopRecord();
 
                 MaterialPropertyBlock props = new MaterialPropertyBlock();
 
