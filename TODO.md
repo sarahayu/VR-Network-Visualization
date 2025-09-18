@@ -1,6 +1,8 @@
 # TODO
 
-- trash can/optinons
+- render hovered/selected links on top somehow?
+- highlight by outline?
+
 - option for 3d pictures
 - update wall frames on subnetwork update
 
@@ -130,6 +132,7 @@
 - disable selecting on main network
 - footprint and more spherical wall (offset center of room)
 - description/summary beneath pictures
+- trash can/optinons
 
 ## Ignore
 - move node moving animation to mln

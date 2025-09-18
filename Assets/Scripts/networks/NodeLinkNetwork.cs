@@ -9,8 +9,6 @@ namespace VidiGraph
 {
     public class NodeLinkNetwork : Network
     {
-        public MultiLayoutContext.Settings BaseSettings;
-
         // TODO restrict edit access
         public MultiLayoutContext Context { get { return _context; } }
 
@@ -654,13 +652,6 @@ namespace VidiGraph
         {
             Debug.Log(GameObject.Find("/Network Manager"));
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-        }
-
-        protected void InitContext()
-        {
-            _context = new MultiLayoutContext(subnetworkID: 0, useShell: false);
-            _context.SetFromGlobal(_manager.NetworkGlobal, _manager.FileLoader.SphericalLayout);
-            _context.ContextSettings = BaseSettings;
         }
 
         protected void InitRenderer()

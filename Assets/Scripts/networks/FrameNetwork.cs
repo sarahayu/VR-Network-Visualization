@@ -31,7 +31,6 @@ namespace VidiGraph
         public void UpdateContext(MultiLayoutContext sourceContext)
         {
             _context.SetFromContext(_manager.NetworkGlobal, sourceContext, sourceContext.Nodes.Keys);
-            _context.ContextSettings = BaseSettings;
 
             var relScale = GetComponentInChildren<WorldTransformTransformer>().transform.lossyScale.x;
 

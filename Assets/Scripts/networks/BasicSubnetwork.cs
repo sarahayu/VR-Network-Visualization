@@ -8,6 +8,9 @@ namespace VidiGraph
 {
     public class BasicSubnetwork : NodeLinkNetwork
     {
+        [SerializeField] bool _overrideContextSettings;
+        [SerializeField] MultiLayoutContext.Settings _settings;
+
         void Update()
         {
             Draw();
@@ -21,7 +24,9 @@ namespace VidiGraph
             InitTransformers();
 
             // apply initial transformations before first render so we don't get a weird jump
-            // TransformNetworkNoRender("encoding");
+
+            if (_overrideContextSettings)
+                TransformNetworkNoRender("encoding");
             SetLinksBundlingStrength(_context.Links.Keys, 0f, updateStorage: true, updateRenderElements: false);
             // TransformNetworkNoRender("edit");
 
@@ -44,7 +49,12 @@ namespace VidiGraph
         {
             _context = new MultiLayoutContext(subnetworkID: _id, useShell);
             _context.SetFromContext(_manager.NetworkGlobal, sourceContext, nodeIDs);
-            _context.ContextSettings = BaseSettings;
+
+            if (_overrideContextSettings)
+            {
+                _context.ContextSettings = _settings;
+                _context.SetDefaultEncodings(null, null);
+            }
         }
     }
 }

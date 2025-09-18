@@ -9,6 +9,7 @@ namespace VidiGraph
 {
     public class MultiLayoutNetwork : NodeLinkNetwork
     {
+        public MultiLayoutContext.Settings BaseSettings;
         // for now, only one multilayoutnetwork shall exist and it is the main network in the scene
         public const int InstanceID = 0;
 
@@ -107,6 +108,13 @@ namespace VidiGraph
                 updateRenderElements: updateRenderElements
             ));
 
+        }
+
+        void InitContext()
+        {
+            _context = new MultiLayoutContext(subnetworkID: 0, useShell: false);
+            _context.SetFromGlobal(_manager.NetworkGlobal, _manager.FileLoader.SphericalLayout);
+            _context.ContextSettings = BaseSettings;
         }
 
         protected override void PreprocLayoutChange(int commID, string layout)

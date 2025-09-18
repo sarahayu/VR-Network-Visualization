@@ -290,6 +290,8 @@ namespace VidiGraph
             GetLinkBundleStart = otherContext.GetLinkBundleStart;
             GetLinkBundleEnd = otherContext.GetLinkBundleEnd;
             GetLinkAlpha = otherContext.GetLinkAlpha;
+
+            ContextSettings = otherContext.ContextSettings;
         }
 
         // public void SetFromGlobal(NetworkGlobal networkGlobal, NetworkFileData networkFile, IEnumerable<int> nodeIDs, int subnetworkID = 0)
@@ -464,9 +466,7 @@ namespace VidiGraph
             SetSelectedNetwork(false);
         }
 
-        /*=============== start private methods ===================*/
-
-        void SetDefaultEncodings(NetworkGlobal networkGlobal, NetworkFileData networkFile)
+        public void SetDefaultEncodings(NetworkGlobal networkGlobal, NetworkFileData networkFile)
         {
             // // Bully data
             // GetNodeSize = _ => 1f;
@@ -518,6 +518,9 @@ namespace VidiGraph
             GetLinkBundleEnd = _ => true;
             GetLinkAlpha = _ => ContextSettings.LinkNormalAlphaFactor;
         }
+
+        /*=============== start private methods ===================*/
+
 
         Color GetColor(int commID, Dictionary<int, VidiGraph.Community> comms)
         {

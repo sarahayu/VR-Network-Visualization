@@ -323,10 +323,10 @@ namespace VidiGraph
         {
             if (_curWorkingSubgraph != -1) HideSubnetwork(_curWorkingSubgraph);
 
-            var newSubnID = CreateSubnetwork(nodeIDs,
+            var newSubn = CreateSubnetwork(nodeIDs,
                     useShell: false,
-                    sourceSubnetworkID: _multiLayoutNetwork.ID)
-                .SubnetworkID;
+                    sourceSubnetworkID: _multiLayoutNetwork.ID);
+            var newSubnID = newSubn.SubnetworkID;
 
             _queryTextMap[newSubnID] = query;
 
@@ -335,7 +335,7 @@ namespace VidiGraph
                 displayName: $"{name}",
                 onClick: _ =>
                 {
-                    SwitchToSubnetwork(newSubnID);
+                    ToggleSubnetwork(newSubnID);
                 }
             );
 
@@ -932,6 +932,27 @@ namespace VidiGraph
             _queryText.text = _queryTextMap[subnetworkID];
 
             _curWorkingSubgraph = subnetworkID;
+        }
+
+        public void ToggleSubnetwork(int subnetworkID)
+        {
+            // currently selected, so unselect it
+            if (_curWorkingSubgraph == subnetworkID)
+            {
+                HideSubnetwork(_curWorkingSubgraph);
+                _framesArea.Frames[_curWorkingSubgraph].SetSelect(false);
+
+                _multiLayoutNetwork.ClearSelection();
+                _multiLayoutNetwork.UpdateSelectedElements();
+
+                _curWorkingSubgraph = -1;
+                _queryText.text = _queryTextMap[_curWorkingSubgraph];
+            }
+            // currently unselected, so select it
+            else
+            {
+                SwitchToSubnetwork(subnetworkID);
+            }
         }
 
         public MultiLayoutContext CreateSurfSubnetwork(IEnumerable<int> nodeIDs, out int surfaceID, int sourceSubnetworkID = MainNetworkID)
