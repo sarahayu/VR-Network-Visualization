@@ -25,6 +25,7 @@ namespace Whisper.Samples
         public DatabaseStorage _databaseStorage;
         public LoadingIcon loadingIcon;
         public Query _query;
+        public AudioSource audioSource;
 
         [Header("UI")]
         public Button button;
@@ -75,6 +76,8 @@ namespace Whisper.Samples
                 microphoneRecord.StartRecord();
                 _stream.StartStream();
                 whisperStartTime = Time.time; // record start time
+                // play start speaking audio
+                audioSource.Play();
 
 
                 MaterialPropertyBlock props = new MaterialPropertyBlock();
