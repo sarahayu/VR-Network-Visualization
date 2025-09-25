@@ -4,6 +4,7 @@ using UnityEngine.Networking;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using TMPro;
 using Whisper.Utils;
 
 using VidiGraph;
@@ -36,6 +37,8 @@ namespace Whisper.Samples
         public Text buttonText;
         public Text text;
         public ScrollRect scroll;
+        public GameObject command_prefab;
+        public GameObject command_parent;
 
         // Reference to the whisper stream
         private WhisperStream _stream;
@@ -210,6 +213,10 @@ namespace Whisper.Samples
                         var action = classification.actions;
                         Debug.Log("Action: " + action);
                         Debug.Log("Cypher Query: " + query);
+
+                        var new_command = Instantiate(command_prefab, command_parent.transform);
+                        var command_text = new_command.GetComponent<TMP_Text>();
+                        command_text.text = recognizedText;
 
                         switch (action[0][0])
                         {

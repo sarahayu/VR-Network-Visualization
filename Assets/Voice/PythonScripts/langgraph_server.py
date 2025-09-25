@@ -91,7 +91,9 @@ ambiguity_prompt = ChatPromptTemplate.from_template(
     "Decide whether the following user input is ambiguous for generating corresponding graph commands or not. \
     Voice detection might have mistakes such as color 'rate' actually refer to color 'red'. \
     Try to get the correct meaning, do not see these pronunciation mistakes as ambiguous. \
-    Reply with only 'yes' if it is ambiguous and 'no' if it is clear.\n\n User input: {input}"
+    Reply with only 'yes' if it is ambiguous and 'no' if it is clear.\
+    If the user did not mention which node they're interacting with, assume it's the selected community or node if there's selected one. \
+    \n\n User input: {input}"
 )
 
 
