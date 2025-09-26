@@ -21,8 +21,6 @@ namespace VidiGraph
         [SerializeField] OptionsMenu _optionsMenu;
         [SerializeField] FramesArea _framesArea;
         [SerializeField] GameObject _queryIndic;
-        [SerializeField] TextMeshPro _queryText;
-
         Dictionary<int, BasicSubnetwork> _subnetworks = new();
         Dictionary<int, NodeLinkNetwork> _allNetworks = new();
 
@@ -929,7 +927,6 @@ namespace VidiGraph
 
             ShowSubnetwork(subnetworkID);
             _framesArea.Frames[subnetworkID].SetSelect(true);
-            _queryText.text = _queryTextMap[subnetworkID];
 
             _curWorkingSubgraph = subnetworkID;
         }
@@ -946,7 +943,6 @@ namespace VidiGraph
                 _multiLayoutNetwork.UpdateSelectedElements();
 
                 _curWorkingSubgraph = -1;
-                _queryText.text = _queryTextMap[_curWorkingSubgraph];
             }
             // currently unselected, so select it
             else
@@ -1071,7 +1067,6 @@ namespace VidiGraph
             else
             {
                 _curWorkingSubgraph = -1;
-                _queryText.text = _queryTextMap[_curWorkingSubgraph];
             }
 
             var frame = _framesArea.Frames[toRemove];

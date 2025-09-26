@@ -63,8 +63,8 @@ namespace Whisper.Samples
             _stream.OnStreamFinished += OnFinished;
 
             microphoneRecord.OnRecordStop += OnRecordStop;
-            button.onClick.AddListener(OnButtonPressed);
-                microphoneRecord.StartRecord();
+            button?.onClick.AddListener(OnButtonPressed);
+            microphoneRecord.StartRecord();
 
 
             CommandPress.EnableDirectActionIfModeUsed();
