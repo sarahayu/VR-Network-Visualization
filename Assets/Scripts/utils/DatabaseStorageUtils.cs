@@ -385,7 +385,8 @@ namespace VidiGraph
                 var nodes = res.Select(r => r[0].As<INode>().Properties["GUID"].As<string>());
                 TimerUtils.EndTime("res.Select");
 
-                return nodes;
+                // IMPORTANT: convert enumerable to list to allow multiple traversals, since IResult can only be traversed once
+                return nodes.ToList();
             }
             catch (Exception e)
             {
@@ -411,7 +412,8 @@ namespace VidiGraph
                 var links = res.Select(r => r[0].As<IRelationship>().Properties["GUID"].As<string>());
                 TimerUtils.EndTime("res.Select");
 
-                return links;
+                // IMPORTANT: convert enumerable to list to allow multiple traversals, since IResult can only be traversed once
+                return links.ToList();
             }
             catch (Exception e)
             {

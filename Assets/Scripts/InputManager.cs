@@ -31,7 +31,7 @@ public class InputManager : MonoBehaviour
     [SerializeField] GameObject _rightController;
     [SerializeField] GameObject _leftController;
 
-    [SerializeField] NodeLinkNetworkInput _mlInput;
+    [SerializeField] TactileEditInteraction _mlInput;
 
     public XRInputButtonReader LeftGrip { get => _leftGrip; }
     public XRInputButtonReader LeftTrigger { get => _leftTrigger; }
@@ -61,6 +61,8 @@ public class InputManager : MonoBehaviour
 
     NetworkManager _networkManager;
     SurfaceManager _surfaceManager;
+    DatabaseStorage _databaseStorage;
+
 
     void OnEnable()
     {
@@ -81,7 +83,8 @@ public class InputManager : MonoBehaviour
     void Start()
     {
         _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-        _surfaceManager = GameObject.Find("/Surface Manager").GetComponent<SurfaceManager>();
+        _surfaceManager = GameObject.Find("/Surface Manager")?.GetComponent<SurfaceManager>();
+        _databaseStorage = GameObject.Find("/Database")?.GetComponent<DatabaseStorage>();
     }
 
     void Update()
@@ -109,7 +112,7 @@ public class InputManager : MonoBehaviour
     void LeftGripAction()
     {
         LeftGripListener?.Invoke();
-        _networkManager.ToggleBigNetworkSphericalAndHairball();
+        // _networkManager.ToggleBigNetworkSphericalAndHairball();
     }
 
     void LeftTriggerAction()
@@ -158,15 +161,57 @@ public class InputManager : MonoBehaviour
     {
         RightPrimaryListener?.Invoke();
 
-        if (_surfaceManager.CurHoveredSurface == -1)
-            _surfaceManager.SpawnSurfaceFromPointer();
-        else
-            _surfaceManager.DeleteSurface(_surfaceManager.CurHoveredSurface);
+        // CallTestingFunctionWork1();
+
+        // if (_surfaceManager.CurHoveredSurface == -1)
+        //     _surfaceManager.SpawnSurfaceFromPointer();
+        // else
+        //     _surfaceManager.DeleteSurface(_surfaceManager.CurHoveredSurface);
     }
 
     void RightSecondaryAction()
     {
         RightSecondaryListener?.Invoke();
+
+        // CallTestingFunctionWork2();
+    }
+
+    void RightJoystickClickAction()
+    {
+        RightJoystickClickListener?.Invoke();
+
+    }
+
+    void CallTestingFunctionWork1()
+    {
+        if (_databaseStorage == null) return;
+
+        string query = "MATCH (n: Node {smoker: TRUE}) return n";
+
+        Debug.Log("Selecting nodes with query: " + query);
+
+        var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
+        TimerUtils.StartTime("SetWorkingSubgraph");
+        _networkManager.CreateWorkingSubgraph(_networkManager.SortNodeGUIDs(nodes)[0], "Select smokers", "Select smokers");
+        TimerUtils.EndTime("SetWorkingSubgraph");
+    }
+
+    void CallTestingFunctionWork2()
+    {
+        if (_databaseStorage == null) return;
+
+        string query = "MATCH (n: Node {sex: \"female\"}) return n";
+
+        Debug.Log("Selecting nodes with query: " + query);
+
+        var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
+        TimerUtils.StartTime("SetWorkingSubgraph");
+        _networkManager.CreateWorkingSubgraph(_networkManager.SortNodeGUIDs(nodes)[0], "Select females", "Select females");
+        TimerUtils.EndTime("SetWorkingSubgraph");
+    }
+
+    void CallTestingFunctionSelect()
+    {
         var nodeIDs1 = _networkManager.NetworkGlobal.RealNodes.GetRange(0, 10);
         var nodeIDs2 = _networkManager.NetworkGlobal.RealNodes.GetRange(10, 10);
         var linkIDs1 = _networkManager.NetworkGlobal.Links.Values.ToList().GetRange(0, 10).Select(l => l.ID);
@@ -179,12 +224,4 @@ public class InputManager : MonoBehaviour
         _networkManager.SetMLLinksColorEnd(linkIDs1, "#00FFFF");
         _networkManager.SetMLLinksAlpha(linkIDs2, 0.4f);
     }
-
-    void RightJoystickClickAction()
-    {
-        Debug.Log("right joystick click");
-        RightJoystickClickListener?.Invoke();
-
-    }
-
 }

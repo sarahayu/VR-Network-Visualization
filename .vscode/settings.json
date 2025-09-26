@@ -57,5 +57,8 @@
     "editor.defaultFormatter": "ms-dotnettools.csharp",
     "[shaderlab]": {
         "editor.defaultFormatter": "litefeel.shaderlabformatter"
+    },
+    "[csharp]": {
+        "editor.defaultFormatter": "dotnetdev-kr-custom.csharp"
     }
 }

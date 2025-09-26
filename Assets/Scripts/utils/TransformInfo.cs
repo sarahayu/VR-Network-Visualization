@@ -32,9 +32,9 @@ public class TransformInfo
 
     public void SetFromTransform(Transform trans)
     {
-        position = trans.localPosition;
-        rotation = trans.localRotation;
-        scale = trans.localScale;
+        position = trans.position;
+        rotation = trans.rotation;
+        scale = trans.lossyScale;
     }
 
     public void SetFromTransform(TransformInfo trans)

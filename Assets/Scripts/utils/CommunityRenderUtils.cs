@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using GK;
 using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit.Transformers;
 
 namespace VidiGraph
 {
@@ -15,6 +16,9 @@ namespace VidiGraph
             MultiLayoutContext.Community commProps)
         {
             GameObject commObj = UnityEngine.Object.Instantiate(prefab, transform);
+
+            if (commProps.Moveable) commObj.GetComponent<XRGeneralGrabTransformer>().enabled = true;
+            else commObj.GetComponent<XRGeneralGrabTransformer>().enabled = false;
 
             // community won't be selected anyways so just set select color to transparent
             return UpdateCommunity(commObj, commProps, false, Color.clear);
@@ -29,11 +33,7 @@ namespace VidiGraph
             if (!renderer)
                 renderer = commObj.GetComponentInChildren<Renderer>();
 
-            MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-            renderer.GetPropertyBlock(props);
-            props.SetColor("_Color", selected ? selectColor : new Color(0f, 0f, 0f, 0f));
-            renderer.SetPropertyBlock(props);
+            GameObjectUtils.SetColor(renderer, selected ? selectColor : new Color(0f, 0f, 0f, 0f));
 
             // have to modify mesh to account for rotation due to grabbing events
             var invRot = Quaternion.Inverse(commObj.transform.rotation);
@@ -53,11 +53,7 @@ namespace VidiGraph
             if (!renderer)
                 renderer = commObj.GetComponentInChildren<Renderer>();
 
-            MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-            renderer.GetPropertyBlock(props);
-            props.SetColor("_Color", color);
-            renderer.SetPropertyBlock(props);
+            GameObjectUtils.SetColor(renderer, color);
 
             return commObj;
         }
@@ -80,11 +76,7 @@ namespace VidiGraph
             if (!renderer)
                 renderer = commObj.GetComponentInChildren<Renderer>();
 
-            MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-            renderer.GetPropertyBlock(props);
-            props.SetColor("_Color", selected ? selectColor : new Color(0f, 0f, 0f, 0f));
-            renderer.SetPropertyBlock(props);
+            GameObjectUtils.SetColor(renderer, selected ? selectColor : new Color(0f, 0f, 0f, 0f));
 
             // have to modify mesh to account for rotation due to grabbing events
             var invRot = Quaternion.Inverse(commObj.transform.rotation);
@@ -104,11 +96,7 @@ namespace VidiGraph
             if (!renderer)
                 renderer = networkObj.GetComponentInChildren<Renderer>();
 
-            MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-            renderer.GetPropertyBlock(props);
-            props.SetColor("_Color", color);
-            renderer.SetPropertyBlock(props);
+            GameObjectUtils.SetColor(renderer, color);
 
             return networkObj;
         }

@@ -8,31 +8,34 @@ namespace VidiGraph
 {
     public class BasicSubnetwork : NodeLinkNetwork
     {
-
-        NodeLinkNetworkInput _input;
-
-        static int _idCounter = 1;
+        [SerializeField] bool _overrideContextSettings;
+        [SerializeField] MultiLayoutContext.Settings _settings;
 
         void Update()
         {
             Draw();
         }
 
-        public void Initialize(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext)
+        public void Initialize(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext, bool useShell = true)
         {
-            _id = _idCounter++;
             GetManager();
 
-            InitContext(nodeIDs, sourceContext);
-            InitInput();
+            InitContext(nodeIDs, sourceContext, useShell);
             InitTransformers();
 
             // apply initial transformations before first render so we don't get a weird jump
-            // TransformNetworkNoRender("encoding");
+
+            if (_overrideContextSettings)
+                TransformNetworkNoRender("encoding");
             SetLinksBundlingStrength(_context.Links.Keys, 0f, updateStorage: true, updateRenderElements: false);
             // TransformNetworkNoRender("edit");
 
             InitRenderer();
+        }
+
+        public void Destroy()
+        {
+            _renderer.Destroy();
         }
 
         public override void ReturnNodes(IEnumerable<int> nodeIDs, Action onFinished = null)
@@ -42,26 +45,16 @@ namespace VidiGraph
 
         /*=============== start private methods ===================*/
 
-        protected override void QueueLayoutChange(int commID, string layout)
+        void InitContext(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext, bool useShell)
         {
-            switch (layout)
-            {
-                case "hairball": _hairballLayoutTransformer.UpdateOnNextApply(commID); break;
-                default: break;
-            }
-        }
-
-        void InitContext(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext)
-        {
-            _context = new MultiLayoutContext(subnetworkID: _id, useShell: true);
+            _context = new MultiLayoutContext(subnetworkID: _id, useShell);
             _context.SetFromContext(_manager.NetworkGlobal, sourceContext, nodeIDs);
-            _context.ContextSettings = BaseSettings;
-        }
 
-        void InitInput()
-        {
-            _input = GetComponent<NodeLinkNetworkInput>();
-            _input.Initialize(ID);
+            if (_overrideContextSettings)
+            {
+                _context.ContextSettings = _settings;
+                _context.SetDefaultEncodings(null, null);
+            }
         }
     }
 }

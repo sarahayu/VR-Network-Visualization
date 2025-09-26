@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit.Transformers;
 
 namespace VidiGraph
 {
@@ -11,6 +12,9 @@ namespace VidiGraph
 
             nodeObj.GetComponent<MeshFilter>().sharedMesh = IcoSphere.Create(radius: 0.5f, detail: 1);
 
+            if (nodeProps.Moveable) nodeObj.GetComponent<XRGeneralGrabTransformer>().enabled = true;
+            else nodeObj.GetComponent<XRGeneralGrabTransformer>().enabled = false;
+
             return UpdateNode(nodeObj, node, nodeProps);
         }
         public static GameObject UpdateNode(GameObject nodeObj,
@@ -22,11 +26,7 @@ namespace VidiGraph
             if (!renderer)
                 renderer = nodeObj.GetComponentInChildren<Renderer>();
 
-            MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-            renderer.GetPropertyBlock(props);
-            props.SetColor("_Color", nodeProps.Color);
-            renderer.SetPropertyBlock(props);
+            GameObjectUtils.SetColor(renderer, nodeProps.Color);
 
             return nodeObj;
         }
@@ -35,11 +35,7 @@ namespace VidiGraph
             if (!renderer)
                 renderer = nodeObj.GetComponentInChildren<Renderer>();
 
-            MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-            renderer.GetPropertyBlock(props);
-            props.SetColor("_Color", color);
-            renderer.SetPropertyBlock(props);
+            GameObjectUtils.SetColor(renderer, color);
 
             return nodeObj;
         }
@@ -59,11 +55,7 @@ namespace VidiGraph
             if (!renderer)
                 renderer = nodeObj.GetComponentInChildren<Renderer>();
 
-            MaterialPropertyBlock props = new MaterialPropertyBlock();
-
-            renderer.GetPropertyBlock(props);
-            props.SetColor("_Color", nodeProps.Color);
-            renderer.SetPropertyBlock(props);
+            GameObjectUtils.SetColor(renderer, nodeProps.Color);
 
             return nodeObj;
         }

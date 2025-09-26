@@ -72,12 +72,6 @@ namespace VidiGraph
 
             _manager.OnSubnetworkCreate += subn => AttachListeners(subn);
             _manager.OnSubnetworkDestroy += subn => DetachListeners(subn);
-
-            var tablePos = GameObject.Find("/Table/Top").transform.position;
-            var surfOffset = new Vector3(0, 0.2f, 0.5f);
-            float surfAngle = 3f;
-
-            SpawnSurface(tablePos + surfOffset, Quaternion.AngleAxis(-surfAngle, Vector3.right));
         }
 
         class Listeners
@@ -232,7 +226,7 @@ namespace VidiGraph
             return closest;
         }
 
-        Vector3 GetMidpoint(IEnumerable<string> nodeGUIDs)
+        Vector3 GetMidpoint(ICollection<string> nodeGUIDs)
         {
             Vector3 pos = Vector3.zero;
             int count = 0;
@@ -250,11 +244,11 @@ namespace VidiGraph
         {
             if (!_surfaces.ContainsKey(surfID)) return;
 
-            var nGUIDs = nodeGUIDs.ToList();
+            var nodeGUIDsList = nodeGUIDs.ToList();
 
-            DetachNodes(nGUIDs);
+            DetachNodes(nodeGUIDsList);
 
-            foreach (var nodeGUID in nGUIDs)
+            foreach (var nodeGUID in nodeGUIDsList)
             {
                 _surfaces[surfID].Nodes[nodeGUID] = _manager.GetMLNodeTransform(nodeGUID);
                 _nodeToSurf[nodeGUID] = surfID;
@@ -274,7 +268,7 @@ namespace VidiGraph
             _manager.UnpauseRenderUpdate();
             // don't unpause storage update, it'll be updated at the end of animation
 
-            StartAttachAnim(nGUIDs, surfID);
+            StartAttachAnim(nodeGUIDsList, surfID);
         }
 
         public void DetachNodes(IEnumerable<string> nodeGUIDs)

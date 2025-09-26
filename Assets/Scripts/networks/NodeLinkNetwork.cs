@@ -9,9 +9,6 @@ namespace VidiGraph
 {
     public class NodeLinkNetwork : Network
     {
-        public int ID { get { return _id; } }
-        public MultiLayoutContext.Settings BaseSettings;
-
         // TODO restrict edit access
         public MultiLayoutContext Context { get { return _context; } }
 
@@ -56,7 +53,6 @@ namespace VidiGraph
         protected Coroutine _curAnim = null;
         protected Coroutine _curMover = null;
 
-        protected int _id;
 
         void Update()
         {
@@ -77,14 +73,15 @@ namespace VidiGraph
             TransformNetwork("highlight", animated: false);
         }
 
-        // layout = [spherical, cluster, floor]
+        // layout for MultiLayoutNetwork = [spherical, cluster, floor]
+        // layout for BasicSubnetwork = [forceddir]
         public void SetLayout(IEnumerable<int> commIDs, string layout, Action onFinished = null)
         {
             foreach (var commID in commIDs)
             {
                 _context.Communities[commID].State = MultiLayoutContext.StrToState(layout);
 
-                QueueLayoutChange(commID, layout);
+                PreprocLayoutChange(commID, layout);
             }
 
             TransformNetwork(layout, animated: true, onFinished: onFinished);
@@ -646,21 +643,15 @@ namespace VidiGraph
 
         /*=============== start protected methods ===================*/
 
-        protected virtual void QueueLayoutChange(int commID, string layout)
+        protected virtual void PreprocLayoutChange(int commID, string layout)
         {
             // override as needed
         }
 
         protected void GetManager()
         {
+            Debug.Log(GameObject.Find("/Network Manager"));
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
-        }
-
-        protected void InitContext()
-        {
-            _context = new MultiLayoutContext(subnetworkID: 0, useShell: false);
-            _context.SetFromGlobal(_manager.NetworkGlobal, _manager.FileLoader.SphericalLayout);
-            _context.ContextSettings = BaseSettings;
         }
 
         protected void InitRenderer()
@@ -671,7 +662,7 @@ namespace VidiGraph
 
         protected void Draw()
         {
-            _renderer.Draw();
+            _renderer?.Draw();
         }
 
         protected void InitTransformers()
@@ -694,6 +685,9 @@ namespace VidiGraph
 
             _transformers["highlight"] = GetComponentInChildren<HighlightTransformer>();
             _transformers["highlight"].Initialize(_manager.NetworkGlobal, _context);
+
+            _transformers["forcedDir"] = GetComponentInChildren<ForcedDirLayoutTransformer>();
+            _transformers["forcedDir"].Initialize(_manager.NetworkGlobal, _context);
         }
 
         protected void TransformNetwork(string transformer, bool animated = true, Action onFinished = null,
@@ -787,6 +781,7 @@ namespace VidiGraph
 
             while (true)
             {
+                if (!_context.Nodes[nodeID].Moveable) continue;
                 _context.Nodes[nodeID].Position = nodeTransform.position;
                 _context.Nodes[nodeID].Dirty = true;
                 _context.Communities[_context.Nodes[nodeID].CommunityID].Dirty = true;
@@ -810,6 +805,7 @@ namespace VidiGraph
             {
                 foreach (var (nodeID, nodeTransform) in nodeIDs.Zip(nodeTransforms, Tuple.Create))
                 {
+                    if (!_context.Nodes[nodeID].Moveable) continue;
                     _context.Nodes[nodeID].Position = nodeTransform.position;
                     _context.Nodes[nodeID].Dirty = true;
                     _context.Communities[_context.Nodes[nodeID].CommunityID].Dirty = true;
@@ -850,6 +846,7 @@ namespace VidiGraph
 
                     foreach (var (nodeID, nodeTransform) in nodeIDs.Zip(nodeTransforms, Tuple.Create))
                     {
+                        if (!_context.Nodes[nodeID].Moveable) continue;
                         nodeTransform.RotateAround(lastCommPosition, axis, angle);
 
                         nodeTransform.position += diff;
@@ -905,6 +902,7 @@ namespace VidiGraph
                     {
                         foreach (var (nodeID, nodeTransform) in nodeIDs[commID].Zip(nodeTransforms[commID], Tuple.Create))
                         {
+                            if (!_context.Nodes[nodeID].Moveable) continue;
                             nodeTransform.RotateAround(lastCommPosition, axis, angle);
 
                             nodeTransform.position += diff;
@@ -953,6 +951,7 @@ namespace VidiGraph
 
                     foreach (var (nodeID, nodeTransform) in nodeIDs.Zip(nodeTransforms, Tuple.Create))
                     {
+                        if (!_context.Nodes[nodeID].Moveable) continue;
                         nodeTransform.RotateAround(lastNetwPosition, axis, angle);
 
                         nodeTransform.position += diff;

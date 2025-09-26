@@ -21,12 +21,14 @@ namespace VidiGraph
         {
             _networkGlobal = networkGlobal;
             _networkContext = (MinimapContext)networkContext;
-            _surfaceManager = GameObject.Find("/Surface Manager").GetComponent<SurfaceManager>();
+            _surfaceManager = GameObject.Find("/Surface Manager")?.GetComponent<SurfaceManager>();
             _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
         }
 
         public override void ApplyTransformation()
         {
+            if (_surfaceManager == null) return;
+
             _networkContext.NodeRenderables.Clear();
 
             _networkContext.NodesDirty = true;
@@ -68,6 +70,7 @@ namespace VidiGraph
 
         public void PushSelectionEvent(IEnumerable<string> nodes)
         {
+            if (_surfaceManager == null) return;
             foreach (var nodeGUID in _nodeSelectionTimes.Keys.ToList()) _nodeSelectionTimes[nodeGUID] += 1;
             foreach (var nodeGUID in nodes) _nodeSelectionTimes[nodeGUID] = 0;
         }

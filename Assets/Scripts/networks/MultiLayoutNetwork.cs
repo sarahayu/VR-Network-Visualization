@@ -9,7 +9,9 @@ namespace VidiGraph
 {
     public class MultiLayoutNetwork : NodeLinkNetwork
     {
-        NodeLinkNetworkInput _input;
+        public MultiLayoutContext.Settings BaseSettings;
+        // for now, only one multilayoutnetwork shall exist and it is the main network in the scene
+        public const int InstanceID = 0;
 
         // keep a reference to sphericallayout to focus on individual communities
         SphericalLayoutTransformer _sphericalLayoutTransformer;
@@ -30,11 +32,10 @@ namespace VidiGraph
 
         public void Initialize()
         {
-            _id = 0;
+            _id = InstanceID;
             GetManager();
 
             InitContext();
-            InitInput();
             InitTransformers();
 
             // apply initial transformations before first render so we don't get a weird jump
@@ -56,7 +57,7 @@ namespace VidiGraph
             {
                 foreach (var commID in _context.Communities.Keys)
                 {
-                    QueueLayoutChange(commID, "spherical");
+                    PreprocLayoutChange(commID, "spherical");
                     _context.Communities[commID].State = MultiLayoutContext.CommunityState.None;
                 }
             }
@@ -109,7 +110,14 @@ namespace VidiGraph
 
         }
 
-        protected override void QueueLayoutChange(int commID, string layout)
+        void InitContext()
+        {
+            _context = new MultiLayoutContext(subnetworkID: 0, useShell: false);
+            _context.SetFromGlobal(_manager.NetworkGlobal, _manager.FileLoader.SphericalLayout);
+            _context.ContextSettings = BaseSettings;
+        }
+
+        protected override void PreprocLayoutChange(int commID, string layout)
         {
             switch (layout)
             {
@@ -118,12 +126,6 @@ namespace VidiGraph
                 case "spherical": _sphericalLayoutTransformer.UpdateCommOnNextApply(commID); break;
                 default: break;
             }
-        }
-
-        void InitInput()
-        {
-            _input = GetComponent<NodeLinkNetworkInput>();
-            _input.Initialize(0);
         }
 
         new void InitTransformers()

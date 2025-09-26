@@ -33,5 +33,41 @@ namespace VidiGraph
             toLerp.position = Vector3.Lerp(start.position, end.position, t);
             toLerp.scale = Vector3.Lerp(start.scale, end.scale, t);
         }
+
+        public static void SetColor(GameObject gameObject, Color color)
+        {
+            SetColor(gameObject.GetComponent<Renderer>(), color);
+        }
+
+        public static void SetColor(Renderer renderer, Color color)
+        {
+#if UNITY_EDITOR
+            // the below doesn't work if we want to color multiple nodes different colors
+            // renderer.sharedMaterial.color = color;
+
+            MaterialPropertyBlock props = new MaterialPropertyBlock();
+
+            renderer.GetPropertyBlock(props);
+            props.SetColor("_Color", color);
+            renderer.SetPropertyBlock(props);
+#elif UNITY_STANDALONE
+            renderer.material.color = color;
+#endif
+        }
+
+        public static Color GetColor(GameObject gameObject)
+        {
+            return GetColor(gameObject.GetComponent<Renderer>());
+        }
+
+        public static Color GetColor(Renderer renderer)
+        {
+#if UNITY_EDITOR
+            // I don't know if this will work for nodes of different colors...
+            return renderer.sharedMaterial.color;
+#elif UNITY_STANDALONE
+            return renderer.material.color;
+#endif
+        }
     }
 }

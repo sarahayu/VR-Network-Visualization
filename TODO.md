@@ -1,7 +1,13 @@
 # TODO
 
+- render hovered/selected links on top somehow?
+- highlight by outline?
+
+- option for 3d pictures
+- update wall frames on subnetwork update
+
+- figure out a system to exclude main graph from normal graph operations
 - show link directionality
-- trash can/optinons
 
 - make shells have facets, easier distance judgement
 - try to change shell to fit subgraph more
@@ -26,7 +32,7 @@
 - optimize reflection: https://stackoverflow.com/questions/7999652/best-way-to-cache-a-reflection-property-getter-setter
 
 
-- general code cleanup  
+- general code cleanup
 - when splatting to surface, account for random nodes that are not part of same community
 - move control point calculation to a transformer
     - keep bspline count constant
@@ -112,11 +118,27 @@
 - select subgraph nodes
 - transfer selection to new subnetwork
 - make surface based off nodes
+- wood floor
+    - 3 walls
+    - 1 spherical wall for spherical view
+    - ceiling (with fake light)
+    - room metaphor
+- instructions poster
+- user can select picture and blow it up into 3d version
+- call selection and dupe to space
+- picture goes to the right, then next picture goes to the right, history track (make sure to include arrows/lines to show sequence)
+- forcedir
+- when user creates subgraph, hang 2d on wall as picture
+- disable selecting on main network
+- footprint and more spherical wall (offset center of room)
+- description/summary beneath pictures
+- trash can/optinons
 
 ## Ignore
 - move node moving animation to mln
 - fix priority select: probably there's a max to hovered items, and further items just don't get registered. solution: minimize number of possible hoverables, in this case, shrinkwrapping cluster size
 - add position to subgraph context
+- don't register main subnetwork and frame network in database
 
 ## Troubleshooting
 
