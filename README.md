@@ -15,15 +15,24 @@ These are the tools used at our time of development, and by no means are hard re
 
 ### Install
 
-1. Install Neo4J
+1. Install Neo4J.
     - Go to their [download page](https://neo4j.com/deployment-center/#gdb-tab)
     - Scroll down to the section `Neo4j Desktop`
     - Select `Windows`
     - Click `Download`
     ![Screenshot of page where to download Neo4J from](images/downloadscreen.png)
 
-2. Set up language server
+2. Set up language server.
     - Go to folder `Assets/Voice/PythonScripts`
     - Run `install.sh`
 
-3. To run, do the following steps:
+
+### Running
+
+1. Run Neo4J server.
+
+2. Run language server.
+    - Go to folder `Assets/Voice/PythonScripts`
+    - Run `run.sh`
+
+3. Click `Play` in Unity.
