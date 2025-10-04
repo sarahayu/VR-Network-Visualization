@@ -76,3 +76,5 @@ crashlytics-build.properties
 __pycache__Assets/Voice/Whisper/ggml-small.en-q8_0.bin
 
 .env*
+
+__pycache__/
