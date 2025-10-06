@@ -18,7 +18,8 @@ These are the tools used at our time of development, and by no means are hard re
     - Scroll down to the section `Neo4j Desktop`
     - Select `Windows`
     - Click `Download`
-    ![Screenshot of page where to download Neo4J from](images/downloadscreen.png)
+    
+![Screenshot of page where to download Neo4J from](images/downloadscreen.png)
 
 2. Set up language server.
     - Go to folder `Assets/Voice/PythonScripts`
@@ -38,4 +39,6 @@ These are the tools used at our time of development, and by no means are hard re
 ## Notes
 
 - **Changing language model**: You can change the language model by downloading any model from [whisper's repo](https://huggingface.co/ggerganov/whisper.cpp/tree/main). Then, within Unity, go to the game object `===VOICE===/Whisper` and change the `Model Path` variable into the path of the new model. See screenshot below for an example.
+
+
 ![Screenshot of Model Path variable](images/modelpathex.png)
