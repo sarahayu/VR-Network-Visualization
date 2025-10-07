@@ -17,13 +17,17 @@ namespace VidiGraph
         {
             NetworkManager network = (NetworkManager)target;
 
-            DrawDefaultInspector();
+            GUILayout.Space(10);
 
-            if (GUILayout.Button("Reload Preview"))
+            if (GUILayout.Button("Reload Preview", GUILayout.Height(25)))
             {
                 network.Initialize();
                 network.DrawPreview();
             }
+
+            GUILayout.Space(10);
+
+            DrawDefaultInspector();
         }
     }
 }

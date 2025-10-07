@@ -182,7 +182,7 @@ public class InputManager : MonoBehaviour
 
     }
 
-    void CallTestingFunctionWork1()
+    public void CallTestingFunctionWork1()
     {
         if (_databaseStorage == null) return;
 
@@ -196,7 +196,7 @@ public class InputManager : MonoBehaviour
         TimerUtils.EndTime("SetWorkingSubgraph");
     }
 
-    void CallTestingFunctionWork2()
+    public void CallTestingFunctionWork2()
     {
         if (_databaseStorage == null) return;
 
@@ -210,7 +210,7 @@ public class InputManager : MonoBehaviour
         TimerUtils.EndTime("SetWorkingSubgraph");
     }
 
-    void CallTestingFunctionSelect()
+    public void CallTestingFunctionSelect()
     {
         var nodeIDs1 = _networkManager.NetworkGlobal.RealNodes.GetRange(0, 10);
         var nodeIDs2 = _networkManager.NetworkGlobal.RealNodes.GetRange(10, 10);

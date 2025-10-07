@@ -9,8 +9,11 @@ public class Tooltip : MonoBehaviour
 {
     [SerializeField] TextMeshProUGUI _infoCol1;
     [SerializeField] TextMeshProUGUI _infoCol2;
+    [SerializeField] float _scale;
 
     Canvas _canvas;
+
+    Transform _camera;
 
     NetworkManager _networkManager;
 
@@ -25,6 +28,8 @@ public class Tooltip : MonoBehaviour
     void Start()
     {
         Unshow();
+
+        _camera = GameObject.FindWithTag("MainCamera").transform;
     }
 
     void Update()
@@ -61,6 +66,12 @@ public class Tooltip : MonoBehaviour
 
         _infoCol1.SetText(halves.Length >= 1 ? halves[0] : "");
         _infoCol2.SetText(halves.Length >= 2 ? halves[1] : "");
+
+        transform.position = _networkManager.GetMLNodeTransform(_networkManager.HoveredNode).position;
+        transform.rotation = Quaternion.LookRotation(transform.position - _camera.position);
+
+        var dist = (transform.position - _camera.position).magnitude;
+        transform.localScale = Vector3.one * Mathf.Max(0.001f, dist * _scale);
 
         Show();
     }

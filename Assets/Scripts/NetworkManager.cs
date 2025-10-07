@@ -27,6 +27,7 @@ namespace VidiGraph
         public NetworkFilesLoader FileLoader { get { return _fileLoader; } }
         public NetworkGlobal NetworkGlobal { get { return _networkGlobal; } }
         public int? HoveredNetwork { get; private set; }
+        public string HoveredNode { get; private set; }
         public HashSet<int> SelectedNetworks
         {
             get
@@ -428,15 +429,17 @@ namespace VidiGraph
             UpdateOptions();
         }
 
-        public void HoverNode(int nodeID)
+        public void HoverNode(int nodeID, int subnetworkID)
         {
             _networkGlobal.HoveredNode = _networkGlobal.Nodes[nodeID];
+            HoveredNode = NodeIDToGUID[Tuple.Create(subnetworkID, nodeID)];
             TriggerRenderUpdate();
         }
 
         public void UnhoverNode(int nodeID)
         {
             _networkGlobal.HoveredNode = null;
+            HoveredNode = null;
             TriggerRenderUpdate();
         }
 

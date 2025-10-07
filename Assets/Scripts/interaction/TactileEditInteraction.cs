@@ -249,7 +249,7 @@ namespace VidiGraph
                 {
                     _lastState = ActionState.HoverNode;
 
-                    _networkManager.HoverNode(node.ID);
+                    _networkManager.HoverNode(node.ID, _subnetworkID);
                     _hoveredNode = node;
                 }
             }
