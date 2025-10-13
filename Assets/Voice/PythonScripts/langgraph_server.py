@@ -17,6 +17,7 @@ def merge_dicts(old: dict[str, float] | None, new: dict[str, float]) -> dict[str
 
 class AgentState(TypedDict):
     input: Annotated[str, override]
+    original_input: Annotated[str, override]
     code_list: Annotated[list[str], override]
     action_queue: Annotated[list[list[str]], override]
     timings: Annotated[dict[str, float], merge_dicts]
@@ -25,6 +26,17 @@ class AgentState(TypedDict):
 
 app = Flask(__name__)
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+# NEW: Voice recognition error correction prompt
+correction_prompt = ChatPromptTemplate.from_template(
+    "You are a voice recognition error corrector for graph database commands. \
+    Fix common voice recognition mistakes in the user input while preserving the original meaning. \
+    Common errors include: 'note' → 'node', 'notes' → 'nodes', color names like 'rate' → 'red', 'blew' → 'blue', etc. \
+    Also fix grammar and make the command clearer if needed. \
+    If the input is already correct, return it unchanged. \
+    Return ONLY the corrected text, no explanations or quotes.\n\n\
+    User input: {input}"
+)
 
 clarify_prompt = ChatPromptTemplate.from_template(
     "The user input might be unclear. \
@@ -117,6 +129,23 @@ def timed_node(node_name):
     return decorator
 
 
+# NEW: Preprocessing agent to fix voice recognition errors
+@timed_node("preprocess_agent")
+async def preprocess_agent(state: AgentState) -> dict:
+    """Use LLM to fix voice recognition errors"""
+    original_input = state["input"]
+    
+    messages = correction_prompt.format_messages(input=original_input)
+    corrected_input = (await llm.ainvoke(messages)).content.strip()
+    
+    if original_input.lower() != corrected_input.lower():
+        print_colored(f"Input corrected by LLM: '{original_input}' → '{corrected_input}'", 'yellow')
+    else:
+        print_colored(f"Input unchanged: '{original_input}'", 'cyan')
+    
+    return {"input": corrected_input, "original_input": original_input}
+
+
 @timed_node("general_agent")
 async def general_agent(state: AgentState) -> dict:
     messages = ambiguity_prompt.format_messages(input=state["input"])
@@ -179,22 +208,27 @@ def decide_clarify(state: AgentState) -> str:
 # Graph Construction
 graph = StateGraph(state_schema=AgentState)
 
+# Add all nodes including the new preprocessing agent
+graph.add_node("preprocess_agent", preprocess_agent)
 graph.add_node("general_agent", general_agent)
 graph.add_node("clarify_agent", clarify_agent)
 graph.add_node("action_agent", action_agent)
 graph.add_node("cypher_agent", cypher_agent)
 graph.add_node("return_code", return_code)
 
-graph.set_entry_point("general_agent")
+# Set entry point to preprocessing agent
+graph.set_entry_point("preprocess_agent")
 
+# Connect preprocessing to general agent
+graph.add_edge("preprocess_agent", "general_agent")
+
+# Rest of the graph edges remain the same
 graph.add_conditional_edges(
     "general_agent", decide_clarify,
     {"clarify_agent": "clarify_agent", "action_agent": "action_agent"}
 )
 
-# Parallel execution: action_agent → cypher_agent and return_code
 graph.add_edge("action_agent", "cypher_agent")
-# graph.add_edge("action_agent", "return_code")
 graph.add_edge("cypher_agent", "return_code")
 graph.add_edge("clarify_agent", "return_code")
 
@@ -209,6 +243,7 @@ def classify():
         print(f"Received input: {user_input}")
         state = {
             "input": user_input,
+            "original_input": user_input,
             "code_list": [],
             "action_queue": [],
             "timings": {}
@@ -219,7 +254,8 @@ def classify():
 
         print_colored(f"Result from langgraph: {result}", 'green')
         return jsonify({
-            "input": result.get("input", ""),
+            "original_input": result.get("original_input", ""),
+            "corrected_input": result.get("input", ""),
             "queries": result.get("code_list", []),
             "actions": result.get("action_queue", []),
             "clarify": result.get("clarify", ""),
