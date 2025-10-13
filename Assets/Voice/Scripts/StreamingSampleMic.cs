@@ -159,7 +159,7 @@ namespace Whisper.Samples
         private IEnumerator ClassifyUserCommand(string recognizedText, float whisperTime)
         {
             loadingIcon.SetLoading(true);
-            Debug.Log("Recognized text input: " + recognizedText);
+            // Debug.Log("Recognized text input: " + recognizedText);
             // Debug.Log($"Whisper took {whisperTime:F3} seconds to recognize.");
             ClassificationRequest requestBody = new ClassificationRequest { userText = recognizedText };
             string jsonBody = JsonUtility.ToJson(requestBody);
@@ -208,89 +208,94 @@ namespace Whisper.Samples
                     {
                         Debug.Log("Classification Response: " + responseJson);
                         var query = classification.queries;
+                        var corrected_input = classification.corrected_input;
                         // [0].Substring(10, classification.query[0].Length - 13);
                         var action = classification.actions;
-                        Debug.Log("Action: " + action);
+                        var actions_count = action.Length;
+                        Debug.Log("Action: " + action + "Counts:" + actions_count);
                         Debug.Log("Cypher Query: " + query);
 
                         var new_command = Instantiate(command_prefab, command_parent.transform);
                         var command_text = new_command.GetComponent<TMP_Text>();
-                        command_text.text = recognizedText;
+                        command_text.text = corrected_input;
 
-                        switch (action[0][0])
+                        for (int i = 0; i < actions_count; i++)
                         {
-                            case "selectNode":
-                                Debug.Log("Selecting nodes with query: " + query[0]);
-                                text.text += $"\n<size=18><color=#aaa>{query[0]}</color></size>";
-                                var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query[0]);
-                                TimerUtils.StartTime("SetSelectedNodes");
-                                if (_networkManager.OnQueryMode)
-                                {
-                                    // have to convert GUIDs to IDs to create a working subgraph
-                                    var nodeIDs = _networkManager.SortNodeGUIDs(nodes)[NetworkManager.MainNetworkID];
-                                    _networkManager.CreateWorkingSubgraph(nodeIDs, classification.input, classification.input);
-                                    _networkManager.SetQueryMode(false);
-                                }
-                                else
-                                {
-                                    _networkManager.SetWorkingSelectedNodes(nodes, true);
-                                }
-                                TimerUtils.EndTime("SetSelectedNodes");
-                                break;
-                            case "selectLink":
-                                Debug.Log("Selecting links with query: " + query[0]);
-                                text.text += $"\n<size=18><color=#aaa>{query[0]}</color></size>";
-                                var links = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, query[0]);
-                                TimerUtils.StartTime("SetSelectedLinks");
-                                _networkManager.SetWorkingSelectedLinks(links, true);
-                                TimerUtils.EndTime("SetSelectedLinks");
-                                break;
-                            case "deselect":
-                                Debug.Log("Deselecting nodes");
-                                TimerUtils.StartTime("Deselect Nodes");
-                                _networkManager.ClearSelection();
-                                TimerUtils.EndTime("Deselect Nodes");
-                                break;
-                            case "move":
-                                Debug.Log("Moving selected nodes");
-                                var nodes_move = _networkManager.WorkingSelectedNodeGUIDs;
-                                TimerUtils.StartTime("Move Nodes");
-                                _networkManager.BringMLNodes(nodes_move);
-                                TimerUtils.EndTime("Move Nodes");
-                                break;
-                            case "layout":
-                                Debug.Log("Changing layout to: " + action[0][1]);
-                                var comms = _networkManager.WorkingSelectedCommunityGUIDs;
-                                TimerUtils.StartTime("Layout Change");
-                                _networkManager.SetMLLayout(comms, action[0][1]);
-                                TimerUtils.EndTime("Layout Change");
-                                break;
-                            case "colorNode":
-                                Debug.Log("Changing color of selected nodes to: " + action[0][1]);
-                                var nodes_color = _networkManager.WorkingSelectedNodeGUIDs;
-                                TimerUtils.StartTime("SetColor");
-                                _networkManager.SetMLNodesColor(nodes_color, action[0][1]); // Hardcoded to red for now
-                                TimerUtils.EndTime("SetColor");
-                                break;
-                            case "colorLink":
-                                Debug.Log("Changing color of selected links to: " + action[0][1]);
-                                var links_color = _networkManager.WorkingSelectedLinkGUIDs;
-                                TimerUtils.StartTime("SetColor");
-                                _networkManager.SetMLLinksColorStart(links_color, action[0][1]); // Hardcoded to red for now
-                                _networkManager.SetMLLinksColorEnd(links_color, action[0][1]); // Hardcoded to red for now
-                                TimerUtils.EndTime("SetColor");
-                                break;
-                            case "arithmetic":
-                                Debug.Log("Performing arithmetic operation: " + action[0][1]);
-                                TimerUtils.StartTime("Arithmetic Operation");
-                                var result = _databaseStorage.GetValueFromStore(_networkManager.NetworkGlobal, query[0]);
-                                Debug.Log("Arithmetic Result: " + result);
-                                TimerUtils.EndTime("Arithmetic Operation");
-                                break;
-                            default:
-                                // Handle unknown actions
-                                Debug.LogWarning("Unknown action: " + action);
-                                break;
+                            switch (action[0][0])
+                            {
+                                case "selectNode":
+                                    Debug.Log("Selecting nodes with query: " + query[0]);
+                                    text.text += $"\n<size=18><color=#aaa>{query[0]}</color></size>";
+                                    var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query[0]);
+                                    TimerUtils.StartTime("SetSelectedNodes");
+                                    if (_networkManager.OnQueryMode)
+                                    {
+                                        // have to convert GUIDs to IDs to create a working subgraph
+                                        var nodeIDs = _networkManager.SortNodeGUIDs(nodes)[NetworkManager.MainNetworkID];
+                                        _networkManager.CreateWorkingSubgraph(nodeIDs, classification.input, classification.input);
+                                        _networkManager.SetQueryMode(false);
+                                    }
+                                    else
+                                    {
+                                        _networkManager.SetWorkingSelectedNodes(nodes, true);
+                                    }
+                                    TimerUtils.EndTime("SetSelectedNodes");
+                                    break;
+                                case "selectLink":
+                                    Debug.Log("Selecting links with query: " + query[0]);
+                                    text.text += $"\n<size=18><color=#aaa>{query[0]}</color></size>";
+                                    var links = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, query[0]);
+                                    TimerUtils.StartTime("SetSelectedLinks");
+                                    _networkManager.SetWorkingSelectedLinks(links, true);
+                                    TimerUtils.EndTime("SetSelectedLinks");
+                                    break;
+                                case "deselect":
+                                    Debug.Log("Deselecting nodes");
+                                    TimerUtils.StartTime("Deselect Nodes");
+                                    _networkManager.ClearSelection();
+                                    TimerUtils.EndTime("Deselect Nodes");
+                                    break;
+                                case "move":
+                                    Debug.Log("Moving selected nodes");
+                                    var nodes_move = _networkManager.WorkingSelectedNodeGUIDs;
+                                    TimerUtils.StartTime("Move Nodes");
+                                    _networkManager.BringMLNodes(nodes_move);
+                                    TimerUtils.EndTime("Move Nodes");
+                                    break;
+                                case "layout":
+                                    Debug.Log("Changing layout to: " + action[0][1]);
+                                    var comms = _networkManager.WorkingSelectedCommunityGUIDs;
+                                    TimerUtils.StartTime("Layout Change");
+                                    _networkManager.SetMLLayout(comms, action[0][1]);
+                                    TimerUtils.EndTime("Layout Change");
+                                    break;
+                                case "colorNode":
+                                    Debug.Log("Changing color of selected nodes to: " + action[0][1]);
+                                    var nodes_color = _networkManager.WorkingSelectedNodeGUIDs;
+                                    TimerUtils.StartTime("SetColor");
+                                    _networkManager.SetMLNodesColor(nodes_color, action[0][1]); // Hardcoded to red for now
+                                    TimerUtils.EndTime("SetColor");
+                                    break;
+                                case "colorLink":
+                                    Debug.Log("Changing color of selected links to: " + action[0][1]);
+                                    var links_color = _networkManager.WorkingSelectedLinkGUIDs;
+                                    TimerUtils.StartTime("SetColor");
+                                    _networkManager.SetMLLinksColorStart(links_color, action[0][1]); // Hardcoded to red for now
+                                    _networkManager.SetMLLinksColorEnd(links_color, action[0][1]); // Hardcoded to red for now
+                                    TimerUtils.EndTime("SetColor");
+                                    break;
+                                case "arithmetic":
+                                    Debug.Log("Performing arithmetic operation: " + action[0][1]);
+                                    TimerUtils.StartTime("Arithmetic Operation");
+                                    var result = _databaseStorage.GetValueFromStore(_networkManager.NetworkGlobal, query[0]);
+                                    Debug.Log("Arithmetic Result: " + result);
+                                    TimerUtils.EndTime("Arithmetic Operation");
+                                    break;
+                                default:
+                                    // Handle unknown actions
+                                    Debug.LogWarning("Unknown action: " + action);
+                                    break;
+                            }
                         }
 
                         loadingIcon.SetLoading(false); // Done processing
@@ -318,10 +323,12 @@ public class ClassificationRequest
 public class ClassificationResponse
 {
     public string input;
+    public string corrected_input;
     public string[] queries;
     public string clarify;
     public Timing timings;
     public string[][] actions;
+    
 }
 
 [System.Serializable]
