@@ -202,6 +202,9 @@ namespace Whisper.Samples
                     if (!string.IsNullOrEmpty(classification.clarify))
                     {
                         Debug.LogWarning("Clarification Needed: " + classification.clarify);
+                        var new_command = Instantiate(command_prefab, command_parent.transform);
+                        var command_text = new_command.GetComponent<TMP_Text>();
+                        command_text.text = "Clarification needed: " + classification.clarify;
                         // Add the voice for classification later
                     }
                     else
@@ -212,7 +215,7 @@ namespace Whisper.Samples
                         // [0].Substring(10, classification.query[0].Length - 13);
                         var action = classification.actions;
                         var actions_count = action.Length;
-                        Debug.Log("Action: " + action + "Counts:" + actions_count);
+                        Debug.Log("Action: " + action + " Counts:" + actions_count);
                         Debug.Log("Cypher Query: " + query);
 
                         var new_command = Instantiate(command_prefab, command_parent.transform);
