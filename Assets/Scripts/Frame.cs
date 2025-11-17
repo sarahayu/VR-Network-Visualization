@@ -8,6 +8,7 @@ namespace VidiGraph
     public class Frame : MonoBehaviour
     {
         Color OrigColor;
+        public string DisplayName { get; private set; }
 
         public static Color HoverColor;
         public static Color SelectColor;
@@ -15,6 +16,11 @@ namespace VidiGraph
         void Start()
         {
             OrigColor = GameObjectUtils.GetColor(gameObject.GetNamedChild("Wood"));
+        }
+
+        public void Initialize(string displayName)
+        {
+            DisplayName = displayName;
         }
 
         public void SetColor(Color color, float alpha = -1)

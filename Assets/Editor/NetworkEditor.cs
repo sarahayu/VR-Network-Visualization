@@ -21,7 +21,7 @@ namespace VidiGraph
 
             if (GUILayout.Button("Reload Preview", GUILayout.Height(25)))
             {
-                network.Initialize();
+                network.InitForEditorMode();
                 network.DrawPreview();
             }
 

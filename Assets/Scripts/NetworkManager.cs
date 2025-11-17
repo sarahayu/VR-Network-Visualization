@@ -20,7 +20,7 @@ namespace VidiGraph
         [SerializeField] GameObject _subnetworkPrefab;
         [SerializeField] OptionsMenu _optionsMenu;
         [SerializeField] FramesArea _framesArea;
-        [SerializeField] GameObject _queryIndic;
+        [SerializeField] ConsoleInput _console;
         Dictionary<int, BasicSubnetwork> _subnetworks = new();
         Dictionary<int, NodeLinkNetwork> _allNetworks = new();
 
@@ -158,7 +158,7 @@ namespace VidiGraph
 
         void Start()
         {
-            Initialize();
+            InitForEditorMode();
 
             _storage = GameObject.Find("/Database")?.GetComponent<NetworkStorage>();
             _storage?.InitialStore(_fileLoader.ClusterLayout, _networkGlobal,
@@ -168,10 +168,10 @@ namespace VidiGraph
 
             _surfaceManager = GameObject.Find("Surface Manager")?.GetComponent<SurfaceManager>();
 
-            _queryIndic.SetActive(false);
+            SetQueryMode(true);
         }
 
-        public void Initialize()
+        public void InitForEditorMode()
         {
             _fileLoader = GetComponent<NetworkFilesLoader>();
 
@@ -197,8 +197,19 @@ namespace VidiGraph
             {
                 OnQueryMode = queryMode;
 
-                if (OnQueryMode) _queryIndic.SetActive(true);
-                else _queryIndic.SetActive(false);
+                if (OnQueryMode)
+                {
+                    _console.SetText("please say a selection query");
+                    _console.SetActive(
+                        (int)ConsoleInput.ButtonLabel.NewQuery | (int)ConsoleInput.ButtonLabel.DuplicateGraph | (int)ConsoleInput.ButtonLabel.DeleteGraph,
+                        false);
+                }
+                else
+                {
+                    _console.SetActive(
+                        (int)ConsoleInput.ButtonLabel.NewQuery | (int)ConsoleInput.ButtonLabel.DuplicateGraph | (int)ConsoleInput.ButtonLabel.DeleteGraph,
+                        true);
+                }
             }
         }
 
@@ -932,6 +943,7 @@ namespace VidiGraph
             _framesArea.Frames[subnetworkID].SetSelect(true);
 
             _curWorkingSubgraph = subnetworkID;
+            _console.SetText($"Current session made using the prompt \"{_framesArea.Frames[subnetworkID].DisplayName}\"");
         }
 
         public void ToggleSubnetwork(int subnetworkID)
@@ -1070,6 +1082,7 @@ namespace VidiGraph
             else
             {
                 _curWorkingSubgraph = -1;
+                SetQueryMode(true);
             }
 
             var frame = _framesArea.Frames[toRemove];

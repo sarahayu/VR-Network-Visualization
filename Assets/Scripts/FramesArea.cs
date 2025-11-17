@@ -35,6 +35,7 @@ namespace VidiGraph
 
             var frame = Instantiate(_framesPrefab, transform).GetComponent<Frame>();
 
+            frame.Initialize(displayName ?? ID.ToString());
             frame.transform.position += _curPosOffset;
             frame.GetComponentInChildren<TextMeshPro>().SetText($"{displayName ?? ID.ToString()}");
             frame.GetComponent<XRGrabInteractable>().selectExited.AddListener(_ => onClick?.Invoke(frame));
