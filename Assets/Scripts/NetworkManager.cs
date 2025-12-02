@@ -199,6 +199,7 @@ namespace VidiGraph
 
                 if (OnQueryMode)
                 {
+                    if (_curWorkingSubgraph != -1) ToggleSubnetwork(_curWorkingSubgraph);
                     _console.SetText("please say a selection query");
                     _console.SetActive(
                         (int)ConsoleInput.ButtonLabel.NewQuery | (int)ConsoleInput.ButtonLabel.DuplicateGraph | (int)ConsoleInput.ButtonLabel.DeleteGraph,

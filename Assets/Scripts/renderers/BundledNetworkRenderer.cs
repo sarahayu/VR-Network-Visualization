@@ -82,7 +82,7 @@ namespace VidiGraph
             _linkGameObjs.Clear();
             _communityGameObjs.Clear();
 
-            // TODO release shader resources
+            _shaderWrapper.DeleteBuffers();
         }
 
         public override void UpdateRenderElements()

@@ -78,6 +78,27 @@ namespace VidiGraph
             _splineMaterial.SetFloat("_LineWidth", _contextSettings.LinkWidth);
         }
 
+        public void DeleteBuffers()
+        {
+            int kernel = _batchComputeShader.FindKernel("CSMain");
+
+            _splines.Clear();
+            _splineControlPoints.Clear();
+            _splineSegments.Clear();
+
+            _inSplineData.SetData(_splines);
+            _inSplineControlPointData.SetData(_splineControlPoints);
+            _inSplineSegmentData.SetData(_splineSegments);
+
+            _batchComputeShader.SetBuffer(kernel, "InSplineData", _inSplineData);
+            _batchComputeShader.SetBuffer(kernel, "InSplineControlPointData", _inSplineControlPointData);
+            _batchComputeShader.SetBuffer(kernel, "InSplineSegmentData", _inSplineSegmentData);
+            _batchComputeShader.SetBuffer(kernel, "OutSamplePointData", _outSampleControlPointData);
+
+            // idk if this is how it's done, but redraw with empty data to remove splines from world
+            _batchComputeShader.Dispatch(kernel, Math.Max(1, _splineSegments.Count / 32), 1, 1);
+        }
+
         public void Draw()
         {
             int kernel = _batchComputeShader.FindKernel("CSMain");
