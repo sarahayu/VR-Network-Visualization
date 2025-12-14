@@ -9,7 +9,7 @@ namespace VidiGraph
 {
     public class MultiLayoutNetworkReflector
     {
-        MultiLayoutContext _context;
+        NodeLinkContext _context;
         NetworkManager _manager;
         NetworkFileData _fileData;
 
@@ -21,18 +21,18 @@ namespace VidiGraph
         IDictionary<string, object> _sampleContextLinkProps;
         IDictionary<string, object> _sampleFileLinkProps;
 
-        public MultiLayoutNetworkReflector(MultiLayoutContext context, NetworkManager manager)
+        public MultiLayoutNetworkReflector(NodeLinkContext context, NetworkManager manager)
         {
             _context = context;
             _manager = manager;
             _fileData = manager.FileLoader.SphericalLayout;
 
             _sampleGlobalNodeProps = ObjectUtils.AsDictionary(new Node());
-            _sampleContextNodeProps = ObjectUtils.AsDictionary(new MultiLayoutContext.Node());
+            _sampleContextNodeProps = ObjectUtils.AsDictionary(new NodeLinkContext.Node());
             _sampleFileNodeProps = ObjectUtils.AsDictionary(new NodeFileData().props);
 
             _sampleGlobalLinkProps = ObjectUtils.AsDictionary(new Link());
-            _sampleContextLinkProps = ObjectUtils.AsDictionary(new MultiLayoutContext.Link());
+            _sampleContextLinkProps = ObjectUtils.AsDictionary(new NodeLinkContext.Link());
             _sampleFileLinkProps = ObjectUtils.AsDictionary(new LinkFileData().props);
         }
 

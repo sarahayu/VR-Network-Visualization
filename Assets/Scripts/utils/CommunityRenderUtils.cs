@@ -13,7 +13,7 @@ namespace VidiGraph
     {
 
         public static GameObject MakeCommunity(GameObject prefab, Transform transform,
-            MultiLayoutContext.Community commProps)
+            NodeLinkContext.Community commProps)
         {
             GameObject commObj = UnityEngine.Object.Instantiate(prefab, transform);
 
@@ -24,7 +24,7 @@ namespace VidiGraph
             return UpdateCommunity(commObj, commProps, false, Color.clear);
         }
 
-        public static GameObject UpdateCommunity(GameObject commObj, MultiLayoutContext.Community commProps,
+        public static GameObject UpdateCommunity(GameObject commObj, NodeLinkContext.Community commProps,
             bool selected, Color selectColor, Renderer renderer = null)
         {
             commObj.transform.localPosition = commProps.MassCenter;
@@ -59,7 +59,7 @@ namespace VidiGraph
         }
 
         public static GameObject MakeNetwork(GameObject prefab, Transform transform,
-            MultiLayoutContext network)
+            NodeLinkContext network)
         {
             GameObject commObj = UnityEngine.Object.Instantiate(prefab, transform);
 
@@ -67,7 +67,7 @@ namespace VidiGraph
             return UpdateNetwork(commObj, network, false, Color.clear);
         }
 
-        public static GameObject UpdateNetwork(GameObject commObj, MultiLayoutContext network,
+        public static GameObject UpdateNetwork(GameObject commObj, NodeLinkContext network,
             bool selected, Color selectColor, Renderer renderer = null)
         {
             commObj.transform.localPosition = network.MassCenter;

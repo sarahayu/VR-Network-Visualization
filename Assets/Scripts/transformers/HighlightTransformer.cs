@@ -11,12 +11,12 @@ namespace VidiGraph
     {
         NetworkManager _manager;
         NetworkGlobal _networkGlobal;
-        MultiLayoutContext _networkContext;
+        NodeLinkContext _networkContext;
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
             _networkGlobal = networkGlobal;
-            _networkContext = (MultiLayoutContext)networkContext;
+            _networkContext = (NodeLinkContext)networkContext;
 
             _manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
         }

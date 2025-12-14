@@ -48,7 +48,7 @@ namespace VidiGraph
         NetworkManager _manager;
         NetworkRenderer _mlRenderer;
 
-        MultiLayoutContext.Settings _mlSettings;
+        NodeLinkContext.Settings _mlSettings;
 
 
         Coroutine _surfaceHighlighter = null;
@@ -124,8 +124,8 @@ namespace VidiGraph
             listeners.NodeGrabExit = (node, args) => OnNodeGrabExit(node, network.ID, args);
             listeners.CommGrabEnter = (comm, args) => OnCommunityGrabEnter(comm, network.ID, args);
             listeners.CommGrabExit = (comm, args) => OnCommunityGrabExit(comm, network.ID, args);
-            listeners.NetworkGrabEnter = (network, args) => OnNetworkGrabEnter(network, ((MultiLayoutContext)network).SubnetworkID, args);
-            listeners.NetworkGrabExit = (network, args) => OnNetworkGrabExit(network, ((MultiLayoutContext)network).SubnetworkID, args);
+            listeners.NetworkGrabEnter = (network, args) => OnNetworkGrabEnter(network, ((NodeLinkContext)network).SubnetworkID, args);
+            listeners.NetworkGrabExit = (network, args) => OnNetworkGrabExit(network, ((NodeLinkContext)network).SubnetworkID, args);
 
             return listeners;
         }
@@ -411,7 +411,7 @@ namespace VidiGraph
                 }
                 else
                 {
-                    var mlc = (MultiLayoutContext)network;
+                    var mlc = (NodeLinkContext)network;
                     TryAttachNodes(_manager.NodeIDsToNodeGUIDs(mlc.Nodes.Keys, subnetworkID));
                 }
 

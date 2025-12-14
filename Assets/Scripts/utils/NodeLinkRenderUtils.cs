@@ -6,7 +6,7 @@ namespace VidiGraph
     public static class NodeLinkRenderUtils
     {
         public static GameObject MakeNode(GameObject prefab, Transform parent,
-            Node node, MultiLayoutContext.Node nodeProps)
+            Node node, NodeLinkContext.Node nodeProps)
         {
             GameObject nodeObj = UnityEngine.Object.Instantiate(prefab, parent);
 
@@ -18,7 +18,7 @@ namespace VidiGraph
             return UpdateNode(nodeObj, node, nodeProps);
         }
         public static GameObject UpdateNode(GameObject nodeObj,
-            Node node, MultiLayoutContext.Node nodeProps, Renderer renderer = null)
+            Node node, NodeLinkContext.Node nodeProps, Renderer renderer = null)
         {
             nodeObj.transform.position = nodeProps.Position;
             nodeObj.transform.localScale = Vector3.one * nodeProps.Size;

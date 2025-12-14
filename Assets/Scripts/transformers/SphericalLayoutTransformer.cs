@@ -11,7 +11,7 @@ namespace VidiGraph
         public Transform SphericalPosition;
 
         NetworkGlobal _networkGlobal;
-        MultiLayoutContext _networkContext;
+        NodeLinkContext _networkContext;
         TransformInfo _sphericalTransform;
 
         // TODO remove this when we are able to calc at runtime
@@ -20,7 +20,7 @@ namespace VidiGraph
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
-            _networkContext = (MultiLayoutContext)networkContext;
+            _networkContext = (NodeLinkContext)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
@@ -54,13 +54,13 @@ namespace VidiGraph
                     if (link.SourceNodeID == nodeID)
                     {
                         linkContext.BundleStart = true;
-                        if (_networkContext.Communities[link.TargetNode.CommunityID].State == MultiLayoutContext.CommunityState.None)
+                        if (_networkContext.Communities[link.TargetNode.CommunityID].State == NodeLinkContext.CommunityState.None)
                             linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
                     }
                     else
                     {
                         linkContext.BundleEnd = true;
-                        if (_networkContext.Communities[link.SourceNode.CommunityID].State == MultiLayoutContext.CommunityState.None)
+                        if (_networkContext.Communities[link.SourceNode.CommunityID].State == NodeLinkContext.CommunityState.None)
                             linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
                     }
 
@@ -112,12 +112,12 @@ namespace VidiGraph
 
     public class SphericalLayoutInterpolator : TransformInterpolator
     {
-        MultiLayoutContext _networkContext;
+        NodeLinkContext _networkContext;
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
         public SphericalLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal,
-            MultiLayoutContext networkContext, NetworkFilesLoader fileLoader, HashSet<int> nodesToUpdate)
+            NodeLinkContext networkContext, NetworkFilesLoader fileLoader, HashSet<int> nodesToUpdate)
         {
             _networkContext = networkContext;
             // TODO calculate at runtime
@@ -141,13 +141,13 @@ namespace VidiGraph
                     if (link.SourceNodeID == nodeID)
                     {
                         linkContext.BundleStart = true;
-                        if (_networkContext.Communities[link.TargetNode.CommunityID].State == MultiLayoutContext.CommunityState.None)
+                        if (_networkContext.Communities[link.TargetNode.CommunityID].State == NodeLinkContext.CommunityState.None)
                             linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
                     }
                     else
                     {
                         linkContext.BundleEnd = true;
-                        if (_networkContext.Communities[link.SourceNode.CommunityID].State == MultiLayoutContext.CommunityState.None)
+                        if (_networkContext.Communities[link.SourceNode.CommunityID].State == NodeLinkContext.CommunityState.None)
                             linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
                     }
 

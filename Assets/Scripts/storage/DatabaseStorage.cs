@@ -32,7 +32,7 @@ namespace VidiGraph
         }
 
         public override void InitialStore(NetworkFileData networkFile, NetworkGlobal networkGlobal,
-            MultiLayoutContext networkContext, IEnumerable<MultiLayoutContext> subnetworkContexts)
+            NodeLinkContext networkContext, IEnumerable<NodeLinkContext> subnetworkContexts)
         {
             TimerUtils.StartTime("DatabaseStorage.InitialStore");
             DatabaseStorageUtils.BulkInitNetwork(networkFile, networkGlobal, networkContext, subnetworkContexts, _driver, _convertWinPaths);
@@ -40,7 +40,7 @@ namespace VidiGraph
         }
 
         public override void UpdateStore(NetworkFileData networkFile, NetworkGlobal networkGlobal,
-            MultiLayoutContext networkContext, IEnumerable<MultiLayoutContext> subnetworkContexts)
+            NodeLinkContext networkContext, IEnumerable<NodeLinkContext> subnetworkContexts)
         {
             TimerUtils.StartTime("DatabaseStorage.UpdateStore");
             DatabaseStorageUtils.BulkUpdateNetwork(networkFile, networkGlobal, networkContext, subnetworkContexts, _driver, _convertWinPaths);

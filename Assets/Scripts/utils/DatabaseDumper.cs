@@ -16,7 +16,7 @@ namespace VidiGraph
         IEnumerable<string> _linkProps;
         bool _onlyDirty;
         bool _dumpProps;
-        MultiLayoutContext _networkContext;
+        NodeLinkContext _networkContext;
         NetworkGlobal _networkGlobal;
 
         public DatabaseDumper(
@@ -29,7 +29,7 @@ namespace VidiGraph
             IEnumerable<string> linkProps,
             bool onlyDirty,
             bool dumpProps,
-            MultiLayoutContext networkContext,
+            NodeLinkContext networkContext,
             NetworkGlobal networkGlobal)
         {
             _sFile = sFile;

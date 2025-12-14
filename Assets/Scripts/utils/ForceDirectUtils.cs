@@ -9,7 +9,7 @@ namespace VidiGraph
     {
         // Fruchterman, T.M.J. and Reingold, E.M. (1991), Graph drawing by force-directed placement. Softw: Pract. Exper., 21: 1129-1164. https://doi.org/10.1002/spe.4380211102
         // iterations and temp parameters taken from python networkx implementation
-        public static IEnumerable<Vector3> CalculateLayout(MultiLayoutContext network, NetworkGlobal networkGlobal)
+        public static IEnumerable<Vector3> CalculateLayout(NodeLinkContext network, NetworkGlobal networkGlobal)
         {
 
             int iterations = 50;

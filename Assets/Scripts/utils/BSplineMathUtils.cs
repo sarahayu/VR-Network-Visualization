@@ -7,7 +7,7 @@ namespace VidiGraph
 {
     public static class BSplineMathUtils
     {
-        public static Vector3[] ControlPoints(Link link, NetworkGlobal networkData, MultiLayoutContext networkProperties)
+        public static Vector3[] ControlPoints(Link link, NetworkGlobal networkData, NodeLinkContext networkProperties)
         {
             //TODO There has to some better way to do this, and also to provide a constant number of control points
 

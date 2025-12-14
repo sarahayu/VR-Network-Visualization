@@ -13,7 +13,7 @@ namespace VidiGraph
             Draw();
         }
 
-        public void Initialize(MultiLayoutContext sourceContext, bool useShell = true)
+        public void Initialize(NodeLinkContext sourceContext, bool useShell = true)
         {
             GetManager();
 
@@ -28,7 +28,7 @@ namespace VidiGraph
             InitRenderer();
         }
 
-        public void UpdateContext(MultiLayoutContext sourceContext)
+        public void UpdateContext(NodeLinkContext sourceContext)
         {
             _context.SetFromContext(_manager.NetworkGlobal, sourceContext, sourceContext.Nodes.Keys);
 
@@ -55,9 +55,9 @@ namespace VidiGraph
 
         /*=============== start private methods ===================*/
 
-        void InitContext(MultiLayoutContext sourceContext, bool useShell)
+        void InitContext(NodeLinkContext sourceContext, bool useShell)
         {
-            _context = new MultiLayoutContext(subnetworkID: _id, useShell);
+            _context = new NodeLinkContext(subnetworkID: _id, useShell);
         }
 
         void InitOtherTransformers()

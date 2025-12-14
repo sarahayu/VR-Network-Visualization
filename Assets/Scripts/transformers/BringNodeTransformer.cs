@@ -13,7 +13,7 @@ namespace VidiGraph
         [SerializeField] float _offset = 0.2f;
 
         NetworkGlobal _networkGlobal;
-        MultiLayoutContext _networkContext;
+        NodeLinkContext _networkContext;
 
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
@@ -23,7 +23,7 @@ namespace VidiGraph
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
-            _networkContext = (MultiLayoutContext)networkContext;
+            _networkContext = (NodeLinkContext)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
@@ -66,11 +66,11 @@ namespace VidiGraph
 
     public class BringNodeInterpolator : TransformInterpolator
     {
-        MultiLayoutContext _networkContext;
+        NodeLinkContext _networkContext;
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
-        public BringNodeInterpolator(NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
+        public BringNodeInterpolator(NetworkGlobal networkGlobal, NodeLinkContext networkContext,
             NetworkFilesLoader fileLoader, HashSet<int> nodesToUpdate, Transform camera, float targetSpread, float offset)
         {
             _networkContext = networkContext;

@@ -11,14 +11,14 @@ namespace VidiGraph
     public class MLEditTransformer : NetworkContextTransformer
     {
         NetworkGlobal _networkGlobal;
-        MultiLayoutContext _networkContext;
+        NodeLinkContext _networkContext;
 
         Dictionary<int, List<UpdatedAttr>> _nodeUpdates = new Dictionary<int, List<UpdatedAttr>>();
         Dictionary<int, List<UpdatedAttr>> _linkUpdates = new Dictionary<int, List<UpdatedAttr>>();
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
-            _networkContext = (MultiLayoutContext)networkContext;
+            _networkContext = (NodeLinkContext)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;

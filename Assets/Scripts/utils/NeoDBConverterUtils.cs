@@ -36,7 +36,7 @@ namespace VidiGraph
                 });
         }
 
-        public static string StoreNode(ISession session, MultiLayoutContext.Node node, int ID)
+        public static string StoreNode(ISession session, NodeLinkContext.Node node, int ID)
         {
             return session.ExecuteWrite(
                 tx =>
@@ -81,7 +81,7 @@ namespace VidiGraph
                 });
         }
 
-        public static string StoreLink(ISession session, MultiLayoutContext.Link link, int linkID)
+        public static string StoreLink(ISession session, NodeLinkContext.Link link, int linkID)
         {
             return session.ExecuteWrite(
                 tx =>
@@ -125,7 +125,7 @@ namespace VidiGraph
                 });
         }
 
-        public static string StoreCommunity(ISession session, MultiLayoutContext.Community community, int ID)
+        public static string StoreCommunity(ISession session, NodeLinkContext.Community community, int ID)
         {
             return session.ExecuteWrite(
                 tx =>

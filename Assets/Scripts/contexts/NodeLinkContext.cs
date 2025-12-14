@@ -9,11 +9,13 @@ using UnityEngine;
 
 namespace VidiGraph
 {
-    public class MultiLayoutContext : NetworkContext
+    public class NodeLinkContext : NetworkContext
     {
         [Serializable]
         public class Settings
         {
+            public HighlightMode SelectionHighlightMode = HighlightMode.BlueTint;
+
             public float NodeScale = 1f;
             public float LinkWidth = 0.0025f;
             public float EdgeBundlingStrength = 0.8f;
@@ -109,6 +111,12 @@ namespace VidiGraph
             NumStates,
         }
 
+        public enum HighlightMode
+        {
+            BlueTint,
+            Saturate,
+        }
+
         public Settings ContextSettings = new Settings();
 
         public Dictionary<int, Node> Nodes = new Dictionary<int, Node>();
@@ -149,7 +157,7 @@ namespace VidiGraph
         // TODO restrict modification access
         public bool Selected { get; set; }          // DONT MODIFY DIRECTLY, use SetSelectedNodes/Communities
 
-        public MultiLayoutContext(int subnetworkID, bool useShell = true)
+        public NodeLinkContext(int subnetworkID, bool useShell = true)
         {
             // expose constructor
 
@@ -210,7 +218,7 @@ namespace VidiGraph
             SetDefaultEncodings(networkGlobal, networkFile);
         }
 
-        public void SetFromContext(NetworkGlobal networkGlobal, MultiLayoutContext otherContext, IEnumerable<int> nodeIDs)
+        public void SetFromContext(NetworkGlobal networkGlobal, NodeLinkContext otherContext, IEnumerable<int> nodeIDs)
         {
             Nodes.Clear();
             Links.Clear();

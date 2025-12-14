@@ -33,7 +33,7 @@ namespace VidiGraph
 
             _networkContext.NodesDirty = true;
 
-            var allRenderContexts = new HashSet<MultiLayoutContext>() { _mlNetwork.Context }.Union(_subnetworks.Select(subn => subn.Context));
+            var allRenderContexts = new HashSet<NodeLinkContext>() { _mlNetwork.Context }.Union(_subnetworks.Select(subn => subn.Context));
 
             foreach (var context in allRenderContexts)
             {

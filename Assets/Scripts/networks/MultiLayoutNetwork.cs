@@ -9,7 +9,7 @@ namespace VidiGraph
 {
     public class MultiLayoutNetwork : NodeLinkNetwork
     {
-        public MultiLayoutContext.Settings BaseSettings;
+        public NodeLinkContext.Settings BaseSettings;
         // for now, only one multilayoutnetwork shall exist and it is the main network in the scene
         public const int InstanceID = 0;
 
@@ -58,7 +58,7 @@ namespace VidiGraph
                 foreach (var commID in _context.Communities.Keys)
                 {
                     PreprocLayoutChange(commID, "spherical");
-                    _context.Communities[commID].State = MultiLayoutContext.CommunityState.None;
+                    _context.Communities[commID].State = NodeLinkContext.CommunityState.None;
                 }
             }
             else
@@ -66,7 +66,7 @@ namespace VidiGraph
 
                 foreach (var commID in _context.Communities.Keys)
                 {
-                    _context.Communities[commID].State = MultiLayoutContext.CommunityState.Hairball;
+                    _context.Communities[commID].State = NodeLinkContext.CommunityState.Hairball;
                     _hairballLayoutTransformer.UpdateOnNextApply(_manager.NetworkGlobal.Communities[commID].Nodes.Select(n => n.ID));
                 }
             }
@@ -112,7 +112,7 @@ namespace VidiGraph
 
         void InitContext()
         {
-            _context = new MultiLayoutContext(subnetworkID: 0, useShell: false);
+            _context = new NodeLinkContext(subnetworkID: 0, useShell: false);
             _context.SetFromGlobal(_manager.NetworkGlobal, _manager.FileLoader.SphericalLayout);
             _context.ContextSettings = BaseSettings;
         }

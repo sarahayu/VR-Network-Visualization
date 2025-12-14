@@ -10,7 +10,7 @@ namespace VidiGraph
     {
         public Transform HairballPosition;
         NetworkGlobal _networkGlobal;
-        MultiLayoutContext _networkContext;
+        NodeLinkContext _networkContext;
         TransformInfo _hairballTransform;
         HashSet<int> _nodesToUpdate = new HashSet<int>();
 
@@ -19,7 +19,7 @@ namespace VidiGraph
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
-            _networkContext = (MultiLayoutContext)networkContext;
+            _networkContext = (NodeLinkContext)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
@@ -80,11 +80,11 @@ namespace VidiGraph
 
     public class HairballLayoutInterpolator : TransformInterpolator
     {
-        MultiLayoutContext _networkContext;
+        NodeLinkContext _networkContext;
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
-        public HairballLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
+        public HairballLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, NodeLinkContext networkContext,
             NetworkFilesLoader fileLoader, HashSet<int> toUpdate)
         {
             _networkContext = networkContext;

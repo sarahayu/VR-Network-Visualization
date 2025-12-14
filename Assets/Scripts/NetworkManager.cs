@@ -875,7 +875,7 @@ namespace VidiGraph
             return _allNetworks[subnetworkID]?.GetNetworkTransform();
         }
 
-        public MultiLayoutContext CreateSubnetwork(IEnumerable<int> nodeIDs, bool useShell = true, int sourceSubnetworkID = MainNetworkID)
+        public NodeLinkContext CreateSubnetwork(IEnumerable<int> nodeIDs, bool useShell = true, int sourceSubnetworkID = MainNetworkID)
         {
             if (nodeIDs.Count() == 0) return null;
 
@@ -967,7 +967,7 @@ namespace VidiGraph
             }
         }
 
-        public MultiLayoutContext CreateSurfSubnetwork(IEnumerable<int> nodeIDs, out int surfaceID, int sourceSubnetworkID = MainNetworkID)
+        public NodeLinkContext CreateSurfSubnetwork(IEnumerable<int> nodeIDs, out int surfaceID, int sourceSubnetworkID = MainNetworkID)
         {
             surfaceID = -1;
 

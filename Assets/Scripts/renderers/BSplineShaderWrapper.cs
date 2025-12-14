@@ -33,16 +33,16 @@ namespace VidiGraph
         ComputeShader _batchComputeShader;
         Material _splineMaterial;
 
-        MultiLayoutContext.Settings _contextSettings;
+        NodeLinkContext.Settings _contextSettings;
 
-        public void Initialize(ComputeShader computeShader, Material material, MultiLayoutContext context)
+        public void Initialize(ComputeShader computeShader, Material material, NodeLinkContext context)
         {
             _batchComputeShader = computeShader;
             _splineMaterial = material;
             _contextSettings = context.ContextSettings;
         }
 
-        public void PrepareBuffers(NetworkGlobal networkGlobal, MultiLayoutContext networkContext, Dictionary<int, List<Vector3>> linksToCP)
+        public void PrepareBuffers(NetworkGlobal networkGlobal, NodeLinkContext networkContext, Dictionary<int, List<Vector3>> linksToCP)
         {
             InitBufferData(
                 networkContext: networkContext,
@@ -62,7 +62,7 @@ namespace VidiGraph
             _splineMaterial.SetBuffer("OutSamplePointData", _outSampleControlPointData);
         }
 
-        public void UpdateBuffers(NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
+        public void UpdateBuffers(NetworkGlobal networkGlobal, NodeLinkContext networkContext,
             HashSet<int> selNodes, Dictionary<int, List<Vector3>> controlPoints)
         {
             UpdateBufferData(
@@ -117,7 +117,7 @@ namespace VidiGraph
                 MeshTopology.Triangles, _splineSegments.Count * BSplineSamplesPerSegment * 6);
         }
 
-        void InitBufferData(MultiLayoutContext networkContext, Dictionary<int, List<Vector3>> linksToCP)
+        void InitBufferData(NodeLinkContext networkContext, Dictionary<int, List<Vector3>> linksToCP)
         {
             // Initialize Compute Shader data
             _splines = new List<SplineData>();
@@ -153,7 +153,7 @@ namespace VidiGraph
             }
         }
 
-        void AddSpline(MultiLayoutContext.Link linkContext, List<Vector3> cp,
+        void AddSpline(NodeLinkContext.Link linkContext, List<Vector3> cp,
             uint curSegmentIdx, uint splineIdx)
         {
             _splines.Add(new SplineData(
@@ -184,7 +184,7 @@ namespace VidiGraph
             }
         }
 
-        void UpdateBufferData(NetworkGlobal networkGlobal, MultiLayoutContext networkContext, Dictionary<int, List<Vector3>> controlPoints, HashSet<int> selNodes)
+        void UpdateBufferData(NetworkGlobal networkGlobal, NodeLinkContext networkContext, Dictionary<int, List<Vector3>> controlPoints, HashSet<int> selNodes)
         {
             // TODO account for control points (and segments) increasing
             _splineControlPoints = new List<SplineControlPointData>();
@@ -224,7 +224,7 @@ namespace VidiGraph
         }
 
         void UpdateSpline(uint curSplineIdx, uint curSegmentIdx,
-            List<Vector3> cp, HashSet<int> selNodes, int linkID, MultiLayoutContext networkContext, NetworkGlobal networkGlobal)
+            List<Vector3> cp, HashSet<int> selNodes, int linkID, NodeLinkContext networkContext, NetworkGlobal networkGlobal)
         {
             var link = networkGlobal.Links[linkID];
             var contextLink = networkContext.Links[linkID];

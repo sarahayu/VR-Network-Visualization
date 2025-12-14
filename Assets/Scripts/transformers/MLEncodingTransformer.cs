@@ -11,13 +11,13 @@ namespace VidiGraph
     public class MLEncodingTransformer : NetworkContextTransformer
     {
         NetworkGlobal _networkGlobal;
-        MultiLayoutContext _networkContext;
+        NodeLinkContext _networkContext;
         MultiLayoutNetworkReflector _utils;
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
             _networkGlobal = networkGlobal;
-            _networkContext = (MultiLayoutContext)networkContext;
+            _networkContext = (NodeLinkContext)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _utils = new MultiLayoutNetworkReflector(_networkContext, manager);

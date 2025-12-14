@@ -9,14 +9,14 @@ namespace VidiGraph
     public class BasicSubnetwork : NodeLinkNetwork
     {
         [SerializeField] bool _overrideContextSettings;
-        [SerializeField] MultiLayoutContext.Settings _settings;
+        [SerializeField] NodeLinkContext.Settings _settings;
 
         void Update()
         {
             Draw();
         }
 
-        public void Initialize(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext, bool useShell = true)
+        public void Initialize(IEnumerable<int> nodeIDs, NodeLinkContext sourceContext, bool useShell = true)
         {
             GetManager();
 
@@ -45,9 +45,9 @@ namespace VidiGraph
 
         /*=============== start private methods ===================*/
 
-        void InitContext(IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext, bool useShell)
+        void InitContext(IEnumerable<int> nodeIDs, NodeLinkContext sourceContext, bool useShell)
         {
-            _context = new MultiLayoutContext(subnetworkID: _id, useShell);
+            _context = new NodeLinkContext(subnetworkID: _id, useShell);
             _context.SetFromContext(_manager.NetworkGlobal, sourceContext, nodeIDs);
 
             if (_overrideContextSettings)

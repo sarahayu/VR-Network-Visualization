@@ -10,7 +10,7 @@ namespace VidiGraph
     public class NodeLinkNetwork : Network
     {
         // TODO restrict edit access
-        public MultiLayoutContext Context { get { return _context; } }
+        public NodeLinkContext Context { get { return _context; } }
 
         public HashSet<int> SelectedNodes { get { return Context.SelectedNodes; } }
         public HashSet<int> SelectedLinks { get { return Context.SelectedLinks; } }
@@ -35,7 +35,7 @@ namespace VidiGraph
 
         protected NetworkManager _manager;
         protected NetworkRenderer _renderer;
-        protected MultiLayoutContext _context;
+        protected NodeLinkContext _context;
         protected Dictionary<string, NetworkContextTransformer> _transformers = new Dictionary<string, NetworkContextTransformer>();
 
         // keep a reference to hairballlayout to focus on individual communities
@@ -79,7 +79,7 @@ namespace VidiGraph
         {
             foreach (var commID in commIDs)
             {
-                _context.Communities[commID].State = MultiLayoutContext.StrToState(layout);
+                _context.Communities[commID].State = NodeLinkContext.StrToState(layout);
 
                 PreprocLayoutChange(commID, layout);
             }

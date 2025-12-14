@@ -8,7 +8,7 @@ namespace VidiGraph
 {
     public static class MultiLayoutContextUtils
     {
-        public static void ComputeProperties(IEnumerable<Node> nodes, Dictionary<int, MultiLayoutContext.Node> nodeContexts,
+        public static void ComputeProperties(IEnumerable<Node> nodes, Dictionary<int, NodeLinkContext.Node> nodeContexts,
             out double mass, out Vector3 massCenter, out float size)
         {
             mass = 0;
@@ -32,7 +32,7 @@ namespace VidiGraph
         }
 
 
-        public static Mesh GenerateConvexHull(MultiLayoutContext.Community commProps, IEnumerable<MultiLayoutContext.Node> commNodes, float nodeScale)
+        public static Mesh GenerateConvexHull(NodeLinkContext.Community commProps, IEnumerable<NodeLinkContext.Node> commNodes, float nodeScale)
         {
             var calc = new ConvexHullCalculator();
             var verts = new List<Vector3>();
@@ -70,7 +70,7 @@ namespace VidiGraph
         }
 
 
-        public static Mesh GenerateConvexHull(MultiLayoutContext mlContext, float nodeScale)
+        public static Mesh GenerateConvexHull(NodeLinkContext mlContext, float nodeScale)
         {
             var calc = new ConvexHullCalculator();
             var verts = new List<Vector3>();

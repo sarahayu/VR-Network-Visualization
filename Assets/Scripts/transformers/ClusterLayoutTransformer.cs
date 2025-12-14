@@ -11,7 +11,7 @@ namespace VidiGraph
         public Transform ClusterPosition;
 
         NetworkGlobal _networkGlobal;
-        MultiLayoutContext _networkContext;
+        NodeLinkContext _networkContext;
 
         // TODO remove this when we are able to calc at runtime
         NetworkFilesLoader _fileLoader;
@@ -20,7 +20,7 @@ namespace VidiGraph
 
         public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
         {
-            _networkContext = (MultiLayoutContext)networkContext;
+            _networkContext = (NodeLinkContext)networkContext;
 
             var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = manager.NetworkGlobal;
@@ -56,7 +56,7 @@ namespace VidiGraph
                         {
                             linkContext.BundleStart = false;
 
-                            if (_networkContext.Communities[link.TargetNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
+                            if (_networkContext.Communities[link.TargetNode.CommunityID].State == NodeLinkContext.CommunityState.Cluster)
                             {
                                 linkContext.BundlingStrength = 0f;
                                 linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
@@ -66,7 +66,7 @@ namespace VidiGraph
                         {
                             linkContext.BundleEnd = false;
 
-                            if (_networkContext.Communities[link.SourceNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
+                            if (_networkContext.Communities[link.SourceNode.CommunityID].State == NodeLinkContext.CommunityState.Cluster)
                             {
                                 linkContext.BundlingStrength = 0f;
                                 linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
@@ -100,11 +100,11 @@ namespace VidiGraph
 
     public class ClusterLayoutInterpolator : TransformInterpolator
     {
-        MultiLayoutContext _networkContext;
+        NodeLinkContext _networkContext;
         Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
-        public ClusterLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
+        public ClusterLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, NodeLinkContext networkContext,
             NetworkFilesLoader fileLoader, HashSet<int> toUpdate)
         {
             _networkContext = networkContext;
@@ -131,7 +131,7 @@ namespace VidiGraph
                         {
                             linkContext.BundleStart = false;
 
-                            if (_networkContext.Communities[link.TargetNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
+                            if (_networkContext.Communities[link.TargetNode.CommunityID].State == NodeLinkContext.CommunityState.Cluster)
                             {
                                 linkContext.BundlingStrength = 0f;
                                 linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;
@@ -141,7 +141,7 @@ namespace VidiGraph
                         {
                             linkContext.BundleEnd = false;
 
-                            if (_networkContext.Communities[link.SourceNode.CommunityID].State == MultiLayoutContext.CommunityState.Cluster)
+                            if (_networkContext.Communities[link.SourceNode.CommunityID].State == NodeLinkContext.CommunityState.Cluster)
                             {
                                 linkContext.BundlingStrength = 0f;
                                 linkContext.Alpha = _networkContext.ContextSettings.LinkNormalAlphaFactor;

@@ -11,7 +11,7 @@ namespace VidiGraph
     public class DatabaseStorageUtils
     {
         public static void BulkInitNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal,
-            MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
+            NodeLinkContext context, IEnumerable<NodeLinkContext> subnetworkContexts,
             IDriver driver, bool convertWinPaths)
         {
             DeleteDatabaseContents(driver);
@@ -20,7 +20,7 @@ namespace VidiGraph
         }
 
         public static void BulkUpdateNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal,
-            MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
+            NodeLinkContext context, IEnumerable<NodeLinkContext> subnetworkContexts,
             IDriver driver, bool convertWinPaths)
         {
             UpdateNetwork(networkFile, networkGlobal, context, subnetworkContexts, driver, convertWinPaths, true);
@@ -103,7 +103,7 @@ namespace VidiGraph
         }
 
         static void UpdateNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal,
-            MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
+            NodeLinkContext context, IEnumerable<NodeLinkContext> subnetworkContexts,
             IDriver driver, bool convertWinPaths, bool onlyDirty)
         {
             DumpNetwork(networkFile, networkGlobal, context, subnetworkContexts, out var fs, out var fc, out var fn, out var fn2n, onlyDirty);
@@ -229,7 +229,7 @@ namespace VidiGraph
         }
 
         static void DumpNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal,
-            MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
+            NodeLinkContext context, IEnumerable<NodeLinkContext> subnetworkContexts,
             out string subnetworkFile, out string commFile, out string nodeFile, out string nodeToNodeFile, bool onlyDirty = false)
         {
             subnetworkFile = FileUtil.GetUniqueTempPathInProject();
@@ -265,7 +265,7 @@ namespace VidiGraph
                 nFile.WriteLine(nodeHeaders);
                 n2nFile.WriteLine(linkHeaders);
 
-                var allContexts = new HashSet<MultiLayoutContext>() { context }.Union(subnetworkContexts);
+                var allContexts = new HashSet<NodeLinkContext>() { context }.Union(subnetworkContexts);
 
                 foreach (var subContext in allContexts)
                 {

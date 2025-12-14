@@ -11,7 +11,7 @@ namespace VidiGraph
 		public Transform FloorPosition;
 
 		NetworkGlobal _networkGlobal;
-		MultiLayoutContext _networkContext;
+		NodeLinkContext _networkContext;
 
 		// TODO remove this when we are able to calc at runtime
 		NetworkFilesLoader _fileLoader;
@@ -20,7 +20,7 @@ namespace VidiGraph
 
 		public override void Initialize(NetworkGlobal networkGlobal, NetworkContext networkContext)
 		{
-			_networkContext = (MultiLayoutContext)networkContext;
+			_networkContext = (NodeLinkContext)networkContext;
 
 			var manager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
 			_networkGlobal = manager.NetworkGlobal;
@@ -103,11 +103,11 @@ namespace VidiGraph
 
 	public class FloorLayoutInterpolator : TransformInterpolator
 	{
-		MultiLayoutContext _networkContext;
+		NodeLinkContext _networkContext;
 		Dictionary<int, Vector3> _startPositions = new Dictionary<int, Vector3>();
 		Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
-		public FloorLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
+		public FloorLayoutInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal, NodeLinkContext networkContext,
 			NetworkFilesLoader fileLoader, HashSet<int> toUpdate)
 		{
 			_networkContext = networkContext;

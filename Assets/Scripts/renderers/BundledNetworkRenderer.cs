@@ -36,7 +36,7 @@ namespace VidiGraph
         BSplineShaderWrapper _shaderWrapper = new BSplineShaderWrapper();
         NetworkManager _networkManager;
         NetworkGlobal _networkGlobal;
-        MultiLayoutContext _networkContext;
+        NodeLinkContext _networkContext;
         int _lastHoveredNode = -1;
         int _lastHoveredComm = -1;
 
@@ -62,7 +62,7 @@ namespace VidiGraph
 
             _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = _networkManager.NetworkGlobal;
-            _networkContext = (MultiLayoutContext)networkContext;
+            _networkContext = (NodeLinkContext)networkContext;
 
             InitializeShaders();
 
@@ -290,7 +290,7 @@ namespace VidiGraph
 
                 if (CommNeedsRenderUpdate(commID))
                 {
-                    MultiLayoutContext.Community contextComm = _networkContext.Communities[commID];
+                    NodeLinkContext.Community contextComm = _networkContext.Communities[commID];
 
                     CommunityRenderUtils.UpdateCommunity(_communityGameObjs[commID], contextComm,
                         _networkContext.SelectedCommunities.Contains(commID), _networkContext.ContextSettings.CommSelectColor, _commRenderers[commID]);
@@ -455,7 +455,7 @@ namespace VidiGraph
             });
         }
 
-        void AddNetworkInteraction(GameObject gameObject, MultiLayoutContext network)
+        void AddNetworkInteraction(GameObject gameObject, NodeLinkContext network)
         {
             XRGrabInteractable xrInteractable = gameObject.GetComponentInChildren<XRGrabInteractable>();
 

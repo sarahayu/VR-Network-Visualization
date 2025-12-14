@@ -9,7 +9,7 @@ namespace VidiGraph
     public static class BasicSubnetworkUtils
     {
         public static BasicSubnetwork CreateBasicSubnetwork(GameObject prefab, Transform transform,
-            IEnumerable<int> nodeIDs, MultiLayoutContext sourceContext, bool useShell, out GameObject gameObj)
+            IEnumerable<int> nodeIDs, NodeLinkContext sourceContext, bool useShell, out GameObject gameObj)
         {
             gameObj = UnityEngine.Object.Instantiate(prefab, transform);
 
