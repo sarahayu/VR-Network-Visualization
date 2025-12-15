@@ -245,30 +245,11 @@ namespace VidiGraph
             bool hovered = networkGlobal.HoveredNode?.ID == link.SourceNodeID || networkGlobal.HoveredNode?.ID == link.TargetNodeID;
             bool selected = contextLink.Selected;
 
-            var hoverCol = networkContext.ContextSettings.LinkHoverColor;
-            var selectCol = networkContext.ContextSettings.LinkSelectColor;
+            GetSplineColors(spline, hovered, selected, networkContext.ContextSettings,
+                out var startColor, out var endColor);
 
-            Color finalStartColor = spline.StartColorRGBA;
-            Color finalEndColor = spline.EndColorRGBA;
-
-            if (hovered && selected)
-            {
-                finalStartColor = Color.Lerp(Color.Lerp(hoverCol, finalStartColor, 0.5f), selectCol, 0.67f);
-                finalEndColor = Color.Lerp(Color.Lerp(hoverCol, finalEndColor, 0.5f), selectCol, 0.67f);
-            }
-            else if (hovered)
-            {
-                finalStartColor = Color.Lerp(hoverCol, finalStartColor, 0.5f);
-                finalEndColor = Color.Lerp(hoverCol, finalEndColor, 0.5f);
-            }
-            else if (selected)
-            {
-                finalStartColor = Color.Lerp(selectCol, finalStartColor, 0.5f);
-                finalEndColor = Color.Lerp(selectCol, finalEndColor, 0.5f);
-            }
-
-            spline.StartColorRGBA = finalStartColor;
-            spline.EndColorRGBA = finalEndColor;
+            spline.StartColorRGBA = startColor;
+            spline.EndColorRGBA = endColor;
 
             int NumSegments = ControlPointsToSegmentCount(cp); //NumControlPoints + Degree - 2 (First/Last Point)
 
@@ -352,6 +333,64 @@ namespace VidiGraph
             }
 
             _splineControlPoints.AddRange(controlPointsData); // AddRange is faster than adding items in a loop
+        }
+
+        void GetSplineColors(SplineData splineData, bool hovered, bool selected, NodeLinkContext.Settings settings,
+            out Color startColor, out Color endColor)
+        {
+            startColor = splineData.StartColorRGBA;
+            endColor = splineData.EndColorRGBA;
+
+            switch (settings.SelectionHighlightMode)
+            {
+                case NodeLinkContext.HighlightMode.Replace:
+                    if (selected)
+                    {
+                        startColor = settings.LinkSelectColor;
+                        endColor = settings.LinkSelectColor;
+                    }
+
+                    if (hovered)
+                    {
+                        startColor = Color.Lerp(startColor, settings.LinkHoverColor, 0.9f);
+                        endColor = Color.Lerp(endColor, settings.LinkHoverColor, 0.9f);
+                    }
+
+                    break;
+                case NodeLinkContext.HighlightMode.Saturate:
+                    if (selected)
+                    {
+                        startColor = ColorUtils.Saturate(startColor, 1f);
+                        endColor = ColorUtils.Saturate(endColor, 1f);
+                    }
+
+                    if (hovered)
+                    {
+                        startColor = Color.Lerp(startColor, settings.LinkHoverColor, 0.9f);
+                        endColor = Color.Lerp(endColor, settings.LinkHoverColor, 0.9f);
+                    }
+
+                    break;
+                case NodeLinkContext.HighlightMode.Tint:
+                default:
+                    {
+                        Color hoverCol = settings.LinkHoverColor;
+                        Color selectCol = settings.LinkSelectColor;
+
+                        if (selected)
+                        {
+                            startColor = Color.Lerp(startColor, selectCol, 0.5f);
+                            endColor = Color.Lerp(endColor, selectCol, 0.5f);
+                        }
+
+                        if (hovered)
+                        {
+                            startColor = Color.Lerp(startColor, hoverCol, 0.9f);
+                            endColor = Color.Lerp(endColor, hoverCol, 0.9f);
+                        }
+                    }
+                    break;
+            }
         }
 
         static int ControlPointsToSegmentCount(List<Vector3> cp)

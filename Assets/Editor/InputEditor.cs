@@ -24,6 +24,21 @@ namespace VidiGraph
                 network.CallTestingFunctionWork1();
             }
 
+            if (GUILayout.Button("Make Test Selection", GUILayout.Height(25)))
+            {
+                network.CallTestingFunctionSelectWomen();
+            }
+
+            if (GUILayout.Button("Test Color Selected Red", GUILayout.Height(25)))
+            {
+                network.CallTestingFunctionColorSelectedRed();
+            }
+
+            if (GUILayout.Button("Test Color Selected White", GUILayout.Height(25)))
+            {
+                network.CallTestingFunctionColorSelectedWhite();
+            }
+
             GUILayout.Space(10);
 
             DrawDefaultInspector();

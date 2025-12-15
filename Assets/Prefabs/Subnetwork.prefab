@@ -489,6 +489,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _overrideContextSettings: 1
   _settings:
+    SelectionHighlightMode: 2
     NodeScale: 0.1
     LinkWidth: 0.01
     EdgeBundlingStrength: 0.8

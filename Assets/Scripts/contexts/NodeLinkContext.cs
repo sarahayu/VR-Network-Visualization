@@ -14,7 +14,7 @@ namespace VidiGraph
         [Serializable]
         public class Settings
         {
-            public HighlightMode SelectionHighlightMode = HighlightMode.BlueTint;
+            public HighlightMode SelectionHighlightMode = HighlightMode.Tint;
 
             public float NodeScale = 1f;
             public float LinkWidth = 0.0025f;
@@ -113,8 +113,9 @@ namespace VidiGraph
 
         public enum HighlightMode
         {
-            BlueTint,
-            Saturate,
+            Replace,            // replace actual color with highlight color
+            Tint,               // mix actual color with highlight color
+            Saturate,           // saturate color
         }
 
         public Settings ContextSettings = new Settings();

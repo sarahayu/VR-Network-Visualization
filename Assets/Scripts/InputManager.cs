@@ -224,4 +224,28 @@ public class InputManager : MonoBehaviour
         _networkManager.SetMLLinksColorEnd(linkIDs1, "#00FFFF");
         _networkManager.SetMLLinksAlpha(linkIDs2, 0.4f);
     }
+
+    public void CallTestingFunctionSelectWomen()
+    {
+        if (_databaseStorage == null) return;
+
+        string query = "MATCH (n: Node {sex: \"female\"}) return n";
+
+        Debug.Log("Selecting nodes with query: " + query);
+
+        var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
+        _networkManager.SetWorkingSelectedNodes(nodes, true);
+    }
+
+    public void CallTestingFunctionColorSelectedRed()
+    {
+        if (_databaseStorage == null) return;
+        _networkManager.SetMLNodesColor(_networkManager.WorkingSelectedNodeGUIDs, "#FF8C8C");
+    }
+
+    public void CallTestingFunctionColorSelectedWhite()
+    {
+        if (_databaseStorage == null) return;
+        _networkManager.SetMLNodesColor(_networkManager.WorkingSelectedNodeGUIDs, "#EEEEEE");
+    }
 }

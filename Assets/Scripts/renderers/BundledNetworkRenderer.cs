@@ -248,23 +248,7 @@ namespace VidiGraph
                         bool hovered = nodeID == _networkGlobal.HoveredNode?.ID;
                         bool selected = _networkContext.SelectedNodes.Contains(nodeID);
 
-                        var hoverCol = _networkContext.ContextSettings.NodeHoverColor;
-                        var selectCol = _networkContext.ContextSettings.NodeSelectColor;
-
-                        Color finalColor = contextNode.Color;
-
-                        if (hovered && selected)
-                        {
-                            finalColor = Color.Lerp(Color.Lerp(hoverCol, contextNode.Color, 0.5f), selectCol, 0.67f);
-                        }
-                        else if (hovered)
-                        {
-                            finalColor = Color.Lerp(hoverCol, contextNode.Color, 0.5f);
-                        }
-                        else if (selected)
-                        {
-                            finalColor = Color.Lerp(selectCol, contextNode.Color, 0.5f);
-                        }
+                        Color finalColor = GetNodeColor(contextNode.Color, hovered, selected);
 
                         NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], finalColor, _nodeRenderers[nodeID]);
 
@@ -478,6 +462,65 @@ namespace VidiGraph
             {
                 CallNetworkSelectExit(network, evt);
             });
+        }
+
+        Color GetNodeColor(Color startColor, bool hovered, bool selected)
+        {
+            switch (_networkContext.ContextSettings.SelectionHighlightMode)
+            {
+                case NodeLinkContext.HighlightMode.Replace:
+                    {
+                        Color finalColor = startColor;
+
+                        if (selected)
+                        {
+                            finalColor = _networkContext.ContextSettings.NodeSelectColor;
+                        }
+
+                        if (hovered)
+                        {
+                            finalColor = Color.Lerp(finalColor, _networkContext.ContextSettings.NodeHoverColor, 0.9f);
+                        }
+
+                        return finalColor;
+                    }
+                case NodeLinkContext.HighlightMode.Saturate:
+                    {
+                        Color finalColor = startColor;
+
+                        if (selected)
+                        {
+                            finalColor = ColorUtils.Saturate(startColor, 1f);
+                        }
+
+                        if (hovered)
+                        {
+                            finalColor = Color.Lerp(finalColor, _networkContext.ContextSettings.NodeHoverColor, 0.9f);
+                        }
+
+                        return finalColor;
+                    }
+                case NodeLinkContext.HighlightMode.Tint:
+                default:
+                    {
+                        Color finalColor = startColor;
+
+                        Color hoverCol = _networkContext.ContextSettings.NodeHoverColor;
+                        Color selectCol = _networkContext.ContextSettings.NodeSelectColor;
+
+                        if (selected)
+                        {
+                            finalColor = Color.Lerp(startColor, selectCol, 0.5f);
+                        }
+
+                        if (hovered)
+                        {
+                            finalColor = Color.Lerp(finalColor, hoverCol, 0.9f);
+                        }
+
+                        return finalColor;
+                    }
+            }
         }
 
     }
