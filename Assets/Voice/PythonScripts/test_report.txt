@@ -1,0 +1,210 @@
+============================================================
+LangGraph Server Test Suite
+============================================================
+
+=== Testing /ping endpoint ===
+Status: 200
+Response: Server alive!
+
+[SUCCESS] Server is running!
+
+=== Testing /classify with: 'select all female students' ===
+Status: 200
+
+--- Response ---
+Original Input: select all female students
+Corrected Input: select all female nodes
+Actions: [
+  [
+    "selectNode",
+    "n.sex = 'female'"
+  ]
+]
+Queries: [
+  "MATCH (n:Node) WHERE n.sex = 'female' RETURN n"
+]
+Clarify: 
+
+--- Timings ---
+  action_agent: 0.996s
+  cypher_agent: 0.546s
+  general_agent: 0.259s
+  preprocess_agent: 0.706s
+  return_code: 0.000s
+
+=== Testing /classify with: 'color the selected nodes red' ===
+Status: 200
+
+--- Response ---
+Original Input: color the selected nodes red
+Corrected Input: color the selected nodes #FF0000
+Actions: [
+  [
+    "colorNode",
+    "#FF0000"
+  ]
+]
+Queries: [
+  "RETURN \"\""
+]
+Clarify: 
+
+--- Timings ---
+  action_agent: 0.660s
+  cypher_agent: 0.285s
+  general_agent: 0.915s
+  preprocess_agent: 1.208s
+  return_code: 0.000s
+
+=== Testing /classify with: 'select grade 9 students and color them blue' ===
+Status: 200
+
+--- Response ---
+Original Input: select grade 9 students and color them blue
+Corrected Input: select grade 9 students and color them #0000FF
+Actions: [
+  [
+    "selectNode",
+    "n.grade = 9"
+  ],
+  [
+    "colorNode",
+    "#0000FF"
+  ]
+]
+Queries: [
+  "MATCH (n:Node) WHERE n.grade = 9 RETURN n",
+  "RETURN \"\""
+]
+Clarify: 
+
+--- Timings ---
+  action_agent: 1.177s
+  cypher_agent: 4.758s
+  general_agent: 0.290s
+  preprocess_agent: 1.268s
+  return_code: 0.000s
+
+=== Testing /classify with: 'size nodes by GPA' ===
+Status: 200
+
+--- Response ---
+Original Input: size nodes by GPA
+Corrected Input: resize nodes by GPA
+Actions: [
+  [
+    "sizeNode",
+    "gpa"
+  ]
+]
+Queries: [
+  "MATCH (n:Node) WHERE n.selected = true RETURN min(n.gpa) AS minValue, max(n.gpa) AS maxValue"
+]
+Clarify: 
+
+--- Timings ---
+  action_agent: 0.538s
+  cypher_agent: 0.862s
+  general_agent: 0.286s
+  preprocess_agent: 1.051s
+  return_code: 0.000s
+
+=== Testing /classify with: 'select the notes with blew caller' ===
+Status: 200
+
+--- Response ---
+Original Input: select the notes with blew caller
+Corrected Input: select the nodes with blue color
+Actions: [
+  [
+    "colorNode",
+    "#0000FF"
+  ]
+]
+Queries: [
+  "RETURN \"\""
+]
+Clarify: 
+
+--- Timings ---
+  action_agent: 0.556s
+  cypher_agent: 0.416s
+  general_agent: 0.252s
+  preprocess_agent: 1.185s
+  return_code: 0.000s
+
+=== Testing /classify with: 'move selected nodes here' ===
+Status: 200
+
+--- Response ---
+Original Input: move selected nodes here
+Corrected Input: move selected nodes here
+Actions: [
+  [
+    "move",
+    "here"
+  ]
+]
+Queries: [
+  "RETURN \"\""
+]
+Clarify: 
+
+--- Timings ---
+  action_agent: 0.491s
+  cypher_agent: 2.684s
+  general_agent: 0.255s
+  preprocess_agent: 1.796s
+  return_code: 0.000s
+
+=== Testing /classify with: 'deselect all' ===
+Status: 200
+
+--- Response ---
+Original Input: deselect all
+Corrected Input: deselect all
+Actions: [
+  [
+    "deselect",
+    ""
+  ]
+]
+Queries: [
+  "RETURN \"\""
+]
+Clarify: 
+
+--- Timings ---
+  action_agent: 0.817s
+  cypher_agent: 2.673s
+  general_agent: 0.325s
+  preprocess_agent: 3.103s
+  return_code: 0.000s
+
+=== Testing /classify with: 'make it bigger' ===
+Status: 200
+
+--- Response ---
+Original Input: make it bigger
+Corrected Input: make it larger
+Actions: [
+  [
+    "sizeNode",
+    "size"
+  ]
+]
+Queries: [
+  "MATCH (n:Node) WHERE n.selected = true RETURN min(n.size) AS minValue, max(n.size) AS maxValue"
+]
+Clarify: 
+
+--- Timings ---
+  action_agent: 0.594s
+  cypher_agent: 1.007s
+  general_agent: 0.402s
+  preprocess_agent: 2.657s
+  return_code: 0.000s
+
+============================================================
+Test suite completed!
+============================================================

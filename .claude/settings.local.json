@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip show:*)",
+      "Bash(python langgraph_server.py:*)",
+      "Bash(curl:*)",
+      "Bash(python test_server.py:*)"
+    ]
+  }
+}
