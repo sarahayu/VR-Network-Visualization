@@ -365,7 +365,7 @@ namespace VidiGraph
             }
         }
 
-        // also selects connected links and fully selected communities
+        // also selects fully selected communities
         public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool isSelected)
         {
             foreach (var nodeID in nodeIDs)
@@ -374,15 +374,6 @@ namespace VidiGraph
                 {
                     Nodes[nodeID].Selected = isSelected;
                     Nodes[nodeID].Dirty = true;
-                }
-
-                foreach (var linkID in NodeLinkMatrixUndir[nodeID])
-                {
-                    if (Links[linkID].Selected != isSelected)
-                    {
-                        Links[linkID].Selected = isSelected;
-                        Links[linkID].Dirty = true;
-                    }
                 }
             }
 
@@ -403,7 +394,7 @@ namespace VidiGraph
             RecomputeSelecteds();
         }
 
-        // also selects connected links (internal and external) and nodes inside communities
+        // also selects nodes inside communities
         public void SetSelectedComms(IEnumerable<int> commIDs, bool isSelected)
         {
             foreach (var commID in commIDs)
@@ -414,7 +405,7 @@ namespace VidiGraph
             SetSelectedNodes(GetNodesFromCommunities(commIDs), isSelected);
         }
 
-        // also selects connected links and fully selected communities
+        // also selects fully selected communities
         public void SetSelectedNetwork(bool isSelected)
         {
             SetSelectedComms(Communities.Keys, isSelected);
