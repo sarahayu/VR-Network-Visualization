@@ -360,6 +360,55 @@ namespace Whisper.Samples
                                     var _colorByAttr_text = _colorByAttr.GetComponent<TMP_Text>();
                                     _colorByAttr_text.text = $"Colored {distinctValues.Count} categories by {attributeName_color}";
                                     break;
+
+                                case "shapeByAttribute":
+                                    Debug.Log("Categorical shape encoding by attribute: " + action[i][1]);
+                                    string attributeName_shape = action[i][1];
+
+                                    TimerUtils.StartTime("ShapeByAttribute");
+
+                                    // Get distinct values from the query result
+                                    var distinctShapeValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, query[i]);
+                                    Debug.Log($"Found {distinctShapeValues.Count} distinct values for {attributeName_shape}");
+
+                                    // Define the 3 allowed shapes
+                                    string[] allowedShapes = new string[] {
+                                        "sphere",
+                                        "cube",
+                                        "tetrahedron"
+                                    };
+
+                                    // Warn if more than 3 categories
+                                    if (distinctShapeValues.Count > 3)
+                                    {
+                                        Debug.LogWarning($"Found {distinctShapeValues.Count} categories but only 3 shapes available. Shapes will repeat.");
+                                    }
+
+                                    // Assign shape to each category
+                                    for (int j = 0; j < distinctShapeValues.Count; j++)
+                                    {
+                                        string categoryValue = distinctShapeValues[j];
+                                        string shapeName = allowedShapes[j % allowedShapes.Length]; // Cycle through shapes
+
+                                        // Build query to select nodes with this category value
+                                        string categoryQuery = $"MATCH (n:Node) WHERE n.{attributeName_shape} = {categoryValue} RETURN n";
+
+                                        Debug.Log($"  Category '{categoryValue}' → {shapeName}");
+
+                                        // Get nodes for this category
+                                        var categoryNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, categoryQuery);
+
+                                        // Change their shape
+                                        _networkManager.SetMLNodesShape(categoryNodes, shapeName);
+                                    }
+
+                                    TimerUtils.EndTime("ShapeByAttribute");
+
+                                    var _shapeByAttr = Instantiate(command_prefab, command_parent.transform);
+                                    var _shapeByAttr_text = _shapeByAttr.GetComponent<TMP_Text>();
+                                    _shapeByAttr_text.text = $"Shaped {distinctShapeValues.Count} categories by {attributeName_shape}";
+                                    break;
+
                                 case "arithmetic":
                                     Debug.Log("Performing arithmetic operation: " + action[i][1]);
                                     TimerUtils.StartTime("Arithmetic Operation");

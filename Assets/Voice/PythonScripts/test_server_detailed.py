@@ -193,6 +193,14 @@ def generate_markdown_report():
                         elif action_name == "colorNode":
                             md += f"- **Purpose:** Change color of selected nodes\n"
                             md += f"- **Color:** {action_param}\n"
+                        elif action_name == "colorByAttribute":
+                            md += f"- **Purpose:** Categorical coloring - assign different colors to each unique value of `{action_param}`\n"
+                            md += f"- **Attribute:** {action_param}\n"
+                            md += f"- **Available Colors:** 6 colors (sphere/cube/tetrahedron cycle if more categories)\n"
+                        elif action_name == "shapeByAttribute":
+                            md += f"- **Purpose:** Categorical shape encoding - assign different shapes to each unique value of `{action_param}`\n"
+                            md += f"- **Attribute:** {action_param}\n"
+                            md += f"- **Available Shapes:** sphere, cube, tetrahedron (cycles if more than 3 categories)\n"
                         elif action_name == "sizeNode":
                             if ":" in action_param:
                                 attr, scope = action_param.split(":")
@@ -329,6 +337,8 @@ No database query needed (Unity handles this action)
         "selectLink": "Link selection with conditions",
         "colorNode": "Node color modification",
         "colorLink": "Link color modification",
+        "colorByAttribute": "Categorical coloring by attribute",
+        "shapeByAttribute": "Categorical shape encoding by attribute",
         "sizeNode": "Node size encoding by attribute",
         "move": "Spatial repositioning",
         "layout": "Layout algorithm changes",
@@ -384,7 +394,7 @@ def main():
     print()
 
     # Test 1: Server health check
-    print("[1/10] Testing server health...")
+    print("[1/12] Testing server health...")
     if not test_ping():
         print("[ERROR] Server is not running!")
         print("Please start the server with: python langgraph_server.py")
@@ -399,39 +409,47 @@ def main():
     print("[SUCCESS] Server is running!\n")
 
     # Test 2: Simple selection
-    print("[2/10] Testing simple node selection...")
+    print("[2/12] Testing simple node selection...")
     test_classify("select all female students", "Simple Node Selection")
 
     # Test 3: Color command
-    print("[3/10] Testing color command...")
+    print("[3/12] Testing color command...")
     test_classify("color the selected nodes red", "Color Selected Nodes")
 
     # Test 4: Multi-step command
-    print("[4/10] Testing multi-step command...")
+    print("[4/12] Testing multi-step command...")
     test_classify("select grade 9 students and color them blue", "Multi-Step: Select + Color")
 
     # Test 5: Default sizing (all nodes)
-    print("[5/10] Testing default sizing behavior...")
+    print("[5/12] Testing default sizing behavior...")
     test_classify("size nodes by GPA", "Size All Nodes (Default)")
 
     # Test 6: Explicit selected sizing
-    print("[6/10] Testing explicit selected sizing...")
+    print("[6/12] Testing explicit selected sizing...")
     test_classify("size selected nodes by GPA", "Size Selected Nodes Only")
 
-    # Test 7: Voice error correction
-    print("[7/10] Testing voice error correction...")
+    # Test 7: Categorical coloring
+    print("[7/12] Testing categorical coloring...")
+    test_classify("color nodes by grade", "Categorical Coloring by Attribute")
+
+    # Test 8: Categorical shape encoding
+    print("[8/12] Testing categorical shape encoding...")
+    test_classify("shape nodes by grade", "Categorical Shape Encoding by Attribute")
+
+    # Test 9: Voice error correction
+    print("[9/12] Testing voice error correction...")
     test_classify("select the notes with blew caller", "Voice Error Correction")
 
-    # Test 8: Move command
-    print("[8/10] Testing move command...")
+    # Test 10: Move command
+    print("[10/12] Testing move command...")
     test_classify("move selected nodes here", "Move Nodes")
 
-    # Test 9: Deselect
-    print("[9/10] Testing deselection...")
+    # Test 11: Deselect
+    print("[11/12] Testing deselection...")
     test_classify("deselect all", "Deselect All")
 
-    # Test 10: Complex multi-step
-    print("[10/10] Testing complex multi-step command...")
+    # Test 12: Complex multi-step
+    print("[12/12] Testing complex multi-step command...")
     test_classify("select female students and size them by GPA and color them purple",
                   "Complex: Select + Size + Color")
 

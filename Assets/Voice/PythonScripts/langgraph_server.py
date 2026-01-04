@@ -128,6 +128,7 @@ Allowed actions:
 - "colorNode"
 - "colorLink"
 - "colorByAttribute"
+- "shapeByAttribute"
 - "sizeNode"
 - "move"
 - "layout"
@@ -152,6 +153,16 @@ Categorical coloring rules:
   * "color by sex" → ["colorByAttribute", "sex"] (categorical)
   * "categorically color by department" → ["colorByAttribute", "department"]
 - This assigns a unique color from the palette to each distinct value of the attribute
+
+Categorical shape encoding rules:
+- CRITICAL: "shape BY attribute" means categorical shape encoding (assign different shapes per category)
+- If user says "shape nodes by <attribute>" or "change shape by <attribute>", generate: [["shapeByAttribute", "<attribute>"]]
+- Available shapes: sphere, cube, tetrahedron (3 shapes for 3 categories maximum)
+- Examples:
+  * "shape nodes by grade" → ["shapeByAttribute", "grade"] (categorical - different shape per grade)
+  * "change shape by sex" → ["shapeByAttribute", "sex"] (categorical)
+  * "make shapes different by department" → ["shapeByAttribute", "department"]
+- This assigns a unique shape (sphere/cube/tetrahedron) to each distinct value of the attribute
 
 Sizing rules:
 - sizing command should output ["sizeNode", "<attributeName>:<scope>"]
@@ -207,6 +218,11 @@ For:
     → MATCH (n:Node) RETURN DISTINCT n.<attribute> AS value ORDER BY value
     Example: ["colorByAttribute", "grade"]
     → MATCH (n:Node) RETURN DISTINCT n.grade AS value ORDER BY value
+
+- ["shapeByAttribute", "<attribute>"]
+    → MATCH (n:Node) RETURN DISTINCT n.<attribute> AS value ORDER BY value
+    Example: ["shapeByAttribute", "sex"]
+    → MATCH (n:Node) RETURN DISTINCT n.sex AS value ORDER BY value
 
 - ["move", "<param>"]
     → RETURN ""  (Unity handles layout)

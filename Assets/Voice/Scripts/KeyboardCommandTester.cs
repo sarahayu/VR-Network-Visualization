@@ -26,10 +26,11 @@ namespace Whisper.Samples
         public KeyCode sizeByGPAKey = KeyCode.Alpha2;
         public KeyCode colorByGradeKey = KeyCode.Alpha3;
         public KeyCode colorBySexKey = KeyCode.Alpha4;
-        public KeyCode selectFemaleKey = KeyCode.Alpha5;
-        public KeyCode deselectAllKey = KeyCode.Alpha6;
-        public KeyCode colorSelectedRedKey = KeyCode.Alpha7;
-        public KeyCode moveSelectedKey = KeyCode.Alpha8;
+        public KeyCode shapeByGradeKey = KeyCode.Alpha5;
+        public KeyCode selectFemaleKey = KeyCode.Alpha6;
+        public KeyCode deselectAllKey = KeyCode.Alpha7;
+        public KeyCode colorSelectedRedKey = KeyCode.Alpha8;
+        public KeyCode moveSelectedKey = KeyCode.Alpha9;
 
         [Header("Display")]
         public bool showInstructions = true;
@@ -70,6 +71,13 @@ namespace Whisper.Samples
             {
                 Debug.Log("[KEYBOARD] Triggered: Color by attribute (sex)");
                 ExecuteDirectAction("colorByAttribute", "sex");
+            }
+
+            // Shape by grade (categorical shape encoding - works on all nodes)
+            if (Input.GetKeyDown(shapeByGradeKey))
+            {
+                Debug.Log("[KEYBOARD] Triggered: Shape by attribute (grade)");
+                ExecuteDirectAction("shapeByAttribute", "grade");
             }
 
             // Select female nodes
@@ -163,6 +171,12 @@ namespace Whisper.Samples
                     actions = new string[][] { new string[] { "colorByAttribute", parameter } };
                     queries = new string[] { $"MATCH (n:Node) RETURN DISTINCT n.{parameter} AS value ORDER BY value" };
                     commandDescription = $"color by {parameter}";
+                    break;
+
+                case "shapeByAttribute":
+                    actions = new string[][] { new string[] { "shapeByAttribute", parameter } };
+                    queries = new string[] { $"MATCH (n:Node) RETURN DISTINCT n.{parameter} AS value ORDER BY value" };
+                    commandDescription = $"shape by {parameter}";
                     break;
 
                 case "sizeNode":
@@ -363,6 +377,42 @@ namespace Whisper.Samples
                         Debug.Log($"  ✓ Categorical coloring complete");
                         break;
 
+                    case "shapeByAttribute":
+                        Debug.Log($"  Categorical shape encoding by: {actionParam}");
+                        string attributeName_shape = actionParam;
+
+                        // Get distinct values
+                        var distinctShapeValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, queries[i]);
+                        Debug.Log($"  Found {distinctShapeValues.Count} distinct values");
+
+                        // Define 3 allowed shapes
+                        string[] allowedShapes = new string[] {
+                            "sphere",
+                            "cube",
+                            "tetrahedron"
+                        };
+
+                        if (distinctShapeValues.Count > 3)
+                        {
+                            Debug.LogWarning($"  ⚠ {distinctShapeValues.Count} categories but only 3 shapes - shapes will repeat");
+                        }
+
+                        // Assign shape to each category
+                        for (int j = 0; j < distinctShapeValues.Count; j++)
+                        {
+                            string categoryValue = distinctShapeValues[j];
+                            string shapeName = allowedShapes[j % allowedShapes.Length];
+
+                            string categoryQuery = $"MATCH (n:Node) WHERE n.{attributeName_shape} = {categoryValue} RETURN n";
+                            Debug.Log($"    Category {categoryValue} → {shapeName}");
+
+                            var categoryNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, categoryQuery);
+                            _networkManager.SetMLNodesShape(categoryNodes, shapeName);
+                        }
+
+                        Debug.Log($"  ✓ Categorical shape encoding complete");
+                        break;
+
                     case "deselect":
                         Debug.Log($"  Deselecting all nodes");
                         _networkManager.ClearSelection();
@@ -404,6 +454,7 @@ namespace Whisper.Samples
             Debug.Log($"Press [{sizeByGPAKey}] - Size nodes by GPA");
             Debug.Log($"Press [{colorByGradeKey}] - Color nodes by grade (categorical)");
             Debug.Log($"Press [{colorBySexKey}] - Color nodes by sex (categorical)");
+            Debug.Log($"Press [{shapeByGradeKey}] - Shape nodes by grade (categorical)");
             Debug.Log($"Press [{selectFemaleKey}] - Select female students");
             Debug.Log($"Press [{deselectAllKey}] - Deselect all");
             Debug.Log($"Press [{colorSelectedRedKey}] - Color selected nodes red");

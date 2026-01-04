@@ -1112,6 +1112,29 @@ namespace VidiGraph
             _allNetworks[subnetworkID].SetNodesColor(nodeIDs, color, _updatingStorage, _updatingRenderElements);
         }
 
+        public void SetMLNodesShape(IEnumerable<string> nodeGUIDs, string shapeName)
+        {
+            foreach (var (subnID, nodeIDs) in SortNodeGUIDs(nodeGUIDs)) SetMLNodesShape(nodeIDs, shapeName, subnID);
+        }
+
+        public void SetMLNodesShape(IEnumerable<int> nodeIDs, string shapeName, int subnetworkID = MainNetworkID)
+        {
+            Mesh shapeMesh = NodeShapeMeshes.GetMesh(shapeName, 0.5f);
+
+            foreach (var nodeID in nodeIDs)
+            {
+                Transform nodeTransform = _allNetworks[subnetworkID].GetNodeTransform(nodeID);
+                if (nodeTransform != null)
+                {
+                    MeshFilter meshFilter = nodeTransform.GetComponent<MeshFilter>();
+                    if (meshFilter != null)
+                    {
+                        meshFilter.sharedMesh = shapeMesh;
+                    }
+                }
+            }
+        }
+
         public void SetMLNodesPosition(IEnumerable<string> nodeGUIDs, Vector3 position)
         {
             foreach (var (subnID, nodeIDs) in SortNodeGUIDs(nodeGUIDs)) SetMLNodesPosition(nodeIDs, position, subnID);
