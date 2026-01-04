@@ -16,6 +16,9 @@ namespace Whisper.Samples
     {
         [Header("References")]
         public StreamingSampleMic streamingSampleMic;
+        public GameObject command_prefab;
+        public GameObject command_parent;
+        public UnityEngine.UI.ScrollRect scroll;
 
         [Header("Server Settings")]
         public string serverUrl = "http://localhost:5000/classify";
@@ -285,6 +288,15 @@ namespace Whisper.Samples
 
             Debug.Log($"[EXECUTE] Processing {actions.Length} action(s) for: {originalCommand}");
 
+            // Display command in UI (if UI elements are assigned)
+            if (command_prefab != null && command_parent != null)
+            {
+                var _commandUI = Instantiate(command_prefab, command_parent.transform);
+                var _commandUI_text = _commandUI.GetComponent<TMP_Text>();
+                _commandUI_text.text = $"<b>User:</b> {originalCommand}";
+                ScrollToBottom();
+            }
+
             for (int i = 0; i < actions.Length; i++)
             {
                 string actionName = actions[i][0];
@@ -374,7 +386,35 @@ namespace Whisper.Samples
                             _networkManager.SetMLNodesColor(categoryNodes, colorHex);
                         }
 
+                        // Print color legend to console
                         Debug.Log($"  ✓ Categorical coloring complete");
+                        Debug.Log($"  === Color Legend for '{attributeName_color}' ===");
+                        for (int j = 0; j < distinctValues.Count; j++)
+                        {
+                            string categoryValue = distinctValues[j].Replace("'", "");
+                            string colorHex = allowedColors[j % allowedColors.Length];
+                            Debug.Log($"    ■ {categoryValue} = {colorHex}");
+                        }
+
+                        // Create UI legend display (if UI elements are assigned)
+                        if (command_prefab != null && command_parent != null)
+                        {
+                            var _colorLegend = Instantiate(command_prefab, command_parent.transform);
+                            var _colorLegend_text = _colorLegend.GetComponent<TMP_Text>();
+
+                            System.Text.StringBuilder uiLegendBuilder = new System.Text.StringBuilder();
+                            uiLegendBuilder.AppendLine($"<b>Colored by {attributeName_color}</b>");
+
+                            for (int j = 0; j < distinctValues.Count; j++)
+                            {
+                                string categoryValue = distinctValues[j].Replace("'", "");
+                                string colorHex = allowedColors[j % allowedColors.Length];
+                                uiLegendBuilder.AppendLine($"  <color={colorHex}>■</color> {categoryValue}");
+                            }
+
+                            _colorLegend_text.text = uiLegendBuilder.ToString();
+                            ScrollToBottom();
+                        }
                         break;
 
                     case "shapeByAttribute":
@@ -410,7 +450,39 @@ namespace Whisper.Samples
                             _networkManager.SetMLNodesShape(categoryNodes, shapeName);
                         }
 
+                        // Print shape legend to console
                         Debug.Log($"  ✓ Categorical shape encoding complete");
+                        Debug.Log($"  === Shape Legend for '{attributeName_shape}' ===");
+
+                        string[] shapeSymbols = new string[] { "●", "■", "▲" };
+                        for (int j = 0; j < distinctShapeValues.Count; j++)
+                        {
+                            string categoryValue = distinctShapeValues[j].Replace("'", "");
+                            string shapeName = allowedShapes[j % allowedShapes.Length];
+                            string shapeSymbol = shapeSymbols[j % shapeSymbols.Length];
+                            Debug.Log($"    {shapeSymbol} {categoryValue} = {shapeName}");
+                        }
+
+                        // Create UI legend display (if UI elements are assigned)
+                        if (command_prefab != null && command_parent != null)
+                        {
+                            var _shapeLegend = Instantiate(command_prefab, command_parent.transform);
+                            var _shapeLegend_text = _shapeLegend.GetComponent<TMP_Text>();
+
+                            System.Text.StringBuilder uiShapeLegendBuilder = new System.Text.StringBuilder();
+                            uiShapeLegendBuilder.AppendLine($"<b>Shaped by {attributeName_shape}</b>");
+
+                            for (int j = 0; j < distinctShapeValues.Count; j++)
+                            {
+                                string categoryValue = distinctShapeValues[j].Replace("'", "");
+                                string shapeName = allowedShapes[j % allowedShapes.Length];
+                                string shapeSymbol = shapeSymbols[j % shapeSymbols.Length];
+                                uiShapeLegendBuilder.AppendLine($"  {shapeSymbol} {categoryValue} = {shapeName}");
+                            }
+
+                            _shapeLegend_text.text = uiShapeLegendBuilder.ToString();
+                            ScrollToBottom();
+                        }
                         break;
 
                     case "deselect":
@@ -464,5 +536,16 @@ namespace Whisper.Samples
             Debug.Log($"Server Mode: {(serverEnabled ? "ENABLED" : "DISABLED (Direct execution)")}");
             Debug.Log("=".PadRight(60, '='));
         }
+
+        private void ScrollToBottom()
+        {
+            if (scroll != null)
+            {
+                Canvas.ForceUpdateCanvases();
+                scroll.verticalNormalizedPosition = 0f;
+                Canvas.ForceUpdateCanvases();
+            }
+        }
+
     }
 }

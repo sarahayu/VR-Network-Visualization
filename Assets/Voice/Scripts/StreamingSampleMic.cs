@@ -212,6 +212,7 @@ namespace Whisper.Samples
                     var _command = Instantiate(command_prefab, command_parent.transform);
                     var _command_text = _command.GetComponent<TMP_Text>();
                     _command_text.text = corrected_input; // showing the correctd command text
+                    ScrollToBottom();
 
                     // Check if clarification is needed
                     if (!string.IsNullOrEmpty(classification.clarify))
@@ -356,9 +357,22 @@ namespace Whisper.Samples
 
                                     TimerUtils.EndTime("ColorByAttribute");
 
+                                    // Create legend display
                                     var _colorByAttr = Instantiate(command_prefab, command_parent.transform);
                                     var _colorByAttr_text = _colorByAttr.GetComponent<TMP_Text>();
-                                    _colorByAttr_text.text = $"Colored {distinctValues.Count} categories by {attributeName_color}";
+
+                                    System.Text.StringBuilder legendBuilder = new System.Text.StringBuilder();
+                                    legendBuilder.AppendLine($"<b>Colored by {attributeName_color}</b>");
+
+                                    for (int j = 0; j < distinctValues.Count; j++)
+                                    {
+                                        string categoryValue = distinctValues[j].Replace("'", ""); // Remove quotes for display
+                                        string colorHex = allowedColors[j % allowedColors.Length];
+                                        legendBuilder.AppendLine($"  <color={colorHex}>■</color> {categoryValue}");
+                                    }
+
+                                    _colorByAttr_text.text = legendBuilder.ToString();
+                                    ScrollToBottom();
                                     break;
 
                                 case "shapeByAttribute":
@@ -404,9 +418,30 @@ namespace Whisper.Samples
 
                                     TimerUtils.EndTime("ShapeByAttribute");
 
+                                    // Create legend display with shape symbols
                                     var _shapeByAttr = Instantiate(command_prefab, command_parent.transform);
                                     var _shapeByAttr_text = _shapeByAttr.GetComponent<TMP_Text>();
-                                    _shapeByAttr_text.text = $"Shaped {distinctShapeValues.Count} categories by {attributeName_shape}";
+
+                                    System.Text.StringBuilder shapeLegendBuilder = new System.Text.StringBuilder();
+                                    shapeLegendBuilder.AppendLine($"<b>Shaped by {attributeName_shape}</b>");
+
+                                    // Define shape symbols for display
+                                    string[] shapeSymbols = new string[] {
+                                        "●",  // sphere (circle)
+                                        "■",  // cube (square)
+                                        "▲"   // tetrahedron (triangle)
+                                    };
+
+                                    for (int j = 0; j < distinctShapeValues.Count; j++)
+                                    {
+                                        string categoryValue = distinctShapeValues[j].Replace("'", ""); // Remove quotes for display
+                                        string shapeName = allowedShapes[j % allowedShapes.Length];
+                                        string shapeSymbol = shapeSymbols[j % shapeSymbols.Length];
+                                        shapeLegendBuilder.AppendLine($"  {shapeSymbol} {categoryValue} = {shapeName}");
+                                    }
+
+                                    _shapeByAttr_text.text = shapeLegendBuilder.ToString();
+                                    ScrollToBottom();
                                     break;
 
                                 case "arithmetic":
@@ -431,6 +466,16 @@ namespace Whisper.Samples
                         loadingIcon.SetLoading(false); // Done processing
                     }
                 }
+            }
+        }
+
+        private void ScrollToBottom()
+        {
+            if (scroll != null)
+            {
+                Canvas.ForceUpdateCanvases();
+                scroll.verticalNormalizedPosition = 0f;
+                Canvas.ForceUpdateCanvases();
             }
         }
 
