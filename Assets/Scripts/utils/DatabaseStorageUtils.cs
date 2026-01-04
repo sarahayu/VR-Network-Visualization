@@ -482,5 +482,64 @@ namespace VidiGraph
             return (min, max);
         }
 
+        public static List<string> GetDistinctValuesFromStore(NetworkGlobal networkGlobal, string command, IDriver driver, bool convertWinPaths = true)
+        {
+            List<string> distinctValues = new List<string>();
+
+            try
+            {
+                using var session = driver.Session();
+
+                TimerUtils.StartTime("GetDistinctValues.Run");
+                var res = session.Run(command);
+                TimerUtils.EndTime("GetDistinctValues.Run");
+
+                TimerUtils.StartTime("GetDistinctValues.ProcessResults");
+
+                // Iterate through all records and extract the "value" field
+                foreach (var record in res)
+                {
+                    try
+                    {
+                        var value = record["value"];
+
+                        // Convert to string representation based on type
+                        string valueStr;
+                        var objValue = value.As<object>();
+
+                        if (objValue == null)
+                        {
+                            continue; // Skip null values
+                        }
+                        else if (objValue is string)
+                        {
+                            valueStr = $"'{objValue}'"; // String values need quotes for Cypher
+                        }
+                        else
+                        {
+                            valueStr = objValue.ToString(); // Numeric/boolean values don't need quotes
+                        }
+
+                        distinctValues.Add(valueStr);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogWarning($"Skipping value due to error: {ex.Message}");
+                        continue;
+                    }
+                }
+
+                TimerUtils.EndTime("GetDistinctValues.ProcessResults");
+
+                Debug.Log($"Found {distinctValues.Count} distinct values");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"GetDistinctValues Error: {e.Message}");
+            }
+
+            return distinctValues;
+        }
+
     }
 }

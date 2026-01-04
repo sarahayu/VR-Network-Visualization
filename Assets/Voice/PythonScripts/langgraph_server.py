@@ -127,6 +127,7 @@ Allowed actions:
 - "selectLink"
 - "colorNode"
 - "colorLink"
+- "colorByAttribute"
 - "sizeNode"
 - "move"
 - "layout"
@@ -139,6 +140,18 @@ Color rules:
 - If user says "color X nodes blue", generate: [["selectNode", "..."], ["colorNode", "#0000FF"]]
 - If user says "color selected nodes", generate: [["colorNode", "#0000FF"]] (apply to current selection)
 - If user only says "color blue" without specifying, apply to currently selected nodes
+
+Categorical coloring rules:
+- CRITICAL: "color BY attribute" means categorical coloring (assign different colors per category)
+- If user says "color nodes by <attribute>" or "color by <attribute>", generate: [["colorByAttribute", "<attribute>"]]
+- This is DIFFERENT from:
+  * "size by" which is sizing (use sizeNode)
+  * "color nodes <color>" which is single color (use colorNode)
+- Examples:
+  * "color nodes by grade" → ["colorByAttribute", "grade"] (categorical - different color per grade)
+  * "color by sex" → ["colorByAttribute", "sex"] (categorical)
+  * "categorically color by department" → ["colorByAttribute", "department"]
+- This assigns a unique color from the palette to each distinct value of the attribute
 
 Sizing rules:
 - sizing command should output ["sizeNode", "<attributeName>:<scope>"]
@@ -189,6 +202,11 @@ For:
 
 - ["colorLink", "<hex>"]
     → RETURN ""  (Unity handles color)
+
+- ["colorByAttribute", "<attribute>"]
+    → MATCH (n:Node) RETURN DISTINCT n.<attribute> AS value ORDER BY value
+    Example: ["colorByAttribute", "grade"]
+    → MATCH (n:Node) RETURN DISTINCT n.grade AS value ORDER BY value
 
 - ["move", "<param>"]
     → RETURN ""  (Unity handles layout)

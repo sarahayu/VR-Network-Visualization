@@ -73,5 +73,10 @@ namespace VidiGraph
         {
             return DatabaseStorageUtils.GetMinMaxFromStore(networkGlobal, command, _driver, _convertWinPaths);
         }
+
+        public List<string> GetDistinctValuesFromStore(NetworkGlobal networkGlobal, string command)
+        {
+            return DatabaseStorageUtils.GetDistinctValuesFromStore(networkGlobal, command, _driver, _convertWinPaths);
+        }
     }
 }

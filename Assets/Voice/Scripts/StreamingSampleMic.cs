@@ -305,9 +305,60 @@ namespace Whisper.Samples
                                     Debug.Log("Changing color of selected links to: " + action[i][1]);
                                     var links_color = _networkManager.WorkingSelectedLinkGUIDs;
                                     TimerUtils.StartTime("SetColor");
-                                    _networkManager.SetMLLinksColorStart(links_color, action[i][1]); 
-                                    _networkManager.SetMLLinksColorEnd(links_color, action[i][1]); 
+                                    _networkManager.SetMLLinksColorStart(links_color, action[i][1]);
+                                    _networkManager.SetMLLinksColorEnd(links_color, action[i][1]);
                                     TimerUtils.EndTime("SetColor");
+                                    break;
+                                case "colorByAttribute":
+                                    Debug.Log("Categorical coloring by attribute: " + action[i][1]);
+                                    string attributeName_color = action[i][1];
+
+                                    TimerUtils.StartTime("ColorByAttribute");
+
+                                    // Get distinct values from the query result
+                                    var distinctValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, query[i]);
+                                    Debug.Log($"Found {distinctValues.Count} distinct values for {attributeName_color}");
+
+                                    // Define the 6 allowed colors
+                                    string[] allowedColors = new string[] {
+                                        "#FF9999",  // red (S=0.3)
+                                        "#FFCC80",  // orange (S=0.3)
+                                        "#FFFF99",  // yellow (S=0.3)
+                                        "#99FF99",  // green (S=0.3)
+                                        "#9999FF",  // blue (S=0.3)
+                                        "#B380B3"   // purple (S=0.3)
+                                    };
+
+
+                                    // Warn if more than 6 categories
+                                    if (distinctValues.Count > 6)
+                                    {
+                                        Debug.LogWarning($"Found {distinctValues.Count} categories but only 6 colors available. Colors will repeat.");
+                                    }
+
+                                    // Color each category
+                                    for (int j = 0; j < distinctValues.Count; j++)
+                                    {
+                                        string categoryValue = distinctValues[j];
+                                        string colorHex = allowedColors[j % allowedColors.Length]; // Cycle through colors
+
+                                        // Build query to select nodes with this category value
+                                        string categoryQuery = $"MATCH (n:Node) WHERE n.{attributeName_color} = {categoryValue} RETURN n";
+
+                                        Debug.Log($"  Category '{categoryValue}' → {colorHex}");
+
+                                        // Get nodes for this category
+                                        var categoryNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, categoryQuery);
+
+                                        // Color them
+                                        _networkManager.SetMLNodesColor(categoryNodes, colorHex);
+                                    }
+
+                                    TimerUtils.EndTime("ColorByAttribute");
+
+                                    var _colorByAttr = Instantiate(command_prefab, command_parent.transform);
+                                    var _colorByAttr_text = _colorByAttr.GetComponent<TMP_Text>();
+                                    _colorByAttr_text.text = $"Colored {distinctValues.Count} categories by {attributeName_color}";
                                     break;
                                 case "arithmetic":
                                     Debug.Log("Performing arithmetic operation: " + action[i][1]);
@@ -315,6 +366,9 @@ namespace Whisper.Samples
                                     var result = _databaseStorage.GetValueFromStore(_networkManager.NetworkGlobal, query[i]);
                                     Debug.Log("Arithmetic Result: " + result);
                                     TimerUtils.EndTime("Arithmetic Operation");
+                                    var _result = Instantiate(command_prefab, command_parent.transform);
+                                    var _result_text = _result.GetComponent<TMP_Text>();
+                                    _result_text.text = "Calculated Result: " + result;
                                     break;
                                 default:
                                     // Handle unknown actions
