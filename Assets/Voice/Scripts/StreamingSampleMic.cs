@@ -368,7 +368,8 @@ namespace Whisper.Samples
                                     {
                                         string categoryValue = distinctValues[j].Replace("'", ""); // Remove quotes for display
                                         string colorHex = allowedColors[j % allowedColors.Length];
-                                        legendBuilder.AppendLine($"  <color={colorHex}>■</color> {categoryValue}");
+                                        string colorName = GetColorName(colorHex);
+                                        legendBuilder.AppendLine($"  <color={colorHex}>{colorName}</color> for {categoryValue}");
                                     }
 
                                     _colorByAttr_text.text = legendBuilder.ToString();
@@ -477,6 +478,20 @@ namespace Whisper.Samples
                 scroll.verticalNormalizedPosition = 0f;
                 Canvas.ForceUpdateCanvases();
             }
+        }
+
+        private string GetColorName(string hexColor)
+        {
+            return hexColor.ToUpper() switch
+            {
+                "#FF7F7F" => "red",
+                "#FFB852" => "orange",
+                "#FFFF7F" => "yellow",
+                "#7FFF7F" => "green",
+                "#7F7FFF" => "blue",
+                "#9F4D9F" => "purple",
+                _ => "color"
+            };
         }
 
     }
