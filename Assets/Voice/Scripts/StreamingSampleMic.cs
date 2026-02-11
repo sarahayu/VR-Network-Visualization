@@ -220,9 +220,9 @@ namespace Whisper.Samples
                         Debug.LogWarning("Clarification Needed: " + classification.clarify);
                         var new_command = Instantiate(command_prefab, command_parent.transform);
                         var command_text = new_command.GetComponent<TMP_Text>();
-                        command_text.text = "Clarification Needed: " + classification.clarify;
+                        command_text.text = "<color=#FF8F00><b>Please say it again</b></color>";
+                        ScrollToBottom();
                         audioSource.PlayOneShot(errorAudio);
-                        // Add the voice for classification later
                     }
                     else
                     {

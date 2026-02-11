@@ -432,6 +432,7 @@ namespace Whisper.Samples
                 {
                     Debug.LogError($"[SERVER ERROR] {www.error}");
                     Debug.LogError("Make sure the Python server is running: python langgraph_server.py");
+                    ShowSystemMessage("Please say it again");
                 }
                 else
                 {
@@ -444,8 +445,17 @@ namespace Whisper.Samples
                         MissingMemberHandling = MissingMemberHandling.Ignore
                     });
 
-                    // Execute the actions
-                    StartCoroutine(ExecuteActionsDirectly(classification.actions, classification.queries, userInput));
+                    // Check if clarification is needed (server couldn't understand)
+                    if (!string.IsNullOrEmpty(classification.clarify))
+                    {
+                        Debug.LogWarning($"[SERVER] Clarification needed: {classification.clarify}");
+                        ShowSystemMessage("Please say it again");
+                    }
+                    else
+                    {
+                        // Execute the actions
+                        StartCoroutine(ExecuteActionsDirectly(classification.actions, classification.queries, userInput));
+                    }
                 }
             }
         }
@@ -715,6 +725,27 @@ namespace Whisper.Samples
             Debug.Log($"[COMPLETE] All actions executed for: {originalCommand}");
         }
 
+        // Natural language commands for each demo step (sent to server)
+        private static readonly string[][] DemoCommands = new string[][] {
+            // Demo P (demoId 0): Friendship highlight demo
+            new string[] {
+                "Highlight the top 3 nodes that have the most friendship links",
+                "Color the nodes by grade",
+                "Color their aggression links for highlighted nodes"
+            },
+            // Demo L (demoId 1): Smoker/drinker + aggression demo
+            new string[] {
+                "Color nodes by smoker or drinker",
+                "Color their aggression links in red"
+            },
+            // Demo O (demoId 2): Gender + aggression targets + friendship links
+            new string[] {
+                "Color nodes by gender",
+                "Select the nodes with many incoming aggression links",
+                "Color their friendship links in blue"
+            }
+        };
+
         private void RunDemoStep(int demoId, int step)
         {
             // Ensure QueryMode is off so selectNode doesn't create subgraphs during demos
@@ -724,17 +755,39 @@ namespace Whisper.Samples
                 _networkManager.SetQueryMode(false);
             }
 
+            if (demoId < 0 || demoId >= DemoCommands.Length || step < 0 || step >= DemoCommands[demoId].Length)
+            {
+                Debug.LogError($"[DEMO] Invalid demoId={demoId} step={step}");
+                return;
+            }
+
+            string command = DemoCommands[demoId][step];
+            string demoLabel = demoId == 0 ? "P" : demoId == 1 ? "L" : "O";
+            Debug.Log($"[DEMO {demoLabel} - Step {step + 1}] {command}");
+
+            if (serverEnabled)
+            {
+                // Send natural language to server → server returns actions/queries → Unity executes
+                StartCoroutine(SendToServerAndExecute(command));
+            }
+            else
+            {
+                // Fallback: direct execution with hardcoded actions
+                RunDemoStepDirect(demoId, step);
+            }
+        }
+
+        private void RunDemoStepDirect(int demoId, int step)
+        {
             string[][] actions;
             string[] queries;
             string commandDescription;
 
             if (demoId == 0)
             {
-                // Demo P: Friendship highlight demo
                 switch (step)
                 {
                     case 0:
-                        Debug.Log("[DEMO P - Step 1] Highlight top 3 nodes by friendship links");
                         actions = new string[][] {
                             new string[] { "selectNode", "top3friendship" },
                             new string[] { "colorNode", "#FF0000" }
@@ -746,9 +799,7 @@ namespace Whisper.Samples
                         commandDescription = "Highlight top 3 nodes with most friendship links";
                         StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
                         break;
-
                     case 1:
-                        Debug.Log("[DEMO P - Step 2] Color nodes by grade");
                         actions = new string[][] {
                             new string[] { "colorByAttribute", "grade" }
                         };
@@ -758,9 +809,7 @@ namespace Whisper.Samples
                         commandDescription = "Color nodes by grade";
                         StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
                         break;
-
                     case 2:
-                        Debug.Log("[DEMO P - Step 3] Color aggression links for highlighted nodes");
                         actions = new string[][] {
                             new string[] { "selectLink", "aggression" },
                             new string[] { "colorLink", "#FF0000" }
@@ -776,11 +825,9 @@ namespace Whisper.Samples
             }
             else if (demoId == 1)
             {
-                // Demo L: Smoker/drinker demo
                 switch (step)
                 {
                     case 0:
-                        Debug.Log("[DEMO L - Step 1] Color nodes by smoker or drinker");
                         actions = new string[][] {
                             new string[] { "colorByAttribute", "smoker" }
                         };
@@ -790,9 +837,7 @@ namespace Whisper.Samples
                         commandDescription = "Color nodes by smoker";
                         StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
                         break;
-
                     case 1:
-                        Debug.Log("[DEMO L - Step 2] Color aggression links in red");
                         actions = new string[][] {
                             new string[] { "selectLink", "aggression" },
                             new string[] { "colorLink", "#FF0000" }
@@ -808,11 +853,9 @@ namespace Whisper.Samples
             }
             else if (demoId == 2)
             {
-                // Demo ,: Gender + aggression + friendship links demo
                 switch (step)
                 {
                     case 0:
-                        Debug.Log("[DEMO , - Step 1] Color nodes by gender");
                         actions = new string[][] {
                             new string[] { "colorByAttribute", "sex" }
                         };
@@ -822,9 +865,7 @@ namespace Whisper.Samples
                         commandDescription = "Color nodes by gender";
                         StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
                         break;
-
                     case 1:
-                        Debug.Log("[DEMO , - Step 2] Select nodes with many incoming aggression links");
                         actions = new string[][] {
                             new string[] { "selectNode", "topAggression" },
                             new string[] { "colorNode", "#FF0000" }
@@ -836,9 +877,7 @@ namespace Whisper.Samples
                         commandDescription = "Select nodes with most incoming aggression links";
                         StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
                         break;
-
                     case 2:
-                        Debug.Log("[DEMO , - Step 3] Color friendship links for selected nodes in blue");
                         actions = new string[][] {
                             new string[] { "selectLink", "friendship" },
                             new string[] { "colorLink", "#7F7FFF" }
@@ -877,6 +916,18 @@ namespace Whisper.Samples
             Debug.Log("=".PadRight(60, '='));
             Debug.Log($"Server Mode: {(serverEnabled ? "ENABLED" : "DISABLED (Direct execution)")}");
             Debug.Log("=".PadRight(60, '='));
+        }
+
+        private void ShowSystemMessage(string message)
+        {
+            Debug.Log($"[SYSTEM] {message}");
+            if (command_prefab != null && command_parent != null)
+            {
+                var msgObj = Instantiate(command_prefab, command_parent.transform);
+                var msgText = msgObj.GetComponent<TMP_Text>();
+                msgText.text = $"<color=#FF8F00><b>{message}</b></color>";
+                ScrollToBottom();
+            }
         }
 
         private void ScrollToBottom()
