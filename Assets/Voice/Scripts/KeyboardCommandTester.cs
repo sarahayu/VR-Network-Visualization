@@ -331,6 +331,9 @@ namespace Whisper.Samples
             var _networkManager = streamingSampleMic._networkManager;
             var _databaseStorage = streamingSampleMic._databaseStorage;
 
+            // Store link GUIDs from selectLink so colorLink can use them without marking links as Selected
+            HashSet<string> _lastQueriedLinkGUIDs = new HashSet<string>();
+
             if (_networkManager == null || _databaseStorage == null)
             {
                 Debug.LogError("NetworkManager or DatabaseStorage is null!");
@@ -372,9 +375,9 @@ namespace Whisper.Samples
                         }
                         else
                         {
-                            Debug.Log($"  [Selection Mode] Setting working selected nodes");
-                            _networkManager.SetWorkingSelectedNodes(nodes, true);
-                            Debug.Log($"  ✓ Nodes selected");
+                            Debug.Log($"  [Selection Mode] Setting selected nodes");
+                            _networkManager.SetSelectedNodes(nodes, true);
+                            Debug.Log($"  ✓ Nodes selected (total selected: {_networkManager.SelectedNodeGUIDs.Count})");
                         }
                         break;
 
@@ -392,7 +395,8 @@ namespace Whisper.Samples
 
                     case "colorNode":
                         Debug.Log($"  Coloring selected nodes: {actionParam}");
-                        var nodes_color = _networkManager.WorkingSelectedNodeGUIDs;
+                        var nodes_color = _networkManager.SelectedNodeGUIDs;
+                        Debug.Log($"  Found {nodes_color.Count} selected nodes to color");
                         _networkManager.SetMLNodesColor(nodes_color, actionParam);
                         Debug.Log($"  ✓ {nodes_color.Count} nodes colored");
                         break;
@@ -536,18 +540,17 @@ namespace Whisper.Samples
                         break;
 
                     case "selectLink":
-                        Debug.Log($"  Selecting links with query: {queries[i]}");
+                        Debug.Log($"  Querying links with: {queries[i]}");
                         var links = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, queries[i]);
-                        _networkManager.SetWorkingSelectedLinks(links, true);
-                        Debug.Log($"  ✓ Links selected");
+                        _lastQueriedLinkGUIDs = new HashSet<string>(links);
+                        Debug.Log($"  ✓ Found {_lastQueriedLinkGUIDs.Count} links from query");
                         break;
 
                     case "colorLink":
-                        Debug.Log($"  Coloring selected links: {actionParam}");
-                        var links_color = _networkManager.WorkingSelectedLinkGUIDs;
-                        _networkManager.SetMLLinksColorStart(links_color, actionParam);
-                        _networkManager.SetMLLinksColorEnd(links_color, actionParam);
-                        Debug.Log($"  ✓ {links_color.Count} links colored");
+                        Debug.Log($"  Coloring {_lastQueriedLinkGUIDs.Count} queried links: {actionParam}");
+                        _networkManager.SetMLLinksColorStart(_lastQueriedLinkGUIDs, actionParam);
+                        _networkManager.SetMLLinksColorEnd(_lastQueriedLinkGUIDs, actionParam);
+                        Debug.Log($"  ✓ {_lastQueriedLinkGUIDs.Count} links colored {actionParam}");
                         break;
 
                     case "deselect":
@@ -558,7 +561,7 @@ namespace Whisper.Samples
 
                     case "move":
                         Debug.Log($"  Moving selected nodes");
-                        var nodes_move = _networkManager.WorkingSelectedNodeGUIDs;
+                        var nodes_move = _networkManager.SelectedNodeGUIDs;
                         _networkManager.BringMLNodes(nodes_move);
                         Debug.Log($"  ✓ {nodes_move.Count} nodes moved");
                         break;
@@ -584,6 +587,13 @@ namespace Whisper.Samples
 
         private void RunDemoStep(int demoId, int step)
         {
+            // Ensure QueryMode is off so selectNode doesn't create subgraphs during demos
+            var _networkManager = streamingSampleMic._networkManager;
+            if (_networkManager.OnQueryMode)
+            {
+                _networkManager.SetQueryMode(false);
+            }
+
             string[][] actions;
             string[] queries;
             string commandDescription;
@@ -620,16 +630,16 @@ namespace Whisper.Samples
                         break;
 
                     case 2:
-                        Debug.Log("[DEMO P - Step 3] Color friendship links for highlighted nodes");
+                        Debug.Log("[DEMO P - Step 3] Color aggression links for highlighted nodes");
                         actions = new string[][] {
-                            new string[] { "selectLink", "friendship" },
+                            new string[] { "selectLink", "aggression" },
                             new string[] { "colorLink", "#FF0000" }
                         };
                         queries = new string[] {
-                            "MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE n.selected = true AND r.type = 'friendship' RETURN r",
+                            "MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE n.selected = true AND r.type = 'aggression' RETURN r",
                             ""
                         };
-                        commandDescription = "Color friendship links for highlighted nodes";
+                        commandDescription = "Color aggression links for highlighted nodes";
                         StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
                         break;
                 }
@@ -652,16 +662,16 @@ namespace Whisper.Samples
                         break;
 
                     case 1:
-                        Debug.Log("[DEMO L - Step 2] Color friendship links in red");
+                        Debug.Log("[DEMO L - Step 2] Color aggression links in red");
                         actions = new string[][] {
-                            new string[] { "selectLink", "friendship" },
+                            new string[] { "selectLink", "aggression" },
                             new string[] { "colorLink", "#FF0000" }
                         };
                         queries = new string[] {
-                            "MATCH ()-[r:POINTS_TO]-() WHERE r.type = 'friendship' RETURN r",
+                            "MATCH ()-[r:POINTS_TO]-() WHERE r.type = 'aggression' RETURN r",
                             ""
                         };
-                        commandDescription = "Color friendship links in red";
+                        commandDescription = "Color aggression links in red";
                         StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
                         break;
                 }
@@ -730,8 +740,8 @@ namespace Whisper.Samples
             Debug.Log($"Press [{moveSelectedKey}] - Move selected nodes");
             Debug.Log($"Press [H] - Show this help menu");
             Debug.Log("---");
-            Debug.Log($"Press [P] - Demo: highlight top 3 → color by grade → color friendship links");
-            Debug.Log($"Press [L] - Demo: color by smoker → color friendship links");
+            Debug.Log($"Press [P] - Demo: highlight top 3 → color by grade → color aggression links");
+            Debug.Log($"Press [L] - Demo: color by smoker → color aggression links");
             Debug.Log($"Press [O] - Demo: color by gender → select aggression targets → color friendship links blue");
             Debug.Log($"Press [Enter] - Next demo step");
             Debug.Log("=".PadRight(60, '='));

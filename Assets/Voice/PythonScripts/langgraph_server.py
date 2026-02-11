@@ -61,19 +61,23 @@ ALLOWED_COLORS = {
 
 correction_prompt = ChatPromptTemplate.from_template(
 """
-You are correcting ASR (voice recognition) errors for graph commands.
+You are correcting ASR (voice recognition) errors for graph visualization commands.
 
 Tasks:
-- Fix voice mishearing (e.g., note→node, blew→blue, rate→red, coral→color)
-- Normalize any color into these EXACT hex values:
-  red=#FF0000, orange=#FFA500, yellow=#FFFF00,
-  green=#00FF00, blue=#0000FF, purple=#800080
-- Normalize synonyms of "color" (colour, caller, etc.)
-- Normalize synonyms of "size" (resize, scale)
-- Normalize references to nodes/links
+- Fix voice mishearing (e.g., note→node, blew→blue, rate→red, caller→color, colour→color)
+- Normalize synonyms: colour/caller→color, resize/scale→size
+- Fix misheard node/link attribute names (e.g., "great"→"grade", "sacks"→"sex", "GBA"→"GPA")
+- Fix misheard link types (e.g., "aggression", "friendship")
 - DO NOT add meaning. Fix only recognition errors.
 
-Return ONLY corrected text, no explanations.
+IMPORTANT:
+- Do NOT convert color names to hex codes. Keep color names as words (red, blue, purple, etc.).
+- The word "color" is often a VERB (meaning "to color/paint"). Do NOT replace it with a hex code.
+  Example: "color nodes by grade" → keep as "color nodes by grade"
+  Example: "color all aggression links in red" → keep as "color all aggression links in red"
+- Only fix words that are clearly misheard by voice recognition.
+
+Return ONLY the corrected text, no explanations.
 
 User said: {input}
 """
@@ -117,77 +121,74 @@ User input: {input}
 
 action_prompt = ChatPromptTemplate.from_template(
 """
-You are generating a pipeline of graph actions.
+You are generating a pipeline of graph visualization actions.
 
 Return ONLY a valid JSON list of actions.
 Each action must be a 2-element list: ["actionName", "param"]
 
 Allowed actions:
-- "selectNode"
-- "selectLink"
-- "colorNode"
-- "colorLink"
-- "colorByAttribute"
-- "shapeByAttribute"
-- "sizeNode"
-- "move"
-- "layout"
-- "deselect"
-- "arithmetic"
+- "selectNode" - select nodes by condition
+- "selectLink" - select links by condition
+- "colorNode" - color currently selected nodes a single color
+- "colorLink" - color currently selected links a single color
+- "colorByAttribute" - categorical coloring: assign different colors per unique attribute value
+- "shapeByAttribute" - categorical shape: assign different shapes per unique attribute value
+- "sizeNode" - size nodes by numeric attribute
+- "move" - move selected nodes
+- "layout" - change layout
+- "deselect" - clear selection
+- "arithmetic" - perform calculation
 
-Color rules:
-- Must output ONLY these hex values:
-  #FF0000, #FFA500, #FFFF00, #00FF00, #0000FF, #800080
-- If user says "color X nodes blue", generate: [["selectNode", "..."], ["colorNode", "#0000FF"]]
-- If user says "color selected nodes", generate: [["colorNode", "#0000FF"]] (apply to current selection)
-- If user only says "color blue" without specifying, apply to currently selected nodes
+=== COLOR NAME TO HEX MAPPING ===
+When generating colorNode or colorLink actions, convert color names to hex:
+  red → #FF0000, orange → #FFA500, yellow → #FFFF00,
+  green → #00FF00, blue → #0000FF, purple → #800080
 
-Categorical coloring rules:
-- CRITICAL: "color BY attribute" means categorical coloring (assign different colors per category)
-- If user says "color nodes by <attribute>" or "color by <attribute>", generate: [["colorByAttribute", "<attribute>"]]
-- This is DIFFERENT from:
-  * "size by" which is sizing (use sizeNode)
-  * "color nodes <color>" which is single color (use colorNode)
-- Examples:
-  * "color nodes by grade" → ["colorByAttribute", "grade"] (categorical - different color per grade)
-  * "color by sex" → ["colorByAttribute", "sex"] (categorical)
-  * "categorically color by department" → ["colorByAttribute", "department"]
-- This assigns a unique color from the palette to each distinct value of the attribute
+=== CRITICAL: "color BY attribute" vs "color IN a color" ===
+These are COMPLETELY DIFFERENT operations:
 
-Categorical shape encoding rules:
-- CRITICAL: "shape BY attribute" means categorical shape encoding (assign different shapes per category)
-- If user says "shape nodes by <attribute>" or "change shape by <attribute>", generate: [["shapeByAttribute", "<attribute>"]]
-- Available shapes: sphere, cube, tetrahedron (3 shapes for 3 categories maximum)
-- Examples:
-  * "shape nodes by grade" → ["shapeByAttribute", "grade"] (categorical - different shape per grade)
-  * "change shape by sex" → ["shapeByAttribute", "sex"] (categorical)
-  * "make shapes different by department" → ["shapeByAttribute", "department"]
-- This assigns a unique shape (sphere/cube/tetrahedron) to each distinct value of the attribute
+1. "color nodes by <attribute>" / "color by <attribute>" → CATEGORICAL coloring
+   Generate: [["colorByAttribute", "<attribute>"]]
+   Examples:
+     "color nodes by grade" → [["colorByAttribute", "grade"]]
+     "color by sex" → [["colorByAttribute", "sex"]]
+     "color all nodes by smoker" → [["colorByAttribute", "smoker"]]
+     "color nodes by gender" → [["colorByAttribute", "sex"]]
 
-Sizing rules:
-- sizing command should output ["sizeNode", "<attributeName>:<scope>"]
-- <scope> can be "all" or "selected"
-- DEFAULT: If user does NOT mention "selected", use "all"
-- Examples:
-  * "size nodes by gpa" → ["sizeNode", "gpa:all"]
-  * "size selected nodes by gpa" → ["sizeNode", "gpa:selected"]
+2. "color nodes <color>" / "color X links in <color>" → SINGLE COLOR
+   Generate: [["selectNode/selectLink", "..."], ["colorNode/colorLink", "#HEX"]]
+   Examples:
+     "color selected nodes red" → [["colorNode", "#FF0000"]]
+     "color all aggression links in red" → [["selectLink", "aggression"], ["colorLink", "#FF0000"]]
 
-Selection defaults:
-- If user describes a group ("female", "smoker", "grade 9"), create a selectNode step:
-    ["selectNode", "n.sex = 'female'"]
-- "selected nodes" means use current selection, do NOT create a new selectNode action
+The KEY difference: "by <attribute>" = categorical, "in <color>" or just "<color>" = single color.
 
-Action execution order:
-- Actions execute sequentially in the order you specify
-- Later actions operate on the state created by earlier actions
-- Example: selectNode → colorNode means "select these nodes, then color the selected ones"
+=== LINK SELECTION ===
+- "color <type> links" → select links by type, then color:
+  [["selectLink", "<type>"], ["colorLink", "#HEX"]]
+- "color <type> links for selected/highlighted nodes" → select links scoped to selected nodes:
+  [["selectLink", "<type>:selected"], ["colorLink", "#HEX"]]
+- "their <type> links" or "the <type> links for those nodes" also means scoped to selected nodes.
 
-Return ONLY JSON. Example:
+=== NODE SELECTION ===
+- "top N nodes by <metric>" → ["selectNode", "top_N_by_<metric>"]
+  Examples:
+    "highlight top 3 nodes with most friendship links" → [["selectNode", "top_3_friendship_degree"], ["colorNode", "#FF0000"]]
+    "select nodes with most incoming aggression" → [["selectNode", "top_3_incoming_aggression"], ["colorNode", "#FF0000"]]
+- If user describes a group ("female", "grade 9"), create: ["selectNode", "n.sex = 'female'"]
+- "selected nodes" / "highlighted nodes" = use current selection, do NOT create a new selectNode
 
-[
-  ["selectNode", "n.sex = 'female'"],
-  ["colorNode", "#FF0000"]
-]
+=== CATEGORICAL SHAPE ===
+- "shape nodes by <attribute>" → [["shapeByAttribute", "<attribute>"]]
+
+=== SIZING ===
+- "size nodes by <attr>" → ["sizeNode", "<attr>:all"]
+- "size selected nodes by <attr>" → ["sizeNode", "<attr>:selected"]
+
+=== ACTION ORDER ===
+Actions execute sequentially. Later actions operate on state from earlier ones.
+
+Return ONLY JSON. No explanations.
 
 User request: {input}
 """
@@ -201,50 +202,61 @@ cypher_prompt = ChatPromptTemplate.from_template(
 """
 You are a Neo4j Cypher expert. Convert the action into a Cypher query.
 
-For:
-- ["selectNode", "<condition>"]
-    → MATCH (n:Node) WHERE <condition> RETURN n
+Database schema:
+- Nodes have label :Node with properties like sex, grade, smoker, drinker, gpa, selected (boolean)
+- Links are relationship :POINTS_TO with properties: type (e.g., "friendship", "aggression"), selected
 
-- ["selectLink", "<condition>"]
-    → MATCH ()-[l:POINTS_TO]->() WHERE <condition> RETURN l
+Rules for each action type:
 
-- ["colorNode", "<hex>"]
-    → RETURN ""  (Unity handles the color; no Cypher required)
+=== selectNode ===
+- Simple condition: ["selectNode", "n.sex = 'female'"]
+  → MATCH (n:Node) WHERE n.sex = 'female' RETURN n
 
-- ["colorLink", "<hex>"]
-    → RETURN ""  (Unity handles color)
+- Top N by degree: ["selectNode", "top_3_friendship_degree"]
+  → MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE r.type = 'friendship' WITH n, COUNT(r) AS degree ORDER BY degree DESC LIMIT 3 RETURN n
 
-- ["colorByAttribute", "<attribute>"]
-    → MATCH (n:Node) RETURN DISTINCT n.<attribute> AS value ORDER BY value
-    Example: ["colorByAttribute", "grade"]
-    → MATCH (n:Node) RETURN DISTINCT n.grade AS value ORDER BY value
+- Top N by incoming: ["selectNode", "top_3_incoming_aggression"]
+  → MATCH (n:Node)<-[r:POINTS_TO]-(m) WHERE r.type = 'aggression' WITH n, COUNT(r) AS cnt ORDER BY cnt DESC LIMIT 3 RETURN n
 
-- ["shapeByAttribute", "<attribute>"]
-    → MATCH (n:Node) RETURN DISTINCT n.<attribute> AS value ORDER BY value
-    Example: ["shapeByAttribute", "sex"]
-    → MATCH (n:Node) RETURN DISTINCT n.sex AS value ORDER BY value
+- If the param contains "top" and a number, ALWAYS use ORDER BY ... DESC LIMIT N pattern.
 
-- ["move", "<param>"]
-    → RETURN ""  (Unity handles layout)
+=== selectLink ===
+- By type only: ["selectLink", "aggression"]
+  → MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE r.type = 'aggression' RETURN r
 
-- ["layout", "<type>"]
-    → RETURN ""
+- By type scoped to selected nodes: ["selectLink", "aggression:selected"]
+  → MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE n.selected = true AND r.type = 'aggression' RETURN r
 
-- ["deselect", ""]
-    → RETURN ""  (Unity handles deselection)
+- By type scoped to selected: ["selectLink", "friendship:selected"]
+  → MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE n.selected = true AND r.type = 'friendship' RETURN r
 
-- ["sizeNode", "<attribute>:<scope>"]
-    Parse the parameter as "attribute:scope"
-    If scope is "selected":
-        MATCH (n:Node) WHERE n.selected = true RETURN min(n.<attribute>) AS minValue, max(n.<attribute>) AS maxValue
-    If scope is "all" (DEFAULT):
-        MATCH (n:Node) RETURN min(n.<attribute>) AS minValue, max(n.<attribute>) AS maxValue
+- IMPORTANT: If param contains ":selected", add WHERE n.selected = true to scope to currently selected nodes.
 
-- ["arithmetic", "<expr>"]
-    Example: degree, min, max:
-    MATCH (n:Node) WHERE n.selected = true RETURN <expr>
+=== colorNode / colorLink ===
+→ ""  (no Cypher needed, Unity handles the coloring)
 
-Return ONLY cypher string. No code block.
+=== colorByAttribute ===
+["colorByAttribute", "<attribute>"]
+→ MATCH (n:Node) RETURN DISTINCT n.<attribute> AS value ORDER BY value
+
+=== shapeByAttribute ===
+["shapeByAttribute", "<attribute>"]
+→ MATCH (n:Node) RETURN DISTINCT n.<attribute> AS value ORDER BY value
+
+=== sizeNode ===
+["sizeNode", "<attribute>:<scope>"]
+If scope is "selected":
+  → MATCH (n:Node) WHERE n.selected = true RETURN min(n.<attribute>) AS minValue, max(n.<attribute>) AS maxValue
+If scope is "all":
+  → MATCH (n:Node) RETURN min(n.<attribute>) AS minValue, max(n.<attribute>) AS maxValue
+
+=== move / layout / deselect ===
+→ ""  (Unity handles these)
+
+=== arithmetic ===
+→ MATCH (n:Node) WHERE n.selected = true RETURN <expr>
+
+Return ONLY the cypher string. No code block markers. No explanations.
 Action: {input}
 """
 )
@@ -312,11 +324,14 @@ async def action_agent(state: AgentState):
         for a in actions:
             if not isinstance(a, list) or len(a) != 2:
                 raise ValueError
-            # Validate color hex codes
+            # Normalize color: if LLM returned a color name instead of hex, convert it
             if a[0] in ["colorNode", "colorLink"]:
+                color_val = a[1].strip().lower()
+                if color_val in ALLOWED_COLORS:
+                    a[1] = ALLOWED_COLORS[color_val]
                 color = a[1].upper()
-                if color not in ALLOWED_COLORS.values():
-                    raise ValueError(f"Invalid color hex: {a[1]}. Must be one of {list(ALLOWED_COLORS.values())}")
+                if color not in [v.upper() for v in ALLOWED_COLORS.values()]:
+                    raise ValueError(f"Invalid color: {a[1]}. Must be one of {list(ALLOWED_COLORS.values())}")
     except Exception as e:
         raise ValueError(f"Action JSON invalid: {raw}. Error: {str(e)}")
 
