@@ -38,6 +38,12 @@ namespace Whisper.Samples
         [Header("Display")]
         public bool showInstructions = true;
 
+        // Demo mode state
+        private bool _demoRunning = false;
+        private int _demoStep = 0;
+        private int _demoTotalSteps = 0;
+        private int _activeDemoId = 0; // 0 = demo P, 1 = demo L
+
         private void Start()
         {
             if (showInstructions)
@@ -115,6 +121,51 @@ namespace Whisper.Samples
             if (Input.GetKeyDown(KeyCode.H))
             {
                 PrintInstructions();
+            }
+
+            // Demo mode: Press P or L to start, Enter to advance
+            if (Input.GetKeyDown(KeyCode.P) && !_demoRunning)
+            {
+                Debug.Log("[DEMO P] Starting demo sequence...");
+                _demoRunning = true;
+                _activeDemoId = 0;
+                _demoStep = 0;
+                _demoTotalSteps = 3;
+                RunDemoStep(_activeDemoId, _demoStep);
+            }
+
+            if (Input.GetKeyDown(KeyCode.L) && !_demoRunning)
+            {
+                Debug.Log("[DEMO L] Starting demo sequence...");
+                _demoRunning = true;
+                _activeDemoId = 1;
+                _demoStep = 0;
+                _demoTotalSteps = 2;
+                RunDemoStep(_activeDemoId, _demoStep);
+            }
+
+            if (Input.GetKeyDown(KeyCode.O) && !_demoRunning)
+            {
+                Debug.Log("[DEMO O] Starting demo sequence...");
+                _demoRunning = true;
+                _activeDemoId = 2;
+                _demoStep = 0;
+                _demoTotalSteps = 3;
+                RunDemoStep(_activeDemoId, _demoStep);
+            }
+
+            if (Input.GetKeyDown(KeyCode.Return) && _demoRunning)
+            {
+                _demoStep++;
+                if (_demoStep < _demoTotalSteps)
+                {
+                    RunDemoStep(_activeDemoId, _demoStep);
+                }
+                else
+                {
+                    _demoRunning = false;
+                    Debug.Log("[DEMO] Demo complete!");
+                }
             }
         }
 
@@ -354,14 +405,12 @@ namespace Whisper.Samples
                         var distinctValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, queries[i]);
                         Debug.Log($"  Found {distinctValues.Count} distinct values");
 
-                        // Define 6 allowed colors
+                        // Define 4 allowed colors (no red - reserved for highlighting)
                         string[] allowedColors = new string[] {
-                            "#FF7F7F",  // red (S=0.5)
-                            "#FFB852",  // orange (S=0.5)
-                            "#FFFF7F",  // yellow (S=0.5)
-                            "#7FFF7F",  // green (S=0.5)
-                            "#7F7FFF",  // blue (S=0.5)
-                            "#9F4D9F"   // purple (S=0.5)
+                            "#7FFFFF",  // cyan
+                            "#7F7FFF",  // blue
+                            "#FFFF7F",  // yellow
+                            "#BF7FBF"   // purple
                         };
 
 
@@ -486,6 +535,21 @@ namespace Whisper.Samples
                         }
                         break;
 
+                    case "selectLink":
+                        Debug.Log($"  Selecting links with query: {queries[i]}");
+                        var links = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, queries[i]);
+                        _networkManager.SetWorkingSelectedLinks(links, true);
+                        Debug.Log($"  ✓ Links selected");
+                        break;
+
+                    case "colorLink":
+                        Debug.Log($"  Coloring selected links: {actionParam}");
+                        var links_color = _networkManager.WorkingSelectedLinkGUIDs;
+                        _networkManager.SetMLLinksColorStart(links_color, actionParam);
+                        _networkManager.SetMLLinksColorEnd(links_color, actionParam);
+                        Debug.Log($"  ✓ {links_color.Count} links colored");
+                        break;
+
                     case "deselect":
                         Debug.Log($"  Deselecting all nodes");
                         _networkManager.ClearSelection();
@@ -518,6 +582,138 @@ namespace Whisper.Samples
             Debug.Log($"[COMPLETE] All actions executed for: {originalCommand}");
         }
 
+        private void RunDemoStep(int demoId, int step)
+        {
+            string[][] actions;
+            string[] queries;
+            string commandDescription;
+
+            if (demoId == 0)
+            {
+                // Demo P: Friendship highlight demo
+                switch (step)
+                {
+                    case 0:
+                        Debug.Log("[DEMO P - Step 1] Highlight top 3 nodes by friendship links");
+                        actions = new string[][] {
+                            new string[] { "selectNode", "top3friendship" },
+                            new string[] { "colorNode", "#FF0000" }
+                        };
+                        queries = new string[] {
+                            "MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE r.type = 'friendship' WITH n, COUNT(r) AS degree ORDER BY degree DESC LIMIT 3 RETURN n",
+                            ""
+                        };
+                        commandDescription = "Highlight top 3 nodes with most friendship links";
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        break;
+
+                    case 1:
+                        Debug.Log("[DEMO P - Step 2] Color nodes by grade");
+                        actions = new string[][] {
+                            new string[] { "colorByAttribute", "grade" }
+                        };
+                        queries = new string[] {
+                            "MATCH (n:Node) RETURN DISTINCT n.grade AS value ORDER BY value"
+                        };
+                        commandDescription = "Color nodes by grade";
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        break;
+
+                    case 2:
+                        Debug.Log("[DEMO P - Step 3] Color friendship links for highlighted nodes");
+                        actions = new string[][] {
+                            new string[] { "selectLink", "friendship" },
+                            new string[] { "colorLink", "#FF0000" }
+                        };
+                        queries = new string[] {
+                            "MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE n.selected = true AND r.type = 'friendship' RETURN r",
+                            ""
+                        };
+                        commandDescription = "Color friendship links for highlighted nodes";
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        break;
+                }
+            }
+            else if (demoId == 1)
+            {
+                // Demo L: Smoker/drinker demo
+                switch (step)
+                {
+                    case 0:
+                        Debug.Log("[DEMO L - Step 1] Color nodes by smoker or drinker");
+                        actions = new string[][] {
+                            new string[] { "colorByAttribute", "smoker" }
+                        };
+                        queries = new string[] {
+                            "MATCH (n:Node) RETURN DISTINCT n.smoker AS value ORDER BY value"
+                        };
+                        commandDescription = "Color nodes by smoker";
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        break;
+
+                    case 1:
+                        Debug.Log("[DEMO L - Step 2] Color friendship links in red");
+                        actions = new string[][] {
+                            new string[] { "selectLink", "friendship" },
+                            new string[] { "colorLink", "#FF0000" }
+                        };
+                        queries = new string[] {
+                            "MATCH ()-[r:POINTS_TO]-() WHERE r.type = 'friendship' RETURN r",
+                            ""
+                        };
+                        commandDescription = "Color friendship links in red";
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        break;
+                }
+            }
+            else if (demoId == 2)
+            {
+                // Demo ,: Gender + aggression + friendship links demo
+                switch (step)
+                {
+                    case 0:
+                        Debug.Log("[DEMO , - Step 1] Color nodes by gender");
+                        actions = new string[][] {
+                            new string[] { "colorByAttribute", "sex" }
+                        };
+                        queries = new string[] {
+                            "MATCH (n:Node) RETURN DISTINCT n.sex AS value ORDER BY value"
+                        };
+                        commandDescription = "Color nodes by gender";
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        break;
+
+                    case 1:
+                        Debug.Log("[DEMO , - Step 2] Select nodes with many incoming aggression links");
+                        actions = new string[][] {
+                            new string[] { "selectNode", "topAggression" },
+                            new string[] { "colorNode", "#FF0000" }
+                        };
+                        queries = new string[] {
+                            "MATCH (n:Node)<-[r:POINTS_TO]-(m) WHERE r.type = 'aggression' WITH n, COUNT(r) AS inDegree ORDER BY inDegree DESC LIMIT 3 RETURN n",
+                            ""
+                        };
+                        commandDescription = "Select nodes with most incoming aggression links";
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        break;
+
+                    case 2:
+                        Debug.Log("[DEMO , - Step 3] Color friendship links for selected nodes in blue");
+                        actions = new string[][] {
+                            new string[] { "selectLink", "friendship" },
+                            new string[] { "colorLink", "#7F7FFF" }
+                        };
+                        queries = new string[] {
+                            "MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE n.selected = true AND r.type = 'friendship' RETURN r",
+                            ""
+                        };
+                        commandDescription = "Color friendship links for selected nodes in blue";
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        break;
+                }
+            }
+        }
+
         private void PrintInstructions()
         {
             Debug.Log("=".PadRight(60, '='));
@@ -533,6 +729,11 @@ namespace Whisper.Samples
             Debug.Log($"Press [{colorSelectedRedKey}] - Color selected nodes red");
             Debug.Log($"Press [{moveSelectedKey}] - Move selected nodes");
             Debug.Log($"Press [H] - Show this help menu");
+            Debug.Log("---");
+            Debug.Log($"Press [P] - Demo: highlight top 3 → color by grade → color friendship links");
+            Debug.Log($"Press [L] - Demo: color by smoker → color friendship links");
+            Debug.Log($"Press [O] - Demo: color by gender → select aggression targets → color friendship links blue");
+            Debug.Log($"Press [Enter] - Next demo step");
             Debug.Log("=".PadRight(60, '='));
             Debug.Log($"Server Mode: {(serverEnabled ? "ENABLED" : "DISABLED (Direct execution)")}");
             Debug.Log("=".PadRight(60, '='));
@@ -552,12 +753,10 @@ namespace Whisper.Samples
         {
             return hexColor.ToUpper() switch
             {
-                "#FF7F7F" => "red",
-                "#FFB852" => "orange",
-                "#FFFF7F" => "yellow",
-                "#7FFF7F" => "green",
+                "#7FFFFF" => "cyan",
                 "#7F7FFF" => "blue",
-                "#9F4D9F" => "purple",
+                "#FFFF7F" => "yellow",
+                "#BF7FBF" => "purple",
                 _ => "color"
             };
         }

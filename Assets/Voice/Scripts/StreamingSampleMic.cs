@@ -320,14 +320,12 @@ namespace Whisper.Samples
                                     var distinctValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, query[i]);
                                     Debug.Log($"Found {distinctValues.Count} distinct values for {attributeName_color}");
 
-                                    // Define the 6 allowed colors
+                                    // Define 4 allowed colors (no red - reserved for highlighting)
                                     string[] allowedColors = new string[] {
-                                        "#FF9999",  // red (S=0.3)
-                                        "#FFCC80",  // orange (S=0.3)
-                                        "#FFFF99",  // yellow (S=0.3)
-                                        "#99FF99",  // green (S=0.3)
-                                        "#9999FF",  // blue (S=0.3)
-                                        "#B380B3"   // purple (S=0.3)
+                                        "#7FFFFF",  // cyan
+                                        "#7F7FFF",  // blue
+                                        "#FFFF7F",  // yellow
+                                        "#BF7FBF"   // purple
                                     };
 
 
@@ -484,12 +482,10 @@ namespace Whisper.Samples
         {
             return hexColor.ToUpper() switch
             {
-                "#FF7F7F" => "red",
-                "#FFB852" => "orange",
-                "#FFFF7F" => "yellow",
-                "#7FFF7F" => "green",
+                "#7FFFFF" => "cyan",
                 "#7F7FFF" => "blue",
-                "#9F4D9F" => "purple",
+                "#FFFF7F" => "yellow",
+                "#BF7FBF" => "purple",
                 _ => "color"
             };
         }
