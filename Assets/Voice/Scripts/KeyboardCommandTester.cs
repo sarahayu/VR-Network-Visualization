@@ -1,7 +1,10 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Text;
+using System.Net;
+using System.Threading;
 using UnityEngine.Networking;
 using Newtonsoft.Json;
 using TMPro;
@@ -44,16 +47,137 @@ namespace Whisper.Samples
         private int _demoTotalSteps = 0;
         private int _activeDemoId = 0; // 0 = demo P, 1 = demo L
 
+        // External command listener
+        [Header("External Command Listener")]
+        public int listenerPort = 5001;
+        public bool listenerEnabled = true;
+        private HttpListener _httpListener;
+        private Thread _listenerThread;
+        private ConcurrentQueue<string> _commandQueue = new ConcurrentQueue<string>();
+        private bool _isProcessingCommand = false;
+
         private void Start()
         {
             if (showInstructions)
             {
                 PrintInstructions();
             }
+
+            if (listenerEnabled)
+            {
+                StartHttpListener();
+            }
+        }
+
+        private void OnDestroy()
+        {
+            StopHttpListener();
+        }
+
+        private void StartHttpListener()
+        {
+            try
+            {
+                _httpListener = new HttpListener();
+                _httpListener.Prefixes.Add($"http://localhost:{listenerPort}/");
+                _httpListener.Start();
+
+                _listenerThread = new Thread(ListenForRequests);
+                _listenerThread.IsBackground = true;
+                _listenerThread.Start();
+
+                Debug.Log($"[LISTENER] External command listener started on port {listenerPort}");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[LISTENER] Failed to start: {e.Message}");
+            }
+        }
+
+        private void StopHttpListener()
+        {
+            if (_httpListener != null && _httpListener.IsListening)
+            {
+                _httpListener.Stop();
+                _httpListener.Close();
+            }
+            if (_listenerThread != null && _listenerThread.IsAlive)
+            {
+                _listenerThread.Join(1000);
+            }
+        }
+
+        private void ListenForRequests()
+        {
+            while (_httpListener != null && _httpListener.IsListening)
+            {
+                try
+                {
+                    var context = _httpListener.GetContext();
+                    var request = context.Request;
+                    var response = context.Response;
+
+                    if (request.HttpMethod == "POST" && request.Url.AbsolutePath == "/command")
+                    {
+                        using (var reader = new System.IO.StreamReader(request.InputStream, request.ContentEncoding))
+                        {
+                            string body = reader.ReadToEnd();
+                            var json = JsonConvert.DeserializeObject<Dictionary<string, string>>(body);
+                            if (json != null && json.ContainsKey("userText"))
+                            {
+                                string cmd = json["userText"];
+                                _commandQueue.Enqueue(cmd);
+                                Debug.Log($"[LISTENER] Queued command: {cmd}");
+
+                                byte[] responseBytes = Encoding.UTF8.GetBytes("{\"status\": \"queued\"}");
+                                response.ContentType = "application/json";
+                                response.StatusCode = 200;
+                                response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
+                            }
+                            else
+                            {
+                                byte[] responseBytes = Encoding.UTF8.GetBytes("{\"error\": \"missing userText\"}");
+                                response.ContentType = "application/json";
+                                response.StatusCode = 400;
+                                response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
+                            }
+                        }
+                    }
+                    else if (request.HttpMethod == "GET" && request.Url.AbsolutePath == "/ping")
+                    {
+                        byte[] responseBytes = Encoding.UTF8.GetBytes("{\"status\": \"ready\"}");
+                        response.ContentType = "application/json";
+                        response.StatusCode = 200;
+                        response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
+                    }
+                    else
+                    {
+                        response.StatusCode = 404;
+                    }
+
+                    response.Close();
+                }
+                catch (HttpListenerException)
+                {
+                    break; // Listener was stopped
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"[LISTENER] Error: {e.Message}");
+                }
+            }
         }
 
         private void Update()
         {
+            // Process external commands from the HTTP listener queue
+            if (!_isProcessingCommand && _commandQueue.TryDequeue(out string externalCommand))
+            {
+                Debug.Log($"[LISTENER] Processing external command: {externalCommand}");
+                _isProcessingCommand = true;
+                StartCoroutine(SendToServerAndExecuteExternal(externalCommand));
+            }
+
             // Size by grade (stored property - works)
             if (Input.GetKeyDown(sizeByDegreeKey))
             {
@@ -280,6 +404,12 @@ namespace Whisper.Samples
             string commandDescription = $"{actionName} {parameter}";
 
             StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+        }
+
+        private IEnumerator SendToServerAndExecuteExternal(string userInput)
+        {
+            yield return StartCoroutine(SendToServerAndExecute(userInput));
+            _isProcessingCommand = false;
         }
 
         private IEnumerator SendToServerAndExecute(string userInput)
