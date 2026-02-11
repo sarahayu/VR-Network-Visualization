@@ -63,21 +63,23 @@ correction_prompt = ChatPromptTemplate.from_template(
 """
 You are correcting ASR (voice recognition) errors for graph visualization commands.
 
-Tasks:
-- Fix voice mishearing (e.g., note→node, blew→blue, rate→red, caller→color, colour→color)
-- Normalize synonyms: colour/caller→color, resize/scale→size
-- Fix misheard node/link attribute names (e.g., "great"→"grade", "sacks"→"sex", "GBA"→"GPA")
-- Fix misheard link types (e.g., "aggression", "friendship")
-- DO NOT add meaning. Fix only recognition errors.
+Rules:
+- Fix ONLY misheard words (e.g., note→node, blew→blue, caller→color, great→grade, sacks→sex)
+- NEVER convert color names to hex codes. Keep "red" as "red", "blue" as "blue", etc.
+- NEVER change the word "color" — it is a verb meaning "to paint/color".
+- DO NOT add or remove words. Only fix misheard ones.
 
-IMPORTANT:
-- Do NOT convert color names to hex codes. Keep color names as words (red, blue, purple, etc.).
-- The word "color" is often a VERB (meaning "to color/paint"). Do NOT replace it with a hex code.
-  Example: "color nodes by grade" → keep as "color nodes by grade"
-  Example: "color all aggression links in red" → keep as "color all aggression links in red"
-- Only fix words that are clearly misheard by voice recognition.
+Examples:
+- "color nodes by grade" → "color nodes by grade"
+- "color all nodes by grade" → "color all nodes by grade"
+- "color aggression links in red" → "color aggression links in red"
+- "color nodes by smoker" → "color nodes by smoker"
+- "colour the notes blew" → "color the nodes blue"
+- "select the notes with blew caller" → "select the nodes with blue color"
+- "highlight top 3 notes by friendship" → "highlight top 3 nodes by friendship"
+- "color their friendship links in blew" → "color their friendship links in blue"
 
-Return ONLY the corrected text, no explanations.
+Return ONLY the corrected text. Nothing else.
 
 User said: {input}
 """
@@ -164,18 +166,25 @@ These are COMPLETELY DIFFERENT operations:
 The KEY difference: "by <attribute>" = categorical, "in <color>" or just "<color>" = single color.
 
 === LINK SELECTION ===
-- "color <type> links" → select links by type, then color:
-  [["selectLink", "<type>"], ["colorLink", "#HEX"]]
-- "color <type> links for selected/highlighted nodes" → select links scoped to selected nodes:
-  [["selectLink", "<type>:selected"], ["colorLink", "#HEX"]]
-- "their <type> links" or "the <type> links for those nodes" also means scoped to selected nodes.
+The selectLink param is JUST the link type name (e.g., "aggression", "friendship").
+Append ":selected" if scoped to selected/highlighted nodes.
+Do NOT use conditions like "n.type = ..." — just use the type name.
+
+- "color aggression links red" → [["selectLink", "aggression"], ["colorLink", "#FF0000"]]
+- "color all aggression links in red" → [["selectLink", "aggression"], ["colorLink", "#FF0000"]]
+- "color aggression links for selected nodes red" → [["selectLink", "aggression:selected"], ["colorLink", "#FF0000"]]
+- "color their friendship links blue" → [["selectLink", "friendship:selected"], ["colorLink", "#0000FF"]]
+- "color friendship links for highlighted nodes blue" → [["selectLink", "friendship:selected"], ["colorLink", "#0000FF"]]
 
 === NODE SELECTION ===
-- "top N nodes by <metric>" → ["selectNode", "top_N_by_<metric>"]
+- "top N nodes by <metric>" → ALWAYS generate BOTH selectNode AND colorNode:
+  [["selectNode", "top_N_by_<metric>"], ["colorNode", "#FF0000"]]
+- "highlight" or "select" nodes → ALWAYS add a colorNode step after selectNode to make them visible.
   Examples:
     "highlight top 3 nodes with most friendship links" → [["selectNode", "top_3_friendship_degree"], ["colorNode", "#FF0000"]]
     "select nodes with most incoming aggression" → [["selectNode", "top_3_incoming_aggression"], ["colorNode", "#FF0000"]]
-- If user describes a group ("female", "grade 9"), create: ["selectNode", "n.sex = 'female'"]
+    "select the nodes with many incoming aggression links" → [["selectNode", "top_3_incoming_aggression"], ["colorNode", "#FF0000"]]
+- If user describes a group ("female", "grade 9"), create: [["selectNode", "n.sex = 'female'"], ["colorNode", "#FF0000"]]
 - "selected nodes" / "highlighted nodes" = use current selection, do NOT create a new selectNode
 
 === CATEGORICAL SHAPE ===
@@ -317,6 +326,12 @@ async def action_agent(state: AgentState):
     msg = action_prompt.format_messages(input=state["input"])
     raw = (await llm.ainvoke(msg)).content.strip()
 
+    # Strip markdown code block markers if present
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+    if raw.endswith("```"):
+        raw = raw[:-3].strip()
+
     try:
         actions = json.loads(raw)
         if not isinstance(actions, list):
@@ -346,6 +361,11 @@ async def cypher_agent(state: AgentState):
     for action_name, param in actions:
         formatted = cypher_prompt.format_messages(input=f'["{action_name}", "{param}"]')
         cypher = (await llm.ainvoke(formatted)).content.strip()
+        # Strip markdown code block markers if present
+        if cypher.startswith("```"):
+            cypher = cypher.split("\n", 1)[1] if "\n" in cypher else cypher[3:]
+        if cypher.endswith("```"):
+            cypher = cypher[:-3].strip()
         code_list.append(cypher)
 
     return {"code_list": code_list}

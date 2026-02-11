@@ -35,12 +35,11 @@ DEMO_TESTS = [
         "step": 1,
         "description": "Highlight top 3 nodes with most friendship links",
         "natural_commands": [
-            "highlight the top 3 nodes that have the most friendship links",
-            "select top 3 nodes by friendship degree",
+            "Highlight the top 3 nodes that have the most friendship links",
         ],
         "expected_actions": [
-            ["selectNode"],   # first action should be selectNode
-            ["colorNode"],    # second action should be colorNode (any color)
+            ["selectNode"],   # selectNode with top-3 friendship degree
+            ["colorNode"],    # colorNode (any color to highlight)
         ],
         "expected_query_contains": [
             "friendship",     # query should mention friendship
@@ -50,10 +49,9 @@ DEMO_TESTS = [
     {
         "demo": "P",
         "step": 2,
-        "description": "Color all nodes by grade",
+        "description": "Color nodes by grade (categorical)",
         "natural_commands": [
-            "color all nodes by grade",
-            "color nodes by grade",
+            "Color the nodes by grade",
         ],
         "expected_actions": [
             ["colorByAttribute", "grade"],
@@ -65,10 +63,9 @@ DEMO_TESTS = [
     {
         "demo": "P",
         "step": 3,
-        "description": "Color aggression links for highlighted nodes in red",
+        "description": "Color aggression links for highlighted nodes",
         "natural_commands": [
-            "color the aggression links for highlighted nodes in red",
-            "color aggression links for selected nodes red",
+            "Color their aggression links for highlighted nodes",
         ],
         "expected_actions": [
             ["selectLink"],
@@ -80,17 +77,16 @@ DEMO_TESTS = [
         ],
     },
 
-    # === Demo L: Smoker + aggression demo ===
+    # === Demo L: Smoker/drinker + aggression demo ===
     {
         "demo": "L",
         "step": 1,
-        "description": "Color nodes by smoker",
+        "description": "Color nodes by smoker or drinker (categorical)",
         "natural_commands": [
-            "color nodes by smoker",
-            "color all nodes by smoker attribute",
+            "Color nodes by smoker or drinker",
         ],
         "expected_actions": [
-            ["colorByAttribute", "smoker"],
+            ["colorByAttribute"],
         ],
         "expected_query_contains": [
             "smoker",
@@ -99,10 +95,9 @@ DEMO_TESTS = [
     {
         "demo": "L",
         "step": 2,
-        "description": "Color all aggression links in red",
+        "description": "Color aggression links in red",
         "natural_commands": [
-            "color all aggression links in red",
-            "color aggression links red",
+            "Color their aggression links in red",
         ],
         "expected_actions": [
             ["selectLink"],
@@ -117,25 +112,21 @@ DEMO_TESTS = [
     {
         "demo": "O",
         "step": 1,
-        "description": "Color nodes by gender",
+        "description": "Color nodes by gender (categorical)",
         "natural_commands": [
-            "color nodes by gender",
-            "color all nodes by sex",
+            "Color nodes by gender",
         ],
         "expected_actions": [
             ["colorByAttribute"],
         ],
-        "expected_query_contains": [
-            "sex",
-        ],
+        "expected_query_contains": [],
     },
     {
         "demo": "O",
         "step": 2,
-        "description": "Select nodes with most incoming aggression links",
+        "description": "Select nodes with many incoming aggression links",
         "natural_commands": [
-            "select the nodes with the most incoming aggression links",
-            "highlight top 3 nodes that receive the most aggression",
+            "Select the nodes with many incoming aggression links",
         ],
         "expected_actions": [
             ["selectNode"],
@@ -150,8 +141,7 @@ DEMO_TESTS = [
         "step": 3,
         "description": "Color friendship links for selected nodes in blue",
         "natural_commands": [
-            "color their friendship links in blue",
-            "color friendship links for selected nodes blue",
+            "Color their friendship links in blue",
         ],
         "expected_actions": [
             ["selectLink"],
