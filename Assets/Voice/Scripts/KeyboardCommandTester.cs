@@ -687,7 +687,31 @@ namespace Whisper.Samples
                         break;
 
                     case "colorLink":
-                        Debug.Log($"  Coloring {_lastQueriedLinkGUIDs.Count} queried links: {actionParam}");
+                        Debug.Log($"  Coloring links: {actionParam}");
+
+                        // If no links queried, select all links first
+                        if (_lastQueriedLinkGUIDs.Count == 0)
+                        {
+                            Debug.Log("  No links queried, creating session and selecting all links");
+
+                            // Get all nodes
+                            string selectAllNodesQuery = "MATCH (n:Node) RETURN n";
+                            var allNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, selectAllNodesQuery);
+
+                            // Create working subgraph session if needed
+                            var workingLinks = _networkManager.WorkingSelectedLinkGUIDs;
+                            if (workingLinks.Count == 0)
+                            {
+                                var nodeIDs = _networkManager.SortNodeGUIDs(allNodes)[VidiGraph.NetworkManager.MainNetworkID];
+                                _networkManager.CreateWorkingSubgraph(nodeIDs, "Color all links", "Color Links");
+                            }
+
+                            // Select all links
+                            string selectAllLinksQuery = "MATCH ()-[r:POINTS_TO]-() RETURN r";
+                            var allLinks = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, selectAllLinksQuery);
+                            _lastQueriedLinkGUIDs = new HashSet<string>(allLinks);
+                        }
+
                         _networkManager.SetMLLinksColorStart(_lastQueriedLinkGUIDs, actionParam);
                         _networkManager.SetMLLinksColorEnd(_lastQueriedLinkGUIDs, actionParam);
                         Debug.Log($"  ✓ {_lastQueriedLinkGUIDs.Count} links colored {actionParam}");
@@ -750,9 +774,25 @@ namespace Whisper.Samples
         {
             // Ensure QueryMode is off so selectNode doesn't create subgraphs during demos
             var _networkManager = streamingSampleMic._networkManager;
+            var _databaseStorage = streamingSampleMic._databaseStorage;
+
             if (_networkManager.OnQueryMode)
             {
                 _networkManager.SetQueryMode(false);
+            }
+
+            // Determine demo label
+            string demoLabel = demoId == 0 ? "P" : demoId == 1 ? "L" : "O";
+
+            // Create working subgraph session if this is the first step
+            if (step == 0)
+            {
+                Debug.Log($"[DEMO] Creating session for demo {demoLabel}");
+                string selectAllQuery = "MATCH (n:Node) RETURN n";
+                var allNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, selectAllQuery);
+                var nodeIDs = _networkManager.SortNodeGUIDs(allNodes)[VidiGraph.NetworkManager.MainNetworkID];
+
+                _networkManager.CreateWorkingSubgraph(nodeIDs, $"Demo {demoLabel}", $"Demo {demoLabel}");
             }
 
             if (demoId < 0 || demoId >= DemoCommands.Length || step < 0 || step >= DemoCommands[demoId].Length)
@@ -762,7 +802,6 @@ namespace Whisper.Samples
             }
 
             string command = DemoCommands[demoId][step];
-            string demoLabel = demoId == 0 ? "P" : demoId == 1 ? "L" : "O";
             Debug.Log($"[DEMO {demoLabel} - Step {step + 1}] {command}");
 
             if (serverEnabled)

@@ -296,15 +296,64 @@ namespace Whisper.Samples
                                     TimerUtils.EndTime("Layout Change");
                                     break;
                                 case "colorNode":
-                                    Debug.Log("Changing color of selected nodes to: " + action[i][1]);
+                                    Debug.Log("Changing color of nodes to: " + action[i][1]);
                                     var nodes_color = _networkManager.WorkingSelectedNodeGUIDs;
+
+                                    // If no nodes selected, create session and select all nodes first
+                                    if (nodes_color.Count == 0)
+                                    {
+                                        Debug.Log("No nodes selected, creating session and selecting all nodes first");
+                                        string selectAllQuery = "MATCH (n:Node) RETURN n";
+                                        var allNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, selectAllQuery);
+
+                                        // Create working subgraph session
+                                        var nodeIDs = _networkManager.SortNodeGUIDs(allNodes)[NetworkManager.MainNetworkID];
+                                        _networkManager.CreateWorkingSubgraph(nodeIDs, "Color all nodes", "Color Nodes");
+
+                                        // Select the nodes in the session
+                                        _networkManager.SetWorkingSelectedNodes(allNodes, true);
+                                        nodes_color = _networkManager.WorkingSelectedNodeGUIDs;
+
+                                        // Bring selected nodes to user
+                                        Debug.Log("Bringing nodes to user");
+                                        _networkManager.BringMLNodes(nodes_color);
+                                    }
+
                                     TimerUtils.StartTime("SetColor");
-                                    _networkManager.SetMLNodesColor(nodes_color, action[i][1]); 
+                                    _networkManager.SetMLNodesColor(nodes_color, action[i][1]);
                                     TimerUtils.EndTime("SetColor");
                                     break;
                                 case "colorLink":
-                                    Debug.Log("Changing color of selected links to: " + action[i][1]);
+                                    Debug.Log("Changing color of links to: " + action[i][1]);
                                     var links_color = _networkManager.WorkingSelectedLinkGUIDs;
+
+                                    // If no links selected, create session and select all links first
+                                    if (links_color.Count == 0)
+                                    {
+                                        Debug.Log("No links selected, creating session and selecting all links first");
+
+                                        // Get all nodes and links
+                                        string selectAllNodesQuery = "MATCH (n:Node) RETURN n";
+                                        var allNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, selectAllNodesQuery);
+
+                                        // Create working subgraph session with all nodes
+                                        var nodeIDs = _networkManager.SortNodeGUIDs(allNodes)[NetworkManager.MainNetworkID];
+                                        _networkManager.CreateWorkingSubgraph(nodeIDs, "Color all links", "Color Links");
+
+                                        // Select all nodes
+                                        _networkManager.SetWorkingSelectedNodes(allNodes, true);
+
+                                        // Select all links
+                                        string selectAllLinksQuery = "MATCH ()-[r:POINTS_TO]-() RETURN r";
+                                        var allLinks = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, selectAllLinksQuery);
+                                        _networkManager.SetWorkingSelectedLinks(allLinks, true);
+                                        links_color = _networkManager.WorkingSelectedLinkGUIDs;
+
+                                        // Bring all nodes (and their links) to user
+                                        Debug.Log("Bringing nodes and links to user");
+                                        _networkManager.BringMLNodes(_networkManager.WorkingSelectedNodeGUIDs);
+                                    }
+
                                     TimerUtils.StartTime("SetColor");
                                     _networkManager.SetMLLinksColorStart(links_color, action[i][1]);
                                     _networkManager.SetMLLinksColorEnd(links_color, action[i][1]);

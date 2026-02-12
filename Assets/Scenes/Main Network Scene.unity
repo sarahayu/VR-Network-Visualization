@@ -526,6 +526,8 @@ MonoBehaviour:
   colorSelectedRedKey: 55
   moveSelectedKey: 56
   showInstructions: 1
+  listenerPort: 5001
+  listenerEnabled: 1
 --- !u!4 &4380608
 Transform:
   m_ObjectHideFlags: 0
@@ -20597,7 +20599,7 @@ AudioListener:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 394101877}
-  m_Enabled: 1
+  m_Enabled: 0
 --- !u!20 &394101880
 Camera:
   m_ObjectHideFlags: 0
@@ -93615,7 +93617,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   logLevel: 1
-  modelPath: Assets/Voice/Whisper/ggml-tiny.bin
+  modelPath: Assets/Voice/Whisper/ggml-small.en-q5_1.bin
   isModelPathInStreamingAssets: 0
   initOnAwake: 1
   language: en
@@ -116044,7 +116046,7 @@ AudioListener:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1845144347}
-  m_Enabled: 1
+  m_Enabled: 0
 --- !u!20 &1845144350
 Camera:
   m_ObjectHideFlags: 0
