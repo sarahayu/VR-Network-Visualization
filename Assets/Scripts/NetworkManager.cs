@@ -146,6 +146,63 @@ namespace VidiGraph
         public event SubnetworkDestroyEvent OnSubnetworkDestroy;
 
         public bool OnQueryMode { get; private set; } = false;
+        public bool HasWorkingSession => _curWorkingSubgraph != -1;
+
+        // All node GUIDs in the working subgraph context (NOT main-network/DB GUIDs)
+        public HashSet<string> WorkingSubgraphAllNodeGUIDs
+        {
+            get
+            {
+                if (_curWorkingSubgraph == -1) return new HashSet<string>();
+                return _allNetworks[_curWorkingSubgraph].Context.Nodes.Values
+                    .Select(n => n.GUID).ToHashSet();
+            }
+        }
+
+        // All link GUIDs in the working subgraph context (NOT main-network/DB GUIDs)
+        public HashSet<string> WorkingSubgraphAllLinkGUIDs
+        {
+            get
+            {
+                if (_curWorkingSubgraph == -1) return new HashSet<string>();
+                return _allNetworks[_curWorkingSubgraph].Context.Links.Values
+                    .Select(l => l.GUID).ToHashSet();
+            }
+        }
+
+        // Convert DB (main-network) node GUIDs to their counterparts in the working subgraph
+        public HashSet<string> TranslateToWorkingSubgraphNodeGUIDs(IEnumerable<string> dbNodeGUIDs)
+        {
+            if (_curWorkingSubgraph == -1) return new HashSet<string>();
+            var result = new HashSet<string>();
+            foreach (var dbGuid in dbNodeGUIDs)
+            {
+                if (NodeGUIDToID.TryGetValue(dbGuid, out var tup) && tup.Item1 == MainNetworkID)
+                {
+                    var subnTup = Tuple.Create(_curWorkingSubgraph, tup.Item2);
+                    if (NodeIDToGUID.TryGetValue(subnTup, out var subnGuid))
+                        result.Add(subnGuid);
+                }
+            }
+            return result;
+        }
+
+        // Convert DB (main-network) link GUIDs to their counterparts in the working subgraph
+        public HashSet<string> TranslateToWorkingSubgraphLinkGUIDs(IEnumerable<string> dbLinkGUIDs)
+        {
+            if (_curWorkingSubgraph == -1) return new HashSet<string>();
+            var result = new HashSet<string>();
+            foreach (var dbGuid in dbLinkGUIDs)
+            {
+                if (LinkGUIDToID.TryGetValue(dbGuid, out var tup) && tup.Item1 == MainNetworkID)
+                {
+                    var subnTup = Tuple.Create(_curWorkingSubgraph, tup.Item2);
+                    if (LinkIDToGUID.TryGetValue(subnTup, out var subnGuid))
+                        result.Add(subnGuid);
+                }
+            }
+            return result;
+        }
 
         NetworkGlobal _networkGlobal = new();
 
@@ -1068,6 +1125,39 @@ namespace VidiGraph
         public void DuplicateCurWorkingGraph()
         {
             throw new NotImplementedException();
+        }
+
+        // Removes all sessions, clears all selections, and resets node/link visuals to defaults
+        public void ResetAll()
+        {
+            // 1. Delete all working subgraph sessions and their frames
+            var subnIDs = _subnetworks.Keys.ToList();
+            foreach (var subnID in subnIDs)
+            {
+                var frame = _framesArea.Frames[subnID];
+                frame.GetComponentInChildren<FrameNetwork>()?.Destroy();
+                _framesArea.RemoveFrame(subnID);
+                DeleteSubnetwork(subnID);
+            }
+            _curWorkingSubgraph = -1;
+
+            // 2. Clear all selections
+            ClearSelection();
+
+            // 3. Reset node and link visuals to defaults on the main network
+            var mainNet = _allNetworks[MainNetworkID];
+            var ctx = mainNet.Context;
+            string defaultNodeHex = "#" + ColorUtility.ToHtmlStringRGB(ctx.ContextSettings.NodeDefaultColor);
+            string defaultLinkHex = "#" + ColorUtility.ToHtmlStringRGB(ctx.ContextSettings.LinkDefaultColor);
+
+            var allNodeIDs = ctx.Nodes.Keys.ToList();
+            mainNet.SetNodesColor(allNodeIDs, defaultNodeHex, _updatingStorage, _updatingRenderElements);
+            mainNet.SetNodesSize(allNodeIDs, 1.0f, _updatingStorage, _updatingRenderElements);
+
+            var allLinkIDs = ctx.Links.Keys.ToList();
+            mainNet.SetLinksColorStart(allLinkIDs, defaultLinkHex, _updatingStorage, _updatingRenderElements);
+            mainNet.SetLinksColorEnd(allLinkIDs, defaultLinkHex, _updatingStorage, _updatingRenderElements);
+            mainNet.SetLinksWidth(allLinkIDs, 1.0f, _updatingStorage, _updatingRenderElements);
         }
 
         public void DeleteCurWorkingGraph()

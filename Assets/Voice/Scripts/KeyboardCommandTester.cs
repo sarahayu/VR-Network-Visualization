@@ -37,6 +37,11 @@ namespace Whisper.Samples
         public KeyCode deselectAllKey = KeyCode.Alpha7;
         public KeyCode colorSelectedRedKey = KeyCode.Alpha8;
         public KeyCode moveSelectedKey = KeyCode.Alpha9;
+        public KeyCode resetKey = KeyCode.R;
+
+        [Header("Text Input")]
+        [TextArea] public string testCommand;
+        public KeyCode submitCommandKey = KeyCode.T;
 
         [Header("Display")]
         public bool showInstructions = true;
@@ -67,6 +72,7 @@ namespace Whisper.Samples
             {
                 StartHttpListener();
             }
+
         }
 
         private void OnDestroy()
@@ -178,6 +184,13 @@ namespace Whisper.Samples
                 StartCoroutine(SendToServerAndExecuteExternal(externalCommand));
             }
 
+            // Submit typed inspector command
+            if (Input.GetKeyDown(submitCommandKey) && !string.IsNullOrWhiteSpace(testCommand))
+            {
+                Debug.Log($"[TEXT INPUT] Submitting: {testCommand}");
+                StartCoroutine(SendToServerAndExecute(testCommand.Trim()));
+            }
+
             // Size by grade (stored property - works)
             if (Input.GetKeyDown(sizeByDegreeKey))
             {
@@ -239,6 +252,14 @@ namespace Whisper.Samples
             {
                 Debug.Log("[KEYBOARD] Triggered: Move selected nodes");
                 ExecuteDirectSimpleAction("move", "here");
+            }
+
+            // Reset all annotations and selections
+            if (Input.GetKeyDown(resetKey))
+            {
+                Debug.Log("[KEYBOARD] Triggered: Reset all");
+                var _networkManager = streamingSampleMic._networkManager;
+                _networkManager.ResetAll();
             }
 
             // Help menu
@@ -507,17 +528,26 @@ namespace Whisper.Samples
                         if (_networkManager.OnQueryMode)
                         {
                             Debug.Log($"  [Query Mode] Creating working subgraph");
-                            // Convert GUIDs to IDs to create a working subgraph
                             var nodeIDs = _networkManager.SortNodeGUIDs(nodes)[VidiGraph.NetworkManager.MainNetworkID];
                             _networkManager.CreateWorkingSubgraph(nodeIDs, originalCommand, originalCommand);
                             _networkManager.SetQueryMode(false);
-                            Debug.Log($"  ✓ Working subgraph created");
+                            _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
+                            Debug.Log($"  ✓ Working subgraph created with {_networkManager.WorkingSubgraphAllNodeGUIDs.Count} nodes");
+                        }
+                        else if (!_networkManager.HasWorkingSession)
+                        {
+                            Debug.Log($"  [No Session] Creating working subgraph");
+                            var nodeIDs = _networkManager.SortNodeGUIDs(nodes)[VidiGraph.NetworkManager.MainNetworkID];
+                            _networkManager.CreateWorkingSubgraph(nodeIDs, originalCommand, originalCommand);
+                            _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
+                            Debug.Log($"  ✓ Working subgraph created with {_networkManager.WorkingSubgraphAllNodeGUIDs.Count} nodes");
                         }
                         else
                         {
-                            Debug.Log($"  [Selection Mode] Setting selected nodes");
-                            _networkManager.SetSelectedNodes(nodes, true);
-                            Debug.Log($"  ✓ Nodes selected (total selected: {_networkManager.SelectedNodeGUIDs.Count})");
+                            Debug.Log($"  [Session Exists] Selecting within working subgraph");
+                            var subnGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(nodes);
+                            _networkManager.SetWorkingSelectedNodes(subnGUIDs, true);
+                            Debug.Log($"  ✓ {subnGUIDs.Count} nodes selected in working subgraph");
                         }
                         break;
 
@@ -534,9 +564,19 @@ namespace Whisper.Samples
                         break;
 
                     case "colorNode":
-                        Debug.Log($"  Coloring selected nodes: {actionParam}");
-                        var nodes_color = _networkManager.SelectedNodeGUIDs;
-                        Debug.Log($"  Found {nodes_color.Count} selected nodes to color");
+                        Debug.Log($"  Coloring nodes: {actionParam}");
+                        HashSet<string> nodes_color;
+                        if (_networkManager.HasWorkingSession)
+                        {
+                            nodes_color = _networkManager.WorkingSelectedNodeGUIDs;
+                            if (nodes_color.Count == 0)
+                                nodes_color = _networkManager.WorkingSubgraphAllNodeGUIDs;
+                        }
+                        else
+                        {
+                            nodes_color = _networkManager.SelectedNodeGUIDs;
+                        }
+                        Debug.Log($"  Found {nodes_color.Count} nodes to color");
                         _networkManager.SetMLNodesColor(nodes_color, actionParam);
                         Debug.Log($"  ✓ {nodes_color.Count} nodes colored");
                         break;
@@ -688,38 +728,39 @@ namespace Whisper.Samples
 
                     case "colorLink":
                         Debug.Log($"  Coloring links: {actionParam}");
-
-                        // If no links queried, select all links first
-                        if (_lastQueriedLinkGUIDs.Count == 0)
+                        HashSet<string> linkGUIDs_color;
+                        if (_networkManager.HasWorkingSession)
                         {
-                            Debug.Log("  No links queried, creating session and selecting all links");
-
-                            // Get all nodes
-                            string selectAllNodesQuery = "MATCH (n:Node) RETURN n";
-                            var allNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, selectAllNodesQuery);
-
-                            // Create working subgraph session if needed
-                            var workingLinks = _networkManager.WorkingSelectedLinkGUIDs;
-                            if (workingLinks.Count == 0)
-                            {
-                                var nodeIDs = _networkManager.SortNodeGUIDs(allNodes)[VidiGraph.NetworkManager.MainNetworkID];
-                                _networkManager.CreateWorkingSubgraph(nodeIDs, "Color all links", "Color Links");
-                            }
-
-                            // Select all links
-                            string selectAllLinksQuery = "MATCH ()-[r:POINTS_TO]-() RETURN r";
-                            var allLinks = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, selectAllLinksQuery);
-                            _lastQueriedLinkGUIDs = new HashSet<string>(allLinks);
+                            linkGUIDs_color = _networkManager.TranslateToWorkingSubgraphLinkGUIDs(_lastQueriedLinkGUIDs);
+                            if (linkGUIDs_color.Count == 0)
+                                linkGUIDs_color = _networkManager.WorkingSubgraphAllLinkGUIDs;
                         }
+                        else
+                        {
+                            if (_lastQueriedLinkGUIDs.Count == 0)
+                            {
+                                string selectAllLinksQuery = "MATCH ()-[r:POINTS_TO]-() RETURN r";
+                                var allLinks = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, selectAllLinksQuery);
+                                _lastQueriedLinkGUIDs = new HashSet<string>(allLinks);
+                            }
+                            linkGUIDs_color = _lastQueriedLinkGUIDs;
+                        }
+                        _networkManager.SetMLLinksColorStart(linkGUIDs_color, actionParam);
+                        _networkManager.SetMLLinksColorEnd(linkGUIDs_color, actionParam);
+                        Debug.Log($"  ✓ {linkGUIDs_color.Count} links colored {actionParam}");
+                        break;
 
-                        _networkManager.SetMLLinksColorStart(_lastQueriedLinkGUIDs, actionParam);
-                        _networkManager.SetMLLinksColorEnd(_lastQueriedLinkGUIDs, actionParam);
-                        Debug.Log($"  ✓ {_lastQueriedLinkGUIDs.Count} links colored {actionParam}");
+                    case "reset":
+                        Debug.Log($"  Resetting all annotations and selections");
+                        _networkManager.ResetAll();
+                        _lastQueriedLinkGUIDs.Clear();
+                        Debug.Log($"  ✓ Reset complete");
                         break;
 
                     case "deselect":
                         Debug.Log($"  Deselecting all nodes");
                         _networkManager.ClearSelection();
+                        _lastQueriedLinkGUIDs.Clear();
                         Debug.Log($"  ✓ Selection cleared");
                         break;
 
@@ -946,6 +987,7 @@ namespace Whisper.Samples
             Debug.Log($"Press [{deselectAllKey}] - Deselect all");
             Debug.Log($"Press [{colorSelectedRedKey}] - Color selected nodes red");
             Debug.Log($"Press [{moveSelectedKey}] - Move selected nodes");
+            Debug.Log($"Press [{resetKey}] - Reset all annotations and selections");
             Debug.Log($"Press [H] - Show this help menu");
             Debug.Log("---");
             Debug.Log($"Press [P] - Demo: highlight top 3 → color by grade → color aggression links");

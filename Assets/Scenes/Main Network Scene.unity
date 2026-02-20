@@ -525,6 +525,9 @@ MonoBehaviour:
   deselectAllKey: 54
   colorSelectedRedKey: 55
   moveSelectedKey: 56
+  resetKey: 114
+  testCommand: 
+  submitCommandKey: 116
   showInstructions: 1
   listenerPort: 5001
   listenerEnabled: 1
@@ -10279,8 +10282,8 @@ Transform:
   m_GameObject: {fileID: 197059287}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1.39, z: 0.02}
+  m_LocalPosition: {x: 0.0055, y: -0.1887, z: 0.0173}
+  m_LocalScale: {x: 1, y: 1.7606815, z: 0.02}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1275421464}
@@ -28431,10 +28434,18 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "<size=120%><align=\"center\"><b>Example Commands</b></align>\r</size>\n<size=80%>
-    </size>\n* \"Select all female nodes\"\n<size=50%> </size>\n* \"Select all smokers\"\n<size=50%>
-    </size>\n* \"Select drinkers\" and \"Color nodes red\"\n<size=50%> </size>\n*
-    \"Select friendship links\" and \"Color blue\"\n<size=50%> </size>\nmore to come..."
+  m_text: "<size=120%><align=\"center\"><b>Possible Tasks Commands</b></align>\r</size>\n<size=80%>
+    </size>\nTask 1: Are socially central students concentrated in certain grades,
+    and are they also involved in bullying?\n<size=50%> </size>\n* 1-1 Highlight
+    the top 3 nodes that have the most friendship links\n<size=50%> </size>\n* 1-2
+    Color the nodes by grade\n<size=50%> </size>\n* 1-3 Color their aggression links
+    in yellow for highlighted nodes\n\n<size=50%> </size>\nTask 2: Is bullying happening
+    mostly within or across behavioral groups?\n<size=50%> </size>\n* 2-1 Color nodes
+    by smoker/drinker\n<size=50%> </size>\n* 2-2 Color their aggression links in
+    yellow\n\n<size=50%> </size>\nTask 3: Are socially isolated students of a particular
+    gender more likely to be targeted?\n<size=50%> </size>\n* 3-1 Color nodes by
+    gender\n<size=50%> </size>\n* 3-2 Select the nodes with many incoming aggression
+    links\n<size=50%> </size>\n* 3-3 Color their aggression links in yellow"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -32847,6 +32858,7 @@ MonoBehaviour:
   scroll: {fileID: 2085695096}
   command_prefab: {fileID: 7428457708510806725, guid: 2c667e6b542867642a48b572e2644030, type: 3}
   command_parent: {fileID: 58217632}
+  textCommandInput: {fileID: 0}
 --- !u!43 &561409869
 Mesh:
   m_ObjectHideFlags: 0
@@ -74943,6 +74955,7 @@ MonoBehaviour:
   scroll: {fileID: 599585968}
   command_prefab: {fileID: 0}
   command_parent: {fileID: 0}
+  textCommandInput: {fileID: 0}
 --- !u!1 &1207582826
 GameObject:
   m_ObjectHideFlags: 0
