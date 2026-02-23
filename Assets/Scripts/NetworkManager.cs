@@ -1066,6 +1066,13 @@ namespace VidiGraph
             throw new NotImplementedException();
         }
 
+        // Returns all link GUIDs (in any subnetwork) that connect to any of the given node GUIDs
+        public HashSet<string> GetLinksForNodes(IEnumerable<string> nodeGUIDs)
+        {
+            GetInnerAndOuterLinks(nodeGUIDs, out var inner, out var outer, out _);
+            return inner.Concat(outer).ToHashSet();
+        }
+
         // TODO perhaps move this somewhere else, or at least move to util file
         public void GetInnerAndOuterLinks(IEnumerable<string> nodeGUIDs, out List<string> innerLinks, out List<string> outerLinks, out List<bool> isStartOuterLinks)
         {
@@ -1125,6 +1132,33 @@ namespace VidiGraph
         public void DuplicateCurWorkingGraph()
         {
             throw new NotImplementedException();
+        }
+
+        // Resets all visual properties within the current working session to defaults.
+        // Keeps the session structure and node/link layout intact — only reverts colors, sizes, shapes.
+        public void ResetCurrentSession()
+        {
+            if (_curWorkingSubgraph == -1) return;
+
+            // Read default colors from main network settings
+            var mainCtx = _multiLayoutNetwork.Context;
+            string defaultNodeHex = "#" + ColorUtility.ToHtmlStringRGB(mainCtx.ContextSettings.NodeDefaultColor);
+            string defaultLinkHex = "#" + ColorUtility.ToHtmlStringRGB(mainCtx.ContextSettings.LinkDefaultColor);
+
+            // Reset all node visuals in the working session
+            var allSubnNodeGUIDs = WorkingSubgraphAllNodeGUIDs;
+            SetMLNodesColor(allSubnNodeGUIDs, defaultNodeHex);
+            SetMLNodesSize(allSubnNodeGUIDs, 1.0f);
+            SetMLNodesShape(allSubnNodeGUIDs, "sphere");
+
+            // Reset all link visuals in the working session
+            var allSubnLinkGUIDs = WorkingSubgraphAllLinkGUIDs;
+            SetMLLinksColorStart(allSubnLinkGUIDs, defaultLinkHex);
+            SetMLLinksColorEnd(allSubnLinkGUIDs, defaultLinkHex);
+            SetMLLinksWidth(allSubnLinkGUIDs, 1.0f);
+
+            // Clear selections
+            ClearSelection();
         }
 
         // Removes all sessions, clears all selections, and resets node/link visuals to defaults

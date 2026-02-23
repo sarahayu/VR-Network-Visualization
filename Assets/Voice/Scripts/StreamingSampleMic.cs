@@ -52,8 +52,6 @@ namespace Whisper.Samples
 
         // Link GUIDs from the last selectLink command — used by colorLink
         private HashSet<string> _lastSelectedLinkGUIDs = new HashSet<string>();
-        // Node GUIDs that have already been brought to the user — avoid re-moving them
-        private HashSet<string> _broughtNodeGUIDs = new HashSet<string>();
 
 
         // Classification server URL
@@ -259,35 +257,21 @@ namespace Whisper.Samples
                                     text.text += $"\n<size=18><color=#aaa>{query[i]}</color></size>";
                                     var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query[i]);
                                     TimerUtils.StartTime("SetSelectedNodes");
-                                    if (_networkManager.OnQueryMode)
+                                    if (_networkManager.OnQueryMode || !_networkManager.HasWorkingSession)
                                     {
-                                        var nodeIDs = _networkManager.SortNodeGUIDs(nodes)[NetworkManager.MainNetworkID];
-                                        _networkManager.CreateWorkingSubgraph(nodeIDs, classification.input, classification.input);
+                                        // No session yet — create one with ALL nodes first, then select the queried subset
+                                        var allNodesForSel = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+                                        var allNodeIDsForSel = _networkManager.SortNodeGUIDs(allNodesForSel)[NetworkManager.MainNetworkID];
+                                        _networkManager.CreateWorkingSubgraph(allNodeIDsForSel, classification.corrected_input, classification.corrected_input);
                                         _networkManager.SetQueryMode(false);
-                                    }
-                                    else if (!_networkManager.HasWorkingSession)
-                                    {
-                                        // No session yet — create one from the queried nodes
-                                        var nodeIDs = _networkManager.SortNodeGUIDs(nodes)[NetworkManager.MainNetworkID];
-                                        _networkManager.CreateWorkingSubgraph(nodeIDs, query[i], classification.corrected_input);
-                                        // Select all nodes using their working subgraph GUIDs (not DB GUIDs)
-                                        _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
-                                    }
-                                    else
-                                    {
-                                        // Session exists — find the queried nodes inside the working subgraph
                                         var subnGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(nodes);
                                         _networkManager.SetWorkingSelectedNodes(subnGUIDs, true);
                                     }
-
-                                    // Bring nodes to user only if far away and not already brought
-                                    var selectedAfterSelect = _networkManager.WorkingSelectedNodeGUIDs;
-                                    bool alreadyBrought = selectedAfterSelect.IsSubsetOf(_broughtNodeGUIDs);
-                                    if (selectedAfterSelect.Count > 0 && !alreadyBrought && AreNodesFarFromUser(selectedAfterSelect))
+                                    else
                                     {
-                                        Debug.Log("Selected nodes are far away, bringing to user");
-                                        _networkManager.BringMLNodes(selectedAfterSelect);
-                                        _broughtNodeGUIDs.UnionWith(selectedAfterSelect);
+                                        // Session exists — select queried nodes within it
+                                        var subnGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(nodes);
+                                        _networkManager.SetWorkingSelectedNodes(subnGUIDs, true);
                                     }
 
                                     TimerUtils.EndTime("SetSelectedNodes");
@@ -306,8 +290,27 @@ namespace Whisper.Samples
                                     text.text += $"\n<size=18><color=#aaa>{query[i]}</color></size>";
                                     TimerUtils.StartTime("SetSelectedLinks");
                                     var links = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, query[i]);
-                                    // Store separately from node selection — colorLink reads this directly
                                     _lastSelectedLinkGUIDs = new HashSet<string>(links);
+
+                                    // n.selected=true is Unity state, not stored in Neo4j — filter by selected nodes in Unity
+                                    if (query[i].Contains("n.selected = true") && _networkManager.HasWorkingSession
+                                        && _networkManager.WorkingSelectedNodeGUIDs.Count > 0)
+                                    {
+                                        string queryWithoutSelected = query[i]
+                                            .Replace("n.selected = true AND ", "")
+                                            .Replace(" AND n.selected = true", "");
+                                        var allTypeLinks = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, queryWithoutSelected);
+                                        var selectedNodeIDs = _networkManager.SortNodeGUIDs(_networkManager.WorkingSelectedNodeGUIDs)
+                                            .Values.SelectMany(x => x).ToHashSet();
+                                        _lastSelectedLinkGUIDs = new HashSet<string>(allTypeLinks.Where(linkGuid =>
+                                        {
+                                            if (!_networkManager.LinkGUIDToID.TryGetValue(linkGuid, out var tup)) return false;
+                                            if (!_networkManager.NetworkGlobal.Links.TryGetValue(tup.Item2, out var lnk)) return false;
+                                            return selectedNodeIDs.Contains(lnk.SourceNodeID) || selectedNodeIDs.Contains(lnk.TargetNodeID);
+                                        }));
+                                        Debug.Log($"Filtered to {_lastSelectedLinkGUIDs.Count} links for selected nodes");
+                                    }
+
                                     Debug.Log($"Stored {_lastSelectedLinkGUIDs.Count} link GUIDs for coloring");
                                     TimerUtils.EndTime("SetSelectedLinks");
                                     break;
@@ -316,7 +319,6 @@ namespace Whisper.Samples
                                     TimerUtils.StartTime("Deselect Nodes");
                                     _networkManager.ClearSelection();
                                     _lastSelectedLinkGUIDs.Clear();
-                                    _broughtNodeGUIDs.Clear();
                                     TimerUtils.EndTime("Deselect Nodes");
                                     break;
                                 case "move":
@@ -358,7 +360,6 @@ namespace Whisper.Samples
                                         _networkManager.CreateWorkingSubgraph(nodeIDs, "Color all nodes", "Color Nodes");
                                         _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
                                         nodes_color = _networkManager.WorkingSelectedNodeGUIDs;
-                                        _networkManager.BringMLNodes(nodes_color);
                                     }
 
                                     TimerUtils.StartTime("SetColor");
@@ -374,7 +375,13 @@ namespace Whisper.Samples
                                         // Translate DB link GUIDs to working subgraph GUIDs
                                         linkGUIDs_color = _networkManager.TranslateToWorkingSubgraphLinkGUIDs(_lastSelectedLinkGUIDs);
                                         if (linkGUIDs_color.Count == 0)
-                                            linkGUIDs_color = _networkManager.WorkingSubgraphAllLinkGUIDs;
+                                        {
+                                            // Fall back to selected nodes' links, not ALL links
+                                            var selectedNodeLinks = _networkManager.GetLinksForNodes(_networkManager.WorkingSelectedNodeGUIDs);
+                                            linkGUIDs_color = selectedNodeLinks.Count > 0
+                                                ? selectedNodeLinks
+                                                : _networkManager.WorkingSubgraphAllLinkGUIDs;
+                                        }
                                     }
                                     else
                                     {
@@ -390,16 +397,13 @@ namespace Whisper.Samples
 
                                     TimerUtils.StartTime("ColorByAttribute");
 
-                                    // Ensure a working session exists; if not, create one with all nodes and bring to user
+                                    // Ensure a working session exists; if not, create one with all nodes
                                     if (!_networkManager.HasWorkingSession)
                                     {
                                         var allNodesForCBA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
                                         var cbaNodeIDs = _networkManager.SortNodeGUIDs(allNodesForCBA)[NetworkManager.MainNetworkID];
                                         _networkManager.CreateWorkingSubgraph(cbaNodeIDs, $"Color by {attributeName_color}", $"Color by {attributeName_color}");
                                         _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
-                                        var cbaSubnGUIDs = _networkManager.WorkingSubgraphAllNodeGUIDs;
-                                        _networkManager.BringMLNodes(cbaSubnGUIDs);
-                                        _broughtNodeGUIDs.UnionWith(cbaSubnGUIDs);
                                     }
 
                                     // Get distinct values from the query result
@@ -461,6 +465,14 @@ namespace Whisper.Samples
 
                                     TimerUtils.StartTime("ShapeByAttribute");
 
+                                    // If no session yet, create one with all nodes
+                                    if (!_networkManager.HasWorkingSession)
+                                    {
+                                        var allNodesForSBA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+                                        var sbaNodeIDs = _networkManager.SortNodeGUIDs(allNodesForSBA)[NetworkManager.MainNetworkID];
+                                        _networkManager.CreateWorkingSubgraph(sbaNodeIDs, $"Shape by {attributeName_shape}", $"Shape by {attributeName_shape}");
+                                    }
+
                                     // Get distinct values from the query result
                                     var distinctShapeValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, query[i]);
                                     Debug.Log($"Found {distinctShapeValues.Count} distinct values for {attributeName_shape}");
@@ -478,7 +490,7 @@ namespace Whisper.Samples
                                         Debug.LogWarning($"Found {distinctShapeValues.Count} categories but only 3 shapes available. Shapes will repeat.");
                                     }
 
-                                    // Assign shape to each category
+                                    // Assign shape to each category within the working subgraph
                                     for (int j = 0; j < distinctShapeValues.Count; j++)
                                     {
                                         string categoryValue = distinctShapeValues[j];
@@ -489,11 +501,9 @@ namespace Whisper.Samples
 
                                         Debug.Log($"  Category '{categoryValue}' → {shapeName}");
 
-                                        // Get nodes for this category
                                         var categoryNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, categoryQuery);
-
-                                        // Change their shape
-                                        _networkManager.SetMLNodesShape(categoryNodes, shapeName);
+                                        var subnShapeGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(categoryNodes);
+                                        _networkManager.SetMLNodesShape(subnShapeGUIDs, shapeName);
                                     }
 
                                     TimerUtils.EndTime("ShapeByAttribute");
@@ -535,11 +545,20 @@ namespace Whisper.Samples
                                     _result_text.text = "Calculated Result: " + result;
                                     break;
                                 case "reset":
-                                    Debug.Log("Resetting all annotations and selections");
+                                    Debug.Log("Reset — coloring all nodes yellow and links gray");
                                     TimerUtils.StartTime("Reset");
-                                    _networkManager.ResetAll();
                                     _lastSelectedLinkGUIDs.Clear();
-                                    _broughtNodeGUIDs.Clear();
+                                    if (!_networkManager.HasWorkingSession)
+                                    {
+                                        var allNodesForReset = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+                                        var resetNodeIDs = _networkManager.SortNodeGUIDs(allNodesForReset)[NetworkManager.MainNetworkID];
+                                        _networkManager.CreateWorkingSubgraph(resetNodeIDs, "Reset", "Reset");
+                                        _networkManager.BringMLNodes(_networkManager.WorkingSubgraphAllNodeGUIDs);
+                                    }
+                                    _networkManager.SetMLNodesColor(_networkManager.WorkingSubgraphAllNodeGUIDs, "#FFFF00");
+                                    _networkManager.SetMLLinksColorStart(_networkManager.WorkingSubgraphAllLinkGUIDs, "#808080");
+                                    _networkManager.SetMLLinksColorEnd(_networkManager.WorkingSubgraphAllLinkGUIDs, "#808080");
+                                    _networkManager.ClearSelection();
                                     TimerUtils.EndTime("Reset");
                                     var _resetMsg = Instantiate(command_prefab, command_parent.transform);
                                     _resetMsg.GetComponent<TMP_Text>().text = "<color=#aaa><i>Reset complete</i></color>";
@@ -560,28 +579,6 @@ namespace Whisper.Samples
             }
         }
 
-        // Returns true if the centroid of the given nodes is further than 2m from the user's head
-        private bool AreNodesFarFromUser(HashSet<string> nodeGUIDs, float threshold = 2.0f)
-        {
-            if (Camera.main == null || nodeGUIDs.Count == 0) return false;
-
-            Vector3 userPos = Camera.main.transform.position;
-            Vector3 centroid = Vector3.zero;
-            int count = 0;
-
-            foreach (var (subnID, nodeIDs) in _networkManager.SortNodeGUIDs(nodeGUIDs))
-            {
-                foreach (var nodeID in nodeIDs)
-                {
-                    var t = _networkManager.GetMLNodeTransform(nodeID, subnID);
-                    if (t != null) { centroid += t.position; count++; }
-                }
-            }
-
-            if (count == 0) return false;
-            centroid /= count;
-            return Vector3.Distance(centroid, userPos) > threshold;
-        }
 
         private void ScrollToBottom()
         {

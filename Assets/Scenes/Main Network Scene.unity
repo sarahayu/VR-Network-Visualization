@@ -526,7 +526,7 @@ MonoBehaviour:
   colorSelectedRedKey: 55
   moveSelectedKey: 56
   resetKey: 114
-  testCommand: 
+  testCommand: highlighting the top 3 nodes with the most friendship links
   submitCommandKey: 116
   showInstructions: 1
   listenerPort: 5001
@@ -20610,7 +20610,7 @@ Camera:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 394101877}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
@@ -116067,7 +116067,7 @@ Camera:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1845144347}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
