@@ -28441,12 +28441,12 @@ MonoBehaviour:
     Color the nodes by grade\n<size=50%> </size>\n* 1-3 Color the aggression links
     of highlighted nodes in red\n\n<size=50%> </size>\nTask 2: Is bullying happening
     mostly within or across behavioral groups?\n<size=50%> </size>\n* 2-1 Color all
-    nodes by smoker/drinker\n<size=50%> </size>\n* 2-2 Color the aggression links
-    of smoker in red\n\n<size=50%> </size>\nTask 3: Are socially isolated students
-    of a particular gender more likely to be targeted?\n<size=50%> </size>\n* 3-1
-    Color all nodes by gender\n<size=50%> </size>\n* 3-2 Highlight the nodes with
-    many incoming aggression links\n<size=50%> </size>\n* 3-3 Color the aggression
-    links of highlighted nodes in red"
+    nodes by smoker\n<size=50%> </size>\n* 2-2 Color the aggression links of smoker
+    in red\n\n<size=50%> </size>\nTask 3: Are socially isolated students of a particular
+    gender more likely to be targeted?\n<size=50%> </size>\n* 3-1 Highlight the nodes
+    with many incoming aggression links\n<size=50%> </size>\n* 3-2 Color/Shape all
+    nodes by gender\n<size=50%> </size>\n* 3-3 Color the aggression links of highlighted
+    nodes in red"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

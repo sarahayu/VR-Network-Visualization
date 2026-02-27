@@ -410,7 +410,10 @@ namespace Whisper.Samples
                                     var distinctValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, query[i]);
                                     Debug.Log($"Found {distinctValues.Count} distinct values for {attributeName_color}");
 
-                                    // Define 4 allowed colors (no red - reserved for highlighting)
+                                    // Sort for deterministic color assignment regardless of DB return order
+                                    distinctValues.Sort();
+
+                                    // Palette for auto-pick when user doesn't specify colors
                                     string[] allowedColors = new string[] {
                                         "#7FFFFF",  // cyan
                                         "#7F7FFF",  // blue
@@ -418,21 +421,34 @@ namespace Whisper.Samples
                                         "#BF7FBF"   // purple
                                     };
 
-                                    // Warn if more than 6 categories
-                                    if (distinctValues.Count > 6)
+                                    // Parse any user-specified colors from action params (action[i][2+] = "category:colorHex")
+                                    var userColors = new Dictionary<string, string>();
+                                    for (int k = 2; k < action[i].Length; k++)
                                     {
-                                        Debug.LogWarning($"Found {distinctValues.Count} categories but only 6 colors available. Colors will repeat.");
+                                        var parts = action[i][k].Split(new char[] { ':' }, 2);
+                                        if (parts.Length == 2 && parts[1].StartsWith("#"))
+                                            userColors[parts[0].Trim()] = parts[1].Trim();
                                     }
 
-                                    // Color each category within the working subgraph only
-                                    for (int j = 0; j < distinctValues.Count; j++)
+                                    // Build color mapping — use user-specified if available, else auto-pick from palette
+                                    var colorMapping = new List<(string cypherValue, string colorHex)>();
+                                    int autoColorIdx = 0;
+                                    foreach (var val in distinctValues)
                                     {
-                                        string categoryValue = distinctValues[j];
-                                        string colorHex = allowedColors[j % allowedColors.Length];
+                                        string colorHex = userColors.TryGetValue(val, out string specifiedColor)
+                                            ? specifiedColor
+                                            : allowedColors[autoColorIdx++ % allowedColors.Length];
+                                        colorMapping.Add((val, colorHex));
+                                    }
 
-                                        string categoryQuery = $"MATCH (n:Node) WHERE n.{attributeName_color} = {categoryValue} RETURN n";
-                                        Debug.Log($"  Category '{categoryValue}' → {colorHex}");
+                                    if (userColors.Count == 0 && distinctValues.Count > allowedColors.Length)
+                                        Debug.LogWarning($"Found {distinctValues.Count} categories but only {allowedColors.Length} colors. Colors will repeat.");
 
+                                    // Color each category using the mapping
+                                    foreach (var (cypherValue, colorHex) in colorMapping)
+                                    {
+                                        string categoryQuery = $"MATCH (n:Node) WHERE n.{attributeName_color} = {cypherValue} RETURN n";
+                                        Debug.Log($"  Category '{cypherValue}' → {colorHex}");
                                         var categoryNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, categoryQuery);
                                         var subnGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(categoryNodes);
                                         _networkManager.SetMLNodesColor(subnGUIDs, colorHex);
@@ -440,19 +456,17 @@ namespace Whisper.Samples
 
                                     TimerUtils.EndTime("ColorByAttribute");
 
-                                    // Create legend display
+                                    // Build legend from the SAME mapping — guaranteed to match what was applied
                                     var _colorByAttr = Instantiate(command_prefab, command_parent.transform);
                                     var _colorByAttr_text = _colorByAttr.GetComponent<TMP_Text>();
 
                                     System.Text.StringBuilder legendBuilder = new System.Text.StringBuilder();
                                     legendBuilder.AppendLine($"<b>Colored by {attributeName_color}</b>");
-
-                                    for (int j = 0; j < distinctValues.Count; j++)
+                                    foreach (var (cypherValue, colorHex) in colorMapping)
                                     {
-                                        string categoryValue = distinctValues[j].Replace("'", ""); // Remove quotes for display
-                                        string colorHex = allowedColors[j % allowedColors.Length];
+                                        string displayValue = cypherValue.Replace("'", "");
                                         string colorName = GetColorName(colorHex);
-                                        legendBuilder.AppendLine($"  <color={colorHex}>{colorName}</color> for {categoryValue}");
+                                        legendBuilder.AppendLine($"  <color={colorHex}>{colorName}</color> for {displayValue}");
                                     }
 
                                     _colorByAttr_text.text = legendBuilder.ToString();
