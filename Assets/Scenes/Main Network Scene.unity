@@ -20588,13 +20588,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 394101877}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.077404164, y: 0.5445058, z: -0.050557427, w: 0.83364624}
-  m_LocalPosition: {x: 0.394, y: 1.359, z: -0.164}
+  m_LocalRotation: {x: 0.07566395, y: 0.53053135, z: -0.0458897, w: 0.84303355}
+  m_LocalPosition: {x: 0.426, y: 1.406, z: -0.147}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1655081517}
-  m_LocalEulerAnglesHint: {x: 10.609, y: 66.302, z: 0}
+  m_LocalEulerAnglesHint: {x: 10.152, y: 64.38, z: 0.169}
 --- !u!81 &394101879
 AudioListener:
   m_ObjectHideFlags: 0
@@ -20610,7 +20610,7 @@ Camera:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 394101877}
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
@@ -28444,8 +28444,8 @@ MonoBehaviour:
     nodes by smoker\n<size=50%> </size>\n* 2-2 Color the aggression links of smoker
     in red\n\n<size=50%> </size>\nTask 3: Are socially isolated students of a particular
     gender more likely to be targeted?\n<size=50%> </size>\n* 3-1 Highlight the nodes
-    with many incoming aggression links\n<size=50%> </size>\n* 3-2 Color/Shape all
-    nodes by gender\n<size=50%> </size>\n* 3-3 Color the aggression links of highlighted
+    with many incoming aggression links\n<size=50%> </size>\n* 3-2 Shape all nodes
+    by gender\n<size=50%> </size>\n* 3-3 Color the aggression links of highlighted
     nodes in red"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -116068,7 +116068,7 @@ Camera:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1845144347}
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}

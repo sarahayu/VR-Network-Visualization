@@ -406,6 +406,33 @@ namespace Whisper.Samples
                                         _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
                                     }
 
+                                    // GPA uses linear gradient coloring instead of categorical
+                                    if (attributeName_color.ToLower() == "gpa")
+                                    {
+                                        string gpaMinMaxQuery = "MATCH (n:Node) RETURN min(n.gpa) AS minValue, max(n.gpa) AS maxValue";
+                                        var (gpaMin, gpaMax) = _databaseStorage.GetMinMaxFromStore(_networkManager.NetworkGlobal, gpaMinMaxQuery);
+                                        string[] gpaGradient = { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" };
+                                        float gpaRange = gpaMax - gpaMin; if (gpaRange <= 0f) gpaRange = 1f;
+                                        float gpaStep = gpaRange / gpaGradient.Length;
+                                        for (int b = 0; b < gpaGradient.Length; b++)
+                                        {
+                                            float lo = gpaMin + b * gpaStep;
+                                            float hi = b == gpaGradient.Length - 1 ? gpaMax + 0.001f : gpaMin + (b + 1) * gpaStep;
+                                            var gpaNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal,
+                                                $"MATCH (n:Node) WHERE n.gpa >= {lo:F4} AND n.gpa < {hi:F4} RETURN n");
+                                            _networkManager.SetMLNodesColor(_networkManager.TranslateToWorkingSubgraphNodeGUIDs(gpaNodes), gpaGradient[b]);
+                                        }
+                                        TimerUtils.EndTime("ColorByAttribute");
+                                        var _gpaLegend = Instantiate(command_prefab, command_parent.transform);
+                                        var gpaBuilder = new StringBuilder();
+                                        gpaBuilder.Append("<b>gpa</b>  ");
+                                        foreach (var c in gpaGradient) gpaBuilder.Append($"<color={c}>■</color>");
+                                        gpaBuilder.AppendLine($"  {gpaMin:F1} → {gpaMax:F1}");
+                                        _gpaLegend.GetComponent<TMP_Text>().text = gpaBuilder.ToString();
+                                        ScrollToBottom();
+                                        break;
+                                    }
+
                                     // Get distinct values from the query result
                                     var distinctValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, query[i]);
                                     Debug.Log($"Found {distinctValues.Count} distinct values for {attributeName_color}");
@@ -470,6 +497,56 @@ namespace Whisper.Samples
                                     }
 
                                     _colorByAttr_text.text = legendBuilder.ToString();
+                                    ScrollToBottom();
+                                    break;
+
+                                case "colorByValue":
+                                    Debug.Log("Linear color encoding by value: " + action[i][1]);
+                                    string cbvAttribute = action[i][1];
+
+                                    TimerUtils.StartTime("ColorByValue");
+
+                                    // Ensure session exists
+                                    if (!_networkManager.HasWorkingSession)
+                                    {
+                                        var allNodesForCBV = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+                                        var cbvNodeIDs = _networkManager.SortNodeGUIDs(allNodesForCBV)[NetworkManager.MainNetworkID];
+                                        _networkManager.CreateWorkingSubgraph(cbvNodeIDs, $"Color by {cbvAttribute}", $"Color by {cbvAttribute}");
+                                    }
+
+                                    // Get value range from min/max query
+                                    var (cbvMin, cbvMax) = _databaseStorage.GetMinMaxFromStore(_networkManager.NetworkGlobal, query[i]);
+                                    Debug.Log($"  {cbvAttribute} range: [{cbvMin}, {cbvMax}]");
+
+                                    // Single-hue blue gradient: light = low value, dark = high value
+                                    string[] cbvGradient = { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" };
+                                    int cbvBuckets = cbvGradient.Length;
+                                    float cbvRange = cbvMax - cbvMin;
+                                    if (cbvRange <= 0f) cbvRange = 1f;
+                                    float cbvStep = cbvRange / cbvBuckets;
+
+                                    for (int b = 0; b < cbvBuckets; b++)
+                                    {
+                                        float lo = cbvMin + b * cbvStep;
+                                        float hi = b == cbvBuckets - 1 ? cbvMax + 0.001f : cbvMin + (b + 1) * cbvStep;
+                                        string bucketQuery = $"MATCH (n:Node) WHERE n.{cbvAttribute} >= {lo:F4} AND n.{cbvAttribute} < {hi:F4} RETURN n";
+                                        var bucketNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, bucketQuery);
+                                        var cbvSubnGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(bucketNodes);
+                                        _networkManager.SetMLNodesColor(cbvSubnGUIDs, cbvGradient[b]);
+                                        Debug.Log($"  Bucket {b}: [{lo:F2}, {hi:F2}) → {cbvGradient[b]} ({cbvSubnGUIDs.Count} nodes)");
+                                    }
+
+                                    TimerUtils.EndTime("ColorByValue");
+
+                                    // Legend: show gradient strip with min/max values
+                                    var _cbvLegend = Instantiate(command_prefab, command_parent.transform);
+                                    var cbvBuilder = new StringBuilder();
+                                    cbvBuilder.AppendLine($"<b>{cbvAttribute}</b>  (lighter = lower, darker = higher)");
+                                    cbvBuilder.Append("  ");
+                                    foreach (var c in cbvGradient)
+                                        cbvBuilder.Append($"<color={c}>■</color>");
+                                    cbvBuilder.AppendLine($"  {cbvMin:F1} → {cbvMax:F1}");
+                                    _cbvLegend.GetComponent<TMP_Text>().text = cbvBuilder.ToString();
                                     ScrollToBottom();
                                     break;
 
