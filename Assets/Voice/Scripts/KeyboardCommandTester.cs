@@ -68,6 +68,15 @@ namespace Whisper.Samples
 
         private void Start()
         {
+            if (legendManager == null)
+            {
+                legendManager = FindObjectOfType<LegendManager>();
+                if (legendManager == null)
+                    Debug.LogWarning("[KeyboardCommandTester] No LegendManager found in scene — legend panel will not update.");
+                else
+                    Debug.Log("[KeyboardCommandTester] LegendManager auto-discovered.");
+            }
+
             if (showInstructions)
             {
                 PrintInstructions();
@@ -77,7 +86,6 @@ namespace Whisper.Samples
             {
                 StartHttpListener();
             }
-
         }
 
         private void OnDestroy()
@@ -533,7 +541,7 @@ namespace Whisper.Samples
             }
         }
 
-        private IEnumerator ExecuteActionsDirectly(string[][] actions, string[] queries, string originalCommand)
+        private IEnumerator ExecuteActionsDirectly(string[][] actions, string[] queries, string originalCommand, string legendNodeLabel = null)
         {
             if (streamingSampleMic == null)
             {
@@ -548,6 +556,8 @@ namespace Whisper.Samples
             HashSet<string> _lastQueriedLinkGUIDs = new HashSet<string>();
             // Track last selectLink type for legend labeling
             string _lastLinkSelectLabel = "Links";
+            // Track last selectNode param to derive short legend label
+            string _lastSelectNodeLabel = "";
 
             if (_networkManager == null || _databaseStorage == null)
             {
@@ -599,6 +609,7 @@ namespace Whisper.Samples
                             _networkManager.SetWorkingSelectedNodes(subnGUIDs, true);
                             Debug.Log($"  ✓ {subnGUIDs.Count} nodes selected in working subgraph");
                         }
+                        _lastSelectNodeLabel = ToShortLabel(actionParam);
                         break;
 
                     case "sizeNode":
@@ -635,7 +646,7 @@ namespace Whisper.Samples
                         Debug.Log($"  Found {nodes_color.Count} nodes to color");
                         _networkManager.SetMLNodesColor(nodes_color, actionParam);
                         Debug.Log($"  ✓ {nodes_color.Count} nodes colored");
-                        legendManager?.SetNodeColorLabel(actionParam, originalCommand);
+                        legendManager?.SetNodeColorLabel(actionParam, legendNodeLabel ?? _lastSelectNodeLabel);
                         break;
 
                     case "colorByAttribute":
@@ -1051,8 +1062,8 @@ namespace Whisper.Samples
             },
             // Demo L (demoId 1): Smoker highlight + aggression demo
             new string[] {
-                "Color all nodes where smoker is true in steel blue",
-                "Color all links gray then color the aggression links of the selected nodes light orange then deselect all nodes"
+                "Color all nodes where smoker is true in purple",
+                "Color the aggression links of the smoker nodes pink and friendship link in green"
             },
             // Demo O (demoId 2): Gender + aggression targets + friendship links
             new string[] {
@@ -1060,9 +1071,9 @@ namespace Whisper.Samples
                 "Select the top 3 nodes with the most incoming aggression links",
                 "Color their friendship links in blue"
             },
-            // Demo K (demoId 3): Smoker highlight + aggression demo (cyan nodes, pink links)
+            // Demo K (demoId 3): Smoker highlight + aggression demo (purple nodes, pink links)
             new string[] {
-                "Color all nodes where smoker is true in cyan",
+                "Color all nodes where smoker is true in purple",
                 "Set all links to width 10 and color gray, then color the aggression links of the selected nodes pink, then deselect all nodes"
             }
         };
@@ -1084,7 +1095,10 @@ namespace Whisper.Samples
             // Create working subgraph session if this is the first step
             if (step == 0)
             {
+                if (legendManager == null)
+                    Debug.LogWarning("[DEMO] legendManager is not assigned on KeyboardCommandTester — legend will not update. Assign it in the Inspector.");
                 Debug.Log($"[DEMO] Creating session for demo {demoLabel}");
+                legendManager?.ResetAll();
                 string selectAllQuery = "MATCH (n:Node) RETURN n";
                 var allNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, selectAllQuery);
                 var sortedDemo = _networkManager.SortNodeGUIDs(allNodes);
@@ -1134,7 +1148,7 @@ namespace Whisper.Samples
                             ""
                         };
                         commandDescription = "Highlight top 3 nodes with most friendship links";
-                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription, legendNodeLabel: "Top 3 Friendship"));
                         break;
                     case 1:
                         actions = new string[][] {
@@ -1167,14 +1181,16 @@ namespace Whisper.Samples
                     case 0:
                         actions = new string[][] {
                             new string[] { "selectNode", "smoker" },
-                            new string[] { "colorNode", "#2a52be" }
+                            new string[] { "colorNode", "#A000FF" },
+                            new string[] { "deselect", "" }
                         };
                         queries = new string[] {
                             "MATCH (n:Node) WHERE n.smoker = true RETURN n",
+                            "",
                             ""
                         };
-                        commandDescription = "Color all nodes where smoker is true blue";
-                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        commandDescription = "Color all nodes where smoker is true in purple";
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription, legendNodeLabel: "Smokers"));
                         break;
                     case 1:
                         actions = new string[][] {
@@ -1187,11 +1203,11 @@ namespace Whisper.Samples
                         queries = new string[] {
                             "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) RETURN r",
                             "",
-                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE n.selected = true AND r.type = 'aggression' RETURN r",
+                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE n.smoker = true AND r.type = 'aggression' RETURN r",
                             "",
                             ""
                         };
-                        commandDescription = "Color all links gray, color smoker aggression links pink, deselect all nodes";
+                        commandDescription = "Color all links gray, color smoker aggression links pink";
                         StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
                         break;
                 }
@@ -1244,14 +1260,16 @@ namespace Whisper.Samples
                     case 0:
                         actions = new string[][] {
                             new string[] { "selectNode", "smoker" },
-                            new string[] { "colorNode", "#2a52be" }
+                            new string[] { "colorNode", "#A000FF" },
+                            new string[] { "deselect", "" }
                         };
                         queries = new string[] {
                             "MATCH (n:Node) WHERE n.smoker = true RETURN n",
+                            "",
                             ""
                         };
-                        commandDescription = "Color all nodes where smoker is true blue";
-                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        commandDescription = "Color all nodes where smoker is true in purple";
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription, legendNodeLabel: "Smokers"));
                         break;
                     case 1:
                         actions = new string[][] {
@@ -1264,11 +1282,11 @@ namespace Whisper.Samples
                         queries = new string[] {
                             "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) RETURN r",
                             "",
-                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE n.selected = true AND r.type = 'aggression' RETURN r",
+                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE n.smoker = true AND r.type = 'aggression' RETURN r",
                             "",
                             ""
                         };
-                        commandDescription = "Color all links gray, color smoker aggression links pink, deselect all nodes";
+                        commandDescription = "Color all links gray, color smoker aggression links pink";
                         StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
                         break;
                 }
@@ -1294,19 +1312,23 @@ namespace Whisper.Samples
                 yield break;
             }
             _networkManager.CreateWorkingSubgraph(sorted[VidiGraph.NetworkManager.MainNetworkID], "Demo Q", "Demo Q");
+            legendManager?.ResetAll();
 
             // Step 1: Highlight top-3 nodes with most friendship links
             Debug.Log("[DEMO Q - Step 1/3] Highlight top-3 nodes with most friendship links");
             yield return StartCoroutine(ExecuteActionsDirectly(
                 new string[][] {
                     new string[] { "selectNode", "top3friendship" },
-                    new string[] { "colorNode", "#FFD700" }
+                    new string[] { "colorNode", "#FFD700" },
+                    new string[] { "deselect", "" }
                 },
                 new string[] {
                     "MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE r.type = 'friendship' WITH n, COUNT(r) AS degree ORDER BY degree DESC LIMIT 3 RETURN n",
+                    "",
                     ""
                 },
-                "Highlight top 3 nodes with most friendship links"
+                "Highlight top 3 nodes with most friendship links",
+                legendNodeLabel: "Top 3 Friendship"
             ));
 
             yield return new WaitForSeconds(1.5f);
@@ -1358,6 +1380,7 @@ namespace Whisper.Samples
                 yield break;
             }
             _networkManager.CreateWorkingSubgraph(sorted[VidiGraph.NetworkManager.MainNetworkID], "Demo W", "Demo W");
+            legendManager?.ResetAll();
 
             // Step 1: Highlight top-5 nodes with most friendship links
             Debug.Log("[DEMO W - Step 1/3] Highlight top-5 nodes with most friendship links");
@@ -1370,7 +1393,8 @@ namespace Whisper.Samples
                     "MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE r.type = 'friendship' WITH n, COUNT(r) AS degree ORDER BY degree DESC LIMIT 5 RETURN n",
                     ""
                 },
-                "Highlight top 5 nodes with most friendship links"
+                "Highlight top 5 nodes with most friendship links",
+                legendNodeLabel: "Top 5 Friendship"
             ));
 
             yield return new WaitForSeconds(1.5f);
@@ -1423,6 +1447,7 @@ namespace Whisper.Samples
             }
             _networkManager.CreateWorkingSubgraph(sorted[VidiGraph.NetworkManager.MainNetworkID], "Demo E - Top 3 Friendship", "Demo E");
             if (showBackgroundNetwork) _networkManager.ShowMainNetwork();
+            legendManager?.ResetAll();
 
             // Step 1: Highlight top-3 nodes with most friendship links
             Debug.Log("[DEMO E - Step 1/2] Highlight top-3 nodes with most friendship links");
@@ -1435,7 +1460,8 @@ namespace Whisper.Samples
                     "MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE r.type = 'friendship' WITH n, COUNT(r) AS degree ORDER BY degree DESC LIMIT 3 RETURN n",
                     ""
                 },
-                "Highlight the top 3 nodes with the most friendship links"
+                "Highlight the top 3 nodes with the most friendship links",
+                legendNodeLabel: "Top 3 Friendship"
             ));
 
             yield return new WaitForSeconds(1.5f);
@@ -1477,7 +1503,8 @@ namespace Whisper.Samples
                     new string[] { "colorNode", "#2a52be" }
                 },
                 new string[] { "" },
-                "Color smokers nodes in blue"
+                "Color smokers nodes in blue",
+                legendNodeLabel: "Smokers"
             ));
 
             _demoRunning = false;
@@ -1546,6 +1573,20 @@ namespace Whisper.Samples
                 "#FFFF7F" => "yellow",
                 "#BF7FBF" => "purple",
                 _ => "color"
+            };
+        }
+
+        // Converts a selectNode actionParam to a short human-readable legend label
+        private static string ToShortLabel(string actionParam)
+        {
+            return actionParam.ToLower() switch
+            {
+                "smoker"         => "Smokers",
+                "top3friendship" => "Top 3 Friendship",
+                "top5friendship" => "Top 5 Friendship",
+                "topaggression"  => "Top Aggression",
+                "all"            => "",
+                _                => char.ToUpper(actionParam[0]) + actionParam.Substring(1)
             };
         }
 

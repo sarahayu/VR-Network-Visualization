@@ -250,12 +250,18 @@ namespace VidiGraph
 
                         var hoverCol = _networkContext.ContextSettings.NodeHoverColor;
                         var selectCol = _networkContext.ContextSettings.NodeSelectColor;
+                        var defaultCol = _networkContext.ContextSettings.NodeDefaultColor;
+                        bool hasCustomColor = contextNode.Color != defaultCol;
 
                         Color finalColor = contextNode.Color;
 
                         if (hovered && selected)
                         {
-                            finalColor = Color.Lerp(Color.Lerp(hoverCol, contextNode.Color, 0.5f), selectCol, 0.67f);
+                            // For custom-colored nodes, only apply hover — skip selection yellow blend
+                            if (hasCustomColor)
+                                finalColor = Color.Lerp(hoverCol, contextNode.Color, 0.5f);
+                            else
+                                finalColor = Color.Lerp(Color.Lerp(hoverCol, contextNode.Color, 0.5f), selectCol, 0.67f);
                         }
                         else if (hovered)
                         {
@@ -263,7 +269,9 @@ namespace VidiGraph
                         }
                         else if (selected)
                         {
-                            finalColor = Color.Lerp(selectCol, contextNode.Color, 0.5f);
+                            // Only apply selection yellow tint for default-colored nodes
+                            if (!hasCustomColor)
+                                finalColor = Color.Lerp(selectCol, contextNode.Color, 0.5f);
                         }
 
                         NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], finalColor, _nodeRenderers[nodeID]);

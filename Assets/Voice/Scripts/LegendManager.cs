@@ -20,12 +20,12 @@ namespace Whisper.Samples
         // 6 fixed palette slots. Each has a "regular" (lighter) display color and a "selected" (vivid) display color.
         private static readonly (string reg, string sel)[] NodePalette =
         {
-            ("#F29C9C", "#FF0000"),
-            ("#F6B37E", "#FF7A00"),
-            ("#F6F3A1", "#FFF200"),
-            ("#A6F2A6", "#00FF00"),
-            ("#A8E6F2", "#00C8FF"),
-            ("#D7A8F2", "#A000FF"),
+            ("#F29C9C", "#FF0000"),   // red
+            ("#F6B37E", "#FF7A00"),   // orange
+            ("#A8F0F6", "#00D8E6"),   // cyan
+            ("#A6F2A6", "#00FF00"),   // green
+            ("#F6A8D7", "#FF3FA4"),   // pink
+            ("#D7A8F2", "#A000FF"),   // purple
         };
 
         private struct NodeColorEntry { public string reg; public string sel; public string label; public bool isGradient; public string[] gradientColors; }
@@ -66,6 +66,7 @@ namespace Whisper.Samples
         /// </summary>
         public void SetNodeColorLabel(string hexColor, string label)
         {
+            Debug.Log($"[LegendManager] SetNodeColorLabel({hexColor}, {label}) — legendText={(legendText != null ? "assigned" : "NULL")}");
             hexColor = hexColor.ToUpper();
 
             // Update existing slot that already uses this hex
@@ -174,7 +175,11 @@ namespace Whisper.Samples
 
         private void Rebuild()
         {
-            if (legendText == null) return;
+            if (legendText == null)
+            {
+                Debug.LogWarning("[LegendManager] legendText is not assigned — legend will not display.");
+                return;
+            }
 
             var sb = new StringBuilder();
 
@@ -211,6 +216,7 @@ namespace Whisper.Samples
                     sb.AppendLine($"<color={hex}>A → B</color>  {label}");
 
             legendText.text = sb.ToString().TrimEnd();
+            legendText.ForceMeshUpdate();
         }
 
         private static string Lighten(string hex)

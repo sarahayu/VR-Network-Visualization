@@ -49,8 +49,8 @@ llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 ALLOWED_COLORS = {
     "red": "#FF0000",
     "orange": "#FFA500",
-    "yellow": "#FFFF00",
-    "green": "#00FF00",
+    "yellow": "#e4d00a",
+    "green": "#3cb371",
     "blue": "#0000FF",
     "purple": "#800080",
     "cyan": "#00FFFF",
