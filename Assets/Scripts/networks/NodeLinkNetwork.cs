@@ -341,6 +341,11 @@ namespace VidiGraph
                 updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
+        public (float min, float max, bool found) TryGetNodePropMinMax(string prop)
+        {
+            return _encodingTransformer.TryGetNodePropMinMax(prop);
+        }
+
         public bool SetNodeColorEncoding(string prop, float min, float max, string color,
             bool updateStorage, bool updateRenderElements)
         {

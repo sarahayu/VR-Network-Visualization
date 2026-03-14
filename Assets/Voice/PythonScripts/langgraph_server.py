@@ -49,10 +49,23 @@ llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 ALLOWED_COLORS = {
     "red": "#FF0000",
     "orange": "#FFA500",
-    "yellow": "#FFFF00",
-    "green": "#00FF00",
+    "yellow": "#e4d00a",
+    "green": "#3cb371",
     "blue": "#0000FF",
-    "purple": "#800080"
+    "purple": "#800080",
+    "cyan": "#00FFFF",
+    "pink": "#FF69B4",
+    "white": "#FFFFFF",
+    "gray": "#808080",
+    "grey": "#808080",
+    "black": "#000000",
+    "lime": "#00FF00",
+    "magenta": "#FF00FF",
+    "teal": "#008080",
+    "navy": "#000080",
+    "gold": "#FFD700",
+    "brown": "#A52A2A",
+    "violet": "#EE82EE",
 }
 
 # ==========================================================
@@ -64,7 +77,7 @@ correction_prompt = ChatPromptTemplate.from_template(
 You are correcting ASR (voice recognition) errors for graph visualization commands.
 
 Rules:
-- Fix ONLY misheard words (e.g., note→node, blew→blue, caller→color, great→grade, sacks→sex)
+- Fix ONLY misheard words (e.g., note→node, blew→blue, caller→color, great→grade, sacks→sex, gee pee ay→GPA, GP→GPA, geepay→GPA)
 - NEVER convert color names to hex codes. Keep "red" as "red", "blue" as "blue", etc.
 - NEVER change the word "color" — it is a verb meaning "to paint/color".
 - DO NOT add or remove words. Only fix misheard ones.
@@ -134,6 +147,7 @@ Allowed actions:
 - "colorNode" - color currently selected nodes a single color
 - "colorLink" - color currently selected links a single color
 - "colorByAttribute" - categorical coloring: assign different colors per unique attribute value
+- "colorByGPA" - linear blue coloring by GPA: lighter = lower GPA, darker = higher GPA
 - "shapeByAttribute" - categorical shape: assign different shapes per unique attribute value
 - "sizeNode" - size nodes by numeric attribute
 - "move" - move selected nodes
@@ -143,13 +157,28 @@ Allowed actions:
 
 === COLOR NAME TO HEX MAPPING ===
 When generating colorNode or colorLink actions, convert color names to hex:
-  red → #FF0000, orange → #FFA500, yellow → #FFFF00,
-  green → #00FF00, blue → #0000FF, purple → #800080
+  red → #FF0000, orange → #FFA500, yellow → #FFFF00, green → #00FF00,
+  blue → #0000FF, purple → #800080, cyan → #00FFFF, pink → #FF69B4,
+  white → #FFFFFF, gray/grey → #808080, black → #000000, magenta → #FF00FF,
+  teal → #008080, navy → #000080, gold → #FFD700, brown → #A52A2A, violet → #EE82EE
+You may also pass any hex color directly (e.g. #1565C0) if the user specifies one.
+
+=== HIGHEST PRIORITY: GPA coloring ===
+ANY mention of "GPA" in a coloring context → ALWAYS use colorByGPA, never colorByAttribute.
+Generate: [["colorByGPA", "gpa"]]
+Examples (ALL of these → colorByGPA):
+  "color nodes by GPA" → [["colorByGPA", "gpa"]]
+  "color by GPA" → [["colorByGPA", "gpa"]]
+  "color all nodes by GPA" → [["colorByGPA", "gpa"]]
+  "show GPA" → [["colorByGPA", "gpa"]]
+  "show GPA on nodes" → [["colorByGPA", "gpa"]]
+  "visualize GPA" → [["colorByGPA", "gpa"]]
+  "highlight by GPA" → [["colorByGPA", "gpa"]]
 
 === CRITICAL: "color BY attribute" vs "color IN a color" ===
 These are COMPLETELY DIFFERENT operations:
 
-1. "color nodes by <attribute>" / "color by <attribute>" → CATEGORICAL coloring
+1. "color nodes by <attribute>" / "color by <attribute>" → CATEGORICAL coloring (NOT for GPA — see above)
    Generate: [["colorByAttribute", "<attribute>"]]
    Examples:
      "color nodes by grade" → [["colorByAttribute", "grade"]]
@@ -167,14 +196,18 @@ The KEY difference: "by <attribute>" = categorical, "in <color>" or just "<color
 
 === LINK SELECTION ===
 The selectLink param is JUST the link type name (e.g., "aggression", "friendship").
+Use "all" to select every link regardless of type.
 Append ":selected" if scoped to selected/highlighted nodes.
 Do NOT use conditions like "n.type = ..." — just use the type name.
 
+- "color all links gray" → [["selectLink", "all"], ["colorLink", "#808080"]]
 - "color aggression links red" → [["selectLink", "aggression"], ["colorLink", "#FF0000"]]
 - "color all aggression links in red" → [["selectLink", "aggression"], ["colorLink", "#FF0000"]]
 - "color aggression links for selected nodes red" → [["selectLink", "aggression:selected"], ["colorLink", "#FF0000"]]
 - "color their friendship links blue" → [["selectLink", "friendship:selected"], ["colorLink", "#0000FF"]]
 - "color friendship links for highlighted nodes blue" → [["selectLink", "friendship:selected"], ["colorLink", "#0000FF"]]
+- "color all links gray then color the aggression links of the selected nodes red" →
+  [["selectLink", "all"], ["colorLink", "#808080"], ["selectLink", "aggression:selected"], ["colorLink", "#FF0000"]]
 
 === NODE SELECTION ===
 - "top N nodes by <metric>" → ALWAYS generate BOTH selectNode AND colorNode:
@@ -230,6 +263,9 @@ Rules for each action type:
 - If the param contains "top" and a number, ALWAYS use ORDER BY ... DESC LIMIT N pattern.
 
 === selectLink ===
+- All links: ["selectLink", "all"]
+  → MATCH (n:Node)-[r:POINTS_TO]-(m:Node) RETURN r
+
 - By type only: ["selectLink", "aggression"]
   → MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE r.type = 'aggression' RETURN r
 
@@ -239,6 +275,7 @@ Rules for each action type:
 - By type scoped to selected: ["selectLink", "friendship:selected"]
   → MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE n.selected = true AND r.type = 'friendship' RETURN r
 
+- IMPORTANT: If param is "all", return ALL links with no WHERE filter.
 - IMPORTANT: If param contains ":selected", add WHERE n.selected = true to scope to currently selected nodes.
 
 === colorNode / colorLink ===
@@ -247,6 +284,9 @@ Rules for each action type:
 === colorByAttribute ===
 ["colorByAttribute", "<attribute>"]
 → MATCH (n:Node) RETURN DISTINCT n.<attribute> AS value ORDER BY value
+
+=== colorByGPA ===
+→ ""  (no Cypher needed, Unity reads GPA from in-memory data)
 
 === shapeByAttribute ===
 ["shapeByAttribute", "<attribute>"]
@@ -344,9 +384,10 @@ async def action_agent(state: AgentState):
                 color_val = a[1].strip().lower()
                 if color_val in ALLOWED_COLORS:
                     a[1] = ALLOWED_COLORS[color_val]
-                color = a[1].upper()
-                if color not in [v.upper() for v in ALLOWED_COLORS.values()]:
-                    raise ValueError(f"Invalid color: {a[1]}. Must be one of {list(ALLOWED_COLORS.values())}")
+                color = a[1].strip()
+                import re as _re
+                if not _re.fullmatch(r'#[0-9A-Fa-f]{6}', color):
+                    raise ValueError(f"Invalid color: {a[1]}. Must be a hex color (#RRGGBB) or a name like red, blue, cyan, etc.")
     except Exception as e:
         raise ValueError(f"Action JSON invalid: {raw}. Error: {str(e)}")
 

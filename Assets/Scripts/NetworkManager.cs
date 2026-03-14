@@ -147,6 +147,7 @@ namespace VidiGraph
 
         public bool OnQueryMode { get; private set; } = false;
         public bool HasWorkingSession => _curWorkingSubgraph != -1;
+        public int WorkingSubgraphID => _curWorkingSubgraph;
 
         // All node GUIDs in the working subgraph context (NOT main-network/DB GUIDs)
         public HashSet<string> WorkingSubgraphAllNodeGUIDs
@@ -407,6 +408,8 @@ namespace VidiGraph
             );
 
             SwitchToSubnetwork(newSubnID);
+
+            _multiLayoutNetwork.gameObject.SetActive(false);
 
             _allNetworks[newSubnID].SetLayout(new int[] { }, "forcedDir", () =>
             {
@@ -984,6 +987,16 @@ namespace VidiGraph
             _subnetworks[subnetworkID].gameObject.SetActive(true);
         }
 
+        public void HideMainNetwork()
+        {
+            _multiLayoutNetwork.gameObject.SetActive(false);
+        }
+
+        public void ShowMainNetwork()
+        {
+            _multiLayoutNetwork.gameObject.SetActive(true);
+        }
+
         public void SwitchToSubnetwork(int subnetworkID)
         {
             if (_curWorkingSubgraph != -1)
@@ -1164,6 +1177,9 @@ namespace VidiGraph
         // Removes all sessions, clears all selections, and resets node/link visuals to defaults
         public void ResetAll()
         {
+            // 0. Restore main network visibility
+            _multiLayoutNetwork.gameObject.SetActive(true);
+
             // 1. Delete all working subgraph sessions and their frames
             var subnIDs = _subnetworks.Keys.ToList();
             foreach (var subnID in subnIDs)
@@ -1289,6 +1305,16 @@ namespace VidiGraph
             _allNetworks[subnetworkID].SetLinksWidth(linkIDs, width, _updatingStorage, _updatingRenderElements);
         }
 
+        // Changes the global link width for a subnetwork's render context.
+        // The BSpline renderer uses a single global _LineWidth shader parameter for all links,
+        // so per-link width is not supported — this is the only way to visually change link thickness.
+        public void SetSubnetworkGlobalLinkWidth(float width, int subnetworkID = MainNetworkID)
+        {
+            if (!_allNetworks.TryGetValue(subnetworkID, out var network)) return;
+            network.Context.ContextSettings.LinkWidth = width;
+            TriggerRenderUpdate();
+        }
+
         public void SetMLLinksColorStart(IEnumerable<string> linkGUIDs, string color)
         {
             foreach (var (subnID, linkIDs) in SortLinkGUIDs(linkGUIDs)) SetMLLinksColorStart(linkIDs, color, subnID);
@@ -1347,6 +1373,44 @@ namespace VidiGraph
         public void SetMLLinksBundleEnd(IEnumerable<int> linkIDs, bool bundleEnd, int subnetworkID = MainNetworkID)
         {
             _allNetworks[subnetworkID].SetLinksBundleEnd(linkIDs, bundleEnd, _updatingStorage, _updatingRenderElements);
+        }
+
+        // Computes min/max of a float node prop from in-memory data (not Neo4j).
+        // Returns (min, max, true) if prop exists and has non-null values; (0,0,false) otherwise.
+        public (float min, float max, bool found) TryGetNodePropMinMax(string prop, int subnetworkID = MainNetworkID)
+        {
+            return _allNetworks[subnetworkID].TryGetNodePropMinMax(prop);
+        }
+
+        // Applies a linear color gradient to real nodes in the working subgraph based on a file prop (e.g. "gpa").
+        // Directly sets node context colors and triggers a single render update — avoids encoding transformer issues.
+        public void ApplyLinearColorToWorkingSubgraph(string prop, float min, float max, string colorHex)
+        {
+            if (_curWorkingSubgraph == -1) return;
+
+            var ctx = _allNetworks[_curWorkingSubgraph].Context;
+            var fileData = _fileLoader.SphericalLayout;
+            var targetColor = ColorUtils.StringToColor(colorHex);
+
+            foreach (var (nodeID, nodeCtx) in ctx.Nodes)
+            {
+                if (!_networkGlobal.Nodes.IdToIndex.ContainsKey(nodeID)) continue;
+                var node = _networkGlobal.Nodes[nodeID];
+                if (node.IsVirtualNode) continue;
+
+                var propVal = ObjectUtils.AsDictionary(fileData.nodes[node.IdxProcessed].props);
+                if (!propVal.ContainsKey(prop) || propVal[prop] == null) continue;
+
+                float f;
+                try { f = System.Convert.ToSingle(propVal[prop]); }
+                catch { continue; }
+
+                var t = Mathf.InverseLerp(min, max, f);
+                nodeCtx.Color = Color.Lerp(Color.white, targetColor, t);
+                nodeCtx.Dirty = true;
+            }
+
+            TriggerRenderUpdate();
         }
 
         public bool SetMLNodeColorEncoding(string prop, float min = 0f, float max = 1f, string color = "#0000FF" /* blue */, int subnetworkID = MainNetworkID)

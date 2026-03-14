@@ -19,8 +19,8 @@ This feature allows users to color nodes based on categorical attributes (e.g., 
 
 **Result:**
 - System queries all distinct values of the attribute
-- Each unique value gets assigned one of 6 colors
-- All nodes with the same value get the same color
+- If the attribute is **categorical**, each unique value gets assigned one of 6 colors and the legend shows each category
+- If the attribute is **numeric** (e.g., GPA), nodes are colored along a single-hue gradient (darker = higher), with a compressed legend showing the gradient range
 - If >6 categories exist, colors cycle/repeat
 
 ---

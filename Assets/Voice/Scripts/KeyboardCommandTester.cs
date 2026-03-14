@@ -9,6 +9,7 @@ using System.Threading;
 using UnityEngine.Networking;
 using Newtonsoft.Json;
 using TMPro;
+using VidiGraph;
 
 namespace Whisper.Samples
 {
@@ -20,6 +21,7 @@ namespace Whisper.Samples
     {
         [Header("References")]
         public StreamingSampleMic streamingSampleMic;
+        public LegendManager legendManager;
         public GameObject command_prefab;
         public GameObject command_parent;
         public UnityEngine.UI.ScrollRect scroll;
@@ -33,6 +35,7 @@ namespace Whisper.Samples
         public KeyCode sizeByGPAKey = KeyCode.Alpha2;
         public KeyCode colorByGradeKey = KeyCode.Alpha3;
         public KeyCode colorBySexKey = KeyCode.Alpha4;
+        public KeyCode colorByGPAKey = KeyCode.G;
         public KeyCode shapeByGradeKey = KeyCode.Alpha5;
         public KeyCode selectFemaleKey = KeyCode.Alpha6;
         public KeyCode deselectAllKey = KeyCode.Alpha7;
@@ -46,6 +49,7 @@ namespace Whisper.Samples
 
         [Header("Display")]
         public bool showInstructions = true;
+        public bool showBackgroundNetwork = false;
 
         // Demo mode state
         private bool _demoRunning = false;
@@ -64,6 +68,15 @@ namespace Whisper.Samples
 
         private void Start()
         {
+            if (legendManager == null)
+            {
+                legendManager = FindObjectOfType<LegendManager>();
+                if (legendManager == null)
+                    Debug.LogWarning("[KeyboardCommandTester] No LegendManager found in scene — legend panel will not update.");
+                else
+                    Debug.Log("[KeyboardCommandTester] LegendManager auto-discovered.");
+            }
+
             if (showInstructions)
             {
                 PrintInstructions();
@@ -73,7 +86,6 @@ namespace Whisper.Samples
             {
                 StartHttpListener();
             }
-
         }
 
         private void OnDestroy()
@@ -220,6 +232,13 @@ namespace Whisper.Samples
                 ExecuteDirectAction("colorByAttribute", "sex");
             }
 
+            // Color by GPA (linear blue gradient — reads from in-memory data, no server needed)
+            if (Input.GetKeyDown(colorByGPAKey))
+            {
+                Debug.Log("[KEYBOARD] Triggered: Color by GPA");
+                ExecuteDirectAction("colorByGPA", "gpa");
+            }
+
             // Shape by grade (categorical shape encoding - works on all nodes)
             if (Input.GetKeyDown(shapeByGradeKey))
             {
@@ -300,6 +319,40 @@ namespace Whisper.Samples
                 RunDemoStep(_activeDemoId, _demoStep);
             }
 
+            if (Input.GetKeyDown(KeyCode.Q) && !_demoRunning)
+            {
+                Debug.Log("[DEMO Q] Starting continuous demo sequence...");
+                _demoRunning = true;
+                _activeDemoId = 3;
+                StartCoroutine(RunDemoQContinuous());
+            }
+
+            if (Input.GetKeyDown(KeyCode.W) && !_demoRunning)
+            {
+                Debug.Log("[DEMO W] Starting continuous demo sequence...");
+                _demoRunning = true;
+                _activeDemoId = 4;
+                StartCoroutine(RunDemoWContinuous());
+            }
+
+            if (Input.GetKeyDown(KeyCode.K) && !_demoRunning)
+            {
+                Debug.Log("[DEMO K] Starting demo sequence (smoker + cyan aggression)...");
+                _demoRunning = true;
+                _activeDemoId = 3;
+                _demoStep = 0;
+                _demoTotalSteps = 2;
+                RunDemoStep(_activeDemoId, _demoStep);
+            }
+
+            if (Input.GetKeyDown(KeyCode.E) && !_demoRunning)
+            {
+                Debug.Log("[DEMO E] Starting continuous demo sequence...");
+                _demoRunning = true;
+                _activeDemoId = 5;
+                StartCoroutine(RunDemoEContinuous());
+            }
+
             if (Input.GetKeyDown(KeyCode.Return) && _demoRunning)
             {
                 _demoStep++;
@@ -367,6 +420,12 @@ namespace Whisper.Samples
 
             switch (actionName)
             {
+                case "colorByGPA":
+                    actions = new string[][] { new string[] { "colorByGPA", "gpa" } };
+                    queries = new string[] { "" };
+                    commandDescription = "color by GPA";
+                    break;
+
                 case "colorByAttribute":
                     actions = new string[][] { new string[] { "colorByAttribute", parameter } };
                     queries = new string[] { $"MATCH (n:Node) RETURN DISTINCT n.{parameter} AS value ORDER BY value" };
@@ -482,7 +541,7 @@ namespace Whisper.Samples
             }
         }
 
-        private IEnumerator ExecuteActionsDirectly(string[][] actions, string[] queries, string originalCommand)
+        private IEnumerator ExecuteActionsDirectly(string[][] actions, string[] queries, string originalCommand, string legendNodeLabel = null)
         {
             if (streamingSampleMic == null)
             {
@@ -495,6 +554,10 @@ namespace Whisper.Samples
 
             // Store link GUIDs from selectLink so colorLink can use them without marking links as Selected
             HashSet<string> _lastQueriedLinkGUIDs = new HashSet<string>();
+            // Track last selectLink type for legend labeling
+            string _lastLinkSelectLabel = "Links";
+            // Track last selectNode param to derive short legend label
+            string _lastSelectNodeLabel = "";
 
             if (_networkManager == null || _databaseStorage == null)
             {
@@ -531,8 +594,9 @@ namespace Whisper.Samples
                             // No session yet — create one with ALL nodes first, then select the queried subset
                             Debug.Log($"  [No Session] Creating working subgraph with ALL nodes first");
                             var allNodesForSel = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                            var allNodeIDsForSel = _networkManager.SortNodeGUIDs(allNodesForSel)[VidiGraph.NetworkManager.MainNetworkID];
-                            _networkManager.CreateWorkingSubgraph(allNodeIDsForSel, originalCommand, originalCommand);
+                            var sortedSel = _networkManager.SortNodeGUIDs(allNodesForSel);
+                            if (!sortedSel.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
+                            _networkManager.CreateWorkingSubgraph(sortedSel[VidiGraph.NetworkManager.MainNetworkID], originalCommand, originalCommand);
                             _networkManager.SetQueryMode(false);
                             var subnGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(nodes);
                             _networkManager.SetWorkingSelectedNodes(subnGUIDs, true);
@@ -545,6 +609,7 @@ namespace Whisper.Samples
                             _networkManager.SetWorkingSelectedNodes(subnGUIDs, true);
                             Debug.Log($"  ✓ {subnGUIDs.Count} nodes selected in working subgraph");
                         }
+                        _lastSelectNodeLabel = ToShortLabel(actionParam);
                         break;
 
                     case "sizeNode":
@@ -573,13 +638,15 @@ namespace Whisper.Samples
                             // No session — create one with all nodes
                             Debug.Log($"  No session, creating one with all nodes");
                             var allNodesForColor = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                            var colorNodeIDs = _networkManager.SortNodeGUIDs(allNodesForColor)[VidiGraph.NetworkManager.MainNetworkID];
-                            _networkManager.CreateWorkingSubgraph(colorNodeIDs, "Color all nodes", "Color Nodes");
+                            var sortedColorAll = _networkManager.SortNodeGUIDs(allNodesForColor);
+                            if (!sortedColorAll.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
+                            _networkManager.CreateWorkingSubgraph(sortedColorAll[VidiGraph.NetworkManager.MainNetworkID], "Color all nodes", "Color Nodes");
                             nodes_color = _networkManager.WorkingSubgraphAllNodeGUIDs;
                         }
                         Debug.Log($"  Found {nodes_color.Count} nodes to color");
                         _networkManager.SetMLNodesColor(nodes_color, actionParam);
                         Debug.Log($"  ✓ {nodes_color.Count} nodes colored");
+                        legendManager?.SetNodeColorLabel(actionParam, legendNodeLabel ?? _lastSelectNodeLabel);
                         break;
 
                     case "colorByAttribute":
@@ -591,37 +658,10 @@ namespace Whisper.Samples
                         {
                             Debug.Log($"  No session, creating one with all nodes");
                             var allNodesForCBA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                            var cbaNodeIDs = _networkManager.SortNodeGUIDs(allNodesForCBA)[VidiGraph.NetworkManager.MainNetworkID];
-                            _networkManager.CreateWorkingSubgraph(cbaNodeIDs, $"Color by {attributeName_color}", $"Color by {attributeName_color}");
-                        }
-
-                        // GPA uses linear gradient coloring instead of categorical
-                        if (attributeName_color.ToLower() == "gpa")
-                        {
-                            string gpaMinMaxQuery = "MATCH (n:Node) RETURN min(n.gpa) AS minValue, max(n.gpa) AS maxValue";
-                            var (gpaMin, gpaMax) = _databaseStorage.GetMinMaxFromStore(_networkManager.NetworkGlobal, gpaMinMaxQuery);
-                            string[] gpaGradient = { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" };
-                            float gpaRange = gpaMax - gpaMin; if (gpaRange <= 0f) gpaRange = 1f;
-                            float gpaStep = gpaRange / gpaGradient.Length;
-                            for (int b = 0; b < gpaGradient.Length; b++)
-                            {
-                                float lo = gpaMin + b * gpaStep;
-                                float hi = b == gpaGradient.Length - 1 ? gpaMax + 0.001f : gpaMin + (b + 1) * gpaStep;
-                                var gpaNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal,
-                                    $"MATCH (n:Node) WHERE n.gpa >= {lo:F4} AND n.gpa < {hi:F4} RETURN n");
-                                _networkManager.SetMLNodesColor(_networkManager.TranslateToWorkingSubgraphNodeGUIDs(gpaNodes), gpaGradient[b]);
-                            }
-                            if (command_prefab != null && command_parent != null)
-                            {
-                                var _gpaLegend = Instantiate(command_prefab, command_parent.transform);
-                                var gpaBuilder = new System.Text.StringBuilder();
-                                gpaBuilder.Append("<b>gpa</b>  ");
-                                foreach (var c in gpaGradient) gpaBuilder.Append($"<color={c}>■</color>");
-                                gpaBuilder.AppendLine($"  {gpaMin:F1} → {gpaMax:F1}");
-                                _gpaLegend.GetComponent<TMP_Text>().text = gpaBuilder.ToString();
-                                ScrollToBottom();
-                            }
-                            break;
+                            var sortedCBA = _networkManager.SortNodeGUIDs(allNodesForCBA);
+                            if (!sortedCBA.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
+                            _networkManager.CreateWorkingSubgraph(sortedCBA[VidiGraph.NetworkManager.MainNetworkID], $"Color by {attributeName_color}", $"Color by {attributeName_color}");
+                            _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
                         }
 
                         // Get distinct values
@@ -677,6 +717,7 @@ namespace Whisper.Samples
                         Debug.Log($"  === Color Legend for '{attributeName_color}' ===");
                         foreach (var (cypherValue, colorHex) in colorMapping)
                             Debug.Log($"    ■ {cypherValue.Replace("'", "")} = {colorHex}");
+                        legendManager?.SetNodeColorMapping(colorMapping.Select(cm => (cm.cypherValue.Replace("'", ""), cm.colorHex)));
 
                         if (command_prefab != null && command_parent != null)
                         {
@@ -696,6 +737,57 @@ namespace Whisper.Samples
                         }
                         break;
 
+                    case "colorByGPA":
+                        Debug.Log($"  Linear GPA coloring");
+
+                        TimerUtils.StartTime("ColorByGPA");
+
+                        // Create session with all nodes if none exists (same as colorByAttribute)
+                        if (!_networkManager.HasWorkingSession)
+                        {
+                            Debug.Log($"  No session, creating one with all nodes");
+                            var allNodesForGPA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+                            var sortedGPA = _networkManager.SortNodeGUIDs(allNodesForGPA);
+                            if (!sortedGPA.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
+                            _networkManager.CreateWorkingSubgraph(sortedGPA[VidiGraph.NetworkManager.MainNetworkID], "Color by GPA", "Color by GPA");
+                            _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
+                        }
+
+                        {
+                            string[] gpaGradient = { "#E3F2FD", "#90CAF9", "#42A5F5", "#1976D2", "#1565C0" };
+                            var (gpaMin, gpaMax) = _databaseStorage.GetMinMaxFromStore(
+                                _networkManager.NetworkGlobal,
+                                "MATCH (n:Node) WHERE n.gpa IS NOT NULL RETURN min(n.gpa) AS minValue, max(n.gpa) AS maxValue");
+                            if (gpaMax > gpaMin)
+                            {
+                                float step = (gpaMax - gpaMin) / gpaGradient.Length;
+                                for (int b = 0; b < gpaGradient.Length; b++)
+                                {
+                                    float low = gpaMin + b * step;
+                                    float high = (b == gpaGradient.Length - 1) ? gpaMax + 0.001f : gpaMin + (b + 1) * step;
+                                    string bucketQuery = $"MATCH (n:Node) WHERE n.gpa >= {low.ToString(System.Globalization.CultureInfo.InvariantCulture)} AND n.gpa < {high.ToString(System.Globalization.CultureInfo.InvariantCulture)} RETURN n";
+                                    var bucketNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, bucketQuery);
+                                    var bucketGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(bucketNodes);
+                                    _networkManager.SetMLNodesColor(bucketGUIDs, gpaGradient[b]);
+                                }
+                            }
+
+                            TimerUtils.EndTime("ColorByGPA");
+                            legendManager?.SetNodeGradient("GPA", gpaGradient);
+
+                            if (command_prefab != null && command_parent != null)
+                            {
+                                var _gpaLegend = Instantiate(command_prefab, command_parent.transform);
+                                var gpaLegendBuilder = new System.Text.StringBuilder();
+                                gpaLegendBuilder.Append("<b>gpa</b>   low  ");
+                                foreach (var c in gpaGradient) gpaLegendBuilder.Append($"<color={c}>■</color>");
+                                gpaLegendBuilder.Append("  high");
+                                _gpaLegend.GetComponent<TMP_Text>().text = gpaLegendBuilder.ToString();
+                                ScrollToBottom();
+                            }
+                        }
+                        break;
+
                     case "colorByValue":
                         Debug.Log($"  Linear color encoding by value: {actionParam}");
                         string cbvAttribute = actionParam;
@@ -704,42 +796,49 @@ namespace Whisper.Samples
                         if (!_networkManager.HasWorkingSession)
                         {
                             var allNodesForCBV = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                            var cbvNodeIDs = _networkManager.SortNodeGUIDs(allNodesForCBV)[VidiGraph.NetworkManager.MainNetworkID];
-                            _networkManager.CreateWorkingSubgraph(cbvNodeIDs, $"Color by {cbvAttribute}", $"Color by {cbvAttribute}");
+                            var sortedCBV = _networkManager.SortNodeGUIDs(allNodesForCBV);
+                            if (!sortedCBV.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
+                            _networkManager.CreateWorkingSubgraph(sortedCBV[VidiGraph.NetworkManager.MainNetworkID], $"Color by {cbvAttribute}", $"Color by {cbvAttribute}");
+                            _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
                         }
 
                         // Get value range from min/max query
                         var (cbvMin, cbvMax) = _databaseStorage.GetMinMaxFromStore(_networkManager.NetworkGlobal, queries[i]);
                         Debug.Log($"  {cbvAttribute} range: [{cbvMin}, {cbvMax}]");
 
-                        // Single-hue blue gradient: light = low value, dark = high value
-                        string[] cbvGradient = { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" };
-                        int cbvBuckets = cbvGradient.Length;
-                        float cbvRange = cbvMax - cbvMin;
-                        if (cbvRange <= 0f) cbvRange = 1f;
-                        float cbvStep = cbvRange / cbvBuckets;
+                        // Linear encoding: same hue, lighter = lower, darker = higher
+                        string cbvLinearHue = "#003388";
+                        bool cbvEncodingSuccess = _networkManager.SetMLNodeColorEncoding(
+                            cbvAttribute, cbvMin, cbvMax, cbvLinearHue);
 
-                        for (int b = 0; b < cbvBuckets; b++)
+                        if (!cbvEncodingSuccess)
                         {
-                            float lo = cbvMin + b * cbvStep;
-                            float hi = b == cbvBuckets - 1 ? cbvMax + 0.001f : cbvMin + (b + 1) * cbvStep;
-                            string bucketQuery = $"MATCH (n:Node) WHERE n.{cbvAttribute} >= {lo:F4} AND n.{cbvAttribute} < {hi:F4} RETURN n";
-                            var bucketNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, bucketQuery);
-                            var cbvSubnGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(bucketNodes);
-                            _networkManager.SetMLNodesColor(cbvSubnGUIDs, cbvGradient[b]);
-                            Debug.Log($"  Bucket {b}: [{lo:F2}, {hi:F2}) → {cbvGradient[b]} ({cbvSubnGUIDs.Count} nodes)");
+                            // Fall back to bucket approach
+                            string[] cbvGradient = { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" };
+                            float cbvRange = cbvMax - cbvMin;
+                            if (cbvRange <= 0f) cbvRange = 1f;
+                            float cbvStep = cbvRange / cbvGradient.Length;
+                            for (int b = 0; b < cbvGradient.Length; b++)
+                            {
+                                float lo = cbvMin + b * cbvStep;
+                                float hi = b == cbvGradient.Length - 1 ? cbvMax + 0.001f : cbvMin + (b + 1) * cbvStep;
+                                string bucketQuery = $"MATCH (n:Node) WHERE n.{cbvAttribute} >= {lo:F4} AND n.{cbvAttribute} < {hi:F4} RETURN n";
+                                var bucketNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, bucketQuery);
+                                _networkManager.SetMLNodesColor(_networkManager.TranslateToWorkingSubgraphNodeGUIDs(bucketNodes), cbvGradient[b]);
+                            }
                         }
 
-                        // Legend: show gradient strip with min/max values
+                        // Legend: gradient strip with lighter/darker meaning (no min/max numbers)
+                        legendManager?.SetNodeGradient(cbvAttribute, new string[] { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" });
                         if (command_prefab != null && command_parent != null)
                         {
                             var _cbvLegend = Instantiate(command_prefab, command_parent.transform);
                             var cbvBuilder = new System.Text.StringBuilder();
-                            cbvBuilder.AppendLine($"<b>{cbvAttribute}</b>  (lighter = lower, darker = higher)");
-                            cbvBuilder.Append("  ");
-                            foreach (var c in cbvGradient)
+                            string[] cbvGradientDisplay = { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" };
+                            cbvBuilder.Append($"<b>{cbvAttribute}</b>   low  ");
+                            foreach (var c in cbvGradientDisplay)
                                 cbvBuilder.Append($"<color={c}>■</color>");
-                            cbvBuilder.AppendLine($"  {cbvMin:F1} → {cbvMax:F1}");
+                            cbvBuilder.Append("  high");
                             _cbvLegend.GetComponent<TMP_Text>().text = cbvBuilder.ToString();
                             ScrollToBottom();
                         }
@@ -754,8 +853,9 @@ namespace Whisper.Samples
                         {
                             Debug.Log($"  No session, creating one with all nodes");
                             var allNodesForSBA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                            var sbaNodeIDs = _networkManager.SortNodeGUIDs(allNodesForSBA)[VidiGraph.NetworkManager.MainNetworkID];
-                            _networkManager.CreateWorkingSubgraph(sbaNodeIDs, $"Shape by {attributeName_shape}", $"Shape by {attributeName_shape}");
+                            var sortedSBA = _networkManager.SortNodeGUIDs(allNodesForSBA);
+                            if (!sortedSBA.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
+                            _networkManager.CreateWorkingSubgraph(sortedSBA[VidiGraph.NetworkManager.MainNetworkID], $"Shape by {attributeName_shape}", $"Shape by {attributeName_shape}");
                         }
 
                         // Get distinct values
@@ -791,6 +891,7 @@ namespace Whisper.Samples
                         // Print shape legend to console
                         Debug.Log($"  ✓ Categorical shape encoding complete");
                         Debug.Log($"  === Shape Legend for '{attributeName_shape}' ===");
+                        legendManager?.SetShapeMapping(distinctShapeValues.Select(v => v.Replace("'", "")));
 
                         string[] shapeSymbols = new string[] { "●", "■", "▲" };
                         for (int j = 0; j < distinctShapeValues.Count; j++)
@@ -825,6 +926,11 @@ namespace Whisper.Samples
 
                     case "selectLink":
                         Debug.Log($"  Querying links with: {queries[i]}");
+                        // Track link type for legend labeling
+                        if (actionParam == "all") _lastLinkSelectLabel = "All links";
+                        else if (actionParam.Contains("aggression")) _lastLinkSelectLabel = "Aggression links";
+                        else if (actionParam.Contains("friendship")) _lastLinkSelectLabel = "Friendship links";
+                        else _lastLinkSelectLabel = actionParam + " links";
                         var links = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, queries[i]);
                         _lastQueriedLinkGUIDs = new HashSet<string>(links);
 
@@ -878,6 +984,20 @@ namespace Whisper.Samples
                         _networkManager.SetMLLinksColorStart(linkGUIDs_color, actionParam);
                         _networkManager.SetMLLinksColorEnd(linkGUIDs_color, actionParam);
                         Debug.Log($"  ✓ {linkGUIDs_color.Count} links colored {actionParam}");
+                        legendManager?.SetEdgeColorLabel(actionParam, _lastLinkSelectLabel);
+                        break;
+
+                    case "widthLink":
+                        Debug.Log($"  Setting global link width: {actionParam}");
+                        if (float.TryParse(actionParam, System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, out float linkWidth))
+                        {
+                            int targetSubn = _networkManager.HasWorkingSession
+                                ? _networkManager.WorkingSubgraphID
+                                : VidiGraph.NetworkManager.MainNetworkID;
+                            _networkManager.SetSubnetworkGlobalLinkWidth(linkWidth, targetSubn);
+                            Debug.Log($"  ✓ Global link width set to {linkWidth} for subnetwork {targetSubn}");
+                        }
                         break;
 
                     case "reset":
@@ -886,8 +1006,9 @@ namespace Whisper.Samples
                         if (!_networkManager.HasWorkingSession)
                         {
                             var allNodesForReset = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                            var resetNodeIDs = _networkManager.SortNodeGUIDs(allNodesForReset)[VidiGraph.NetworkManager.MainNetworkID];
-                            _networkManager.CreateWorkingSubgraph(resetNodeIDs, "Reset", "Reset");
+                            var sortedReset = _networkManager.SortNodeGUIDs(allNodesForReset);
+                            if (!sortedReset.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
+                            _networkManager.CreateWorkingSubgraph(sortedReset[VidiGraph.NetworkManager.MainNetworkID], "Reset", "Reset");
                             _networkManager.BringMLNodes(_networkManager.WorkingSubgraphAllNodeGUIDs);
                         }
                         _networkManager.SetMLNodesColor(_networkManager.WorkingSubgraphAllNodeGUIDs, "#FFFF00");
@@ -895,6 +1016,7 @@ namespace Whisper.Samples
                         _networkManager.SetMLLinksColorEnd(_networkManager.WorkingSubgraphAllLinkGUIDs, "#808080");
                         _networkManager.ClearSelection();
                         Debug.Log($"  ✓ Reset complete — nodes yellow, links gray");
+                        legendManager?.ResetAll();
                         break;
 
                     case "deselect":
@@ -938,16 +1060,21 @@ namespace Whisper.Samples
                 "Color the nodes by grade",
                 "Color their aggression links for highlighted nodes"
             },
-            // Demo L (demoId 1): Smoker/drinker + aggression demo
+            // Demo L (demoId 1): Smoker highlight + aggression demo
             new string[] {
-                "Color nodes by smoker or drinker",
-                "Color the aggression links connected to smoker nodes in red"
+                "Color all nodes where smoker is true in purple",
+                "Color the aggression links of the smoker nodes pink and friendship link in green"
             },
             // Demo O (demoId 2): Gender + aggression targets + friendship links
             new string[] {
                 "Color nodes by gender",
                 "Select the top 3 nodes with the most incoming aggression links",
                 "Color their friendship links in blue"
+            },
+            // Demo K (demoId 3): Smoker highlight + aggression demo (purple nodes, pink links)
+            new string[] {
+                "Color all nodes where smoker is true in purple",
+                "Set all links to width 10 and color gray, then color the aggression links of the selected nodes pink, then deselect all nodes"
             }
         };
 
@@ -963,17 +1090,21 @@ namespace Whisper.Samples
             }
 
             // Determine demo label
-            string demoLabel = demoId == 0 ? "P" : demoId == 1 ? "L" : "O";
+            string demoLabel = demoId == 0 ? "P" : demoId == 1 ? "L" : demoId == 2 ? "O" : demoId == 3 ? "K" : "Q";
 
             // Create working subgraph session if this is the first step
             if (step == 0)
             {
+                if (legendManager == null)
+                    Debug.LogWarning("[DEMO] legendManager is not assigned on KeyboardCommandTester — legend will not update. Assign it in the Inspector.");
                 Debug.Log($"[DEMO] Creating session for demo {demoLabel}");
+                legendManager?.ResetAll();
                 string selectAllQuery = "MATCH (n:Node) RETURN n";
                 var allNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, selectAllQuery);
-                var nodeIDs = _networkManager.SortNodeGUIDs(allNodes)[VidiGraph.NetworkManager.MainNetworkID];
+                var sortedDemo = _networkManager.SortNodeGUIDs(allNodes);
+                if (!sortedDemo.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) return;
 
-                _networkManager.CreateWorkingSubgraph(nodeIDs, $"Demo {demoLabel}", $"Demo {demoLabel}");
+                _networkManager.CreateWorkingSubgraph(sortedDemo[VidiGraph.NetworkManager.MainNetworkID], $"Demo {demoLabel}", $"Demo {demoLabel}");
             }
 
             if (demoId < 0 || demoId >= DemoCommands.Length || step < 0 || step >= DemoCommands[demoId].Length)
@@ -1017,7 +1148,7 @@ namespace Whisper.Samples
                             ""
                         };
                         commandDescription = "Highlight top 3 nodes with most friendship links";
-                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription, legendNodeLabel: "Top 3 Friendship"));
                         break;
                     case 1:
                         actions = new string[][] {
@@ -1049,24 +1180,34 @@ namespace Whisper.Samples
                 {
                     case 0:
                         actions = new string[][] {
-                            new string[] { "colorByAttribute", "smoker" }
+                            new string[] { "selectNode", "smoker" },
+                            new string[] { "colorNode", "#A000FF" },
+                            new string[] { "deselect", "" }
                         };
                         queries = new string[] {
-                            "MATCH (n:Node) RETURN DISTINCT n.smoker AS value ORDER BY value"
+                            "MATCH (n:Node) WHERE n.smoker = true RETURN n",
+                            "",
+                            ""
                         };
-                        commandDescription = "Color nodes by smoker";
-                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        commandDescription = "Color all nodes where smoker is true in purple";
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription, legendNodeLabel: "Smokers"));
                         break;
                     case 1:
                         actions = new string[][] {
+                            new string[] { "selectLink", "all" },
+                            new string[] { "colorLink", "#808080" },
                             new string[] { "selectLink", "aggression" },
-                            new string[] { "colorLink", "#FF0000" }
+                            new string[] { "colorLink", "#FFB6C1" },
+                            new string[] { "deselect", "" }
                         };
                         queries = new string[] {
-                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE r.type = 'aggression' AND (n.smoker = true OR m.smoker = true) RETURN r",
+                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) RETURN r",
+                            "",
+                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE n.smoker = true AND r.type = 'aggression' RETURN r",
+                            "",
                             ""
                         };
-                        commandDescription = "Color smoker aggression links in red";
+                        commandDescription = "Color all links gray, color smoker aggression links pink";
                         StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
                         break;
                 }
@@ -1111,6 +1252,263 @@ namespace Whisper.Samples
                         break;
                 }
             }
+            else if (demoId == 3)
+            {
+                // Demo K: smoker nodes #2a52be, gray links, smoker aggression links pink
+                switch (step)
+                {
+                    case 0:
+                        actions = new string[][] {
+                            new string[] { "selectNode", "smoker" },
+                            new string[] { "colorNode", "#A000FF" },
+                            new string[] { "deselect", "" }
+                        };
+                        queries = new string[] {
+                            "MATCH (n:Node) WHERE n.smoker = true RETURN n",
+                            "",
+                            ""
+                        };
+                        commandDescription = "Color all nodes where smoker is true in purple";
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription, legendNodeLabel: "Smokers"));
+                        break;
+                    case 1:
+                        actions = new string[][] {
+                            new string[] { "selectLink", "all" },
+                            new string[] { "colorLink", "#808080" },
+                            new string[] { "selectLink", "aggression" },
+                            new string[] { "colorLink", "#FFB6C1" },
+                            new string[] { "deselect", "" }
+                        };
+                        queries = new string[] {
+                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) RETURN r",
+                            "",
+                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE n.smoker = true AND r.type = 'aggression' RETURN r",
+                            "",
+                            ""
+                        };
+                        commandDescription = "Color all links gray, color smoker aggression links pink";
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        break;
+                }
+            }
+        }
+
+        private IEnumerator RunDemoQContinuous()
+        {
+            var _networkManager = streamingSampleMic._networkManager;
+            var _databaseStorage = streamingSampleMic._databaseStorage;
+
+            if (_networkManager.OnQueryMode)
+                _networkManager.SetQueryMode(false);
+
+            // Create session with all nodes
+            Debug.Log("[DEMO Q] Creating session with all nodes...");
+            var allNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+            var sorted = _networkManager.SortNodeGUIDs(allNodes);
+            if (!sorted.ContainsKey(VidiGraph.NetworkManager.MainNetworkID))
+            {
+                Debug.LogError("[DEMO Q] No main network nodes found.");
+                _demoRunning = false;
+                yield break;
+            }
+            _networkManager.CreateWorkingSubgraph(sorted[VidiGraph.NetworkManager.MainNetworkID], "Demo Q", "Demo Q");
+            legendManager?.ResetAll();
+
+            // Step 1: Highlight top-3 nodes with most friendship links
+            Debug.Log("[DEMO Q - Step 1/3] Highlight top-3 nodes with most friendship links");
+            yield return StartCoroutine(ExecuteActionsDirectly(
+                new string[][] {
+                    new string[] { "selectNode", "top3friendship" },
+                    new string[] { "colorNode", "#FFD700" },
+                    new string[] { "deselect", "" }
+                },
+                new string[] {
+                    "MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE r.type = 'friendship' WITH n, COUNT(r) AS degree ORDER BY degree DESC LIMIT 3 RETURN n",
+                    "",
+                    ""
+                },
+                "Highlight top 3 nodes with most friendship links",
+                legendNodeLabel: "Top 3 Friendship"
+            ));
+
+            yield return new WaitForSeconds(1.5f);
+
+            // Step 2: Color nodes by GPA
+            Debug.Log("[DEMO Q - Step 2/3] Color nodes by GPA");
+            yield return StartCoroutine(ExecuteActionsDirectly(
+                new string[][] { new string[] { "colorByGPA", "gpa" } },
+                new string[] { "" },
+                "Color nodes by GPA"
+            ));
+
+            yield return new WaitForSeconds(1.5f);
+
+            // Step 3: Color ALL aggression links in red
+            Debug.Log("[DEMO Q - Step 3/3] Color aggression links in red");
+            yield return StartCoroutine(ExecuteActionsDirectly(
+                new string[][] {
+                    new string[] { "selectLink", "aggression" },
+                    new string[] { "colorLink", "#FF0000" }
+                },
+                new string[] {
+                    "MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE r.type = 'aggression' RETURN r",
+                    ""
+                },
+                "Color aggression links in red"
+            ));
+
+            _demoRunning = false;
+            Debug.Log("[DEMO Q] Continuous demo complete!");
+        }
+
+        private IEnumerator RunDemoWContinuous()
+        {
+            var _networkManager = streamingSampleMic._networkManager;
+            var _databaseStorage = streamingSampleMic._databaseStorage;
+
+            if (_networkManager.OnQueryMode)
+                _networkManager.SetQueryMode(false);
+
+            // Create session with all nodes
+            Debug.Log("[DEMO W] Creating session with all nodes...");
+            var allNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+            var sorted = _networkManager.SortNodeGUIDs(allNodes);
+            if (!sorted.ContainsKey(VidiGraph.NetworkManager.MainNetworkID))
+            {
+                Debug.LogError("[DEMO W] No main network nodes found.");
+                _demoRunning = false;
+                yield break;
+            }
+            _networkManager.CreateWorkingSubgraph(sorted[VidiGraph.NetworkManager.MainNetworkID], "Demo W", "Demo W");
+            legendManager?.ResetAll();
+
+            // Step 1: Highlight top-5 nodes with most friendship links
+            Debug.Log("[DEMO W - Step 1/3] Highlight top-5 nodes with most friendship links");
+            yield return StartCoroutine(ExecuteActionsDirectly(
+                new string[][] {
+                    new string[] { "selectNode", "top5friendship" },
+                    new string[] { "colorNode", "#FF0000" }
+                },
+                new string[] {
+                    "MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE r.type = 'friendship' WITH n, COUNT(r) AS degree ORDER BY degree DESC LIMIT 5 RETURN n",
+                    ""
+                },
+                "Highlight top 5 nodes with most friendship links",
+                legendNodeLabel: "Top 5 Friendship"
+            ));
+
+            yield return new WaitForSeconds(1.5f);
+
+            // Step 2: Shape nodes by gender
+            Debug.Log("[DEMO W - Step 2/3] Shape nodes by gender");
+            yield return StartCoroutine(ExecuteActionsDirectly(
+                new string[][] { new string[] { "shapeByAttribute", "sex" } },
+                new string[] { "MATCH (n:Node) RETURN DISTINCT n.sex AS value ORDER BY value" },
+                "Shape nodes by gender"
+            ));
+
+            yield return new WaitForSeconds(1.5f);
+
+            // Step 3: Color aggression links for highlighted nodes in red
+            Debug.Log("[DEMO W - Step 3/3] Color aggression links for highlighted nodes in red");
+            yield return StartCoroutine(ExecuteActionsDirectly(
+                new string[][] {
+                    new string[] { "selectLink", "aggression" },
+                    new string[] { "colorLink", "#FF0000" }
+                },
+                new string[] {
+                    "MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE n.selected = true AND r.type = 'aggression' RETURN r",
+                    ""
+                },
+                "Color aggression links for highlighted nodes in red"
+            ));
+
+            _demoRunning = false;
+            Debug.Log("[DEMO W] Continuous demo complete!");
+        }
+
+        private IEnumerator RunDemoEContinuous()
+        {
+            var _networkManager = streamingSampleMic._networkManager;
+            var _databaseStorage = streamingSampleMic._databaseStorage;
+
+            if (_networkManager.OnQueryMode)
+                _networkManager.SetQueryMode(false);
+
+            // Create first session with all nodes
+            Debug.Log("[DEMO E] Creating first session with all nodes...");
+            var allNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+            var sorted = _networkManager.SortNodeGUIDs(allNodes);
+            if (!sorted.ContainsKey(VidiGraph.NetworkManager.MainNetworkID))
+            {
+                Debug.LogError("[DEMO E] No main network nodes found.");
+                _demoRunning = false;
+                yield break;
+            }
+            _networkManager.CreateWorkingSubgraph(sorted[VidiGraph.NetworkManager.MainNetworkID], "Demo E - Top 3 Friendship", "Demo E");
+            if (showBackgroundNetwork) _networkManager.ShowMainNetwork();
+            legendManager?.ResetAll();
+
+            // Step 1: Highlight top-3 nodes with most friendship links
+            Debug.Log("[DEMO E - Step 1/2] Highlight top-3 nodes with most friendship links");
+            yield return StartCoroutine(ExecuteActionsDirectly(
+                new string[][] {
+                    new string[] { "selectNode", "top3friendship" },
+                    new string[] { "colorNode", "#FFD700" }
+                },
+                new string[] {
+                    "MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE r.type = 'friendship' WITH n, COUNT(r) AS degree ORDER BY degree DESC LIMIT 3 RETURN n",
+                    ""
+                },
+                "Highlight the top 3 nodes with the most friendship links",
+                legendNodeLabel: "Top 3 Friendship"
+            ));
+
+            yield return new WaitForSeconds(1.5f);
+
+            // Step 2: Save this session and create a new session with smoker nodes
+            Debug.Log("[DEMO E - Step 2/2] Saving current session, creating new smokers session");
+
+            // Show the command in history panel
+            if (command_prefab != null && command_parent != null)
+            {
+                var cmdObj = Instantiate(command_prefab, command_parent.transform);
+                cmdObj.GetComponent<TMP_Text>().text = "<b>User:</b> Save this session and create a new session of select all smokers nodes";
+                ScrollToBottom();
+            }
+
+            ShowSystemMessage("Session 'Demo E' saved. Creating new smokers session...");
+
+            // Query smoker nodes and create a new dedicated session
+            var smokerNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) WHERE n.smoker = true RETURN n");
+            var sortedSmokers = _networkManager.SortNodeGUIDs(smokerNodes);
+            if (!sortedSmokers.ContainsKey(VidiGraph.NetworkManager.MainNetworkID) || !sortedSmokers[VidiGraph.NetworkManager.MainNetworkID].Any())
+            {
+                Debug.LogError("[DEMO E] No smoker nodes found.");
+                ShowSystemMessage("No smoker nodes found.");
+                _demoRunning = false;
+                yield break;
+            }
+
+            _networkManager.CreateWorkingSubgraph(
+                sortedSmokers[VidiGraph.NetworkManager.MainNetworkID],
+                "Smokers Session",
+                "Smokers"
+            );
+            if (showBackgroundNetwork) _networkManager.ShowMainNetwork();
+
+            // Color all nodes in the new smokers session blue (same as Demo L)
+            yield return StartCoroutine(ExecuteActionsDirectly(
+                new string[][] {
+                    new string[] { "colorNode", "#2a52be" }
+                },
+                new string[] { "" },
+                "Color smokers nodes in blue",
+                legendNodeLabel: "Smokers"
+            ));
+
+            _demoRunning = false;
+            Debug.Log("[DEMO E] Continuous demo complete!");
         }
 
         private void PrintInstructions()
@@ -1122,6 +1520,7 @@ namespace Whisper.Samples
             Debug.Log($"Press [{sizeByGPAKey}] - Size nodes by GPA");
             Debug.Log($"Press [{colorByGradeKey}] - Color nodes by grade (categorical)");
             Debug.Log($"Press [{colorBySexKey}] - Color nodes by sex (categorical)");
+            Debug.Log($"Press [{colorByGPAKey}] - Color nodes by GPA (linear blue gradient)");
             Debug.Log($"Press [{shapeByGradeKey}] - Shape nodes by grade (categorical)");
             Debug.Log($"Press [{selectFemaleKey}] - Select female students");
             Debug.Log($"Press [{deselectAllKey}] - Deselect all");
@@ -1131,9 +1530,13 @@ namespace Whisper.Samples
             Debug.Log($"Press [H] - Show this help menu");
             Debug.Log("---");
             Debug.Log($"Press [P] - Demo: highlight top 3 → color by grade → color aggression links");
-            Debug.Log($"Press [L] - Demo: color by smoker → color aggression links");
+            Debug.Log($"Press [L] - Demo: highlight smoker nodes orange → color all aggression links red");
             Debug.Log($"Press [O] - Demo: color by gender → select aggression targets → color friendship links blue");
-            Debug.Log($"Press [Enter] - Next demo step");
+            Debug.Log($"Press [Q] - Demo (continuous): highlight top 3 friendship → color by GPA → color aggression links red");
+            Debug.Log($"Press [W] - Demo (continuous): highlight top 5 friendship → shape by gender → color all aggression links red");
+            Debug.Log($"Press [K] - Demo: highlight smoker nodes blue → color all links gray → color smoker aggression links cyan");
+            Debug.Log($"Press [E] - Demo (continuous): highlight top 3 friendship → save session → new session with all smokers selected");
+            Debug.Log($"Press [Enter] - Next demo step (P/L/O/K)");
             Debug.Log("=".PadRight(60, '='));
             Debug.Log($"Server Mode: {(serverEnabled ? "ENABLED" : "DISABLED (Direct execution)")}");
             Debug.Log("=".PadRight(60, '='));
@@ -1146,7 +1549,7 @@ namespace Whisper.Samples
             {
                 var msgObj = Instantiate(command_prefab, command_parent.transform);
                 var msgText = msgObj.GetComponent<TMP_Text>();
-                msgText.text = $"<color=#FF8F00><b>{message}</b></color>";
+                msgText.text = $"<b>{message}</b>";
                 ScrollToBottom();
             }
         }
@@ -1170,6 +1573,20 @@ namespace Whisper.Samples
                 "#FFFF7F" => "yellow",
                 "#BF7FBF" => "purple",
                 _ => "color"
+            };
+        }
+
+        // Converts a selectNode actionParam to a short human-readable legend label
+        private static string ToShortLabel(string actionParam)
+        {
+            return actionParam.ToLower() switch
+            {
+                "smoker"         => "Smokers",
+                "top3friendship" => "Top 3 Friendship",
+                "top5friendship" => "Top 5 Friendship",
+                "topaggression"  => "Top Aggression",
+                "all"            => "",
+                _                => char.ToUpper(actionParam[0]) + actionParam.Substring(1)
             };
         }
 

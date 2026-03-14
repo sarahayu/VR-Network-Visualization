@@ -15,7 +15,7 @@ namespace VidiGraph
         public class Settings
         {
             public float NodeScale = 1f;
-            public float LinkWidth = 0.0025f;
+            public float LinkWidth = 0.005f;
             public float EdgeBundlingStrength = 0.8f;
 
             public Color NodeDefaultColor;

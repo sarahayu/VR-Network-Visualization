@@ -28,6 +28,7 @@ namespace VidiGraph
             TimerUtils.StartTime("MLEncodingTransformer.ApplyTransformation");
             foreach (var (nodeID, nodeContext) in _networkContext.Nodes)
             {
+                if (!_networkGlobal.Nodes.IdToIndex.ContainsKey(nodeID)) continue;
                 var node = _networkGlobal.Nodes[nodeID];
                 if (node.IsVirtualNode) continue;
 
@@ -40,8 +41,11 @@ namespace VidiGraph
 
             foreach (var (linkID, linkContext) in _networkContext.Links)
             {
+                if (!_networkGlobal.Links.ContainsKey(linkID)) continue;
                 var link = _networkGlobal.Links[linkID];
 
+                if (!_networkGlobal.Nodes.IdToIndex.ContainsKey(link.SourceNodeID)
+                    || !_networkGlobal.Nodes.IdToIndex.ContainsKey(link.TargetNodeID)) continue;
                 if (_networkGlobal.Nodes[link.SourceNodeID].IsVirtualNode
                     || _networkGlobal.Nodes[link.TargetNodeID].IsVirtualNode) continue;
 
@@ -56,6 +60,25 @@ namespace VidiGraph
                 linkContext.Dirty = true;
             }
             TimerUtils.EndTime("MLEncodingTransformer.ApplyTransformation");
+        }
+
+        // Returns (min, max, true) if prop exists as float? in any node; (0,0,false) if not found or no non-null values
+        public (float min, float max, bool found) TryGetNodePropMinMax(string prop)
+        {
+            if (!_utils.TryCastNodeProp<float?>(prop)) return (0f, 0f, false);
+
+            float min = float.MaxValue, max = float.MinValue;
+            foreach (var (nodeID, _) in _networkContext.Nodes)
+            {
+                var val = _utils.CastNodeProp<float?>(nodeID, prop);
+                if (val == null) continue;
+                float f = (float)val;
+                if (f < min) min = f;
+                if (f > max) max = f;
+            }
+
+            if (min == float.MaxValue) return (0f, 0f, false);
+            return (min, max, true);
         }
 
         public bool SetNodeColorEncoding(string prop, float min, float max, string color)

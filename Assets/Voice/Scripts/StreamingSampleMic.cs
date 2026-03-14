@@ -39,6 +39,8 @@ namespace Whisper.Samples
         Renderer Indicator;
         public Text buttonText;
         public Text text;
+        public TMP_Text LegendText;
+        public LegendManager legendManager;
         public ScrollRect scroll;
         public GameObject command_prefab;
         public GameObject command_parent;
@@ -52,6 +54,8 @@ namespace Whisper.Samples
 
         // Link GUIDs from the last selectLink command — used by colorLink
         private HashSet<string> _lastSelectedLinkGUIDs = new HashSet<string>();
+        // Track last selectLink type for legend labeling
+        private string _lastLinkSelectLabel = "Links";
 
 
         // Classification server URL
@@ -261,8 +265,9 @@ namespace Whisper.Samples
                                     {
                                         // No session yet — create one with ALL nodes first, then select the queried subset
                                         var allNodesForSel = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                                        var allNodeIDsForSel = _networkManager.SortNodeGUIDs(allNodesForSel)[NetworkManager.MainNetworkID];
-                                        _networkManager.CreateWorkingSubgraph(allNodeIDsForSel, classification.corrected_input, classification.corrected_input);
+                                        var sortedSel = _networkManager.SortNodeGUIDs(allNodesForSel);
+                                        if (!sortedSel.ContainsKey(NetworkManager.MainNetworkID)) break;
+                                        _networkManager.CreateWorkingSubgraph(sortedSel[NetworkManager.MainNetworkID], classification.corrected_input, classification.corrected_input);
                                         _networkManager.SetQueryMode(false);
                                         var subnGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(nodes);
                                         _networkManager.SetWorkingSelectedNodes(subnGUIDs, true);
@@ -289,6 +294,11 @@ namespace Whisper.Samples
                                     Debug.Log("Selecting links with query: " + query[i]);
                                     text.text += $"\n<size=18><color=#aaa>{query[i]}</color></size>";
                                     TimerUtils.StartTime("SetSelectedLinks");
+                                    // Track link type for legend
+                                    if (action[i][1] == "all") _lastLinkSelectLabel = "All links";
+                                    else if (action[i][1].Contains("aggression")) _lastLinkSelectLabel = "Aggression links";
+                                    else if (action[i][1].Contains("friendship")) _lastLinkSelectLabel = "Friendship links";
+                                    else _lastLinkSelectLabel = action[i][1] + " links";
                                     var links = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, query[i]);
                                     _lastSelectedLinkGUIDs = new HashSet<string>(links);
 
@@ -356,14 +366,16 @@ namespace Whisper.Samples
                                         Debug.Log("No session, creating one with all nodes");
                                         string selectAllQuery = "MATCH (n:Node) RETURN n";
                                         var allNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, selectAllQuery);
-                                        var nodeIDs = _networkManager.SortNodeGUIDs(allNodes)[NetworkManager.MainNetworkID];
-                                        _networkManager.CreateWorkingSubgraph(nodeIDs, "Color all nodes", "Color Nodes");
+                                        var sortedColorAll = _networkManager.SortNodeGUIDs(allNodes);
+                                        if (!sortedColorAll.ContainsKey(NetworkManager.MainNetworkID)) break;
+                                        _networkManager.CreateWorkingSubgraph(sortedColorAll[NetworkManager.MainNetworkID], "Color all nodes", "Color Nodes");
                                         _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
                                         nodes_color = _networkManager.WorkingSelectedNodeGUIDs;
                                     }
 
                                     TimerUtils.StartTime("SetColor");
                                     _networkManager.SetMLNodesColor(nodes_color, action[i][1]);
+                                    legendManager?.SetNodeColorLabel(action[i][1], corrected_input);
                                     TimerUtils.EndTime("SetColor");
                                     break;
                                 case "colorLink":
@@ -389,6 +401,7 @@ namespace Whisper.Samples
                                     }
                                     _networkManager.SetMLLinksColorStart(linkGUIDs_color, action[i][1]);
                                     _networkManager.SetMLLinksColorEnd(linkGUIDs_color, action[i][1]);
+                                    legendManager?.SetEdgeColorLabel(action[i][1], _lastLinkSelectLabel);
                                     TimerUtils.EndTime("SetColor");
                                     break;
                                 case "colorByAttribute":
@@ -397,40 +410,14 @@ namespace Whisper.Samples
 
                                     TimerUtils.StartTime("ColorByAttribute");
 
-                                    // Ensure a working session exists; if not, create one with all nodes
+                                    // Create session with all nodes if none exists
                                     if (!_networkManager.HasWorkingSession)
                                     {
                                         var allNodesForCBA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                                        var cbaNodeIDs = _networkManager.SortNodeGUIDs(allNodesForCBA)[NetworkManager.MainNetworkID];
-                                        _networkManager.CreateWorkingSubgraph(cbaNodeIDs, $"Color by {attributeName_color}", $"Color by {attributeName_color}");
+                                        var sortedCBA = _networkManager.SortNodeGUIDs(allNodesForCBA);
+                                        if (!sortedCBA.ContainsKey(NetworkManager.MainNetworkID)) break;
+                                        _networkManager.CreateWorkingSubgraph(sortedCBA[NetworkManager.MainNetworkID], $"Color by {attributeName_color}", $"Color by {attributeName_color}");
                                         _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
-                                    }
-
-                                    // GPA uses linear gradient coloring instead of categorical
-                                    if (attributeName_color.ToLower() == "gpa")
-                                    {
-                                        string gpaMinMaxQuery = "MATCH (n:Node) RETURN min(n.gpa) AS minValue, max(n.gpa) AS maxValue";
-                                        var (gpaMin, gpaMax) = _databaseStorage.GetMinMaxFromStore(_networkManager.NetworkGlobal, gpaMinMaxQuery);
-                                        string[] gpaGradient = { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" };
-                                        float gpaRange = gpaMax - gpaMin; if (gpaRange <= 0f) gpaRange = 1f;
-                                        float gpaStep = gpaRange / gpaGradient.Length;
-                                        for (int b = 0; b < gpaGradient.Length; b++)
-                                        {
-                                            float lo = gpaMin + b * gpaStep;
-                                            float hi = b == gpaGradient.Length - 1 ? gpaMax + 0.001f : gpaMin + (b + 1) * gpaStep;
-                                            var gpaNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal,
-                                                $"MATCH (n:Node) WHERE n.gpa >= {lo:F4} AND n.gpa < {hi:F4} RETURN n");
-                                            _networkManager.SetMLNodesColor(_networkManager.TranslateToWorkingSubgraphNodeGUIDs(gpaNodes), gpaGradient[b]);
-                                        }
-                                        TimerUtils.EndTime("ColorByAttribute");
-                                        var _gpaLegend = Instantiate(command_prefab, command_parent.transform);
-                                        var gpaBuilder = new StringBuilder();
-                                        gpaBuilder.Append("<b>gpa</b>  ");
-                                        foreach (var c in gpaGradient) gpaBuilder.Append($"<color={c}>■</color>");
-                                        gpaBuilder.AppendLine($"  {gpaMin:F1} → {gpaMax:F1}");
-                                        _gpaLegend.GetComponent<TMP_Text>().text = gpaBuilder.ToString();
-                                        ScrollToBottom();
-                                        break;
                                     }
 
                                     // Get distinct values from the query result
@@ -497,7 +484,55 @@ namespace Whisper.Samples
                                     }
 
                                     _colorByAttr_text.text = legendBuilder.ToString();
+                                    legendManager?.SetNodeColorMapping(colorMapping.Select(cm => (cm.cypherValue.Replace("'", ""), cm.colorHex)));
                                     ScrollToBottom();
+                                    break;
+
+                                case "colorByGPA":
+                                    Debug.Log("Linear GPA coloring");
+
+                                    TimerUtils.StartTime("ColorByGPA");
+
+                                    // Create session with all nodes if none exists (same as colorByAttribute)
+                                    if (!_networkManager.HasWorkingSession)
+                                    {
+                                        var allNodesForGPA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+                                        var sortedGPA = _networkManager.SortNodeGUIDs(allNodesForGPA);
+                                        if (!sortedGPA.ContainsKey(NetworkManager.MainNetworkID)) break;
+                                        _networkManager.CreateWorkingSubgraph(sortedGPA[NetworkManager.MainNetworkID], "Color by GPA", "Color by GPA");
+                                        _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
+                                    }
+
+                                    {
+                                        string[] gpaGradient = { "#E3F2FD", "#90CAF9", "#42A5F5", "#1976D2", "#1565C0" };
+                                        var (gpaMin, gpaMax) = _databaseStorage.GetMinMaxFromStore(
+                                            _networkManager.NetworkGlobal,
+                                            "MATCH (n:Node) WHERE n.gpa IS NOT NULL RETURN min(n.gpa) AS minValue, max(n.gpa) AS maxValue");
+                                        if (gpaMax > gpaMin)
+                                        {
+                                            float step = (gpaMax - gpaMin) / gpaGradient.Length;
+                                            for (int b = 0; b < gpaGradient.Length; b++)
+                                            {
+                                                float low = gpaMin + b * step;
+                                                float high = (b == gpaGradient.Length - 1) ? gpaMax + 0.001f : gpaMin + (b + 1) * step;
+                                                string bucketQuery = $"MATCH (n:Node) WHERE n.gpa >= {low.ToString(System.Globalization.CultureInfo.InvariantCulture)} AND n.gpa < {high.ToString(System.Globalization.CultureInfo.InvariantCulture)} RETURN n";
+                                                var bucketNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, bucketQuery);
+                                                var bucketGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(bucketNodes);
+                                                _networkManager.SetMLNodesColor(bucketGUIDs, gpaGradient[b]);
+                                            }
+                                        }
+
+                                        TimerUtils.EndTime("ColorByGPA");
+
+                                        var _gpaLegend = Instantiate(command_prefab, command_parent.transform);
+                                        var gpaLegendBuilder = new StringBuilder();
+                                        gpaLegendBuilder.Append("<b>gpa</b>   low  ");
+                                        foreach (var c in gpaGradient)
+                                            gpaLegendBuilder.Append($"<color={c}>■</color>");
+                                        gpaLegendBuilder.Append("  high");
+                                        _gpaLegend.GetComponent<TMP_Text>().text = gpaLegendBuilder.ToString();
+                                        ScrollToBottom();
+                                    }
                                     break;
 
                                 case "colorByValue":
@@ -510,42 +545,48 @@ namespace Whisper.Samples
                                     if (!_networkManager.HasWorkingSession)
                                     {
                                         var allNodesForCBV = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                                        var cbvNodeIDs = _networkManager.SortNodeGUIDs(allNodesForCBV)[NetworkManager.MainNetworkID];
-                                        _networkManager.CreateWorkingSubgraph(cbvNodeIDs, $"Color by {cbvAttribute}", $"Color by {cbvAttribute}");
+                                        var sortedCBV = _networkManager.SortNodeGUIDs(allNodesForCBV);
+                                        if (!sortedCBV.ContainsKey(NetworkManager.MainNetworkID)) break;
+                                        _networkManager.CreateWorkingSubgraph(sortedCBV[NetworkManager.MainNetworkID], $"Color by {cbvAttribute}", $"Color by {cbvAttribute}");
+                                        _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
                                     }
 
                                     // Get value range from min/max query
                                     var (cbvMin, cbvMax) = _databaseStorage.GetMinMaxFromStore(_networkManager.NetworkGlobal, query[i]);
                                     Debug.Log($"  {cbvAttribute} range: [{cbvMin}, {cbvMax}]");
 
-                                    // Single-hue blue gradient: light = low value, dark = high value
-                                    string[] cbvGradient = { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" };
-                                    int cbvBuckets = cbvGradient.Length;
-                                    float cbvRange = cbvMax - cbvMin;
-                                    if (cbvRange <= 0f) cbvRange = 1f;
-                                    float cbvStep = cbvRange / cbvBuckets;
+                                    // Linear encoding: same hue, lighter = lower, darker = higher
+                                    string cbvLinearHue = "#003388";
+                                    bool cbvEncodingSuccess = _networkManager.SetMLNodeColorEncoding(
+                                        cbvAttribute, cbvMin, cbvMax, cbvLinearHue);
 
-                                    for (int b = 0; b < cbvBuckets; b++)
+                                    if (!cbvEncodingSuccess)
                                     {
-                                        float lo = cbvMin + b * cbvStep;
-                                        float hi = b == cbvBuckets - 1 ? cbvMax + 0.001f : cbvMin + (b + 1) * cbvStep;
-                                        string bucketQuery = $"MATCH (n:Node) WHERE n.{cbvAttribute} >= {lo:F4} AND n.{cbvAttribute} < {hi:F4} RETURN n";
-                                        var bucketNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, bucketQuery);
-                                        var cbvSubnGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(bucketNodes);
-                                        _networkManager.SetMLNodesColor(cbvSubnGUIDs, cbvGradient[b]);
-                                        Debug.Log($"  Bucket {b}: [{lo:F2}, {hi:F2}) → {cbvGradient[b]} ({cbvSubnGUIDs.Count} nodes)");
+                                        // Fall back to bucket approach
+                                        string[] cbvGradient = { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" };
+                                        float cbvRange = cbvMax - cbvMin;
+                                        if (cbvRange <= 0f) cbvRange = 1f;
+                                        float cbvStep = cbvRange / cbvGradient.Length;
+                                        for (int b = 0; b < cbvGradient.Length; b++)
+                                        {
+                                            float lo = cbvMin + b * cbvStep;
+                                            float hi = b == cbvGradient.Length - 1 ? cbvMax + 0.001f : cbvMin + (b + 1) * cbvStep;
+                                            string bucketQuery = $"MATCH (n:Node) WHERE n.{cbvAttribute} >= {lo:F4} AND n.{cbvAttribute} < {hi:F4} RETURN n";
+                                            var bucketNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, bucketQuery);
+                                            _networkManager.SetMLNodesColor(_networkManager.TranslateToWorkingSubgraphNodeGUIDs(bucketNodes), cbvGradient[b]);
+                                        }
                                     }
 
                                     TimerUtils.EndTime("ColorByValue");
 
-                                    // Legend: show gradient strip with min/max values
+                                    // Legend: gradient strip with lighter/darker meaning (no min/max numbers)
                                     var _cbvLegend = Instantiate(command_prefab, command_parent.transform);
                                     var cbvBuilder = new StringBuilder();
-                                    cbvBuilder.AppendLine($"<b>{cbvAttribute}</b>  (lighter = lower, darker = higher)");
-                                    cbvBuilder.Append("  ");
-                                    foreach (var c in cbvGradient)
+                                    string[] cbvGradientDisplay = { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" };
+                                    cbvBuilder.Append($"<b>{cbvAttribute}</b>   low  ");
+                                    foreach (var c in cbvGradientDisplay)
                                         cbvBuilder.Append($"<color={c}>■</color>");
-                                    cbvBuilder.AppendLine($"  {cbvMin:F1} → {cbvMax:F1}");
+                                    cbvBuilder.Append("  high");
                                     _cbvLegend.GetComponent<TMP_Text>().text = cbvBuilder.ToString();
                                     ScrollToBottom();
                                     break;
@@ -560,8 +601,9 @@ namespace Whisper.Samples
                                     if (!_networkManager.HasWorkingSession)
                                     {
                                         var allNodesForSBA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                                        var sbaNodeIDs = _networkManager.SortNodeGUIDs(allNodesForSBA)[NetworkManager.MainNetworkID];
-                                        _networkManager.CreateWorkingSubgraph(sbaNodeIDs, $"Shape by {attributeName_shape}", $"Shape by {attributeName_shape}");
+                                        var sortedSBA = _networkManager.SortNodeGUIDs(allNodesForSBA);
+                                        if (!sortedSBA.ContainsKey(NetworkManager.MainNetworkID)) break;
+                                        _networkManager.CreateWorkingSubgraph(sortedSBA[NetworkManager.MainNetworkID], $"Shape by {attributeName_shape}", $"Shape by {attributeName_shape}");
                                     }
 
                                     // Get distinct values from the query result
@@ -622,6 +664,7 @@ namespace Whisper.Samples
                                     }
 
                                     _shapeByAttr_text.text = shapeLegendBuilder.ToString();
+                                    legendManager?.SetShapeMapping(distinctShapeValues.Select(v => v.Replace("'", "")));
                                     ScrollToBottom();
                                     break;
 
@@ -642,14 +685,16 @@ namespace Whisper.Samples
                                     if (!_networkManager.HasWorkingSession)
                                     {
                                         var allNodesForReset = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                                        var resetNodeIDs = _networkManager.SortNodeGUIDs(allNodesForReset)[NetworkManager.MainNetworkID];
-                                        _networkManager.CreateWorkingSubgraph(resetNodeIDs, "Reset", "Reset");
+                                        var sortedReset = _networkManager.SortNodeGUIDs(allNodesForReset);
+                                        if (!sortedReset.ContainsKey(NetworkManager.MainNetworkID)) break;
+                                        _networkManager.CreateWorkingSubgraph(sortedReset[NetworkManager.MainNetworkID], "Reset", "Reset");
                                         _networkManager.BringMLNodes(_networkManager.WorkingSubgraphAllNodeGUIDs);
                                     }
                                     _networkManager.SetMLNodesColor(_networkManager.WorkingSubgraphAllNodeGUIDs, "#FFFF00");
                                     _networkManager.SetMLLinksColorStart(_networkManager.WorkingSubgraphAllLinkGUIDs, "#808080");
                                     _networkManager.SetMLLinksColorEnd(_networkManager.WorkingSubgraphAllLinkGUIDs, "#808080");
                                     _networkManager.ClearSelection();
+                                    legendManager?.ResetAll();
                                     TimerUtils.EndTime("Reset");
                                     var _resetMsg = Instantiate(command_prefab, command_parent.transform);
                                     _resetMsg.GetComponent<TMP_Text>().text = "<color=#aaa><i>Reset complete</i></color>";
