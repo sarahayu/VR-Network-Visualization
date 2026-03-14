@@ -39,6 +39,8 @@ namespace Whisper.Samples
         Renderer Indicator;
         public Text buttonText;
         public Text text;
+        public TMP_Text LegendText;
+        public LegendManager legendManager;
         public ScrollRect scroll;
         public GameObject command_prefab;
         public GameObject command_parent;
@@ -52,6 +54,8 @@ namespace Whisper.Samples
 
         // Link GUIDs from the last selectLink command — used by colorLink
         private HashSet<string> _lastSelectedLinkGUIDs = new HashSet<string>();
+        // Track last selectLink type for legend labeling
+        private string _lastLinkSelectLabel = "Links";
 
 
         // Classification server URL
@@ -290,6 +294,11 @@ namespace Whisper.Samples
                                     Debug.Log("Selecting links with query: " + query[i]);
                                     text.text += $"\n<size=18><color=#aaa>{query[i]}</color></size>";
                                     TimerUtils.StartTime("SetSelectedLinks");
+                                    // Track link type for legend
+                                    if (action[i][1] == "all") _lastLinkSelectLabel = "All links";
+                                    else if (action[i][1].Contains("aggression")) _lastLinkSelectLabel = "Aggression links";
+                                    else if (action[i][1].Contains("friendship")) _lastLinkSelectLabel = "Friendship links";
+                                    else _lastLinkSelectLabel = action[i][1] + " links";
                                     var links = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, query[i]);
                                     _lastSelectedLinkGUIDs = new HashSet<string>(links);
 
@@ -366,6 +375,7 @@ namespace Whisper.Samples
 
                                     TimerUtils.StartTime("SetColor");
                                     _networkManager.SetMLNodesColor(nodes_color, action[i][1]);
+                                    legendManager?.SetNodeColorLabel(action[i][1], corrected_input);
                                     TimerUtils.EndTime("SetColor");
                                     break;
                                 case "colorLink":
@@ -391,6 +401,7 @@ namespace Whisper.Samples
                                     }
                                     _networkManager.SetMLLinksColorStart(linkGUIDs_color, action[i][1]);
                                     _networkManager.SetMLLinksColorEnd(linkGUIDs_color, action[i][1]);
+                                    legendManager?.SetEdgeColorLabel(action[i][1], _lastLinkSelectLabel);
                                     TimerUtils.EndTime("SetColor");
                                     break;
                                 case "colorByAttribute":
@@ -473,6 +484,7 @@ namespace Whisper.Samples
                                     }
 
                                     _colorByAttr_text.text = legendBuilder.ToString();
+                                    legendManager?.SetNodeColorMapping(colorMapping.Select(cm => (cm.cypherValue.Replace("'", ""), cm.colorHex)));
                                     ScrollToBottom();
                                     break;
 
@@ -652,6 +664,7 @@ namespace Whisper.Samples
                                     }
 
                                     _shapeByAttr_text.text = shapeLegendBuilder.ToString();
+                                    legendManager?.SetShapeMapping(distinctShapeValues.Select(v => v.Replace("'", "")));
                                     ScrollToBottom();
                                     break;
 
@@ -681,6 +694,7 @@ namespace Whisper.Samples
                                     _networkManager.SetMLLinksColorStart(_networkManager.WorkingSubgraphAllLinkGUIDs, "#808080");
                                     _networkManager.SetMLLinksColorEnd(_networkManager.WorkingSubgraphAllLinkGUIDs, "#808080");
                                     _networkManager.ClearSelection();
+                                    legendManager?.ResetAll();
                                     TimerUtils.EndTime("Reset");
                                     var _resetMsg = Instantiate(command_prefab, command_parent.transform);
                                     _resetMsg.GetComponent<TMP_Text>().text = "<color=#aaa><i>Reset complete</i></color>";

@@ -84,6 +84,8 @@ namespace VidiGraph
 
             if (_inSplineData == null) return;
 
+            _splineMaterial.SetFloat("_LineWidth", _contextSettings.LinkWidth);
+
             _batchComputeShader.SetBuffer(kernel, "InSplineData", _inSplineData);
             _batchComputeShader.SetBuffer(kernel, "InSplineControlPointData", _inSplineControlPointData);
             _batchComputeShader.SetBuffer(kernel, "InSplineSegmentData", _inSplineSegmentData);

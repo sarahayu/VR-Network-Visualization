@@ -1305,6 +1305,16 @@ namespace VidiGraph
             _allNetworks[subnetworkID].SetLinksWidth(linkIDs, width, _updatingStorage, _updatingRenderElements);
         }
 
+        // Changes the global link width for a subnetwork's render context.
+        // The BSpline renderer uses a single global _LineWidth shader parameter for all links,
+        // so per-link width is not supported — this is the only way to visually change link thickness.
+        public void SetSubnetworkGlobalLinkWidth(float width, int subnetworkID = MainNetworkID)
+        {
+            if (!_allNetworks.TryGetValue(subnetworkID, out var network)) return;
+            network.Context.ContextSettings.LinkWidth = width;
+            TriggerRenderUpdate();
+        }
+
         public void SetMLLinksColorStart(IEnumerable<string> linkGUIDs, string color)
         {
             foreach (var (subnID, linkIDs) in SortLinkGUIDs(linkGUIDs)) SetMLLinksColorStart(linkIDs, color, subnID);

@@ -55,7 +55,19 @@ namespace VidiGraph
 
         public override void UpdateRenderElements()
         {
-            // do nothing
+            foreach (var linkpair in _networkProperties.Links)
+            {
+                var linkID = linkpair.Key;
+                var link = linkpair.Value;
+
+                if (!_linkGameObjs.TryGetValue(linkID, out var linkObj)) continue;
+
+                int c1 = linkID.Item1, c2 = linkID.Item2;
+                Vector3 startPos = _networkProperties.CommunityNodes[c1].Position,
+                    endPos = _networkProperties.CommunityNodes[c2].Position;
+
+                NodeLinkRenderUtils.UpdateStraightLink(linkObj, startPos, endPos, LinkWidth * link.Weight);
+            }
         }
 
         public override void Draw()
