@@ -86245,7 +86245,7 @@ AudioListener:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1345292060}
-  m_Enabled: 1
+  m_Enabled: 0
 --- !u!20 &1345292063
 Camera:
   m_ObjectHideFlags: 0
@@ -94193,7 +94193,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   logLevel: 1
-  modelPath: Assets/Voice/Whisper/ggml-tiny.en.bin
+  modelPath: Assets/Voice/Whisper/ggml-small.en-q5_1.bin
   isModelPathInStreamingAssets: 0
   initOnAwake: 1
   language: en

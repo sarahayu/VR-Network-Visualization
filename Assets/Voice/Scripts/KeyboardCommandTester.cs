@@ -345,6 +345,16 @@ namespace Whisper.Samples
                 RunDemoStep(_activeDemoId, _demoStep);
             }
 
+            if (Input.GetKeyDown(KeyCode.Z) && !_demoRunning)
+            {
+                Debug.Log("[DEMO Z] Starting demo sequence (smoker purple + aggression pink + friendship green)...");
+                _demoRunning = true;
+                _activeDemoId = 4;
+                _demoStep = 0;
+                _demoTotalSteps = 2;
+                RunDemoStep(_activeDemoId, _demoStep);
+            }
+
             if (Input.GetKeyDown(KeyCode.E) && !_demoRunning)
             {
                 Debug.Log("[DEMO E] Starting continuous demo sequence...");
@@ -716,8 +726,8 @@ namespace Whisper.Samples
                         Debug.Log($"  ✓ Categorical coloring complete");
                         Debug.Log($"  === Color Legend for '{attributeName_color}' ===");
                         foreach (var (cypherValue, colorHex) in colorMapping)
-                            Debug.Log($"    ■ {cypherValue.Replace("'", "")} = {colorHex}");
-                        legendManager?.SetNodeColorMapping(colorMapping.Select(cm => (cm.cypherValue.Replace("'", ""), cm.colorHex)));
+                            Debug.Log($"    ■ {LegendManager.PrettifyLabel(attributeName_color, cypherValue)} = {colorHex}");
+                        legendManager?.SetNodeColorMapping(colorMapping.Select(cm => (LegendManager.PrettifyLabel(attributeName_color, cm.cypherValue), cm.colorHex)));
 
                         if (command_prefab != null && command_parent != null)
                         {
@@ -729,7 +739,7 @@ namespace Whisper.Samples
                             foreach (var (cypherValue, colorHex) in colorMapping)
                             {
                                 string colorName = GetColorName(colorHex);
-                                uiLegendBuilder.AppendLine($"  <color={colorHex}>{colorName}</color> for {cypherValue.Replace("'", "")}");
+                                uiLegendBuilder.AppendLine($"  <color={colorHex}>{colorName}</color> for {LegendManager.PrettifyLabel(attributeName_color, cypherValue)}");
                             }
 
                             _colorLegend_text.text = uiLegendBuilder.ToString();
@@ -891,7 +901,7 @@ namespace Whisper.Samples
                         // Print shape legend to console
                         Debug.Log($"  ✓ Categorical shape encoding complete");
                         Debug.Log($"  === Shape Legend for '{attributeName_shape}' ===");
-                        legendManager?.SetShapeMapping(distinctShapeValues.Select(v => v.Replace("'", "")));
+                        legendManager?.SetShapeMapping(distinctShapeValues.Select(v => LegendManager.PrettifyLabel(attributeName_shape, v)));
 
                         string[] shapeSymbols = new string[] { "●", "■", "▲" };
                         for (int j = 0; j < distinctShapeValues.Count; j++)
@@ -1071,10 +1081,15 @@ namespace Whisper.Samples
                 "Select the top 3 nodes with the most incoming aggression links",
                 "Color their friendship links in blue"
             },
-            // Demo K (demoId 3): Smoker highlight + aggression demo (purple nodes, pink links)
+            // Demo K (demoId 3): Smoker nodes steel blue, gray all links, smoker aggression links light orange
             new string[] {
-                "Color all nodes where smoker is true in purple",
-                "Set all links to width 10 and color gray, then color the aggression links of the selected nodes pink, then deselect all nodes"
+                "Color all nodes where smoker is true in steel blue",
+                "Color the aggression links of smoker nodes in light orange"
+            },
+            // Demo Z (demoId 4): Smoker nodes purple, then color aggression links pink + friendship links green
+            new string[] {
+                "Color all smoker nodes in purple",
+                "Color the aggression links of smoker nodes in pink and friendship links in green"
             }
         };
 
@@ -1090,7 +1105,7 @@ namespace Whisper.Samples
             }
 
             // Determine demo label
-            string demoLabel = demoId == 0 ? "P" : demoId == 1 ? "L" : demoId == 2 ? "O" : demoId == 3 ? "K" : "Q";
+            string demoLabel = demoId == 0 ? "P" : demoId == 1 ? "L" : demoId == 2 ? "O" : demoId == 3 ? "K" : demoId == 4 ? "Z" : "Q";
 
             // Create working subgraph session if this is the first step
             if (step == 0)
@@ -1254,13 +1269,13 @@ namespace Whisper.Samples
             }
             else if (demoId == 3)
             {
-                // Demo K: smoker nodes #2a52be, gray links, smoker aggression links pink
+                // Demo K: smoker nodes blue, gray all links, smoker aggression links light orange
                 switch (step)
                 {
                     case 0:
                         actions = new string[][] {
                             new string[] { "selectNode", "smoker" },
-                            new string[] { "colorNode", "#A000FF" },
+                            new string[] { "colorNode", "#4682B4" },
                             new string[] { "deselect", "" }
                         };
                         queries = new string[] {
@@ -1268,25 +1283,56 @@ namespace Whisper.Samples
                             "",
                             ""
                         };
-                        commandDescription = "Color all nodes where smoker is true in purple";
+                        commandDescription = "Color all smoker nodes in steel blue";
                         StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription, legendNodeLabel: "Smokers"));
                         break;
                     case 1:
                         actions = new string[][] {
-                            new string[] { "selectLink", "all" },
-                            new string[] { "colorLink", "#808080" },
                             new string[] { "selectLink", "aggression" },
-                            new string[] { "colorLink", "#FFB6C1" },
+                            new string[] { "colorLink", "#FFA700" }
+                        };
+                        queries = new string[] {
+                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE n.smoker = true AND r.type = 'aggression' RETURN r",
+                            ""
+                        };
+                        commandDescription = "Color smoker aggression links light orange";
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        break;
+                }
+            }
+            else if (demoId == 4)
+            {
+                // Demo Z: smoker nodes purple, then aggression links pink + friendship links green
+                switch (step)
+                {
+                    case 0:
+                        actions = new string[][] {
+                            new string[] { "selectNode", "smoker" },
+                            new string[] { "colorNode", "#800080" },
                             new string[] { "deselect", "" }
                         };
                         queries = new string[] {
-                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) RETURN r",
-                            "",
-                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE n.smoker = true AND r.type = 'aggression' RETURN r",
+                            "MATCH (n:Node) WHERE n.smoker = true RETURN n",
                             "",
                             ""
                         };
-                        commandDescription = "Color all links gray, color smoker aggression links pink";
+                        commandDescription = "Color all smoker nodes in purple";
+                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription, legendNodeLabel: "Smoker"));
+                        break;
+                    case 1:
+                        actions = new string[][] {
+                            new string[] { "selectLink", "aggression" },
+                            new string[] { "colorLink", "#FF69B4" },
+                            new string[] { "selectLink", "friendship" },
+                            new string[] { "colorLink", "#00FF00" }
+                        };
+                        queries = new string[] {
+                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE (n.smoker = true OR m.smoker = true) AND r.type = 'aggression' RETURN r",
+                            "",
+                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE (n.smoker = true OR m.smoker = true) AND r.type = 'friendship' RETURN r",
+                            ""
+                        };
+                        commandDescription = "Color aggression links of smoker nodes pink, friendship links green";
                         StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
                         break;
                 }
@@ -1534,7 +1580,8 @@ namespace Whisper.Samples
             Debug.Log($"Press [O] - Demo: color by gender → select aggression targets → color friendship links blue");
             Debug.Log($"Press [Q] - Demo (continuous): highlight top 3 friendship → color by GPA → color aggression links red");
             Debug.Log($"Press [W] - Demo (continuous): highlight top 5 friendship → shape by gender → color all aggression links red");
-            Debug.Log($"Press [K] - Demo: highlight smoker nodes blue → color all links gray → color smoker aggression links cyan");
+            Debug.Log($"Press [K] - Demo: smoker nodes steel blue → color smoker aggression links light orange");
+            Debug.Log($"Press [Z] - Demo: color smoker nodes purple → color smoker aggression links pink + friendship links green");
             Debug.Log($"Press [E] - Demo (continuous): highlight top 3 friendship → save session → new session with all smokers selected");
             Debug.Log($"Press [Enter] - Next demo step (P/L/O/K)");
             Debug.Log("=".PadRight(60, '='));
@@ -1577,18 +1624,8 @@ namespace Whisper.Samples
         }
 
         // Converts a selectNode actionParam to a short human-readable legend label
-        private static string ToShortLabel(string actionParam)
-        {
-            return actionParam.ToLower() switch
-            {
-                "smoker"         => "Smokers",
-                "top3friendship" => "Top 3 Friendship",
-                "top5friendship" => "Top 5 Friendship",
-                "topaggression"  => "Top Aggression",
-                "all"            => "",
-                _                => char.ToUpper(actionParam[0]) + actionParam.Substring(1)
-            };
-        }
+        private static string ToShortLabel(string actionParam) =>
+            LegendManager.ToShortLabel(actionParam);
 
     }
 }

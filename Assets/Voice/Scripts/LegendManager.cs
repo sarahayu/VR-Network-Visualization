@@ -17,15 +17,16 @@ namespace Whisper.Samples
         public TMP_Text legendText;
 
         // ---- Node Color ----
-        // 6 fixed palette slots. Each has a "regular" (lighter) display color and a "selected" (vivid) display color.
+        // 6 fixed palette slots. sel colors match server ALLOWED_COLORS exactly so legend
+        // slots are found and updated (not duplicated) when a command uses one of these colors.
         private static readonly (string reg, string sel)[] NodePalette =
         {
-            ("#F29C9C", "#FF0000"),   // red
-            ("#F6B37E", "#FF7A00"),   // orange
-            ("#A8F0F6", "#00D8E6"),   // cyan
-            ("#A6F2A6", "#00FF00"),   // green
-            ("#F6A8D7", "#FF3FA4"),   // pink
-            ("#D7A8F2", "#A000FF"),   // purple
+            ("#FF9999", "#FF0000"),   // red
+            ("#FFDB99", "#FFA500"),   // orange
+            ("#99FF99", "#00FF00"),   // green
+            ("#9999FF", "#0000FF"),   // blue
+            ("#CC99CC", "#800080"),   // purple
+            ("#FFC3E1", "#FF69B4"),   // pink
         };
 
         private struct NodeColorEntry { public string reg; public string sel; public string label; public bool isGradient; public string[] gradientColors; }
@@ -33,7 +34,10 @@ namespace Whisper.Samples
         private int _nextColorSlot = 0;
 
         // ---- Node Shape ----
-        private static readonly string[] ShapeSymbols = { "□", "○", "△" };
+        // Order matches VR shape indices: 0=sphere, 1=cube, 2=triangle.
+        // Default hides sphere (empty label) so only Cube + Triangle show until a command assigns it.
+        private static readonly string[] ShapeSymbols = { "●", "■", "▲" };
+        private static readonly string[] ShapeDefaults = { "", "Not used", "Not used" };
         private string[] _shapeLabels = new string[3];
 
         // ---- Edge Color ----
@@ -55,7 +59,7 @@ namespace Whisper.Samples
                 _nodeColors[i] = new NodeColorEntry { reg = NodePalette[i].reg, sel = NodePalette[i].sel, label = "Not used" };
             _nextColorSlot = 0;
 
-            for (int i = 0; i < 3; i++) _shapeLabels[i] = "Not used";
+            for (int i = 0; i < 3; i++) _shapeLabels[i] = ShapeDefaults[i];
 
             _edgeColors.Clear();
             Rebuild();
@@ -138,7 +142,7 @@ namespace Whisper.Samples
         /// </summary>
         public void SetShapeMapping(IEnumerable<string> labels)
         {
-            for (int i = 0; i < 3; i++) _shapeLabels[i] = "Not used";
+            for (int i = 0; i < 3; i++) _shapeLabels[i] = ShapeDefaults[i];
             int i2 = 0;
             foreach (var label in labels)
             {
@@ -183,7 +187,7 @@ namespace Whisper.Samples
 
             var sb = new StringBuilder();
 
-            // ---- Node Color ----
+            // ---- Node Color ---- (always show all slots, including "Not used")
             sb.AppendLine("<b>Node Color (Regular / Selected)</b>");
             sb.AppendLine();
             foreach (var e in _nodeColors)
@@ -199,24 +203,78 @@ namespace Whisper.Samples
                 }
             }
 
-            // ---- Node Shape ----
+            // ---- Node Shape ---- (skip slots with empty label)
             sb.AppendLine();
             sb.AppendLine("<b>Node Shape</b>");
             sb.AppendLine();
-            sb.AppendLine(string.Join("    ", ShapeSymbols.Select((sym, i) => $"{sym} {_shapeLabels[i]}")));
+            var shapeEntries = ShapeSymbols
+                .Select((sym, i) => (sym, label: _shapeLabels[i]))
+                .Where(x => !string.IsNullOrEmpty(x.label))
+                .ToArray();
+            if (shapeEntries.Length > 0)
+                sb.AppendLine(string.Join("    ", shapeEntries.Select(x => $"{x.sym} {x.label}")));
 
-            // ---- Edge Color ----
+            // ---- Edge Color ---- (show used entries; if none, show 2 placeholder rows)
             sb.AppendLine();
             sb.AppendLine("<b>Edge Color</b>");
             sb.AppendLine();
-            if (_edgeColors.Count == 0)
-                sb.AppendLine("Not used");
-            else
+            if (_edgeColors.Count > 0)
+            {
                 foreach (var (hex, label) in _edgeColors)
                     sb.AppendLine($"<color={hex}>A → B</color>  {label}");
+            }
+            else
+            {
+                sb.AppendLine("<color=#808080>A → B</color>  Not used");
+                sb.AppendLine("<color=#808080>A → B</color>  Not used");
+            }
 
             legendText.text = sb.ToString().TrimEnd();
             legendText.ForceMeshUpdate();
+        }
+
+        /// <summary>
+        /// Converts a raw Cypher attribute value into a human-readable legend label.
+        /// e.g. PrettifyLabel("smoker", "true") → "Smoker"
+        ///      PrettifyLabel("smoker", "false") → "Non-smoker"
+        ///      PrettifyLabel("grade", "9") → "Grade: 9"
+        ///      PrettifyLabel("sex", "'F'") → "Sex: F"
+        /// </summary>
+        public static string PrettifyLabel(string attrName, string cypherValue)
+        {
+            string val = cypherValue.Trim('\'', ' ');
+            string attr = attrName.Length == 0 ? "" :
+                char.ToUpper(attrName[0]) + attrName.Substring(1).ToLower();
+
+            if (val.ToLower() == "true")  return attr;
+            if (val.ToLower() == "false") return "Non-" + attrName.ToLower();
+            return $"{attr}: {val}";
+        }
+
+        /// <summary>
+        /// Converts a selectNode action parameter into a short legend label.
+        /// Handles WHERE-clause patterns ("n.smoker = true" → "Smoker"),
+        /// known keywords ("top3friendship" → "Top 3 Friendship"), and plain names.
+        /// </summary>
+        public static string ToShortLabel(string actionParam)
+        {
+            // Handle WHERE-clause patterns: "n.attribute = value" or "n.attribute = 'value'"
+            var m = System.Text.RegularExpressions.Regex.Match(
+                actionParam, @"n\.(\w+)\s*=\s*(.+)");
+            if (m.Success)
+                return PrettifyLabel(m.Groups[1].Value, m.Groups[2].Value.Trim());
+
+            return actionParam.ToLower() switch
+            {
+                "smoker"         => "Smokers",
+                "top3friendship" => "Top 3 Friendship",
+                "top5friendship" => "Top 5 Friendship",
+                "topaggression"  => "Top Aggression",
+                "all"            => "",
+                _ => actionParam.Length > 0
+                    ? char.ToUpper(actionParam[0]) + actionParam.Substring(1)
+                    : ""
+            };
         }
 
         private static string Lighten(string hex)

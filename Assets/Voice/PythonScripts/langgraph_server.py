@@ -66,6 +66,8 @@ ALLOWED_COLORS = {
     "gold": "#FFD700",
     "brown": "#A52A2A",
     "violet": "#EE82EE",
+    "steel blue": "#4682B4",
+    "steelblue": "#4682B4",
 }
 
 # ==========================================================
@@ -199,6 +201,7 @@ The selectLink param is JUST the link type name (e.g., "aggression", "friendship
 Use "all" to select every link regardless of type.
 Append ":selected" if scoped to selected/highlighted nodes.
 Do NOT use conditions like "n.type = ..." — just use the type name.
+IMPORTANT: When the user asks to color ONE type of link, ONLY generate actions for that type. Do NOT add a selectLink "all" + gray step or touch friendship links unless explicitly asked.
 
 - "color all links gray" → [["selectLink", "all"], ["colorLink", "#808080"]]
 - "color aggression links red" → [["selectLink", "aggression"], ["colorLink", "#FF0000"]]

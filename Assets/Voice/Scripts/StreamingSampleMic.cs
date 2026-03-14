@@ -56,6 +56,8 @@ namespace Whisper.Samples
         private HashSet<string> _lastSelectedLinkGUIDs = new HashSet<string>();
         // Track last selectLink type for legend labeling
         private string _lastLinkSelectLabel = "Links";
+        // Track last selectNode parameter for legend labeling
+        private string _lastSelectNodeLabel = "";
 
 
         // Classification server URL
@@ -259,6 +261,7 @@ namespace Whisper.Samples
                                 case "selectNode":
                                     Debug.Log("Selecting nodes with query: " + query[i]);
                                     text.text += $"\n<size=18><color=#aaa>{query[i]}</color></size>";
+                                    _lastSelectNodeLabel = LegendManager.ToShortLabel(action[i][1]);
                                     var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query[i]);
                                     TimerUtils.StartTime("SetSelectedNodes");
                                     if (_networkManager.OnQueryMode || !_networkManager.HasWorkingSession)
@@ -375,7 +378,7 @@ namespace Whisper.Samples
 
                                     TimerUtils.StartTime("SetColor");
                                     _networkManager.SetMLNodesColor(nodes_color, action[i][1]);
-                                    legendManager?.SetNodeColorLabel(action[i][1], corrected_input);
+                                    legendManager?.SetNodeColorLabel(action[i][1], _lastSelectNodeLabel);
                                     TimerUtils.EndTime("SetColor");
                                     break;
                                 case "colorLink":
@@ -478,13 +481,13 @@ namespace Whisper.Samples
                                     legendBuilder.AppendLine($"<b>Colored by {attributeName_color}</b>");
                                     foreach (var (cypherValue, colorHex) in colorMapping)
                                     {
-                                        string displayValue = cypherValue.Replace("'", "");
+                                        string displayValue = LegendManager.PrettifyLabel(attributeName_color, cypherValue);
                                         string colorName = GetColorName(colorHex);
                                         legendBuilder.AppendLine($"  <color={colorHex}>{colorName}</color> for {displayValue}");
                                     }
 
                                     _colorByAttr_text.text = legendBuilder.ToString();
-                                    legendManager?.SetNodeColorMapping(colorMapping.Select(cm => (cm.cypherValue.Replace("'", ""), cm.colorHex)));
+                                    legendManager?.SetNodeColorMapping(colorMapping.Select(cm => (LegendManager.PrettifyLabel(attributeName_color, cm.cypherValue), cm.colorHex)));
                                     ScrollToBottom();
                                     break;
 
@@ -664,7 +667,7 @@ namespace Whisper.Samples
                                     }
 
                                     _shapeByAttr_text.text = shapeLegendBuilder.ToString();
-                                    legendManager?.SetShapeMapping(distinctShapeValues.Select(v => v.Replace("'", "")));
+                                    legendManager?.SetShapeMapping(distinctShapeValues.Select(v => LegendManager.PrettifyLabel(attributeName_shape, v)));
                                     ScrollToBottom();
                                     break;
 
