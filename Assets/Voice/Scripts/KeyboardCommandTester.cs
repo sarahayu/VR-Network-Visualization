@@ -22,6 +22,7 @@ namespace Whisper.Samples
         [Header("References")]
         public StreamingSampleMic streamingSampleMic;
         public LegendManager legendManager;
+        public Camera demoDCamera;
         public GameObject command_prefab;
         public GameObject command_parent;
         public UnityEngine.UI.ScrollRect scroll;
@@ -363,6 +364,34 @@ namespace Whisper.Samples
                 StartCoroutine(RunDemoEContinuous());
             }
 
+            if (Input.GetKeyDown(KeyCode.S) && !_demoRunning)
+            {
+                Debug.Log("[DEMO S] Starting continuous demo sequence...");
+                _demoRunning = true;
+                _activeDemoId = 6;
+                StartCoroutine(RunDemoSContinuous());
+            }
+
+            if (Input.GetKeyDown(KeyCode.D) && !_demoRunning)
+            {
+                Debug.Log("[DEMO D] Starting smoker node movement demo...");
+                _demoRunning = true;
+                _activeDemoId = 7;
+                StartCoroutine(RunDemoDContinuous());
+            }
+
+            // Demo D — keyboard movement (active while _activeDemoId == 7)
+            if (_demoRunning && _activeDemoId == 7)
+            {
+                UpdateDemoDMovement();
+
+                if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    _demoRunning = false;
+                    Debug.Log("[DEMO D] Exited.");
+                }
+            }
+
             if (Input.GetKeyDown(KeyCode.Return) && _demoRunning)
             {
                 _demoStep++;
@@ -577,8 +606,8 @@ namespace Whisper.Samples
 
             Debug.Log($"[EXECUTE] Processing {actions.Length} action(s) for: {originalCommand}");
 
-            // Display command in UI (if UI elements are assigned)
-            if (command_prefab != null && command_parent != null)
+            // Display command in UI (if UI elements are assigned, and command is non-empty)
+            if (!string.IsNullOrEmpty(originalCommand) && command_prefab != null && command_parent != null)
             {
                 var _commandUI = Instantiate(command_prefab, command_parent.transform);
                 var _commandUI_text = _commandUI.GetComponent<TMP_Text>();
@@ -1557,6 +1586,150 @@ namespace Whisper.Samples
             Debug.Log("[DEMO E] Continuous demo complete!");
         }
 
+        private IEnumerator RunDemoSContinuous()
+        {
+            var _networkManager = streamingSampleMic._networkManager;
+            var _databaseStorage = streamingSampleMic._databaseStorage;
+
+            if (_networkManager.OnQueryMode)
+                _networkManager.SetQueryMode(false);
+
+            // Create session with all nodes so all links are accessible
+            Debug.Log("[DEMO S] Creating session with all nodes...");
+            var allNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+            var sorted = _networkManager.SortNodeGUIDs(allNodes);
+            if (!sorted.ContainsKey(VidiGraph.NetworkManager.MainNetworkID))
+            {
+                Debug.LogError("[DEMO S] No main network nodes found.");
+                _demoRunning = false;
+                yield break;
+            }
+            _networkManager.CreateWorkingSubgraph(sorted[VidiGraph.NetworkManager.MainNetworkID], "Demo S", "Demo S");
+            if (showBackgroundNetwork) _networkManager.ShowMainNetwork();
+            legendManager?.ResetAll();
+
+            // Step 1: Color smokers steel blue
+            Debug.Log("[DEMO S - Step 1/2] Color smokers steel blue");
+            yield return StartCoroutine(ExecuteActionsDirectly(
+                new string[][] {
+                    new string[] { "selectNode", "smoker" },
+                    new string[] { "colorNode", "#4682B4" },
+                    new string[] { "deselect", "" }
+                },
+                new string[] {
+                    "MATCH (n:Node) WHERE n.smoker = true RETURN n",
+                    "",
+                    ""
+                },
+                "Color smokers in steel blue",
+                legendNodeLabel: "Smokers"
+            ));
+
+            yield return new WaitForSeconds(1.5f);
+
+            // Step 2: Gray all links, color smokers' aggression links light orange
+            Debug.Log("[DEMO S - Step 2/2] Gray all links, color smokers' aggression links light orange");
+            yield return StartCoroutine(ExecuteActionsDirectly(
+                new string[][] {
+                    new string[] { "selectLink", "all" },
+                    new string[] { "colorLink", "#808080" },
+                    new string[] { "selectLink", "aggression" },
+                    new string[] { "colorLink", "#FFA040" }
+                },
+                new string[] {
+                    "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) RETURN r",
+                    "",
+                    "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE n.smoker = true AND r.type = 'aggression' RETURN r",
+                    ""
+                },
+                "Color smokers' aggression links in light orange"
+            ));
+
+            // Select the smoker aggression links so they are highlighted
+            var aggrLinks = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal,
+                "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE n.smoker = true AND r.type = 'aggression' RETURN r");
+            _networkManager.SetSelectedLinks(aggrLinks, true);
+            yield return null;
+
+            _demoRunning = false;
+            Debug.Log("[DEMO S] Continuous demo complete!");
+        }
+
+        private IEnumerator RunDemoDContinuous()
+        {
+            var _networkManager = streamingSampleMic._networkManager;
+            var _databaseStorage = streamingSampleMic._databaseStorage;
+
+            if (_networkManager.OnQueryMode)
+                _networkManager.SetQueryMode(false);
+
+            // Create a session with only smoker nodes
+            Debug.Log("[DEMO D] Querying smoker nodes...");
+            var smokerNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal,
+                "MATCH (n:Node) WHERE n.smoker = true RETURN n");
+            var sorted = _networkManager.SortNodeGUIDs(smokerNodes);
+            if (!sorted.ContainsKey(VidiGraph.NetworkManager.MainNetworkID) || !sorted[VidiGraph.NetworkManager.MainNetworkID].Any())
+            {
+                Debug.LogError("[DEMO D] No smoker nodes found.");
+                _demoRunning = false;
+                yield break;
+            }
+
+            _networkManager.CreateWorkingSubgraph(sorted[VidiGraph.NetworkManager.MainNetworkID], "Demo D - Smokers", "Demo D");
+            _networkManager.ShowMainNetwork(); // always show background for context
+            legendManager?.ResetAll();
+
+            // Color smokers steel blue so they stand out from the background
+            if (command_prefab != null && command_parent != null)
+            {
+                var entry = Instantiate(command_prefab, command_parent.transform);
+                entry.GetComponent<TMP_Text>().text = "Color only smokers nodes in steel blue";
+                ScrollToBottom();
+            }
+            yield return StartCoroutine(ExecuteActionsDirectly(
+                new string[][] {
+                    new string[] { "colorNode", "#4682B4" }
+                },
+                new string[] { "" },
+                null,
+                legendNodeLabel: "Smokers"
+            ));
+
+            Debug.Log("[DEMO D] Setup complete. Movement keys now active.");
+            // _demoRunning stays true; movement handled in UpdateDemoDMovement() each frame
+        }
+
+        private void UpdateDemoDMovement()
+        {
+            var cam = demoDCamera;
+            if (cam == null) return;
+
+            const float moveSpeed = 1.5f;
+            const float rotSpeed  = 60f;
+
+            float moveF = 0f;
+            float moveH = 0f;
+            float rot   = 0f;
+
+            if (Input.GetKey(KeyCode.UpArrow))    moveF += moveSpeed * Time.deltaTime;
+            if (Input.GetKey(KeyCode.DownArrow))  moveF -= moveSpeed * Time.deltaTime;
+            if (Input.GetKey(KeyCode.LeftArrow))  moveH -= moveSpeed * Time.deltaTime;
+            if (Input.GetKey(KeyCode.RightArrow)) moveH += moveSpeed * Time.deltaTime;
+            if (Input.GetKey(KeyCode.Q))          rot   -= rotSpeed  * Time.deltaTime;
+            if (Input.GetKey(KeyCode.E))          rot   += rotSpeed  * Time.deltaTime;
+
+            if (moveF == 0f && moveH == 0f && rot == 0f) return;
+
+            // Move along camera's facing/right directions (projected flat on XZ plane)
+            Transform t = cam.transform;
+            Vector3 forward = Vector3.ProjectOnPlane(t.forward, Vector3.up).normalized;
+            Vector3 right   = Vector3.ProjectOnPlane(t.right,   Vector3.up).normalized;
+            t.position += forward * moveF + right * moveH;
+
+            // Rotate around world Y axis (turn left / right)
+            t.Rotate(Vector3.up, rot, Space.World);
+        }
+
         private void PrintInstructions()
         {
             Debug.Log("=".PadRight(60, '='));
@@ -1583,6 +1756,8 @@ namespace Whisper.Samples
             Debug.Log($"Press [K] - Demo: smoker nodes steel blue → color smoker aggression links light orange");
             Debug.Log($"Press [Z] - Demo: color smoker nodes purple → color smoker aggression links pink + friendship links green");
             Debug.Log($"Press [E] - Demo (continuous): highlight top 3 friendship → save session → new session with all smokers selected");
+            Debug.Log($"Press [S] - Demo (continuous): select smokers → color steel blue → color smokers' aggression links pink");
+            Debug.Log($"Press [D] - Demo: show smoker nodes (steel blue) over background — ↑↓ move forward/back, ←→ strafe, Q/E turn, Escape to exit");
             Debug.Log($"Press [Enter] - Next demo step (P/L/O/K)");
             Debug.Log("=".PadRight(60, '='));
             Debug.Log($"Server Mode: {(serverEnabled ? "ENABLED" : "DISABLED (Direct execution)")}");

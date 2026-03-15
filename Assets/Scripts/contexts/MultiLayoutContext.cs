@@ -356,7 +356,7 @@ namespace VidiGraph
             }
         }
 
-        // also selects connected links and fully selected communities
+        // selects nodes only — link selection is always explicit via SetSelectedLinks
         public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool isSelected)
         {
             foreach (var nodeID in nodeIDs)
@@ -365,15 +365,6 @@ namespace VidiGraph
                 {
                     Nodes[nodeID].Selected = isSelected;
                     Nodes[nodeID].Dirty = true;
-                }
-
-                foreach (var linkID in NodeLinkMatrixUndir[nodeID])
-                {
-                    if (Links[linkID].Selected != isSelected)
-                    {
-                        Links[linkID].Selected = isSelected;
-                        Links[linkID].Dirty = true;
-                    }
                 }
             }
 

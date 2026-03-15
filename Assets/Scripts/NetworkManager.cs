@@ -1290,6 +1290,20 @@ namespace VidiGraph
             foreach (var (subnID, nodeIDs) in SortNodeGUIDs(nodeGUIDs)) SetMLNodesPosition(nodeIDs, positions, subnID);
         }
 
+        /// <summary>Returns current context positions of all nodes in the working subgraph, keyed by GUID.</summary>
+        public Dictionary<string, Vector3> GetWorkingSubgraphNodePositions()
+        {
+            var result = new Dictionary<string, Vector3>();
+            if (_curWorkingSubgraph == -1) return result;
+            var ctx = _allNetworks[_curWorkingSubgraph].Context;
+            foreach (var (guid, id) in ctx.NodeGUIDToID)
+            {
+                if (ctx.Nodes.TryGetValue(id, out var node))
+                    result[guid] = node.Position;
+            }
+            return result;
+        }
+
         public void SetMLNodesPosition(IEnumerable<int> nodeIDs, IEnumerable<Vector3> positions, int subnetworkID = MainNetworkID)
         {
             _allNetworks[subnetworkID].SetNodesPosition(nodeIDs, positions, _updatingStorage, _updatingRenderElements);
