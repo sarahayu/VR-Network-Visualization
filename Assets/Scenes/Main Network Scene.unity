@@ -20,11 +20,11 @@ RenderSettings:
   m_FogDensity: 0.01
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
-  m_AmbientSkyColor: {r: 0.7863352, g: 0.7863352, b: 0.7863352, a: 1}
+  m_AmbientSkyColor: {r: 0, g: 0, b: 0, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
   m_AmbientIntensity: 1
-  m_AmbientMode: 0
+  m_AmbientMode: 3
   m_SubtractiveShadowColor: {r: 0.16037738, g: 0.16037738, b: 0.16037738, a: 1}
   m_SkyboxMaterial: {fileID: 0}
   m_HaloStrength: 0.5
@@ -3596,7 +3596,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 50
   m_ChildAlignment: 6
-  m_Spacing: 50
+  m_Spacing: 25
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 0
   m_ChildControlWidth: 0
@@ -19235,6 +19235,30 @@ PrefabInstance:
     - target: {fileID: 8340558493629312128, guid: 67d61008e9eec7543a32ff2ea7cd1369, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9084455385304497309, guid: 67d61008e9eec7543a32ff2ea7cd1369, type: 3}
+      propertyPath: _settings.LinkSelectColor.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9084455385304497309, guid: 67d61008e9eec7543a32ff2ea7cd1369, type: 3}
+      propertyPath: _settings.LinkSelectColor.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9084455385304497309, guid: 67d61008e9eec7543a32ff2ea7cd1369, type: 3}
+      propertyPath: _settings.LinkSelectColor.r
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9084455385304497309, guid: 67d61008e9eec7543a32ff2ea7cd1369, type: 3}
+      propertyPath: _settings.LinkDefaultColor.b
+      value: 0.6754716
+      objectReference: {fileID: 0}
+    - target: {fileID: 9084455385304497309, guid: 67d61008e9eec7543a32ff2ea7cd1369, type: 3}
+      propertyPath: _settings.LinkDefaultColor.g
+      value: 0.6754716
+      objectReference: {fileID: 0}
+    - target: {fileID: 9084455385304497309, guid: 67d61008e9eec7543a32ff2ea7cd1369, type: 3}
+      propertyPath: _settings.LinkDefaultColor.r
+      value: 0.6754716
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

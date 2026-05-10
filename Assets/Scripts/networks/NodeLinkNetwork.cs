@@ -113,7 +113,10 @@ namespace VidiGraph
         public void SetSelectedLinks(IEnumerable<int> linkIDs, bool isSelected)
         {
             var validLinks = Context.Links.Keys.Intersect(linkIDs);
-            var updateLinks = linkIDs.Except(SelectedLinks);        // only update necessary links
+            // Only update links that actually need a state change to avoid unnecessary dirty marks
+            var updateLinks = isSelected
+                ? linkIDs.Except(SelectedLinks)         // adding: skip already-selected
+                : linkIDs.Intersect(SelectedLinks);     // removing: skip already-deselected
 
             if (validLinks.Count() != linkIDs.Count())
             {

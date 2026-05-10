@@ -6,11 +6,11 @@ namespace VidiGraph
     public static class NodeLinkRenderUtils
     {
         public static GameObject MakeNode(GameObject prefab, Transform parent,
-            Node node, MultiLayoutContext.Node nodeProps)
+            Node node, MultiLayoutContext.Node nodeProps, int sphereSubdivisions = 2)
         {
             GameObject nodeObj = UnityEngine.Object.Instantiate(prefab, parent);
 
-            nodeObj.GetComponent<MeshFilter>().sharedMesh = IcoSphere.Create(radius: 0.5f, detail: 1);
+            nodeObj.GetComponent<MeshFilter>().sharedMesh = IcoSphere.Create(radius: 0.5f, detail: sphereSubdivisions);
 
             if (nodeProps.Moveable) nodeObj.GetComponent<XRGeneralGrabTransformer>().enabled = true;
             else nodeObj.GetComponent<XRGeneralGrabTransformer>().enabled = false;

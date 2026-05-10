@@ -27,6 +27,10 @@ namespace Whisper.Samples
         public GameObject command_parent;
         public UnityEngine.UI.ScrollRect scroll;
 
+        [Header("Demo Settings")]
+        [Tooltip("Node size used in Demo E smoker subgraph (default 1.0)")]
+        public float demoENodeSize = 1.5f;
+
         [Header("Server Settings")]
         public string serverUrl = "http://localhost:5000/classify";
         public bool serverEnabled = true;
@@ -374,10 +378,12 @@ namespace Whisper.Samples
 
             if (Input.GetKeyDown(KeyCode.D) && !_demoRunning)
             {
-                Debug.Log("[DEMO D] Starting smoker node movement demo...");
+                Debug.Log("[DEMO D] Starting step-by-step smoker demo...");
                 _demoRunning = true;
                 _activeDemoId = 7;
-                StartCoroutine(RunDemoDContinuous());
+                _demoStep = 0;
+                _demoTotalSteps = 4;
+                RunDemoStep(_activeDemoId, _demoStep);
             }
 
             // Demo D — keyboard movement (active while _activeDemoId == 7)
@@ -398,6 +404,11 @@ namespace Whisper.Samples
                 if (_demoStep < _demoTotalSteps)
                 {
                     RunDemoStep(_activeDemoId, _demoStep);
+                }
+                else if (_activeDemoId == 7)
+                {
+                    // Demo D keeps running so movement stays active; Escape to exit
+                    Debug.Log("[DEMO D] All steps complete. Press Escape to exit.");
                 }
                 else
                 {
@@ -941,8 +952,8 @@ namespace Whisper.Samples
                             Debug.Log($"    {shapeSymbol} {categoryValue} = {shapeName}");
                         }
 
-                        // Create UI legend display (if UI elements are assigned)
-                        if (command_prefab != null && command_parent != null)
+                        // Create UI legend display (if UI elements are assigned and command is non-empty)
+                        if (!string.IsNullOrEmpty(originalCommand) && command_prefab != null && command_parent != null)
                         {
                             var _shapeLegend = Instantiate(command_prefab, command_parent.transform);
                             var _shapeLegend_text = _shapeLegend.GetComponent<TMP_Text>();
@@ -1133,6 +1144,16 @@ namespace Whisper.Samples
                 _networkManager.SetQueryMode(false);
             }
 
+            // Demo D uses its own setup/step logic
+            if (demoId == 7)
+            {
+                if (step == 0)
+                    StartCoroutine(RunDemoDSetup());
+                else
+                    RunDemoDStepDirect(step);
+                return;
+            }
+
             // Determine demo label
             string demoLabel = demoId == 0 ? "P" : demoId == 1 ? "L" : demoId == 2 ? "O" : demoId == 3 ? "K" : demoId == 4 ? "Z" : "Q";
 
@@ -1160,7 +1181,14 @@ namespace Whisper.Samples
             string command = DemoCommands[demoId][step];
             Debug.Log($"[DEMO {demoLabel} - Step {step + 1}] {command}");
 
-            if (serverEnabled)
+            // Demo K step 1 always runs directly — it requires multi-step logic (gray all links,
+            // color aggression orange, then select only aggression in the working subgraph)
+            // that the server cannot produce from a single natural-language command.
+            if (demoId == 3 && step == 1)
+            {
+                StartCoroutine(RunDemoKStep1());
+            }
+            else if (serverEnabled)
             {
                 // Send natural language to server → server returns actions/queries → Unity executes
                 StartCoroutine(SendToServerAndExecute(command));
@@ -1316,16 +1344,7 @@ namespace Whisper.Samples
                         StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription, legendNodeLabel: "Smokers"));
                         break;
                     case 1:
-                        actions = new string[][] {
-                            new string[] { "selectLink", "aggression" },
-                            new string[] { "colorLink", "#FFA700" }
-                        };
-                        queries = new string[] {
-                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE n.smoker = true AND r.type = 'aggression' RETURN r",
-                            ""
-                        };
-                        commandDescription = "Color smoker aggression links light orange";
-                        StartCoroutine(ExecuteActionsDirectly(actions, queries, commandDescription));
+                        StartCoroutine(RunDemoKStep1());
                         break;
                 }
             }
@@ -1366,6 +1385,35 @@ namespace Whisper.Samples
                         break;
                 }
             }
+        }
+
+        private IEnumerator RunDemoKStep1()
+        {
+            var _networkManager = streamingSampleMic._networkManager;
+            var _databaseStorage = streamingSampleMic._databaseStorage;
+
+            const string allLinksQuery = "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) RETURN r";
+            const string aggrQuery     = "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE n.smoker = true AND r.type = 'aggression' RETURN r";
+
+            // Color all links dark gray, then color smoker aggression links light orange
+            // (selectLink/colorLink only sets _lastQueriedLinkGUIDs — does not touch Unity selection state)
+            yield return StartCoroutine(ExecuteActionsDirectly(
+                new string[][] {
+                    new string[] { "selectLink", "all" },
+                    new string[] { "colorLink",  "#404040" },
+                    new string[] { "selectLink", "aggression" },
+                    new string[] { "colorLink",  "#FFA040" }
+                },
+                new string[] { allLinksQuery, "", aggrQuery, "" },
+                "Color all links dark gray, smoker aggression links light orange"
+            ));
+
+            // Clear all link selections, then select ONLY smoker aggression links
+            // using working-subgraph GUIDs so the selection color blends with the light orange
+            _networkManager.SetWorkingSelectedLinks(_networkManager.WorkingSubgraphAllLinkGUIDs, false);
+            var aggrLinksGlobal  = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, aggrQuery);
+            var aggrLinksWorking = _networkManager.TranslateToWorkingSubgraphLinkGUIDs(aggrLinksGlobal);
+            _networkManager.SetWorkingSelectedLinks(aggrLinksWorking, true);
         }
 
         private IEnumerator RunDemoQContinuous()
@@ -1572,15 +1620,27 @@ namespace Whisper.Samples
             );
             if (showBackgroundNetwork) _networkManager.ShowMainNetwork();
 
-            // Color all nodes in the new smokers session blue (same as Demo L)
+            // Make nodes bigger in the smokers subgraph (adjustable via Demo Settings in Inspector)
+            _networkManager.SetMLNodesSize(_networkManager.WorkingSubgraphAllNodeGUIDs, demoENodeSize);
+
+            // Color smoker nodes dodger blue, color ALL links white
             yield return StartCoroutine(ExecuteActionsDirectly(
                 new string[][] {
-                    new string[] { "colorNode", "#2a52be" }
+                    new string[] { "colorNode",  "#1e90ff" },
+                    new string[] { "selectLink", "all" },
+                    new string[] { "colorLink",  "#FFFFFF" }
                 },
-                new string[] { "" },
-                "Color smokers nodes in blue",
+                new string[] {
+                    "",
+                    "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) RETURN r",
+                    ""
+                },
+                "Color smokers nodes dodger blue, all links bright white",
                 legendNodeLabel: "Smokers"
             ));
+
+            // Select ALL links in the working subgraph so the selection color blends with white
+            _networkManager.SetWorkingSelectedLinks(_networkManager.WorkingSubgraphAllLinkGUIDs, true);
 
             _demoRunning = false;
             Debug.Log("[DEMO E] Continuous demo complete!");
@@ -1627,14 +1687,14 @@ namespace Whisper.Samples
 
             yield return new WaitForSeconds(1.5f);
 
-            // Step 2: Gray all links, color smokers' aggression links light orange
-            Debug.Log("[DEMO S - Step 2/2] Gray all links, color smokers' aggression links light orange");
+            // Step 2: Dim all links to dark gray, then highlight smokers' aggression links in vivid orange
+            Debug.Log("[DEMO S - Step 2/2] Dim all links, highlight smokers' aggression links in vivid orange");
             yield return StartCoroutine(ExecuteActionsDirectly(
                 new string[][] {
                     new string[] { "selectLink", "all" },
-                    new string[] { "colorLink", "#808080" },
+                    new string[] { "colorLink", "#404040" },
                     new string[] { "selectLink", "aggression" },
-                    new string[] { "colorLink", "#FFA040" }
+                    new string[] { "colorLink", "#FF5500" }
                 },
                 new string[] {
                     "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) RETURN r",
@@ -1642,7 +1702,7 @@ namespace Whisper.Samples
                     "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE n.smoker = true AND r.type = 'aggression' RETURN r",
                     ""
                 },
-                "Color smokers' aggression links in light orange"
+                "Color smokers' aggression links in vivid orange"
             ));
 
             // Select the smoker aggression links so they are highlighted
@@ -1655,7 +1715,7 @@ namespace Whisper.Samples
             Debug.Log("[DEMO S] Continuous demo complete!");
         }
 
-        private IEnumerator RunDemoDContinuous()
+        private IEnumerator RunDemoDSetup()
         {
             var _networkManager = streamingSampleMic._networkManager;
             var _databaseStorage = streamingSampleMic._databaseStorage;
@@ -1663,7 +1723,6 @@ namespace Whisper.Samples
             if (_networkManager.OnQueryMode)
                 _networkManager.SetQueryMode(false);
 
-            // Create a session with only smoker nodes
             Debug.Log("[DEMO D] Querying smoker nodes...");
             var smokerNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal,
                 "MATCH (n:Node) WHERE n.smoker = true RETURN n");
@@ -1675,28 +1734,66 @@ namespace Whisper.Samples
                 yield break;
             }
 
-            _networkManager.CreateWorkingSubgraph(sorted[VidiGraph.NetworkManager.MainNetworkID], "Demo D - Smokers", "Demo D");
-            _networkManager.ShowMainNetwork(); // always show background for context
+            _networkManager.CreateWorkingSubgraph(sorted[VidiGraph.NetworkManager.MainNetworkID], "Demo D - Smokers", "Smokers");
+            _networkManager.ShowMainNetwork();
             legendManager?.ResetAll();
 
-            // Color smokers steel blue so they stand out from the background
-            if (command_prefab != null && command_parent != null)
-            {
-                var entry = Instantiate(command_prefab, command_parent.transform);
-                entry.GetComponent<TMP_Text>().text = "Color only smokers nodes in steel blue";
-                ScrollToBottom();
-            }
-            yield return StartCoroutine(ExecuteActionsDirectly(
-                new string[][] {
-                    new string[] { "colorNode", "#4682B4" }
-                },
-                new string[] { "" },
-                null,
-                legendNodeLabel: "Smokers"
-            ));
+            // Select all nodes so they are grabbable
+            _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
 
-            Debug.Log("[DEMO D] Setup complete. Movement keys now active.");
-            // _demoRunning stays true; movement handled in UpdateDemoDMovement() each frame
+            ShowDemoMessage("Select only smokers nodes");
+            Debug.Log("[DEMO D] Setup complete. Press Enter to advance steps. Movement keys active.");
+            yield return null;
+        }
+
+        private void RunDemoDStepDirect(int step)
+        {
+            switch (step)
+            {
+                case 1:
+                    ShowDemoMessage("Color smokers in blue");
+                    StartCoroutine(ExecuteActionsDirectly(
+                        new string[][] {
+                            new string[] { "colorNode", "#0892d0" }
+                        },
+                        new string[] { "" },
+                        null,
+                        legendNodeLabel: "Smokers"
+                    ));
+                    break;
+
+                case 2:
+                    ShowDemoMessage("Color the aggression links in pink and friendship in blue");
+                    StartCoroutine(ExecuteActionsDirectly(
+                        new string[][] {
+                            new string[] { "selectLink", "aggression" },
+                            new string[] { "colorLink",  "#FF69B4" },
+                            new string[] { "selectLink", "friendship" },
+                            new string[] { "colorLink",  "#0000FF" }
+                        },
+                        new string[] {
+                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE n.smoker = true AND r.type = 'aggression' RETURN r",
+                            "",
+                            "MATCH (n:Node)-[r:POINTS_TO]-(m:Node) WHERE n.smoker = true AND r.type = 'friendship' RETURN r",
+                            ""
+                        },
+                        null
+                    ));
+                    break;
+
+                case 3:
+                    ShowDemoMessage("Shape nodes by gender");
+                    StartCoroutine(ExecuteActionsDirectly(
+                        new string[][] {
+                            new string[] { "shapeByAttribute", "sex" }
+                        },
+                        new string[] {
+                            "MATCH (n:Node) RETURN DISTINCT n.sex AS value ORDER BY value"
+                        },
+                        null
+                    ));
+                    break;
+            }
         }
 
         private void UpdateDemoDMovement()
@@ -1757,7 +1854,7 @@ namespace Whisper.Samples
             Debug.Log($"Press [Z] - Demo: color smoker nodes purple → color smoker aggression links pink + friendship links green");
             Debug.Log($"Press [E] - Demo (continuous): highlight top 3 friendship → save session → new session with all smokers selected");
             Debug.Log($"Press [S] - Demo (continuous): select smokers → color steel blue → color smokers' aggression links pink");
-            Debug.Log($"Press [D] - Demo: show smoker nodes (steel blue) over background — ↑↓ move forward/back, ←→ strafe, Q/E turn, Escape to exit");
+            Debug.Log($"Press [D] - Demo: smoker subgraph → [Enter] color #0892d0 → [Enter] aggression pink + friendship blue → [Enter] shape by gender | ↑↓←→ Q/E to move camera, Escape to exit");
             Debug.Log($"Press [Enter] - Next demo step (P/L/O/K)");
             Debug.Log("=".PadRight(60, '='));
             Debug.Log($"Server Mode: {(serverEnabled ? "ENABLED" : "DISABLED (Direct execution)")}");
@@ -1772,6 +1869,17 @@ namespace Whisper.Samples
                 var msgObj = Instantiate(command_prefab, command_parent.transform);
                 var msgText = msgObj.GetComponent<TMP_Text>();
                 msgText.text = $"<b>{message}</b>";
+                ScrollToBottom();
+            }
+        }
+
+        // Shows plain text in the command history panel without any prefix
+        private void ShowDemoMessage(string message)
+        {
+            if (command_prefab != null && command_parent != null)
+            {
+                var msgObj = Instantiate(command_prefab, command_parent.transform);
+                msgObj.GetComponent<TMP_Text>().text = message;
                 ScrollToBottom();
             }
         }

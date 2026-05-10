@@ -21,6 +21,16 @@ namespace VidiGraph
         [SerializeField] bool DrawTreeStructure = false;
         [SerializeField] ComputeShader SplineComputeShader;
 
+        [Header("Node Mesh Quality")]
+        [Tooltip("IcoSphere subdivision passes: 1=80 tri (faceted), 2=320 tri (smooth), 3=1280 tri (very smooth)")]
+        [Range(1, 4)] [SerializeField] int sphereSubdivisions = 2;
+
+        [Header("Node Specular (Standard / Particle Standard shader)")]
+        [Tooltip("0 = dielectric (plastic), 1 = fully metallic. Keep at 0 for the plastic sphere look.")]
+        [Range(0f, 1f)] [SerializeField] float nodeMetallic = 0.0f;
+        [Tooltip("0 = rough/matte, 1 = mirror. 0.80-0.85 gives a clear specular highlight like a shiny sphere.")]
+        [Range(0f, 1f)] [SerializeField] float nodeSmoothness = 0.82f;
+
         Dictionary<int, GameObject> _nodeGameObjs = new Dictionary<int, GameObject>();
         Dictionary<int, GameObject> _linkGameObjs = new Dictionary<int, GameObject>();
         Dictionary<int, GameObject> _communityGameObjs = new Dictionary<int, GameObject>();
@@ -130,10 +140,19 @@ namespace VidiGraph
 
                 if (DrawVirtualNodes || !node.IsVirtualNode)
                 {
-                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps);
+                    var nodeObj = NodeLinkRenderUtils.MakeNode(NodePrefab, transform, node, nodeProps, sphereSubdivisions);
 
                     _nodeGameObjs[nodeID] = nodeObj;
-                    _nodeRenderers[nodeID] = nodeObj.GetComponentInChildren<Renderer>();
+                    var nodeRenderer = nodeObj.GetComponentInChildren<Renderer>();
+                    _nodeRenderers[nodeID] = nodeRenderer;
+
+                    // Apply specular parameters via MaterialPropertyBlock so they persist
+                    // alongside per-node color overrides (GetPropertyBlock preserves existing values)
+                    var mpb = new MaterialPropertyBlock();
+                    nodeRenderer.GetPropertyBlock(mpb);
+                    mpb.SetFloat("_Metallic", nodeMetallic);
+                    mpb.SetFloat("_Glossiness", nodeSmoothness);
+                    nodeRenderer.SetPropertyBlock(mpb);
 
                     AddNodeInteraction(nodeObj, node);
                 }

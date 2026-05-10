@@ -49,8 +49,7 @@ namespace Whisper.Samples
         // Reference to the whisper stream
         private WhisperStream _stream;
         private float whisperStartTime;
-        private float whisper_currentTime;
-        public Dictionary<string, float> buffer_database = new Dictionary<string, float>();
+        private float _pipelineStartTime;
 
         // Link GUIDs from the last selectLink command — used by colorLink
         private HashSet<string> _lastSelectedLinkGUIDs = new HashSet<string>();
@@ -140,7 +139,8 @@ namespace Whisper.Samples
         {
             if (string.IsNullOrWhiteSpace(inputText)) return;
             textCommandInput.text = "";
-            textCommandInput.ActivateInputField(); // keep focus for next command
+            textCommandInput.ActivateInputField();
+            _pipelineStartTime = Time.time;
             StartCoroutine(ClassifyUserCommand(inputText.Trim(), 0f));
         }
 
@@ -167,11 +167,10 @@ namespace Whisper.Samples
 
         private void OnSegmentFinished(WhisperResult segment)
         {
-            // Debug.Log($"Segment finished: {segment.Result}");
             float recognitionTime = Time.time - whisperStartTime;
             whisperStartTime = Time.time;
+            _pipelineStartTime = Time.time;
             StartCoroutine(ClassifyUserCommand(segment.Result, recognitionTime));
-            // reset start time for next recording
         }
 
         private void OnFinished(string finalResult)
@@ -196,7 +195,9 @@ namespace Whisper.Samples
                 www.downloadHandler = new DownloadHandlerBuffer();
                 www.SetRequestHeader("Content-Type", "application/json");
 
+                TimerUtils.StartTime("HTTP/LangGraph");
                 yield return www.SendWebRequest();
+                TimerUtils.EndTime("HTTP/LangGraph");
 
                 if (www.result == UnityWebRequest.Result.ConnectionError || www.result == UnityWebRequest.Result.ProtocolError)
                 {
@@ -354,27 +355,10 @@ namespace Whisper.Samples
                                     break;
                                 case "colorNode":
                                     Debug.Log("Changing color of nodes to: " + action[i][1]);
-                                    HashSet<string> nodes_color;
-
-                                    if (_networkManager.HasWorkingSession)
-                                    {
-                                        // Session exists — use selected subgraph nodes, fall back to all subgraph nodes
-                                        nodes_color = _networkManager.WorkingSelectedNodeGUIDs;
-                                        if (nodes_color.Count == 0)
-                                            nodes_color = _networkManager.WorkingSubgraphAllNodeGUIDs;
-                                    }
-                                    else
-                                    {
-                                        // No session — create one with all nodes then color them
-                                        Debug.Log("No session, creating one with all nodes");
-                                        string selectAllQuery = "MATCH (n:Node) RETURN n";
-                                        var allNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, selectAllQuery);
-                                        var sortedColorAll = _networkManager.SortNodeGUIDs(allNodes);
-                                        if (!sortedColorAll.ContainsKey(NetworkManager.MainNetworkID)) break;
-                                        _networkManager.CreateWorkingSubgraph(sortedColorAll[NetworkManager.MainNetworkID], "Color all nodes", "Color Nodes");
-                                        _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
-                                        nodes_color = _networkManager.WorkingSelectedNodeGUIDs;
-                                    }
+                                    if (!EnsureWorkingSession("Color all nodes", "Color Nodes", selectAll: true)) break;
+                                    HashSet<string> nodes_color = _networkManager.WorkingSelectedNodeGUIDs.Count > 0
+                                        ? _networkManager.WorkingSelectedNodeGUIDs
+                                        : _networkManager.WorkingSubgraphAllNodeGUIDs;
 
                                     TimerUtils.StartTime("SetColor");
                                     _networkManager.SetMLNodesColor(nodes_color, action[i][1]);
@@ -413,15 +397,7 @@ namespace Whisper.Samples
 
                                     TimerUtils.StartTime("ColorByAttribute");
 
-                                    // Create session with all nodes if none exists
-                                    if (!_networkManager.HasWorkingSession)
-                                    {
-                                        var allNodesForCBA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                                        var sortedCBA = _networkManager.SortNodeGUIDs(allNodesForCBA);
-                                        if (!sortedCBA.ContainsKey(NetworkManager.MainNetworkID)) break;
-                                        _networkManager.CreateWorkingSubgraph(sortedCBA[NetworkManager.MainNetworkID], $"Color by {attributeName_color}", $"Color by {attributeName_color}");
-                                        _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
-                                    }
+                                    if (!EnsureWorkingSession($"Color by {attributeName_color}", $"Color by {attributeName_color}", selectAll: true)) break;
 
                                     // Get distinct values from the query result
                                     var distinctValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, query[i]);
@@ -496,15 +472,7 @@ namespace Whisper.Samples
 
                                     TimerUtils.StartTime("ColorByGPA");
 
-                                    // Create session with all nodes if none exists (same as colorByAttribute)
-                                    if (!_networkManager.HasWorkingSession)
-                                    {
-                                        var allNodesForGPA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                                        var sortedGPA = _networkManager.SortNodeGUIDs(allNodesForGPA);
-                                        if (!sortedGPA.ContainsKey(NetworkManager.MainNetworkID)) break;
-                                        _networkManager.CreateWorkingSubgraph(sortedGPA[NetworkManager.MainNetworkID], "Color by GPA", "Color by GPA");
-                                        _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
-                                    }
+                                    if (!EnsureWorkingSession("Color by GPA", "Color by GPA", selectAll: true)) break;
 
                                     {
                                         string[] gpaGradient = { "#E3F2FD", "#90CAF9", "#42A5F5", "#1976D2", "#1565C0" };
@@ -544,15 +512,7 @@ namespace Whisper.Samples
 
                                     TimerUtils.StartTime("ColorByValue");
 
-                                    // Ensure session exists
-                                    if (!_networkManager.HasWorkingSession)
-                                    {
-                                        var allNodesForCBV = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                                        var sortedCBV = _networkManager.SortNodeGUIDs(allNodesForCBV);
-                                        if (!sortedCBV.ContainsKey(NetworkManager.MainNetworkID)) break;
-                                        _networkManager.CreateWorkingSubgraph(sortedCBV[NetworkManager.MainNetworkID], $"Color by {cbvAttribute}", $"Color by {cbvAttribute}");
-                                        _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
-                                    }
+                                    if (!EnsureWorkingSession($"Color by {cbvAttribute}", $"Color by {cbvAttribute}", selectAll: true)) break;
 
                                     // Get value range from min/max query
                                     var (cbvMin, cbvMax) = _databaseStorage.GetMinMaxFromStore(_networkManager.NetworkGlobal, query[i]);
@@ -600,14 +560,7 @@ namespace Whisper.Samples
 
                                     TimerUtils.StartTime("ShapeByAttribute");
 
-                                    // If no session yet, create one with all nodes
-                                    if (!_networkManager.HasWorkingSession)
-                                    {
-                                        var allNodesForSBA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                                        var sortedSBA = _networkManager.SortNodeGUIDs(allNodesForSBA);
-                                        if (!sortedSBA.ContainsKey(NetworkManager.MainNetworkID)) break;
-                                        _networkManager.CreateWorkingSubgraph(sortedSBA[NetworkManager.MainNetworkID], $"Shape by {attributeName_shape}", $"Shape by {attributeName_shape}");
-                                    }
+                                    if (!EnsureWorkingSession($"Shape by {attributeName_shape}", $"Shape by {attributeName_shape}")) break;
 
                                     // Get distinct values from the query result
                                     var distinctShapeValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, query[i]);
@@ -685,14 +638,10 @@ namespace Whisper.Samples
                                     Debug.Log("Reset — coloring all nodes yellow and links gray");
                                     TimerUtils.StartTime("Reset");
                                     _lastSelectedLinkGUIDs.Clear();
-                                    if (!_networkManager.HasWorkingSession)
-                                    {
-                                        var allNodesForReset = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                                        var sortedReset = _networkManager.SortNodeGUIDs(allNodesForReset);
-                                        if (!sortedReset.ContainsKey(NetworkManager.MainNetworkID)) break;
-                                        _networkManager.CreateWorkingSubgraph(sortedReset[NetworkManager.MainNetworkID], "Reset", "Reset");
+                                    bool resetHadSession = _networkManager.HasWorkingSession;
+                                    if (!EnsureWorkingSession("Reset", "Reset")) break;
+                                    if (!resetHadSession)
                                         _networkManager.BringMLNodes(_networkManager.WorkingSubgraphAllNodeGUIDs);
-                                    }
                                     _networkManager.SetMLNodesColor(_networkManager.WorkingSubgraphAllNodeGUIDs, "#FFFF00");
                                     _networkManager.SetMLLinksColorStart(_networkManager.WorkingSubgraphAllLinkGUIDs, "#808080");
                                     _networkManager.SetMLLinksColorEnd(_networkManager.WorkingSubgraphAllLinkGUIDs, "#808080");
@@ -712,7 +661,8 @@ namespace Whisper.Samples
                             }
                         }
 
-                        loadingIcon.SetLoading(false); // Done processing
+                        Debug.Log($"<color=cyan>[TotalPipeline]</color> {(Time.time - _pipelineStartTime) * 1000:F0}ms end-to-end (whisper:{whisperTime:F2}s + server + execution)");
+                        loadingIcon.SetLoading(false);
                     }
                 }
             }
@@ -725,8 +675,21 @@ namespace Whisper.Samples
             {
                 Canvas.ForceUpdateCanvases();
                 scroll.verticalNormalizedPosition = 0f;
-                Canvas.ForceUpdateCanvases();
             }
+        }
+
+        // Creates a working session with all nodes if one doesn't exist yet.
+        // Returns false when the main network is not found — caller should break/return.
+        // selectAll: also mark all subgraph nodes as selected after creation.
+        private bool EnsureWorkingSession(string sessionLabel, string shortLabel, bool selectAll = false)
+        {
+            if (_networkManager.HasWorkingSession) return true;
+            var allNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+            var sorted = _networkManager.SortNodeGUIDs(allNodes);
+            if (!sorted.ContainsKey(NetworkManager.MainNetworkID)) return false;
+            _networkManager.CreateWorkingSubgraph(sorted[NetworkManager.MainNetworkID], sessionLabel, shortLabel);
+            if (selectAll) _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
+            return true;
         }
 
         private string GetColorName(string hexColor)
