@@ -53,6 +53,11 @@ namespace Whisper.Samples
 
         // Link GUIDs from the last selectLink command — used by colorLink
         private HashSet<string> _lastSelectedLinkGUIDs = new HashSet<string>();
+
+        // Session-long caches: keyed by attribute name.
+        // Node-attribute groupings are static for the scene lifetime (nodes don't change), so no invalidation needed.
+        private readonly Dictionary<string, Dictionary<string, List<string>>> _groupedNodesCache = new();
+        private readonly Dictionary<string, Dictionary<string, float>> _numericValuesCache = new();
         // Track last selectLink type for legend labeling
         private string _lastLinkSelectLabel = "Links";
         // Track last selectNode parameter for legend labeling
@@ -399,20 +404,17 @@ namespace Whisper.Samples
 
                                     if (!EnsureWorkingSession($"Color by {attributeName_color}", $"Color by {attributeName_color}", selectAll: true)) break;
 
-                                    // Get distinct values from the query result
-                                    var distinctValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, query[i]);
+                                    // Single DB round trip: get all nodes grouped by attribute value (cached per session).
+                                    if (!_groupedNodesCache.TryGetValue(attributeName_color, out var grouped_color))
+                                    {
+                                        grouped_color = _databaseStorage.GetNodesGroupedByAttribute(_networkManager.NetworkGlobal, attributeName_color);
+                                        _groupedNodesCache[attributeName_color] = grouped_color;
+                                    }
+                                    var distinctValues = grouped_color.Keys.OrderBy(v => v).ToList();
                                     Debug.Log($"Found {distinctValues.Count} distinct values for {attributeName_color}");
 
-                                    // Sort for deterministic color assignment regardless of DB return order
-                                    distinctValues.Sort();
-
                                     // Palette for auto-pick when user doesn't specify colors
-                                    string[] allowedColors = new string[] {
-                                        "#7FFFFF",  // cyan
-                                        "#7F7FFF",  // blue
-                                        "#FFFF7F",  // yellow
-                                        "#BF7FBF"   // purple
-                                    };
+                                    string[] allowedColors = { "#7FFFFF", "#7F7FFF", "#FFFF7F", "#BF7FBF" };
 
                                     // Parse any user-specified colors from action params (action[i][2+] = "category:colorHex")
                                     var userColors = new Dictionary<string, string>();
@@ -437,13 +439,11 @@ namespace Whisper.Samples
                                     if (userColors.Count == 0 && distinctValues.Count > allowedColors.Length)
                                         Debug.LogWarning($"Found {distinctValues.Count} categories but only {allowedColors.Length} colors. Colors will repeat.");
 
-                                    // Color each category using the mapping
+                                    // Apply colors using pre-grouped data — zero additional DB calls
                                     foreach (var (cypherValue, colorHex) in colorMapping)
                                     {
-                                        string categoryQuery = $"MATCH (n:Node) WHERE n.{attributeName_color} = {cypherValue} RETURN n";
                                         Debug.Log($"  Category '{cypherValue}' → {colorHex}");
-                                        var categoryNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, categoryQuery);
-                                        var subnGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(categoryNodes);
+                                        var subnGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(grouped_color[cypherValue]);
                                         _networkManager.SetMLNodesColor(subnGUIDs, colorHex);
                                     }
 
@@ -476,20 +476,32 @@ namespace Whisper.Samples
 
                                     {
                                         string[] gpaGradient = { "#E3F2FD", "#90CAF9", "#42A5F5", "#1976D2", "#1565C0" };
-                                        var (gpaMin, gpaMax) = _databaseStorage.GetMinMaxFromStore(
-                                            _networkManager.NetworkGlobal,
-                                            "MATCH (n:Node) WHERE n.gpa IS NOT NULL RETURN min(n.gpa) AS minValue, max(n.gpa) AS maxValue");
-                                        if (gpaMax > gpaMin)
+
+                                        // Single DB round trip: all nodes with their GPA values (cached).
+                                        // Client-side bucketing replaces the previous 1 min/max + 5 bucket queries.
+                                        if (!_numericValuesCache.TryGetValue("gpa", out var gpaValues))
                                         {
-                                            float step = (gpaMax - gpaMin) / gpaGradient.Length;
-                                            for (int b = 0; b < gpaGradient.Length; b++)
+                                            gpaValues = _databaseStorage.GetNodesWithNumericValues(_networkManager.NetworkGlobal, "gpa");
+                                            _numericValuesCache["gpa"] = gpaValues;
+                                        }
+
+                                        if (gpaValues.Count > 0)
+                                        {
+                                            float gpaMin = gpaValues.Values.Min();
+                                            float gpaMax = gpaValues.Values.Max();
+                                            if (gpaMax > gpaMin)
                                             {
-                                                float low = gpaMin + b * step;
-                                                float high = (b == gpaGradient.Length - 1) ? gpaMax + 0.001f : gpaMin + (b + 1) * step;
-                                                string bucketQuery = $"MATCH (n:Node) WHERE n.gpa >= {low.ToString(System.Globalization.CultureInfo.InvariantCulture)} AND n.gpa < {high.ToString(System.Globalization.CultureInfo.InvariantCulture)} RETURN n";
-                                                var bucketNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, bucketQuery);
-                                                var bucketGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(bucketNodes);
-                                                _networkManager.SetMLNodesColor(bucketGUIDs, gpaGradient[b]);
+                                                float step = (gpaMax - gpaMin) / gpaGradient.Length;
+                                                for (int b = 0; b < gpaGradient.Length; b++)
+                                                {
+                                                    float low = gpaMin + b * step;
+                                                    float high = b == gpaGradient.Length - 1 ? gpaMax + 0.001f : gpaMin + (b + 1) * step;
+                                                    var bucketGuids = gpaValues
+                                                        .Where(kv => kv.Value >= low && kv.Value < high)
+                                                        .Select(kv => kv.Key);
+                                                    var bucketGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(bucketGuids);
+                                                    _networkManager.SetMLNodesColor(bucketGUIDs, gpaGradient[b]);
+                                                }
                                             }
                                         }
 
@@ -525,8 +537,14 @@ namespace Whisper.Samples
 
                                     if (!cbvEncodingSuccess)
                                     {
-                                        // Fall back to bucket approach
+                                        // Fallback: client-side bucketing using a single cached DB query.
+                                        // Replaces the previous 5 separate bucket queries.
                                         string[] cbvGradient = { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" };
+                                        if (!_numericValuesCache.TryGetValue(cbvAttribute, out var cbvNodeValues))
+                                        {
+                                            cbvNodeValues = _databaseStorage.GetNodesWithNumericValues(_networkManager.NetworkGlobal, cbvAttribute);
+                                            _numericValuesCache[cbvAttribute] = cbvNodeValues;
+                                        }
                                         float cbvRange = cbvMax - cbvMin;
                                         if (cbvRange <= 0f) cbvRange = 1f;
                                         float cbvStep = cbvRange / cbvGradient.Length;
@@ -534,9 +552,10 @@ namespace Whisper.Samples
                                         {
                                             float lo = cbvMin + b * cbvStep;
                                             float hi = b == cbvGradient.Length - 1 ? cbvMax + 0.001f : cbvMin + (b + 1) * cbvStep;
-                                            string bucketQuery = $"MATCH (n:Node) WHERE n.{cbvAttribute} >= {lo:F4} AND n.{cbvAttribute} < {hi:F4} RETURN n";
-                                            var bucketNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, bucketQuery);
-                                            _networkManager.SetMLNodesColor(_networkManager.TranslateToWorkingSubgraphNodeGUIDs(bucketNodes), cbvGradient[b]);
+                                            var bucketGuids = cbvNodeValues
+                                                .Where(kv => kv.Value >= lo && kv.Value < hi)
+                                                .Select(kv => kv.Key);
+                                            _networkManager.SetMLNodesColor(_networkManager.TranslateToWorkingSubgraphNodeGUIDs(bucketGuids), cbvGradient[b]);
                                         }
                                     }
 
@@ -562,61 +581,42 @@ namespace Whisper.Samples
 
                                     if (!EnsureWorkingSession($"Shape by {attributeName_shape}", $"Shape by {attributeName_shape}")) break;
 
-                                    // Get distinct values from the query result
-                                    var distinctShapeValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, query[i]);
+                                    // Single DB round trip: get all nodes grouped by attribute value (cached).
+                                    if (!_groupedNodesCache.TryGetValue(attributeName_shape, out var grouped_shape))
+                                    {
+                                        grouped_shape = _databaseStorage.GetNodesGroupedByAttribute(_networkManager.NetworkGlobal, attributeName_shape);
+                                        _groupedNodesCache[attributeName_shape] = grouped_shape;
+                                    }
+                                    var distinctShapeValues = grouped_shape.Keys.OrderBy(v => v).ToList();
                                     Debug.Log($"Found {distinctShapeValues.Count} distinct values for {attributeName_shape}");
 
-                                    // Define the 3 allowed shapes
-                                    string[] allowedShapes = new string[] {
-                                        "sphere",
-                                        "cube",
-                                        "tetrahedron"
-                                    };
+                                    string[] allowedShapes = { "sphere", "cube", "tetrahedron" };
 
-                                    // Warn if more than 3 categories
                                     if (distinctShapeValues.Count > 3)
-                                    {
                                         Debug.LogWarning($"Found {distinctShapeValues.Count} categories but only 3 shapes available. Shapes will repeat.");
-                                    }
 
-                                    // Assign shape to each category within the working subgraph
+                                    // Apply shapes using pre-grouped data — zero additional DB calls
                                     for (int j = 0; j < distinctShapeValues.Count; j++)
                                     {
                                         string categoryValue = distinctShapeValues[j];
-                                        string shapeName = allowedShapes[j % allowedShapes.Length]; // Cycle through shapes
-
-                                        // Build query to select nodes with this category value
-                                        string categoryQuery = $"MATCH (n:Node) WHERE n.{attributeName_shape} = {categoryValue} RETURN n";
-
+                                        string shapeName = allowedShapes[j % allowedShapes.Length];
                                         Debug.Log($"  Category '{categoryValue}' → {shapeName}");
-
-                                        var categoryNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, categoryQuery);
-                                        var subnShapeGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(categoryNodes);
+                                        var subnShapeGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(grouped_shape[categoryValue]);
                                         _networkManager.SetMLNodesShape(subnShapeGUIDs, shapeName);
                                     }
 
                                     TimerUtils.EndTime("ShapeByAttribute");
 
-                                    // Create legend display with shape symbols
                                     var _shapeByAttr = Instantiate(command_prefab, command_parent.transform);
                                     var _shapeByAttr_text = _shapeByAttr.GetComponent<TMP_Text>();
 
-                                    System.Text.StringBuilder shapeLegendBuilder = new System.Text.StringBuilder();
+                                    string[] shapeSymbols = { "●", "■", "▲" };
+                                    var shapeLegendBuilder = new System.Text.StringBuilder();
                                     shapeLegendBuilder.AppendLine($"<b>Shaped by {attributeName_shape}</b>");
-
-                                    // Define shape symbols for display
-                                    string[] shapeSymbols = new string[] {
-                                        "●",  // sphere (circle)
-                                        "■",  // cube (square)
-                                        "▲"   // tetrahedron (triangle)
-                                    };
-
                                     for (int j = 0; j < distinctShapeValues.Count; j++)
                                     {
-                                        string categoryValue = distinctShapeValues[j].Replace("'", ""); // Remove quotes for display
-                                        string shapeName = allowedShapes[j % allowedShapes.Length];
-                                        string shapeSymbol = shapeSymbols[j % shapeSymbols.Length];
-                                        shapeLegendBuilder.AppendLine($"  {shapeSymbol} {categoryValue} = {shapeName}");
+                                        string displayVal = distinctShapeValues[j].Replace("'", "");
+                                        shapeLegendBuilder.AppendLine($"  {shapeSymbols[j % shapeSymbols.Length]} {displayVal} = {allowedShapes[j % allowedShapes.Length]}");
                                     }
 
                                     _shapeByAttr_text.text = shapeLegendBuilder.ToString();

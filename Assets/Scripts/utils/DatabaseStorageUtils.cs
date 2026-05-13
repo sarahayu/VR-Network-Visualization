@@ -541,5 +541,82 @@ namespace VidiGraph
             return distinctValues;
         }
 
+        // Single query that returns all nodes grouped by a categorical attribute.
+        // Keys are Cypher-safe value strings (strings wrapped in single quotes, numbers/booleans unquoted)
+        // to match the format produced by GetDistinctValuesFromStore.
+        // This replaces the N-round-trip pattern of calling GetDistinctValuesFromStore + one GetNodesFromStore per category.
+        public static Dictionary<string, List<string>> GetNodesGroupedByAttribute(
+            NetworkGlobal networkGlobal, string attribute, IDriver driver)
+        {
+            var result = new Dictionary<string, List<string>>();
+            try
+            {
+                using var session = driver.Session();
+                string command = $"MATCH (n:Node) WHERE n.{attribute} IS NOT NULL RETURN n.GUID AS guid, n.{attribute} AS value";
+
+                TimerUtils.StartTime("GetNodesGroupedByAttribute.Run");
+                var res = session.Run(command);
+                TimerUtils.EndTime("GetNodesGroupedByAttribute.Run");
+
+                TimerUtils.StartTime("GetNodesGroupedByAttribute.Group");
+                foreach (var record in res)
+                {
+                    string guid = record["guid"].As<string>();
+                    var raw = record["value"].As<object>();
+                    if (raw == null) continue;
+
+                    string key = raw is string s ? $"'{s}'" : raw.ToString();
+
+                    if (!result.TryGetValue(key, out var list))
+                    {
+                        list = new List<string>();
+                        result[key] = list;
+                    }
+                    list.Add(guid);
+                }
+                TimerUtils.EndTime("GetNodesGroupedByAttribute.Group");
+
+                Debug.Log($"[GetNodesGroupedByAttribute] {result.Count} groups for '{attribute}', {result.Values.Sum(l => l.Count)} total nodes");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"GetNodesGroupedByAttribute Error: {e.Message}");
+            }
+            return result;
+        }
+
+        // Single query that returns a dict of GUID → numeric attribute value for all nodes that have the attribute.
+        // Used to do client-side bucketing for gradient color encodings, replacing N bucket queries.
+        public static Dictionary<string, float> GetNodesWithNumericValues(
+            NetworkGlobal networkGlobal, string attribute, IDriver driver)
+        {
+            var result = new Dictionary<string, float>();
+            try
+            {
+                using var session = driver.Session();
+                string command = $"MATCH (n:Node) WHERE n.{attribute} IS NOT NULL RETURN n.GUID AS guid, n.{attribute} AS value";
+
+                TimerUtils.StartTime("GetNodesWithNumericValues.Run");
+                var res = session.Run(command);
+                TimerUtils.EndTime("GetNodesWithNumericValues.Run");
+
+                TimerUtils.StartTime("GetNodesWithNumericValues.Collect");
+                foreach (var record in res)
+                {
+                    string guid = record["guid"].As<string>();
+                    float value = (float)record["value"].As<double>();
+                    result[guid] = value;
+                }
+                TimerUtils.EndTime("GetNodesWithNumericValues.Collect");
+
+                Debug.Log($"[GetNodesWithNumericValues] {result.Count} nodes with '{attribute}'");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"GetNodesWithNumericValues Error: {e.Message}");
+            }
+            return result;
+        }
+
     }
 }

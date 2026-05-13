@@ -78,5 +78,19 @@ namespace VidiGraph
         {
             return DatabaseStorageUtils.GetDistinctValuesFromStore(networkGlobal, command, _driver, _convertWinPaths);
         }
+
+        // Returns all nodes grouped by a categorical attribute in one query.
+        // Replaces the N-round-trip pattern of GetDistinctValuesFromStore + one GetNodesFromStore per category.
+        public Dictionary<string, List<string>> GetNodesGroupedByAttribute(NetworkGlobal networkGlobal, string attribute)
+        {
+            return DatabaseStorageUtils.GetNodesGroupedByAttribute(networkGlobal, attribute, _driver);
+        }
+
+        // Returns GUID → numeric value for all nodes that have the attribute.
+        // Used for client-side bucketing in gradient color encodings.
+        public Dictionary<string, float> GetNodesWithNumericValues(NetworkGlobal networkGlobal, string attribute)
+        {
+            return DatabaseStorageUtils.GetNodesWithNumericValues(networkGlobal, attribute, _driver);
+        }
     }
 }
