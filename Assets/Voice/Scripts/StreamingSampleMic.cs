@@ -63,6 +63,9 @@ namespace Whisper.Samples
         // Track last selectNode parameter for legend labeling
         private string _lastSelectNodeLabel = "";
 
+        private int _snapshotCount = 0;
+        private int _demoStep = 0;
+
 
         // Classification server URL
         private string serverUrl = "http://localhost:5000/classify";
@@ -120,6 +123,28 @@ namespace Whisper.Samples
                 Indicator.GetPropertyBlock(props);
                 props.SetColor("_Color", ColorUtils.StringToColor("#C0C0C0"));
                 Indicator.SetPropertyBlock(props);
+            }
+
+            if (Input.GetKeyDown(KeyCode.Return))
+            {
+                RunDemoStep();
+            }
+
+            if (Input.GetKeyDown(KeyCode.S))
+            {
+                _snapshotCount++;
+                string saveName = $"Snapshot {_snapshotCount}";
+                if (_networkManager.HasWorkingSession && _networkManager.WorkingSelectedNodeGUIDs.Count > 0)
+                {
+                    _networkManager.SaveSelectedNodesAsSession(saveName);
+                }
+                else
+                {
+                    if (!EnsureWorkingSession(saveName, saveName)) return;
+                }
+                var msg = Instantiate(command_prefab, command_parent.transform);
+                msg.GetComponent<TMP_Text>().text = $"<b>Saved:</b> {saveName}";
+                ScrollToBottom();
             }
 
         }
@@ -652,6 +677,38 @@ namespace Whisper.Samples
                                     _resetMsg.GetComponent<TMP_Text>().text = "<color=#aaa><i>Reset complete</i></color>";
                                     ScrollToBottom();
                                     break;
+                                case "deleteSession":
+                                    Debug.Log("Deleting current session");
+                                    if (!_networkManager.HasWorkingSession)
+                                    {
+                                        var _noSession = Instantiate(command_prefab, command_parent.transform);
+                                        _noSession.GetComponent<TMP_Text>().text = "<color=#aaa><i>No active session to delete.</i></color>";
+                                        ScrollToBottom();
+                                        break;
+                                    }
+                                    _networkManager.DeleteCurWorkingGraph();
+                                    var _delMsg = Instantiate(command_prefab, command_parent.transform);
+                                    _delMsg.GetComponent<TMP_Text>().text = "<color=#f88><b>Session deleted.</b></color>";
+                                    ScrollToBottom();
+                                    break;
+                                case "saveSession":
+                                    string saveName = action[i].Length > 1 && !string.IsNullOrWhiteSpace(action[i][1])
+                                        ? action[i][1]
+                                        : "Snapshot";
+                                    Debug.Log($"Saving session as: {saveName}");
+                                    if (_networkManager.HasWorkingSession && _networkManager.WorkingSelectedNodeGUIDs.Count > 0)
+                                    {
+                                        _networkManager.SaveSelectedNodesAsSession(saveName);
+                                    }
+                                    else
+                                    {
+                                        // No selection yet — save all nodes as the new session
+                                        if (!EnsureWorkingSession(saveName, saveName)) break;
+                                    }
+                                    var _saveCmd = Instantiate(command_prefab, command_parent.transform);
+                                    _saveCmd.GetComponent<TMP_Text>().text = $"<b>Saved:</b> {saveName}";
+                                    ScrollToBottom();
+                                    break;
                                 default:
                                     // Handle unknown actions
                                     Debug.LogWarning("Unknown action: " + action);
@@ -668,6 +725,46 @@ namespace Whisper.Samples
             }
         }
 
+
+        private void RunDemoStep()
+        {
+            switch (_demoStep)
+            {
+                case 0:
+                    // Step 1 — create a working session and select ALL nodes inside it
+                    if (!EnsureWorkingSession("Demo Selection", "Demo")) return;
+                    _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
+                    ShowDemoMessage("<b>[Demo 1/3]</b> Working session created — all nodes selected.\n<color=#aaa>Press Enter to save snapshot →</color>");
+                    _demoStep++;
+                    break;
+
+                case 1:
+                    // Step 2 — save the selection as a named snapshot without switching view
+                    if (!_networkManager.HasWorkingSession || _networkManager.WorkingSelectedNodeGUIDs.Count == 0)
+                    {
+                        ShowDemoMessage("<color=#f88>[Demo]</color> No nodes selected — press Enter to restart.");
+                        _demoStep = 0;
+                        return;
+                    }
+                    _networkManager.SaveSelectedNodesAsSession("Demo Snapshot");
+                    ShowDemoMessage("<b>[Demo 2/3]</b> Snapshot saved → watch the cyan dots fly to the wall.\n<color=#aaa>Press Enter to finish →</color>");
+                    _demoStep++;
+                    break;
+
+                case 2:
+                    // Step 3 — reset demo counter
+                    _demoStep = 0;
+                    ShowDemoMessage("<b>[Demo 3/3]</b> Demo complete. Press Enter to run again.");
+                    break;
+            }
+        }
+
+        private void ShowDemoMessage(string msg)
+        {
+            var obj = Instantiate(command_prefab, command_parent.transform);
+            obj.GetComponent<TMP_Text>().text = msg;
+            ScrollToBottom();
+        }
 
         private void ScrollToBottom()
         {

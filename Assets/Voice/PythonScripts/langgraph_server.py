@@ -147,7 +147,8 @@ ACTIONS
 Allowed action names:
   selectNode, selectLink, colorNode, colorLink,
   colorByAttribute, colorByGPA, shapeByAttribute,
-  sizeNode, move, layout, deselect, arithmetic
+  sizeNode, move, layout, deselect, arithmetic,
+  reset, saveSession, deleteSession
 
 ── COLOR NAME → HEX ──
 When generating colorNode or colorLink, convert color names to hex:
@@ -188,7 +189,27 @@ Append ":selected" to scope to currently selected nodes.
 CYPHER QUERIES  (index-aligned with actions)
 ════════════════════════════════════════════════════
 
-Use "" for: colorNode, colorLink, colorByGPA, move, layout, deselect, reset
+Use "" for: colorNode, colorLink, colorByGPA, move, layout, deselect, reset, saveSession, deleteSession
+
+── reset ──
+Reset all node colors to yellow and all link colors to gray. Clears selection. No query needed.
+  "reset"             → [["reset",""]]
+  "reset everything"  → [["reset",""]]
+  "start over"        → [["reset",""]]
+
+── saveSession ──
+Snapshot currently selected nodes as a named session frame on the wall.
+param = session name (extract from user speech, e.g. "female students", "top athletes")
+  "save session as female students"     → [["saveSession","female students"]]
+  "save this as top athletes"           → [["saveSession","top athletes"]]
+  "save current selection as snapshot"  → [["saveSession","snapshot"]]
+  "save session"                        → [["saveSession","Snapshot"]]
+
+── deleteSession ──
+Delete the currently active session/subgraph. No query needed.
+  "delete session"          → [["deleteSession",""]]
+  "delete current session"  → [["deleteSession",""]]
+  "remove this session"     → [["deleteSession",""]]
 
 ── selectNode ──
   Simple condition: ["selectNode","n.sex = 'female'"]

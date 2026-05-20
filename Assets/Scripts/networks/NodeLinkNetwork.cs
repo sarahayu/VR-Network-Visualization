@@ -87,6 +87,12 @@ namespace VidiGraph
             TransformNetwork(layout, animated: true, onFinished: onFinished);
         }
 
+        // Synchronous layout with no coroutine and no render update — safe to call on a hidden network.
+        public void SetLayoutNoRender(string layout, Action onFinished = null)
+        {
+            TransformNetworkNoRender(layout, onFinished);
+        }
+
         public void SetSelectedNetwork(bool isSelected)
         {
             Context.SetSelectedNetwork(isSelected);

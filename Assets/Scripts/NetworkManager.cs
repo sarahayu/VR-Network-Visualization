@@ -417,6 +417,51 @@ namespace VidiGraph
             });
         }
 
+        // Snapshots currently selected nodes as a new named frame on the wall WITHOUT switching the active view.
+        public void SaveSelectedNodesAsSession(string name)
+        {
+            if (_curWorkingSubgraph == -1) return;
+            var selected = WorkingSelectedNodeGUIDs;
+            if (selected.Count == 0) return;
+            var snapNodeIDs = selected
+                .Where(g => NodeGUIDToID.ContainsKey(g))
+                .Select(g => NodeGUIDToID[g].Item2)
+                .ToList();
+            if (snapNodeIDs.Count == 0) return;
+
+            var newSubn = CreateSubnetwork(snapNodeIDs, useShell: false, sourceSubnetworkID: _curWorkingSubgraph);
+            if (newSubn == null) return;
+            var newSubnID = newSubn.SubnetworkID;
+            _queryTextMap[newSubnID] = name;
+
+            // Hide immediately so the new subnetwork never overlays the current view.
+            HideSubnetwork(newSubnID);
+
+            var frame = _framesArea.AddFrame(
+                ID: newSubnID,
+                displayName: name,
+                onClick: _ => ToggleSubnetwork(newSubnID)
+            );
+
+            // Compute the true visual center from actual node world positions.
+            Vector3 effectFrom = _allNetworks[_curWorkingSubgraph].transform.position;
+            var visiblePositions = new List<Vector3>();
+            foreach (var nid in _allNetworks[_curWorkingSubgraph].Context.Nodes.Keys)
+            {
+                try { visiblePositions.Add(GetMLNodeTransform(nid, _curWorkingSubgraph).position); }
+                catch { }
+            }
+            if (visiblePositions.Count > 0)
+                effectFrom = visiblePositions.Aggregate(Vector3.zero, (s, p) => s + p) / visiblePositions.Count;
+            StartCoroutine(PlaySaveEffect(effectFrom, frame.transform.position));
+
+            // Synchronous layout (no coroutine) works on a hidden network — safe to call right away.
+            _allNetworks[newSubnID].SetLayoutNoRender("forcedDir", () =>
+            {
+                frame.GetComponentInChildren<FrameNetwork>().Initialize(_allNetworks[newSubnID].Context, false);
+            });
+        }
+
         // also sets current working subgraph
         public void ReplaceCurWorkingSubgraph(IEnumerable<int> nodeIDs)
         {
@@ -1222,6 +1267,7 @@ namespace VidiGraph
             else
             {
                 _curWorkingSubgraph = -1;
+                _multiLayoutNetwork.gameObject.SetActive(true);
                 SetQueryMode(true);
             }
 
@@ -1813,6 +1859,50 @@ namespace VidiGraph
         {
             foreach (var comm in subnetwork.Context.Communities.Values) comm.Dirty = true;
             foreach (var node in subnetwork.Context.Nodes.Values) node.Dirty = true;
+        }
+
+        IEnumerator PlaySaveEffect(Vector3 from, Vector3 to)
+        {
+            const int DotCount = 6;
+            const float TravelTime = 0.9f;
+            const float Stagger = 0.1f;
+            const float DotSize = 0.15f;
+
+            // Use MaterialPropertyBlock so we never need to create/find a shader —
+            // just override _BaseColor on whatever default URP material the sphere gets.
+            Color cyan = new Color(0.2f, 0.85f, 1f);
+            var mpb = new MaterialPropertyBlock();
+            mpb.SetColor("_BaseColor", cyan);
+            mpb.SetColor("_Color", cyan); // covers Built-in pipeline fallback
+
+            var dots = new GameObject[DotCount];
+            for (int i = 0; i < DotCount; i++)
+            {
+                dots[i] = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                Destroy(dots[i].GetComponent<Collider>());
+                dots[i].GetComponent<Renderer>().SetPropertyBlock(mpb);
+                dots[i].transform.position = from;
+                dots[i].transform.localScale = Vector3.zero;
+            }
+
+            float totalDuration = TravelTime + Stagger * (DotCount - 1);
+
+            yield return AnimationUtils.Lerp(totalDuration, t =>
+            {
+                float elapsed = t * totalDuration;
+                for (int i = 0; i < DotCount; i++)
+                {
+                    float dotT = Mathf.Clamp01((elapsed - i * Stagger) / TravelTime);
+                    dots[i].transform.position = Vector3.Lerp(from, to, Mathf.SmoothStep(0f, 1f, dotT));
+
+                    float scale = dotT < 0.08f
+                        ? Mathf.Lerp(0f, DotSize, dotT / 0.08f)
+                        : Mathf.Lerp(DotSize, 0f, (dotT - 0.08f) / 0.92f);
+                    dots[i].transform.localScale = Vector3.one * scale;
+                }
+            });
+
+            foreach (var dot in dots) Destroy(dot);
         }
 
         Dictionary<int, HashSet<string>> GetSelNodeGUIDs()
