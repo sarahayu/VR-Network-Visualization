@@ -453,7 +453,7 @@ namespace VidiGraph
             }
             if (visiblePositions.Count > 0)
                 effectFrom = visiblePositions.Aggregate(Vector3.zero, (s, p) => s + p) / visiblePositions.Count;
-            StartCoroutine(PlaySaveEffect(effectFrom, frame.transform.position));
+            StartCoroutine(PlaySaveEffect(effectFrom, frame.transform.position, visiblePositions));
 
             // Synchronous layout (no coroutine) works on a hidden network — safe to call right away.
             _allNetworks[newSubnID].SetLayoutNoRender("forcedDir", () =>
@@ -1861,48 +1861,48 @@ namespace VidiGraph
             foreach (var node in subnetwork.Context.Nodes.Values) node.Dirty = true;
         }
 
-        IEnumerator PlaySaveEffect(Vector3 from, Vector3 to)
+        IEnumerator PlaySaveEffect(Vector3 from, Vector3 to, List<Vector3> nodePositions)
         {
-            const int DotCount = 6;
-            const float TravelTime = 0.9f;
-            const float Stagger = 0.1f;
-            const float DotSize = 0.15f;
+            const float TravelTime = 1.1f;
+            const float NodeSize  = 0.07f;
 
-            // Use MaterialPropertyBlock so we never need to create/find a shader —
-            // just override _BaseColor on whatever default URP material the sphere gets.
-            Color cyan = new Color(0.2f, 0.85f, 1f);
+            Color gray = new Color(0.6f, 0.6f, 0.6f);
             var mpb = new MaterialPropertyBlock();
-            mpb.SetColor("_BaseColor", cyan);
-            mpb.SetColor("_Color", cyan); // covers Built-in pipeline fallback
+            mpb.SetColor("_BaseColor", gray);
+            mpb.SetColor("_Color", gray);
 
-            var dots = new GameObject[DotCount];
-            for (int i = 0; i < DotCount; i++)
+            // Build offset array from centroid (cap at 50 to stay performant)
+            int count = Mathf.Min(nodePositions.Count, 50);
+            var offsets = new Vector3[count];
+            for (int i = 0; i < count; i++)
+                offsets[i] = nodePositions[i] - from;
+
+            var spheres = new GameObject[count];
+            for (int i = 0; i < count; i++)
             {
-                dots[i] = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                Destroy(dots[i].GetComponent<Collider>());
-                dots[i].GetComponent<Renderer>().SetPropertyBlock(mpb);
-                dots[i].transform.position = from;
-                dots[i].transform.localScale = Vector3.zero;
+                spheres[i] = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                Destroy(spheres[i].GetComponent<Collider>());
+                spheres[i].GetComponent<Renderer>().SetPropertyBlock(mpb);
+                spheres[i].transform.position = from + offsets[i];
+                spheres[i].transform.localScale = Vector3.one * NodeSize;
             }
 
-            float totalDuration = TravelTime + Stagger * (DotCount - 1);
-
-            yield return AnimationUtils.Lerp(totalDuration, t =>
+            yield return AnimationUtils.Lerp(TravelTime, t =>
             {
-                float elapsed = t * totalDuration;
-                for (int i = 0; i < DotCount; i++)
-                {
-                    float dotT = Mathf.Clamp01((elapsed - i * Stagger) / TravelTime);
-                    dots[i].transform.position = Vector3.Lerp(from, to, Mathf.SmoothStep(0f, 1f, dotT));
+                float smooth      = Mathf.SmoothStep(0f, 1f, t);
+                Vector3 center    = Vector3.Lerp(from, to, smooth);
+                // Formation compresses toward center and shrinks to zero as it flies
+                float compression = 1f - smooth * 0.9f;
+                float scale       = NodeSize * (1f - t);
 
-                    float scale = dotT < 0.08f
-                        ? Mathf.Lerp(0f, DotSize, dotT / 0.08f)
-                        : Mathf.Lerp(DotSize, 0f, (dotT - 0.08f) / 0.92f);
-                    dots[i].transform.localScale = Vector3.one * scale;
+                for (int i = 0; i < count; i++)
+                {
+                    spheres[i].transform.position    = center + offsets[i] * compression;
+                    spheres[i].transform.localScale  = Vector3.one * Mathf.Max(0f, scale);
                 }
             });
 
-            foreach (var dot in dots) Destroy(dot);
+            foreach (var s in spheres) Destroy(s);
         }
 
         Dictionary<int, HashSet<string>> GetSelNodeGUIDs()

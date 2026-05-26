@@ -25,6 +25,7 @@ namespace Whisper.Samples
         public NetworkManager _networkManager;
         public DatabaseStorage _databaseStorage;
         public LoadingIcon loadingIcon;
+        public VidiGraph.NetworkLoadingComet loadingComet;
         public Query _query;
         public AudioSource audioSource;
         public AudioClip startSpeakingAudio;
@@ -91,6 +92,7 @@ namespace Whisper.Samples
 
             CommandPress.EnableDirectActionIfModeUsed();
 
+            loadingComet ??= FindObjectOfType<VidiGraph.NetworkLoadingComet>();
         }
 
         void Update()
@@ -129,6 +131,9 @@ namespace Whisper.Samples
             {
                 RunDemoStep();
             }
+
+            if (Input.GetKeyDown(KeyCode.T)) loadingComet?.Show();
+            if (Input.GetKeyUp(KeyCode.T))   loadingComet?.Hide();
 
             if (Input.GetKeyDown(KeyCode.S))
             {
@@ -212,6 +217,7 @@ namespace Whisper.Samples
         private IEnumerator ClassifyUserCommand(string recognizedText, float whisperTime)
         {
             loadingIcon.SetLoading(true);
+            loadingComet?.Show();
             // Debug.Log("Recognized text input: " + recognizedText);
             // Debug.Log($"Whisper took {whisperTime:F3} seconds to recognize.");
             ClassificationRequest requestBody = new ClassificationRequest { userText = recognizedText };
@@ -233,6 +239,7 @@ namespace Whisper.Samples
                 {
                     Debug.LogError("Classification Error: " + www.error);
                     loadingIcon.SetLoading(false);
+                    loadingComet?.Hide();
                     audioSource.PlayOneShot(errorAudio);
                 }
                 else
@@ -720,6 +727,7 @@ namespace Whisper.Samples
 
                         Debug.Log($"<color=cyan>[TotalPipeline]</color> {(Time.time - _pipelineStartTime) * 1000:F0}ms end-to-end (whisper:{whisperTime:F2}s + server + execution)");
                         loadingIcon.SetLoading(false);
+                        loadingComet?.Hide();
                     }
                 }
             }
