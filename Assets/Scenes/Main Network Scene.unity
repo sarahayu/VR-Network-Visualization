@@ -23345,7 +23345,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1487347027927842491, guid: 27ef47157beaf8c4c8a932d40554fc20, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: 0.074
       objectReference: {fileID: 0}
     - target: {fileID: 1487347027927842491, guid: 27ef47157beaf8c4c8a932d40554fc20, type: 3}
       propertyPath: m_LocalRotation.w
@@ -142396,10 +142396,10 @@ MonoBehaviour:
   Radius: 2.5
   OrbitHeight: 1.2
   OrbitDegreesPerSecond: 120
-  PlanetColor: {r: 0.4, g: 0.92, b: 1, a: 1}
-  PlanetSize: 0.12
-  ShowOrbitRing: 1
-  RingBrightness: 0.25
+  TrailColor: {r: 0.4, g: 0.92, b: 1, a: 1}
+  HeadWidth: 0.18
+  TrailDuration: 1.5
+  TrailMaterial: {fileID: 2100000, guid: 359cac51ca208234ab4fc8966b4ca92b, type: 2}
 --- !u!4 &2069371342
 Transform:
   m_ObjectHideFlags: 0

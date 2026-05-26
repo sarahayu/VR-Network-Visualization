@@ -146,6 +146,7 @@ namespace VidiGraph
         public event SubnetworkDestroyEvent OnSubnetworkDestroy;
 
         public bool OnQueryMode { get; private set; } = false;
+        public bool IsLayoutAnimating { get; private set; }
         public bool HasWorkingSession => _curWorkingSubgraph != -1;
         public int WorkingSubgraphID => _curWorkingSubgraph;
 
@@ -899,7 +900,8 @@ namespace VidiGraph
 
         public void SetMLLayout(IEnumerable<int> commIDs, string layout, int subnetworkID = MainNetworkID)
         {
-            _allNetworks[subnetworkID].SetLayout(commIDs, layout, UpdateHandheld);
+            IsLayoutAnimating = true;
+            _allNetworks[subnetworkID].SetLayout(commIDs, layout, () => { UpdateHandheld(); IsLayoutAnimating = false; });
         }
 
         // layout for MultiLayoutNetwork = [spherical, cluster, floor]
@@ -916,12 +918,14 @@ namespace VidiGraph
 
         public void SetMLLayout(int commID, string layout, int subnetworkID = MainNetworkID)
         {
-            _allNetworks[subnetworkID].SetLayout(new int[] { commID }, layout, UpdateHandheld);
+            IsLayoutAnimating = true;
+            _allNetworks[subnetworkID].SetLayout(new int[] { commID }, layout, () => { UpdateHandheld(); IsLayoutAnimating = false; });
         }
 
         public void SetMLLayout(string layout, int subnetworkID = MainNetworkID)
         {
-            _allNetworks[subnetworkID].SetLayout(new int[] { }, layout, UpdateHandheld);
+            IsLayoutAnimating = true;
+            _allNetworks[subnetworkID].SetLayout(new int[] { }, layout, () => { UpdateHandheld(); IsLayoutAnimating = false; });
         }
 
         public void BringMLNodes(IEnumerable<string> nodeGUIDs)

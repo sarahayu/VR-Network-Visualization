@@ -45,6 +45,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   FlattenedPosition: {fileID: 1962737978501259614}
+  WallOffset: 0
 --- !u!1 &1653493319830657479
 GameObject:
   m_ObjectHideFlags: 0
@@ -398,6 +399,9 @@ MonoBehaviour:
   DrawVirtualNodes: 0
   DrawTreeStructure: 0
   SplineComputeShader: {fileID: 7200000, guid: 1a3b401b2a2ca204a82ad879966f7845, type: 3}
+  sphereSubdivisions: 2
+  nodeMetallic: 0
+  nodeSmoothness: 0.4
 --- !u!1 &7432559501746711911
 GameObject:
   m_ObjectHideFlags: 0
@@ -512,7 +516,7 @@ Transform:
   m_GameObject: {fileID: 8340558493629312128}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -0.035}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -532,19 +536,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 03a6a2ef2ff9d1842be2f38a37adbf8b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BaseSettings:
-    NodeScale: 0.1
-    LinkWidth: 0.0025
-    EdgeBundlingStrength: 0.8
-    NodeDefaultColor: {r: 0.5647059, g: 0.5647059, b: 0.5647059, a: 1}
-    NodeSelectColor: {r: 1, g: 0.56078434, b: 0, a: 0.5372549}
-    CommSelectColor: {r: 0.42352942, g: 0.42352942, b: 0.42352942, a: 0.08627451}
-    LinkDefaultColor: {r: 0.5660378, g: 0.5660378, b: 0.5660378, a: 1}
-    LinkSelectColor: {r: 1, g: 0.56078434, b: 0, a: 0.5372549}
-    NodeHoverColor: {r: 0, g: 0.49803922, b: 1, a: 1}
-    CommHoverColor: {r: 0.42352942, g: 0.42352942, b: 0.42352942, a: 0.050980393}
-    LinkHoverColor: {r: 0, g: 0.49803922, b: 1, a: 0.28235295}
-    LinkMinimumAlpha: 0
-    LinkNormalAlphaFactor: 0.05
-    LinkContextAlphaFactor: 0.5
-    LinkContext2FocusAlphaFactor: 0.05

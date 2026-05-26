@@ -16,6 +16,7 @@ namespace VidiGraph
     {
         public Transform FlattenedPosition;
 
+
         NetworkGlobal _networkGlobal;
         MultiLayoutContext _networkContext;
         TransformInfo _FlattenedTransform;
@@ -31,13 +32,25 @@ namespace VidiGraph
 
         public override void ApplyTransformation()
         {
+            // Center X only — fixes left/right drift when the subnetwork's ForcedDir pivot
+            // is not at world X=0, without disturbing the intended Y placement.
+            var nonVirtual = _networkContext.Nodes
+                .Where(kv => !_networkGlobal.Nodes[kv.Key].IsVirtualNode)
+                .Select(kv => kv.Value.Position)
+                .ToList();
+            var centroidX = nonVirtual.Count > 0
+                ? nonVirtual.Sum(p => p.x) / nonVirtual.Count
+                : 0f;
+
             foreach (var (nodeID, node) in _networkContext.Nodes)
             {
                 if (_networkGlobal.Nodes[nodeID].IsVirtualNode) continue;
 
                 var nodeContext = _networkContext.Nodes[nodeID];
 
-                nodeContext.Position = _FlattenedTransform.TransformPoint(node.Position);
+                // Zero Z so nodes lie flat on the frame wall (ForceDir leaves residual Z from sphere init)
+                var flatPos = new Vector3(node.Position.x - centroidX, node.Position.y, 0f);
+                nodeContext.Position = _FlattenedTransform.TransformPoint(flatPos);
                 nodeContext.Dirty = true;
 
                 _networkContext.Communities[nodeContext.CommunityID].Dirty = true;
@@ -61,12 +74,21 @@ namespace VidiGraph
         {
             _networkContext = networkContext;
 
+            var nonVirtual = networkContext.Nodes
+                .Where(kv => !networkGlobal.Nodes[kv.Key].IsVirtualNode)
+                .Select(kv => kv.Value.Position)
+                .ToList();
+            var centroidX = nonVirtual.Count > 0
+                ? nonVirtual.Sum(p => p.x) / nonVirtual.Count
+                : 0f;
+
             foreach (var (nodeID, node) in _networkContext.Nodes)
             {
                 if (networkGlobal.Nodes[nodeID].IsVirtualNode) continue;
 
                 _startPositions[nodeID] = _networkContext.Nodes[nodeID].Position;
-                _endPositions[nodeID] = endingContextTransform.TransformPoint(node.Position);
+                var flatPos = new Vector3(node.Position.x - centroidX, node.Position.y, 0f);
+                _endPositions[nodeID] = endingContextTransform.TransformPoint(flatPos);
             }
         }
 

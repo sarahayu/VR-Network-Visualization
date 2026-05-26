@@ -24,7 +24,6 @@ namespace VidiGraph
             UpdateContext(sourceContext);
             SetLinksBundlingStrength(_context.Links.Keys, 0f, updateStorage: true, updateRenderElements: false);
             TransformNetworkNoRender("flattened");
-
             InitRenderer();
         }
 

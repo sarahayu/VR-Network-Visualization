@@ -727,12 +727,19 @@ namespace Whisper.Samples
 
                         Debug.Log($"<color=cyan>[TotalPipeline]</color> {(Time.time - _pipelineStartTime) * 1000:F0}ms end-to-end (whisper:{whisperTime:F2}s + server + execution)");
                         loadingIcon.SetLoading(false);
-                        loadingComet?.Hide();
+                        StartCoroutine(HideCometWhenReady());
                     }
                 }
             }
         }
 
+
+        private IEnumerator HideCometWhenReady()
+        {
+            while (_networkManager.IsLayoutAnimating)
+                yield return null;
+            loadingComet?.Hide();
+        }
 
         private void RunDemoStep()
         {
