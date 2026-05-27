@@ -213,6 +213,13 @@ namespace Whisper.Samples
                         Debug.Log("Action: " + action);
                         Debug.Log("Cypher Query: " + query);
 
+                        if (string.IsNullOrWhiteSpace(recognizedText) || action == null || action.Length == 0 || action[0].Length == 0)
+                        {
+                            Debug.LogWarning("No voice command action was generated. Check microphone input, Whisper transcription, and VAD settings.");
+                            loadingIcon.SetLoading(false);
+                            yield break;
+                        }
+
                         var new_command = Instantiate(command_prefab, command_parent.transform);
                         var command_text = new_command.GetComponent<TMP_Text>();
                         command_text.text = recognizedText;
@@ -332,6 +339,5 @@ public class Timing
     public float execute_agent;
     public float return_code;
 }
-
 
 
