@@ -45,7 +45,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   FlattenedPosition: {fileID: 1962737978501259614}
-  WallOffset: 0
+  WallDepth: -0.15
 --- !u!1 &1653493319830657479
 GameObject:
   m_ObjectHideFlags: 0

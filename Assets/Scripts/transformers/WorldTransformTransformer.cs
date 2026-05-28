@@ -15,6 +15,7 @@ namespace VidiGraph
     public class WorldTransformTransformer : NetworkContextTransformer
     {
         public Transform FlattenedPosition;
+        public float WallDepth = 0f;
 
 
         NetworkGlobal _networkGlobal;
@@ -50,7 +51,8 @@ namespace VidiGraph
 
                 // Zero Z so nodes lie flat on the frame wall (ForceDir leaves residual Z from sphere init)
                 var flatPos = new Vector3(node.Position.x - centroidX, node.Position.y, 0f);
-                nodeContext.Position = _FlattenedTransform.TransformPoint(flatPos);
+                var inward = _FlattenedTransform.rotation * Vector3.back;
+                nodeContext.Position = _FlattenedTransform.TransformPoint(flatPos) + inward * WallDepth;
                 nodeContext.Dirty = true;
 
                 _networkContext.Communities[nodeContext.CommunityID].Dirty = true;
@@ -59,7 +61,7 @@ namespace VidiGraph
 
         public override TransformInterpolator GetInterpolator()
         {
-            return new WorldTransformInterpolator(_FlattenedTransform, _networkGlobal, _networkContext);
+            return new WorldTransformInterpolator(_FlattenedTransform, _networkGlobal, _networkContext, WallDepth);
         }
     }
 
@@ -70,7 +72,7 @@ namespace VidiGraph
         Dictionary<int, Vector3> _endPositions = new Dictionary<int, Vector3>();
 
         public WorldTransformInterpolator(TransformInfo endingContextTransform, NetworkGlobal networkGlobal,
-            MultiLayoutContext networkContext)
+            MultiLayoutContext networkContext, float wallDepth = 0f)
         {
             _networkContext = networkContext;
 
@@ -88,7 +90,8 @@ namespace VidiGraph
 
                 _startPositions[nodeID] = _networkContext.Nodes[nodeID].Position;
                 var flatPos = new Vector3(node.Position.x - centroidX, node.Position.y, 0f);
-                _endPositions[nodeID] = endingContextTransform.TransformPoint(flatPos);
+                var inward = endingContextTransform.rotation * Vector3.back;
+                _endPositions[nodeID] = endingContextTransform.TransformPoint(flatPos) + inward * wallDepth;
             }
         }
 
