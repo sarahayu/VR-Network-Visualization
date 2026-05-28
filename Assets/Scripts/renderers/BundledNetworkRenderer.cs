@@ -235,7 +235,7 @@ namespace VidiGraph
                 }
                 cpDistributed[length - 1] = target;
 
-                _controlPointsMap[link.ID] = new List<Vector3>(cp);
+                _controlPointsMap[link.ID] = new List<Vector3>(cpDistributed);
             }
         }
 

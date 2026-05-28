@@ -68443,7 +68443,7 @@ MonoBehaviour:
     NodeDefaultColor: {r: 1, g: 1, b: 1, a: 1}
     NodeSelectColor: {r: 1, g: 0.89954364, b: 0, a: 1}
     CommSelectColor: {r: 0.42352942, g: 0.42352942, b: 0.42352942, a: 0.08627451}
-    LinkDefaultColor: {r: 1, g: 1, b: 1, a: 1}
+    LinkDefaultColor: {r: 0.6745098, g: 0.6745098, b: 0.6745098, a: 0.48235294}
     LinkSelectColor: {r: 1, g: 0.8980392, b: 0, a: 1}
     NodeHoverColor: {r: 0, g: 0.12941177, b: 1, a: 1}
     CommHoverColor: {r: 0.42352942, g: 0.42352942, b: 0.42352942, a: 0.050980393}

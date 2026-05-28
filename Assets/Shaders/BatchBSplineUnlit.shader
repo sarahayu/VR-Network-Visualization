@@ -17,7 +17,7 @@ Shader "Custom/Batch BSpline Unlit"
             #pragma target 5.0
             #pragma vertex vert
             #pragma fragment frag
-            
+
             #define SHADER_CODE
             #include "UnityCG.cginc"
             #include "BSplineData.cginc"
@@ -33,11 +33,11 @@ Shader "Custom/Batch BSpline Unlit"
 
             v2f vert (uint vid : SV_VertexID)
             {
-                // Find current sample point index 
+                // Find current sample point index
                 uint SplineSampleIdx = vid/6; // Every samplepoint translates to 6 vertices = 2 triangles
 
                 v2f o;
-                // Skip early if this is the end of a line 
+                // Skip early if this is the end of a line
                 if (OutSamplePointData[SplineSampleIdx].SplineIdx != OutSamplePointData[SplineSampleIdx + 1].SplineIdx) {
                     // Set some invalid values
                     // It does not matter as the fragment is going to be discarded anyway in the fragment stage
@@ -57,12 +57,12 @@ Shader "Custom/Batch BSpline Unlit"
                     idxOffset = 1;
                 }
                 SplineSampleIdx += idxOffset;
-                
+
                 // Calculate the normal and from that the offset for the current line segment
                 float3 curr = OutSamplePointData[SplineSampleIdx].Position;
                 float3 next = OutSamplePointData[SplineSampleIdx + 1].Position;
                 float3 prev;
-                
+
                 if (SplineSampleIdx != 0)
                 {
                     prev = OutSamplePointData[SplineSampleIdx - 1].Position;
@@ -85,10 +85,10 @@ Shader "Custom/Batch BSpline Unlit"
                     } else {
                     curr += offset;
                 }
-                
+
                 // Depending on the position get the correct sample point, apply the offset and get the color
                 // Here we render the segment from the current point to the next one using 2 tris
-                
+
 
                 o.vertex = mul(UNITY_MATRIX_P, float4(curr, 1));
                 o.color = OutSamplePointData[SplineSampleIdx].ColorRGBA;
