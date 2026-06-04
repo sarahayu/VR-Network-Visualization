@@ -12,13 +12,13 @@ namespace VidiGraph
     public class NetworkLoadingComet : MonoBehaviour
     {
         [Header("Orbit")]
-        public float Radius = 2.5f;
+        public float Radius = 1.0f;
         public float OrbitHeight = 1.2f;
         [Range(20f, 360f)] public float OrbitDegreesPerSecond = 100f;
 
         [Header("Trail")]
         public Color TrailColor = new Color(0.4f, 0.92f, 1f);
-        [Range(0.02f, 0.4f)] public float HeadWidth = 0.18f;
+        [Range(0.02f, 0.4f)] public float HeadWidth = 0.08f;
         [Range(0.3f, 4f)] public float TrailDuration = 1.5f;
 
         [Header("Material")]

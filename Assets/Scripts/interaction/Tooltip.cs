@@ -39,8 +39,11 @@ public class Tooltip : MonoBehaviour
         if (_lastHoveredNode != curHoveredNode)
         {
             _lastHoveredNode = curHoveredNode;
-
             UpdateTooltip(curHoveredNode);
+        }
+        else if (curHoveredNode != -1)
+        {
+            UpdatePosition();
         }
     }
 
@@ -67,13 +70,18 @@ public class Tooltip : MonoBehaviour
         _infoCol1.SetText(halves.Length >= 1 ? halves[0] : "");
         _infoCol2.SetText(halves.Length >= 2 ? halves[1] : "");
 
+        UpdatePosition();
+
+        Show();
+    }
+
+    void UpdatePosition()
+    {
         transform.position = _networkManager.GetMLNodeTransform(_networkManager.HoveredNode).position;
         transform.rotation = Quaternion.LookRotation(transform.position - _camera.position);
 
         var dist = (transform.position - _camera.position).magnitude;
         transform.localScale = Vector3.one * Mathf.Max(0.001f, dist * _scale);
-
-        Show();
     }
 
     string[] GetPropsStr(Node node, int split)

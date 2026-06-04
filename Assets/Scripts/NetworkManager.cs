@@ -1867,7 +1867,7 @@ namespace VidiGraph
 
         IEnumerator PlaySaveEffect(Vector3 from, Vector3 to, List<Vector3> nodePositions)
         {
-            const float TravelTime = 1.1f;
+            const float TravelTime = 2.0f;
             const float NodeSize  = 0.07f;
 
             Color gray = new Color(0.6f, 0.6f, 0.6f);
@@ -1893,11 +1893,13 @@ namespace VidiGraph
 
             yield return AnimationUtils.Lerp(TravelTime, t =>
             {
-                float smooth      = Mathf.SmoothStep(0f, 1f, t);
+                // Double-smoothstep: applying SmoothStep twice flattens the start much more
+                // while still easing out at the end without spiking peak speed
+                float smooth      = Mathf.SmoothStep(0f, 1f, Mathf.SmoothStep(0f, 1f, t));
                 Vector3 center    = Vector3.Lerp(from, to, smooth);
                 // Formation compresses toward center and shrinks to zero as it flies
                 float compression = 1f - smooth * 0.9f;
-                float scale       = NodeSize * (1f - t);
+                float scale       = NodeSize * (1f - smooth);
 
                 for (int i = 0; i < count; i++)
                 {
