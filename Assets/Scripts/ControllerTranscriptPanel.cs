@@ -1,15 +1,30 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class ControllerTranscriptPanel : MonoBehaviour
 {
+    private enum ReferenceMode
+    {
+        Controller,
+        MainCamera,
+        Custom
+    }
+
     [Header("References")]
     [SerializeField] private Transform controller;
     [SerializeField] private Transform cameraTransform;
+    [SerializeField] private Transform customPositionReference;
+    [SerializeField] private Transform customRotationReference;
+
+    [Header("Reference Modes")]
+    [SerializeField] private ReferenceMode positionReferenceMode = ReferenceMode.MainCamera;
+    [SerializeField] private ReferenceMode rotationReferenceMode = ReferenceMode.MainCamera;
 
     [Header("Position")]
-    [SerializeField] private Vector3 localOffset = new Vector3(0f, 0.08f, 0.18f);
-    [SerializeField] private float adjustSpeed = 0.25f;
+    [SerializeField] private Vector3 localOffset = new Vector3(0f, 0.08f, 0.0f);
+
+    [Header("Lag")]
+    [SerializeField] private float movementLagSeconds = 0.05f;
+    [SerializeField] private float maxLagDistance = 0.04f;
 
     [Header("Rotation")]
     [SerializeField] private Vector3 rotationOffsetEuler = new Vector3(0f, 180f, 0f);
@@ -18,83 +33,59 @@ public class ControllerTranscriptPanel : MonoBehaviour
     [SerializeField] private float positionSmooth = 20f;
     [SerializeField] private float rotationSmooth = 20f;
 
-    private InputAction leftTrigger;
-    private InputAction rightTrigger;
-    private InputAction leftGrip;
-    private InputAction rightGrip;
-
-    private void OnEnable()
-    {
-        leftTrigger = new InputAction("Left Trigger", binding: "<XRController>{LeftHand}/trigger");
-        rightTrigger = new InputAction("Right Trigger", binding: "<XRController>{RightHand}/trigger");
-        leftGrip = new InputAction("Left Grip", binding: "<XRController>{LeftHand}/grip");
-        rightGrip = new InputAction("Right Grip", binding: "<XRController>{RightHand}/grip");
-
-        leftTrigger.Enable();
-        rightTrigger.Enable();
-        leftGrip.Enable();
-        rightGrip.Enable();
-    }
-
-    private void OnDisable()
-    {
-        leftTrigger?.Disable();
-        rightTrigger?.Disable();
-        leftGrip?.Disable();
-        rightGrip?.Disable();
-
-        leftTrigger?.Dispose();
-        rightTrigger?.Dispose();
-        leftGrip?.Dispose();
-        rightGrip?.Dispose();
-    }
-
-    private void Update()
-    {
-        float zDelta = leftTrigger.ReadValue<float>() - rightTrigger.ReadValue<float>();
-        float xDelta = leftGrip.ReadValue<float>() - rightGrip.ReadValue<float>();
-
-        localOffset.z += zDelta * adjustSpeed * Time.deltaTime;
-        localOffset.x += xDelta * adjustSpeed * Time.deltaTime;
-    }
+    private Vector3 previousReferencePosition;
+    private bool hasPreviousReferencePosition;
 
     private void LateUpdate()
     {
-        if (controller == null)
+        Transform positionReference = GetReference(positionReferenceMode, customPositionReference);
+        Transform rotationReference = GetReference(rotationReferenceMode, customRotationReference);
+
+        if (positionReference == null)
             return;
 
-        Vector3 targetPosition = controller.position + controller.TransformDirection(localOffset);
+        Vector3 targetPosition = positionReference.position + positionReference.TransformDirection(localOffset);
+        Vector3 referenceVelocity = Vector3.zero;
 
-        Vector3 flatForward;
-
-        if (cameraTransform != null)
+        if (hasPreviousReferencePosition && Time.deltaTime > 0f)
         {
-            flatForward = targetPosition - cameraTransform.position;
-        }
-        else
-        {
-            flatForward = controller.forward;
+            referenceVelocity = (positionReference.position - previousReferencePosition) / Time.deltaTime;
         }
 
-        flatForward.y = 0f;
+        Vector3 lagOffset = Vector3.ClampMagnitude(
+            -referenceVelocity * movementLagSeconds,
+            maxLagDistance
+        );
 
-        if (flatForward.sqrMagnitude < 0.0001f)
-            flatForward = controller.forward;
+        targetPosition += lagOffset;
+        previousReferencePosition = positionReference.position;
+        hasPreviousReferencePosition = true;
 
-        flatForward.y = 0f;
-
-        if (flatForward.sqrMagnitude < 0.0001f)
-            flatForward = transform.forward;
-
-        flatForward.Normalize();
-
-        Quaternion uprightRotation = Quaternion.LookRotation(flatForward, Vector3.up);
-        Quaternion targetRotation = uprightRotation * Quaternion.Euler(rotationOffsetEuler);
+        Quaternion baseRotation = rotationReference != null ? rotationReference.rotation : positionReference.rotation;
+        Quaternion targetRotation = baseRotation * Quaternion.Euler(rotationOffsetEuler);
 
         float posT = 1f - Mathf.Exp(-positionSmooth * Time.deltaTime);
         float rotT = 1f - Mathf.Exp(-rotationSmooth * Time.deltaTime);
 
         transform.position = Vector3.Lerp(transform.position, targetPosition, posT);
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotT);
+    }
+
+    private Transform GetReference(ReferenceMode mode, Transform customReference)
+    {
+        switch (mode)
+        {
+            case ReferenceMode.Controller:
+                return controller;
+            case ReferenceMode.MainCamera:
+                if (cameraTransform != null)
+                    return cameraTransform;
+
+                return Camera.main != null ? Camera.main.transform : null;
+            case ReferenceMode.Custom:
+                return customReference;
+            default:
+                return null;
+        }
     }
 }
