@@ -124,7 +124,7 @@ Material:
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
-    - _FresnelPower: 0.3
+    - _FresnelPower: 1
     - _FresnelProperty: 0
     - _GlossMapScale: 1
     - _Glossiness: 0.5
@@ -146,7 +146,7 @@ Material:
     m_Colors:
     - _Color: {r: 1, g: 0.9669811, b: 0.9669811, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _FresnelColor: {r: 0, g: 1.5696479, b: 1.1151761, a: 0}
+    - _FresnelColor: {r: 766.9961, g: 766.9961, b: 766.9961, a: 0}
     - _LineSpeed: {r: 0, g: 4, b: 0, a: 0}
     - _LineTile: {r: 1, g: 20, b: 0, a: 0}
   m_BuildTextureStacks: []

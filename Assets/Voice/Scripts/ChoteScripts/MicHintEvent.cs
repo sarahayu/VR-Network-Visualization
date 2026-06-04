@@ -4,28 +4,29 @@ using UnityEngine.XR;
 
 public class MicHintEvent : MonoBehaviour
 {
+    private struct RendererFadeState
+    {
+        public Renderer Renderer;
+        public string ColorProperty;
+        public Color OriginalColor;
+    }
+
     private InputAction micPress;
+    private RendererFadeState[] fadeRenderers;
+    private float currentAlpha;
+    private float targetAlpha;
+    private Vector3 originalRootScale;
 
-    [Header("Overlay References")]
+    [Header("Overlay Reference")]
     [SerializeField]
-    private CanvasGroup overlayCanvasGroup;
-
-    [SerializeField]
-    private RectTransform edgeGlowImage;
+    private GameObject overlayRoot;
 
     [Header("Animation")]
     [SerializeField]
     private float fadeSpeed = 8f;
 
     [SerializeField]
-    private float rotationSpeed = 20f;
-
-    [SerializeField]
-    private float pulseSpeed = 3f;
-
-    [SerializeField]
-    private float pulseAmount = 0.03f;
-
+    private float minFadeScale = 0.88f;
 
     [Header("Test Mode")]
     [SerializeField]
@@ -33,8 +34,6 @@ public class MicHintEvent : MonoBehaviour
 
     [SerializeField]
     private KeyCode testKey = KeyCode.Space;
-
-    private bool showOverlay;
 
     [SerializeField]
     private AudioSource endingSound;
@@ -52,15 +51,9 @@ public class MicHintEvent : MonoBehaviour
 
     void Start()
     {
-        if (overlayCanvasGroup == null)
+        if (overlayRoot == null)
         {
-            Debug.LogError("overlayCanvasGroup is not assigned.");
-            return;
-        }
-
-        if (edgeGlowImage == null)
-        {
-            Debug.LogError("edgeGlowImage is not assigned.");
+            Debug.LogError("overlayRoot is not assigned.");
             return;
         }
 
@@ -70,11 +63,10 @@ public class MicHintEvent : MonoBehaviour
             endingSound.Stop();
         }
 
-        overlayCanvasGroup.alpha = 0f;
-        overlayCanvasGroup.interactable = false;
-        overlayCanvasGroup.blocksRaycasts = false;
-
-        edgeGlowImage.localScale = Vector3.one;
+        originalRootScale = overlayRoot.transform.localScale;
+        CacheFadeRenderers();
+        SetOverlayFade(0f);
+        overlayRoot.SetActive(false);
     }
 
     void OnDisable()
@@ -105,7 +97,7 @@ public class MicHintEvent : MonoBehaviour
         if (vrPressedThisFrame || keyboardPressedThisFrame)
         {
             Debug.Log("SHOW OVERLAY");
-            showOverlay = true;
+            ShowOverlay();
             VibrateLeftController(0.4f, 0.16f); //  Vibration feedback when the mic is pressed
 
         }
@@ -113,7 +105,7 @@ public class MicHintEvent : MonoBehaviour
         if (vrReleasedThisFrame || keyboardReleasedThisFrame)
         {
             Debug.Log("HIDE OVERLAY");
-            showOverlay = false;
+            HideOverlay();
             if (endingSound != null)
             {
                 endingSound.Play();
@@ -127,30 +119,90 @@ public class MicHintEvent : MonoBehaviour
         AnimateOverlay();
     }
 
+    private void ShowOverlay()
+    {
+        overlayRoot.SetActive(true);
+        targetAlpha = 1f;
+    }
+
+    private void HideOverlay()
+    {
+        targetAlpha = 0f;
+    }
+
     private void AnimateOverlay()
     {
-        float targetAlpha = showOverlay ? 1f : 0f;
+        if (Mathf.Approximately(currentAlpha, targetAlpha))
+        {
+            return;
+        }
 
-        overlayCanvasGroup.alpha = Mathf.Lerp(
-            overlayCanvasGroup.alpha,
+        currentAlpha = Mathf.MoveTowards(
+            currentAlpha,
             targetAlpha,
             Time.deltaTime * fadeSpeed
         );
 
-        if (showOverlay)
-        {
-            edgeGlowImage.Rotate(0f, 0f, rotationSpeed * Time.deltaTime);
+        SetOverlayFade(currentAlpha);
 
-            float pulse = 1f + Mathf.Sin(Time.time * pulseSpeed) * pulseAmount;
-            edgeGlowImage.localScale = new Vector3(pulse, pulse, 1f);
-        }
-        else
+        if (Mathf.Approximately(currentAlpha, 0f) && Mathf.Approximately(targetAlpha, 0f))
         {
-            edgeGlowImage.localScale = Vector3.Lerp(
-                edgeGlowImage.localScale,
-                Vector3.one,
-                Time.deltaTime * fadeSpeed
-            );
+            overlayRoot.SetActive(false);
+        }
+    }
+
+    private void CacheFadeRenderers()
+    {
+        Renderer[] renderers = overlayRoot.GetComponentsInChildren<Renderer>(true);
+        fadeRenderers = new RendererFadeState[renderers.Length];
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Material material = renderers[i].sharedMaterial;
+            string colorProperty = material != null && material.HasProperty("_BaseColor")
+                ? "_BaseColor"
+                : "_Color";
+
+            Color originalColor = Color.white;
+            if (material != null && material.HasProperty(colorProperty))
+            {
+                originalColor = material.GetColor(colorProperty);
+            }
+
+            fadeRenderers[i] = new RendererFadeState
+            {
+                Renderer = renderers[i],
+                ColorProperty = colorProperty,
+                OriginalColor = originalColor
+            };
+        }
+    }
+
+    private void SetOverlayFade(float alpha)
+    {
+        currentAlpha = alpha;
+        float scale = Mathf.Lerp(minFadeScale, 1f, alpha);
+        overlayRoot.transform.localScale = originalRootScale * scale;
+
+        if (fadeRenderers == null)
+        {
+            return;
+        }
+
+        foreach (RendererFadeState fadeRenderer in fadeRenderers)
+        {
+            if (fadeRenderer.Renderer == null)
+            {
+                continue;
+            }
+
+            MaterialPropertyBlock props = new MaterialPropertyBlock();
+            Color color = fadeRenderer.OriginalColor;
+            color.a *= alpha;
+
+            fadeRenderer.Renderer.GetPropertyBlock(props);
+            props.SetColor(fadeRenderer.ColorProperty, color);
+            fadeRenderer.Renderer.SetPropertyBlock(props);
         }
     }
 
