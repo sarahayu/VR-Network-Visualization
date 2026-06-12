@@ -12,6 +12,8 @@ public class PathHinting : MonoBehaviour
     public bool connectEnd;
     [Range(0, 12)]
     public int cornerVertices;
+    [Min(0.01f)]
+    public float textureRepeatDistance = 1f;
 
     void Start()
     {
@@ -33,12 +35,17 @@ public class PathHinting : MonoBehaviour
 
         Vector3[] vertices = new Vector3[centerline.Count * 4];
         Vector2[] uvs = new Vector2[centerline.Count * 4];
+        Color[] colors = new Color[centerline.Count * 4];
         int segmentCount = connectEnd ? centerline.Count : centerline.Count - 1;
         int capTriangleCount = connectEnd ? 0 : 12;
         int[] triangles = new int[segmentCount * 24 + capTriangleCount];
+        float distanceAlongPath = 0f;
 
         for (int i = 0; i < centerline.Count; i++)
         {
+            if (i > 0)
+                distanceAlongPath += Vector3.Distance(centerline[i - 1], centerline[i]);
+
             Vector3 current = centerline[i];
             Vector3 forward = GetForward(centerline, i);
             Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
@@ -52,14 +59,21 @@ public class PathHinting : MonoBehaviour
             vertices[i * 4 + 2] = transform.InverseTransformPoint(left + depth);
             vertices[i * 4 + 3] = transform.InverseTransformPoint(rightEdge + depth);
 
-            uvs[i * 4] = new Vector2(0, i);
-            uvs[i * 4 + 1] = new Vector2(1, i);
-            uvs[i * 4 + 2] = new Vector2(0, i);
-            uvs[i * 4 + 3] = new Vector2(1, i);
+            float uvY = distanceAlongPath / textureRepeatDistance;
+            uvs[i * 4] = new Vector2(0, uvY);
+            uvs[i * 4 + 1] = new Vector2(1, uvY);
+            uvs[i * 4 + 2] = new Vector2(0, uvY);
+            uvs[i * 4 + 3] = new Vector2(1, uvY);
+
+            colors[i * 4] = Color.white;
+            colors[i * 4 + 1] = Color.white;
+            colors[i * 4 + 2] = Color.white;
+            colors[i * 4 + 3] = Color.white;
         }
 
         mesh.vertices = vertices;
         mesh.uv = uvs;
+        mesh.colors = colors;
         int t = 0;
 
         for (int i = 0; i < segmentCount; i++)
