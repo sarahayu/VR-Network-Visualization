@@ -352,6 +352,12 @@ MonoBehaviour:
   DrawVirtualNodes: 0
   DrawTreeStructure: 0
   SplineComputeShader: {fileID: 7200000, guid: 1a3b401b2a2ca204a82ad879966f7845, type: 3}
+  sphereSubdivisions: 2
+  nodeMetallic: 0
+  nodeSmoothness: 0.4
+  linkEndpointSize: 0.04
+  linkEndpointColor: {r: 0.55, g: 0.55, b: 0.55, a: 1}
+  linkEndpointMaterial: {fileID: 2100000, guid: 1dd6a5264559bc8438552fed169f901a, type: 2}
 --- !u!1 &7432559501746711911
 GameObject:
   m_ObjectHideFlags: 0

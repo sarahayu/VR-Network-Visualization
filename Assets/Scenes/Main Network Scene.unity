@@ -21357,6 +21357,14 @@ PrefabInstance:
       propertyPath: m_ConstrainProportionsScale
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6494961171260255395, guid: 67d61008e9eec7543a32ff2ea7cd1369, type: 3}
+      propertyPath: linkEndpointSize
+      value: 0.005
+      objectReference: {fileID: 0}
+    - target: {fileID: 6494961171260255395, guid: 67d61008e9eec7543a32ff2ea7cd1369, type: 3}
+      propertyPath: linkEndpointMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 1dd6a5264559bc8438552fed169f901a, type: 2}
     - target: {fileID: 6990367642497548774, guid: 67d61008e9eec7543a32ff2ea7cd1369, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.5
@@ -47714,6 +47722,9 @@ MonoBehaviour:
   sphereSubdivisions: 2
   nodeMetallic: 0
   nodeSmoothness: 0.82
+  linkEndpointSize: 0.02
+  linkEndpointColor: {r: 1, g: 1, b: 1, a: 1}
+  linkEndpointMaterial: {fileID: 0}
 --- !u!1 &758052430
 GameObject:
   m_ObjectHideFlags: 0
@@ -141840,7 +141851,7 @@ MonoBehaviour:
   Radius: 1
   OrbitHeight: 1.5
   OrbitDegreesPerSecond: 120
-  TrailColor: {r: 0.4, g: 0.92, b: 1, a: 1}
+  TrailColor: {r: 1, g: 1, b: 1, a: 1}
   HeadWidth: 0.18
   TrailDuration: 1.5
   TrailMaterial: {fileID: 2100000, guid: 359cac51ca208234ab4fc8966b4ca92b, type: 2}
@@ -145644,17 +145655,33 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7745165241073815767, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
+      propertyPath: m_Parameters.colorGradient.key0.b
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7745165241073815767, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
+      propertyPath: m_Parameters.colorGradient.key0.g
+      value: 0.9371229
+      objectReference: {fileID: 0}
+    - target: {fileID: 7745165241073815767, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
+      propertyPath: m_Parameters.colorGradient.key0.r
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7745165241073815767, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
+      propertyPath: m_Parameters.colorGradient.m_ColorSpace
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8676249631819243942, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
       propertyPath: m_InteractionManager
       value: 
       objectReference: {fileID: 2100987746}
     - target: {fileID: 8726068271442359750, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
       propertyPath: m_Parameters.colorGradient.key0.b
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8726068271442359750, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
       propertyPath: m_Parameters.colorGradient.key0.g
-      value: 0.9476305
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8726068271442359750, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
       propertyPath: m_Parameters.colorGradient.key0.r
@@ -145666,11 +145693,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8726068271442359750, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
       propertyPath: m_Parameters.colorGradient.key1.g
-      value: 1
+      value: 0.9676375
       objectReference: {fileID: 0}
     - target: {fileID: 8726068271442359750, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
       propertyPath: m_Parameters.colorGradient.key1.r
-      value: 0.88122773
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8726068271442359750, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
       propertyPath: m_Parameters.colorGradient.m_ColorSpace

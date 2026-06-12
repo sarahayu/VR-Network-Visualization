@@ -41,10 +41,13 @@ public class Tooltip : MonoBehaviour
             _lastHoveredNode = curHoveredNode;
             UpdateTooltip(curHoveredNode);
         }
-        else if (curHoveredNode != -1)
-        {
-            UpdatePosition();
-        }
+
+        // Update position while hovering OR while the node is being dragged.
+        // When XR grab starts, hover exits and clears HoveredNode, but DraggedNodeGUID
+        // stays set until release, so the tooltip keeps following the moving node.
+        string activeGUID = _networkManager.HoveredNode ?? _networkManager.DraggedNodeGUID;
+        if (activeGUID != null)
+            UpdatePosition(activeGUID);
     }
 
     public void Show()
@@ -70,14 +73,15 @@ public class Tooltip : MonoBehaviour
         _infoCol1.SetText(halves.Length >= 1 ? halves[0] : "");
         _infoCol2.SetText(halves.Length >= 2 ? halves[1] : "");
 
-        UpdatePosition();
+        string activeGUID = _networkManager.HoveredNode ?? _networkManager.DraggedNodeGUID;
+        if (activeGUID != null) UpdatePosition(activeGUID);
 
         Show();
     }
 
-    void UpdatePosition()
+    void UpdatePosition(string nodeGUID)
     {
-        transform.position = _networkManager.GetMLNodeTransform(_networkManager.HoveredNode).position;
+        transform.position = _networkManager.GetMLNodeTransform(nodeGUID).position;
         transform.rotation = Quaternion.LookRotation(transform.position - _camera.position);
 
         var dist = (transform.position - _camera.position).magnitude;

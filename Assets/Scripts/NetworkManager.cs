@@ -28,6 +28,7 @@ namespace VidiGraph
         public NetworkGlobal NetworkGlobal { get { return _networkGlobal; } }
         public int? HoveredNetwork { get; private set; }
         public string HoveredNode { get; private set; }
+        public string DraggedNodeGUID { get; private set; }
         public HashSet<int> SelectedNetworks
         {
             get
@@ -698,6 +699,7 @@ namespace VidiGraph
         // TODO figure out a system to exclude main graph from normal graph operations
         public void StartMLNodeMove(string nodeGUID)
         {
+            DraggedNodeGUID = nodeGUID;
             StartMLNodesMove(new string[] { nodeGUID });
         }
 
@@ -718,6 +720,7 @@ namespace VidiGraph
 
         public void EndMLNodesMove()
         {
+            DraggedNodeGUID = null;
             foreach (var subn in _allNetworks.Values) subn.EndNodesMove();
             UpdateHandheld();
         }
@@ -730,6 +733,7 @@ namespace VidiGraph
 
         public void StartMLNodesFollow(string toFollowGUID, IEnumerable<string> nodeGUIDs)
         {
+            DraggedNodeGUID = toFollowGUID;
             _transformMoverCR = StartCoroutine(CRNodesFollow(toFollowGUID, nodeGUIDs));
         }
 

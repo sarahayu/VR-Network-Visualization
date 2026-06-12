@@ -30,9 +30,17 @@ namespace VidiGraph
         [Tooltip("0 = matte, 1 = mirror. ~0.4 gives a subtle highlight without heavy reflections.")]
         [Range(0f, 1f)] [SerializeField] float nodeSmoothness = 0.4f;
 
+        [Header("Link Endpoints")]
+        [Tooltip("Diameter of the sphere placed on the node surface at each link connection.")]
+        [SerializeField] float linkEndpointSize = 0.015f;
+        [Tooltip("Optional override material. Leave empty to automatically copy the material from the node the sphere is attached to.")]
+        [SerializeField] Material linkEndpointMaterial;
+
         Dictionary<int, GameObject> _nodeGameObjs = new Dictionary<int, GameObject>();
         Dictionary<int, GameObject> _linkGameObjs = new Dictionary<int, GameObject>();
         Dictionary<int, GameObject> _communityGameObjs = new Dictionary<int, GameObject>();
+        struct EndpointMarker { public Renderer rend; public int nodeID; public int otherNodeID; public int linkID; public bool isStart; }
+        List<EndpointMarker> _endpointMarkers = new List<EndpointMarker>();
         GameObject _networkGameObj;
         Dictionary<int, List<Vector3>> _controlPointsMap = new Dictionary<int, List<Vector3>>();
         Material _batchSplineMaterial;
@@ -63,6 +71,7 @@ namespace VidiGraph
             _nodeGameObjs.Clear();
             _linkGameObjs.Clear();
             _communityGameObjs.Clear();
+            _endpointMarkers.Clear();
         }
 
         public override void Initialize(NetworkContext networkContext)
@@ -79,6 +88,7 @@ namespace VidiGraph
             CreateCommunities();
             CreateMeshLinks();
             CreateGPULinks();
+            CreateLinkEndpoints();
             CreateShell();
 
             UpdateRenderElements();
@@ -90,6 +100,7 @@ namespace VidiGraph
             _nodeGameObjs.Clear();
             _linkGameObjs.Clear();
             _communityGameObjs.Clear();
+            _endpointMarkers.Clear();
 
             // TODO release shader resources
         }
@@ -100,6 +111,7 @@ namespace VidiGraph
             UpdateCommunities();
             UpdateMeshLinks();
             UpdateGPULinks();
+            UpdateLinkEndpoints();
             UpdateShell();
         }
 
@@ -204,6 +216,76 @@ namespace VidiGraph
                 _networkRenderer = nwObj.GetComponentInChildren<Renderer>();
 
                 AddNetworkInteraction(nwObj, _networkContext);
+            }
+        }
+
+        void CreateLinkEndpoints()
+        {
+            foreach (var linkID in _networkContext.Links.Keys)
+            {
+                var link = _networkGlobal.Links[linkID];
+                int srcID = link.SourceNodeID;
+                int tgtID = link.TargetNodeID;
+
+                if (_networkGlobal.Nodes[srcID].IsVirtualNode || _networkGlobal.Nodes[tgtID].IsVirtualNode)
+                    continue;
+
+                _endpointMarkers.Add(new EndpointMarker { rend = MakeEndpointSphere(srcID), nodeID = srcID, otherNodeID = tgtID, linkID = linkID, isStart = true });
+                _endpointMarkers.Add(new EndpointMarker { rend = MakeEndpointSphere(tgtID), nodeID = tgtID, otherNodeID = srcID, linkID = linkID, isStart = false });
+            }
+
+            UpdateLinkEndpoints();
+        }
+
+        Renderer MakeEndpointSphere(int nodeID)
+        {
+            var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Destroy(sphere.GetComponent<Collider>());
+            sphere.transform.SetParent(transform);
+            sphere.transform.localScale = Vector3.one * linkEndpointSize;
+
+            var rend = sphere.GetComponent<Renderer>();
+
+            // Use the node's own material so lighting matches exactly.
+            // Fall back to the user-assigned override or the node shader if no renderer found.
+            Material srcMat;
+            if (linkEndpointMaterial != null)
+                srcMat = linkEndpointMaterial;
+            else if (_nodeRenderers.TryGetValue(nodeID, out var nodeRend))
+                srcMat = nodeRend.sharedMaterial;
+            else
+            {
+                var shader = Shader.Find("Custom/Node Color Instanced") ?? Shader.Find("Standard");
+                srcMat = shader != null ? new Material(shader) : null;
+            }
+
+            if (srcMat != null)
+                rend.material = new Material(srcMat);
+
+            return rend;
+        }
+
+        void UpdateLinkEndpoints()
+        {
+            float sphereRadius = linkEndpointSize * 0.5f;
+            foreach (var marker in _endpointMarkers)
+            {
+                var nodeCtx  = _networkContext.Nodes[marker.nodeID];
+                var otherCtx = _networkContext.Nodes[marker.otherNodeID];
+                float nodeRadius = nodeCtx.Size * 0.5f;
+                var dir = otherCtx.Position - nodeCtx.Position;
+                if (dir.sqrMagnitude < 1e-6f) dir = Vector3.up;
+                dir.Normalize();
+
+                // Embed the sphere so only ~half its radius protrudes from the node surface.
+                marker.rend.transform.position = nodeCtx.Position + dir * (nodeRadius - sphereRadius * 0.5f);
+
+                // Color follows the link's start/end color (same gradient the edge ribbon uses).
+                var linkCtx = _networkContext.Links[marker.linkID];
+                var c = marker.isStart ? linkCtx.ColorStart : linkCtx.ColorEnd;
+                c.a = 1f; // endpoints are opaque; ignore the link's transparency alpha
+                if (marker.rend.material.HasProperty("_Color"))     marker.rend.material.SetColor("_Color", c);
+                if (marker.rend.material.HasProperty("_BaseColor")) marker.rend.material.SetColor("_BaseColor", c);
             }
         }
 
