@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
 
 public class ControllerTranscriptPanel : MonoBehaviour
 {
@@ -23,6 +24,14 @@ public class ControllerTranscriptPanel : MonoBehaviour
 
     [Header("Position")]
     [SerializeField] private Vector3 localOffset = new Vector3(0f, 0.08f, 0.18f);
+
+    [Header("Right Joystick Forward/Back")]
+    [SerializeField] private bool enableRightJoystickDepthControl = true;
+    [SerializeField] private InputManager inputManager;
+    [SerializeField] private float joystickMoveSpeed = 0.25f;
+    [SerializeField] private float joystickDeadzone = 0.2f;
+    [SerializeField] private float minLocalForwardOffset = 0.08f;
+    [SerializeField] private float maxLocalForwardOffset = 0.55f;
 
     [Header("Collision")]
     [SerializeField] private bool preventClipping = true;
@@ -52,6 +61,7 @@ public class ControllerTranscriptPanel : MonoBehaviour
     private Vector3 previousReferencePosition;
     private bool hasPreviousReferencePosition;
     private InputAction heightButton;
+    private XRInputValueReader<Vector2> rightJoystick;
 
     private void OnEnable()
     {
@@ -62,6 +72,9 @@ public class ControllerTranscriptPanel : MonoBehaviour
         );
 
         heightButton.Enable();
+
+        if (rightJoystick != null)
+            rightJoystick.EnableDirectActionIfModeUsed();
     }
 
     private void OnDisable()
@@ -71,6 +84,15 @@ public class ControllerTranscriptPanel : MonoBehaviour
         heightButton = null;
     }
 
+    private void Start()
+    {
+        if (inputManager == null)
+            inputManager = GameObject.Find("/Input Manager")?.GetComponent<InputManager>();
+
+        rightJoystick = inputManager != null ? inputManager.RightJoystick : null;
+        rightJoystick?.EnableDirectActionIfModeUsed();
+    }
+
     private void LateUpdate()
     {
         Transform positionReference = GetReference(positionReferenceMode, customPositionReference);
@@ -78,6 +100,8 @@ public class ControllerTranscriptPanel : MonoBehaviour
 
         if (positionReference == null)
             return;
+
+        ApplyRightJoystickDepthControl();
 
         Vector3 currentLocalOffset = GetCurrentLocalOffset(positionReference);
         Vector3 targetPosition = positionReference.position + positionReference.TransformDirection(currentLocalOffset);
@@ -124,6 +148,23 @@ public class ControllerTranscriptPanel : MonoBehaviour
             default:
                 return null;
         }
+    }
+
+    private void ApplyRightJoystickDepthControl()
+    {
+        if (!enableRightJoystickDepthControl || rightJoystick == null)
+            return;
+
+        float forwardBackInput = rightJoystick.ReadValue().y;
+
+        if (Mathf.Abs(forwardBackInput) < joystickDeadzone)
+            return;
+
+        localOffset.z = Mathf.Clamp(
+            localOffset.z + forwardBackInput * joystickMoveSpeed * Time.deltaTime,
+            minLocalForwardOffset,
+            maxLocalForwardOffset
+        );
     }
 
     private bool IsHeightButtonHeld()
