@@ -122219,12 +122219,14 @@ MonoBehaviour:
   positionReferenceMode: 0
   rotationReferenceMode: 0
   localOffset: {x: 0, y: 0, z: 1.225}
-  enableRightJoystickDepthControl: 1
+  useSphericalPlacement: 1
+  enableRightJoystickRadiusControl: 1
   inputManager: {fileID: 1888518515}
   joystickMoveSpeed: 5
   joystickDeadzone: 0
-  minLocalForwardOffset: 1
-  maxLocalForwardOffset: 15
+  panelRadius: 0.2
+  minPanelRadius: 1
+  maxPanelRadius: 15
   preventClipping: 1
   blockingLayers:
     serializedVersion: 2
@@ -122236,6 +122238,8 @@ MonoBehaviour:
   heightButtonBinding: <XRController>{LeftHand}/secondaryButton
   enableKeyboardHeightTest: 1
   keyboardHeightKey: 104
+  enableAutoHeightAboveCenter: 0
+  autoHeightCenterYOffset: 0.05
   movementLagSeconds: 0
   maxLagDistance: 0
   rotationOffsetEuler: {x: 60, y: 0, z: 0}

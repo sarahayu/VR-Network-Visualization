@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
 
 public class ControllerTranscriptPanel : MonoBehaviour
@@ -25,13 +26,18 @@ public class ControllerTranscriptPanel : MonoBehaviour
     [Header("Position")]
     [SerializeField] private Vector3 localOffset = new Vector3(0f, 0.08f, 0.18f);
 
-    [Header("Right Joystick Forward/Back")]
-    [SerializeField] private bool enableRightJoystickDepthControl = true;
+    [Header("Spherical Placement")]
+    [SerializeField] private bool useSphericalPlacement = true;
+    [FormerlySerializedAs("enableRightJoystickDepthControl")]
+    [SerializeField] private bool enableRightJoystickRadiusControl = true;
     [SerializeField] private InputManager inputManager;
     [SerializeField] private float joystickMoveSpeed = 0.25f;
     [SerializeField] private float joystickDeadzone = 0.2f;
-    [SerializeField] private float minLocalForwardOffset = 0.08f;
-    [SerializeField] private float maxLocalForwardOffset = 0.55f;
+    [SerializeField] private float panelRadius = 0.2f;
+    [FormerlySerializedAs("minLocalForwardOffset")]
+    [SerializeField] private float minPanelRadius = 0.08f;
+    [FormerlySerializedAs("maxLocalForwardOffset")]
+    [SerializeField] private float maxPanelRadius = 0.55f;
 
     [Header("Collision")]
     [SerializeField] private bool preventClipping = true;
@@ -62,6 +68,8 @@ public class ControllerTranscriptPanel : MonoBehaviour
     private bool hasPreviousReferencePosition;
     private InputAction heightButton;
     private XRInputValueReader<Vector2> rightJoystick;
+    private bool matchPlayerHeightToggled;
+    private bool keyboardHeightKeyWasDown;
 
     private void OnEnable()
     {
@@ -91,6 +99,12 @@ public class ControllerTranscriptPanel : MonoBehaviour
 
         rightJoystick = inputManager != null ? inputManager.RightJoystick : null;
         rightJoystick?.EnableDirectActionIfModeUsed();
+
+        panelRadius = Mathf.Clamp(
+            panelRadius > 0f ? panelRadius : localOffset.magnitude,
+            minPanelRadius,
+            maxPanelRadius
+        );
     }
 
     private void LateUpdate()
@@ -101,7 +115,8 @@ public class ControllerTranscriptPanel : MonoBehaviour
         if (positionReference == null)
             return;
 
-        ApplyRightJoystickDepthControl();
+        ApplyRightJoystickRadiusControl();
+        UpdateHeightToggle();
 
         Vector3 currentLocalOffset = GetCurrentLocalOffset(positionReference);
         Vector3 targetPosition = positionReference.position + positionReference.TransformDirection(currentLocalOffset);
@@ -150,48 +165,69 @@ public class ControllerTranscriptPanel : MonoBehaviour
         }
     }
 
-    private void ApplyRightJoystickDepthControl()
+    private void ApplyRightJoystickRadiusControl()
     {
-        if (!enableRightJoystickDepthControl || rightJoystick == null)
+        if (!enableRightJoystickRadiusControl || rightJoystick == null)
             return;
 
-        float forwardBackInput = rightJoystick.ReadValue().y;
+        float radiusInput = rightJoystick.ReadValue().y;
 
-        if (Mathf.Abs(forwardBackInput) < joystickDeadzone)
+        if (Mathf.Abs(radiusInput) < joystickDeadzone)
             return;
 
-        localOffset.z = Mathf.Clamp(
-            localOffset.z + forwardBackInput * joystickMoveSpeed * Time.deltaTime,
-            minLocalForwardOffset,
-            maxLocalForwardOffset
+        panelRadius = Mathf.Clamp(
+            panelRadius + radiusInput * joystickMoveSpeed * Time.deltaTime,
+            minPanelRadius,
+            maxPanelRadius
         );
     }
 
-    private bool IsHeightButtonHeld()
+    private void UpdateHeightToggle()
     {
-        if (!enableHeightButton)
-            return false;
+        bool heightButtonPressed = enableHeightButton
+            && heightButton != null
+            && heightButton.WasPerformedThisFrame();
 
-        bool xrHeld = heightButton != null && heightButton.ReadValue<float>() > 0.5f;
-        bool keyboardHeld = enableKeyboardHeightTest && Input.GetKey(keyboardHeightKey);
+        bool keyboardHeightKeyDown = enableKeyboardHeightTest && Input.GetKey(keyboardHeightKey);
+        bool keyboardHeightKeyPressed = keyboardHeightKeyDown && !keyboardHeightKeyWasDown;
+        keyboardHeightKeyWasDown = keyboardHeightKeyDown;
 
-        return xrHeld || keyboardHeld;
+        if (heightButtonPressed || keyboardHeightKeyPressed)
+            matchPlayerHeightToggled = !matchPlayerHeightToggled;
+    }
+
+    private bool ShouldMatchPlayerHeight()
+    {
+        return matchPlayerHeightToggled;
     }
 
     private Vector3 GetCurrentLocalOffset(Transform positionReference)
     {
-        if (!IsHeightButtonHeld())
-            return localOffset;
+        Vector3 currentOffset = useSphericalPlacement
+            ? GetSphericalLocalOffset()
+            : localOffset;
+
+        if (!ShouldMatchPlayerHeight())
+            return currentOffset;
 
         Transform heightReference = GetHeightReference();
 
         if (heightReference == null)
-            return localOffset;
+            return currentOffset;
 
-        Vector3 worldOffset = positionReference.TransformDirection(localOffset);
+        Vector3 worldOffset = positionReference.TransformDirection(currentOffset);
         worldOffset.y = heightReference.position.y - positionReference.position.y;
 
         return positionReference.InverseTransformDirection(worldOffset);
+    }
+
+    private Vector3 GetSphericalLocalOffset()
+    {
+        Vector3 localDirection = localOffset.sqrMagnitude > 0.0001f
+            ? localOffset.normalized
+            : Vector3.forward;
+
+        return localDirection * panelRadius;
     }
 
     private Transform GetHeightReference()
