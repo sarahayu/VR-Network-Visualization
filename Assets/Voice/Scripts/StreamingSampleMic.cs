@@ -51,6 +51,7 @@ namespace Whisper.Samples
         private WhisperStream _stream;
         private float whisperStartTime;
         private float _pipelineStartTime;
+        private string _completedTranscript = "";
 
         // Link GUIDs from the last selectLink command — used by colorLink
         private HashSet<string> _lastSelectedLinkGUIDs = new HashSet<string>();
@@ -100,6 +101,9 @@ namespace Whisper.Samples
             if (CommandPress.ReadWasPerformedThisFrame())
             {
                 Debug.Log("calling on button press");
+                _completedTranscript = "";
+                if (text != null)
+                    text.text = "";
                 // Start listening
                 _stream.StartStream();
                 whisperStartTime = Time.time; // record start time
@@ -196,12 +200,19 @@ namespace Whisper.Samples
         {
             // This is partial text as it’s recognized
             // Debug.Log($"Segment updated: {segment.Result}");
-            if (segment.Result != "")
-                text.text = segment.Result;
+            if (text != null && !string.IsNullOrWhiteSpace(segment.Result))
+                text.text = _completedTranscript + segment.Result;
         }
 
         private void OnSegmentFinished(WhisperResult segment)
         {
+            if (!string.IsNullOrWhiteSpace(segment.Result))
+            {
+                _completedTranscript += segment.Result.Trim() + " ";
+                if (text != null)
+                    text.text = _completedTranscript.TrimEnd();
+            }
+
             float recognitionTime = Time.time - whisperStartTime;
             whisperStartTime = Time.time;
             _pipelineStartTime = Time.time;
@@ -853,6 +864,5 @@ public class Timing
     public float cypher_agent;
     public float return_code;
 }
-
 
 
