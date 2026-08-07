@@ -396,14 +396,8 @@ namespace VidiGraph
                 if (dir.sqrMagnitude < 1e-6f) dir = Vector3.up;
                 dir.Normalize();
 
-                // Distance from node center to its surface along dir depends on shape:
-                // a sphere's surface is a constant radius in every direction, but a
-                // cube's surface distance shrinks toward its corners.
-                float halfExtent = nodeCtx.Size * 0.5f;
                 string shape = _networkManager.GetNodeShape(marker.nodeID, subnID);
-                float surfaceDist = shape == "cube"
-                    ? halfExtent / Mathf.Max(Mathf.Abs(dir.x), Mathf.Abs(dir.y), Mathf.Abs(dir.z), 1e-4f)
-                    : halfExtent;
+                float surfaceDist = SurfaceDistance(nodeCtx.Size, shape, dir);
 
                 // The bowl's local origin is its rim (the wide open end — mesh rim
                 // sits at local y=0, pole at y=-0.5 before scaling), so `position`
@@ -420,8 +414,22 @@ namespace VidiGraph
             }
         }
 
+        // Distance from a node's center to its surface along dir, shape-aware:
+        // a sphere's surface is a constant radius in every direction, but a
+        // cube's surface distance shrinks toward its corners. Assumes an
+        // axis-aligned node mesh (node transforms are never rotated).
+        static float SurfaceDistance(float size, string shape, Vector3 dir)
+        {
+            float halfExtent = size * 0.5f;
+            return shape == "cube"
+                ? halfExtent / Mathf.Max(Mathf.Abs(dir.x), Mathf.Abs(dir.y), Mathf.Abs(dir.z), 1e-4f)
+                : halfExtent;
+        }
+
         void ComputeControlPoints()
         {
+            int subnID = _networkContext.SubnetworkID;
+
             foreach (var (linkID, linkProps) in _networkContext.Links)
             {
                 var link = _networkGlobal.Links[linkID];
@@ -429,6 +437,34 @@ namespace VidiGraph
 
                 Vector3[] cp = BSplineMathUtils.ControlPoints(link, _networkGlobal, _networkContext);
                 int length = cp.Length;
+
+                // cp[0]/cp[length-1] are raw node-CENTER positions. Trim them out to
+                // the node's actual surface (shape-aware) along the tangent the curve
+                // approaches from, so the ribbon geometrically ends at the surface
+                // instead of relying on the opaque node mesh to hide the rest. A round
+                // sphere hides this gap from any angle, but a cube's flat faces and
+                // sharp edges don't — off-axis, the ribbon can visibly poke past a
+                // corner instead of being cleanly covered.
+                if (length >= 2)
+                {
+                    var srcDir = cp[1] - cp[0];
+                    if (srcDir.sqrMagnitude > 1e-6f)
+                    {
+                        srcDir.Normalize();
+                        var srcShape = _networkManager.GetNodeShape(link.SourceNodeID, subnID);
+                        float srcDist = SurfaceDistance(_networkContext.Nodes[link.SourceNodeID].Size, srcShape, srcDir);
+                        cp[0] += srcDir * srcDist;
+                    }
+
+                    var tgtDir = cp[length - 2] - cp[length - 1];
+                    if (tgtDir.sqrMagnitude > 1e-6f)
+                    {
+                        tgtDir.Normalize();
+                        var tgtShape = _networkManager.GetNodeShape(link.TargetNodeID, subnID);
+                        float tgtDist = SurfaceDistance(_networkContext.Nodes[link.TargetNodeID].Size, tgtShape, tgtDir);
+                        cp[length - 1] += tgtDir * tgtDist;
+                    }
+                }
 
                 Vector3 source = cp[0];
                 Vector3 target = cp[length - 1];
