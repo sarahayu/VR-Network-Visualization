@@ -48,6 +48,20 @@ namespace VidiGraph
         public Dictionary<Tuple<int, int>, string> CommunityIDToGUID { get; } = new();
         public const int MainNetworkID = MultiLayoutNetwork.InstanceID;
 
+        // -1 when no working subgraph is active.
+        public int CurWorkingSubgraphID => _curWorkingSubgraph;
+
+        // Link IDs of the active working subgraph; empty if none is active.
+        public IEnumerable<int> GetCurWorkingSubgraphLinkIDs()
+            => _curWorkingSubgraph != -1
+                ? _allNetworks[_curWorkingSubgraph].Context.Links.Keys
+                : Enumerable.Empty<int>();
+
+        public Color GetSubgraphLinkDefaultColor(int subnetworkID)
+            => _allNetworks.TryGetValue(subnetworkID, out var net)
+                ? net.Context.ContextSettings.LinkDefaultColor
+                : Color.gray;
+
         Coroutine _transformMoverCR;
 
         int _curWorkingSubgraph = -1;
@@ -1027,6 +1041,10 @@ namespace VidiGraph
             _subnetworks.Remove(subn.ID);
             _allNetworks.Remove(subn.ID);
 
+            foreach (var k in _nodeShapes.Keys.Where(k => k.subnetworkID == subn.ID).ToList())
+                _nodeShapes.Remove(k);
+            _transparentNodes.RemoveWhere(k => k.subnetworkID == subn.ID);
+
             subn.Destroy();
         }
 
@@ -1296,6 +1314,121 @@ namespace VidiGraph
             _allNetworks[subnetworkID].SetNodesSize(nodeIDs, size, _updatingStorage, _updatingRenderElements);
         }
 
+        // Directly sets context link colors and triggers one render update — bypasses transformer chain.
+        // alpha: if given, also overrides the per-link Alpha (which the spline shader
+        // multiplies into the color) so all listed links render at a uniform opacity.
+        public void SetMLLinksColorDirect(IEnumerable<int> linkIDs, Color colorStart, Color colorEnd, int subnetworkID = MainNetworkID, float? alpha = null)
+        {
+            if (!_allNetworks.TryGetValue(subnetworkID, out var network)) return;
+            foreach (var linkID in linkIDs)
+            {
+                if (!network.Context.Links.TryGetValue(linkID, out var link)) continue;
+                link.ColorStart = colorStart;
+                link.ColorEnd = colorEnd;
+                if (alpha.HasValue) link.Alpha = alpha.Value;
+                link.Dirty = true;
+            }
+            TriggerRenderUpdate();
+        }
+
+        Material _nodeOpaqueMat;        // original node material, cached on first swap
+        Material _nodeTransparentMat;   // shared transparent clone used by all faded nodes
+
+        // Per-node state the renderer can't derive from NetworkContext on its own —
+        // current shape (mesh swaps bypass the context) and transparent-material flag.
+        Dictionary<(int subnetworkID, int nodeID), string> _nodeShapes = new();
+        HashSet<(int subnetworkID, int nodeID)> _transparentNodes = new();
+
+        public string GetNodeShape(int nodeID, int subnetworkID = MainNetworkID)
+            => _nodeShapes.TryGetValue((subnetworkID, nodeID), out var shape) ? shape : "sphere";
+
+        public bool IsNodeTransparent(int nodeID, int subnetworkID = MainNetworkID)
+            => _transparentNodes.Contains((subnetworkID, nodeID));
+
+        // Swaps node renderers between the original (opaque) material and a shared
+        // transparent clone, so the alpha in the node's context color actually blends.
+        // The per-node color itself is untouched — set it via SetMLNodesColorDirect.
+        public void SetMLNodesTransparent(IEnumerable<int> nodeIDs, bool transparent, int subnetworkID = MainNetworkID)
+        {
+            if (!_allNetworks.TryGetValue(subnetworkID, out var network)) return;
+
+            int changed = 0;
+            foreach (var nodeID in nodeIDs)
+            {
+                var nodeTransform = network.GetNodeTransform(nodeID);
+                var rend = nodeTransform != null ? nodeTransform.GetComponentInChildren<Renderer>() : null;
+                if (rend == null) continue;
+
+                if (transparent)
+                {
+                    if (_nodeTransparentMat == null)
+                    {
+                        _nodeOpaqueMat = rend.sharedMaterial;
+                        _nodeTransparentMat = MakeTransparentVariant(rend.sharedMaterial);
+                    }
+                    rend.sharedMaterial = _nodeTransparentMat;
+                    _transparentNodes.Add((subnetworkID, nodeID));
+                }
+                else
+                {
+                    if (_nodeOpaqueMat != null) rend.sharedMaterial = _nodeOpaqueMat;
+                    _transparentNodes.Remove((subnetworkID, nodeID));
+                }
+                changed++;
+            }
+
+            Debug.Log($"[NetworkManager] SetMLNodesTransparent({transparent}, subn={subnetworkID}): {changed} nodes.");
+        }
+
+        // Clone a material and configure alpha blending. Sets both the URP Lit and
+        // built-in Standard surface properties — unknown properties are ignored, so
+        // the same recipe works under either pipeline.
+        static Material MakeTransparentVariant(Material src)
+        {
+            var mat = new Material(src) { name = src.name + " (Transparent)" };
+
+            mat.SetOverrideTag("RenderType", "Transparent");
+            mat.SetFloat("_Surface", 1f);   // URP: 1 = Transparent
+            mat.SetFloat("_Mode", 2f);      // built-in Standard: 2 = Fade
+            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            mat.SetInt("_ZWrite", 0);
+            mat.DisableKeyword("_ALPHATEST_ON");
+            mat.EnableKeyword("_ALPHABLEND_ON");              // built-in Fade
+            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");   // URP
+            mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+
+            return mat;
+        }
+
+        // Directly sets context node colors (all to the same color) and triggers one render update.
+        public void SetMLNodesColorDirect(IEnumerable<int> nodeIDs, Color color, int subnetworkID = MainNetworkID)
+        {
+            if (!_allNetworks.TryGetValue(subnetworkID, out var network)) return;
+            foreach (var nodeID in nodeIDs)
+            {
+                if (!network.Context.Nodes.TryGetValue(nodeID, out var node)) continue;
+                node.Color = color;
+                node.Dirty = true;
+            }
+            TriggerRenderUpdate();
+        }
+
+        // Batch variant: each node gets its own color (e.g. a computed gradient),
+        // but the whole batch still triggers only one render update at the end.
+        public void SetMLNodesColorDirect(Dictionary<int, Color> nodeIDToColor, int subnetworkID = MainNetworkID)
+        {
+            if (!_allNetworks.TryGetValue(subnetworkID, out var network)) return;
+            foreach (var (nodeID, color) in nodeIDToColor)
+            {
+                if (!network.Context.Nodes.TryGetValue(nodeID, out var node)) continue;
+                node.Color = color;
+                node.Dirty = true;
+            }
+            TriggerRenderUpdate();
+        }
+
         public void SetMLNodesColor(IEnumerable<string> nodeGUIDs, string color)
         {
             foreach (var (subnID, nodeIDs) in SortNodeGUIDs(nodeGUIDs)) SetMLNodesColor(nodeIDs, color, subnID);
@@ -1313,20 +1446,35 @@ namespace VidiGraph
 
         public void SetMLNodesShape(IEnumerable<int> nodeIDs, string shapeName, int subnetworkID = MainNetworkID)
         {
+            if (!_allNetworks.TryGetValue(subnetworkID, out var network))
+            {
+                Debug.LogWarning($"[NetworkManager] SetMLNodesShape: no network with ID {subnetworkID}.");
+                return;
+            }
+
             Mesh shapeMesh = NodeShapeMeshes.GetMesh(shapeName, 0.5f);
+            int swapped = 0, missing = 0;
 
             foreach (var nodeID in nodeIDs)
             {
-                Transform nodeTransform = _allNetworks[subnetworkID].GetNodeTransform(nodeID);
-                if (nodeTransform != null)
+                Transform nodeTransform = network.GetNodeTransform(nodeID);
+                MeshFilter meshFilter = nodeTransform != null
+                    ? nodeTransform.GetComponentInChildren<MeshFilter>()
+                    : null;
+
+                if (meshFilter != null)
                 {
-                    MeshFilter meshFilter = nodeTransform.GetComponent<MeshFilter>();
-                    if (meshFilter != null)
-                    {
-                        meshFilter.sharedMesh = shapeMesh;
-                    }
+                    meshFilter.sharedMesh = shapeMesh;
+                    _nodeShapes[(subnetworkID, nodeID)] = shapeName.ToLowerInvariant();
+                    swapped++;
+                }
+                else
+                {
+                    missing++;
                 }
             }
+
+            Debug.Log($"[NetworkManager] SetMLNodesShape('{shapeName}', subn={subnetworkID}): {swapped} swapped, {missing} without mesh filter.");
         }
 
         public void SetMLNodesPosition(IEnumerable<string> nodeGUIDs, Vector3 position)

@@ -491,6 +491,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4380608}
   - component: {fileID: 4380607}
+  - component: {fileID: 4380609}
   m_Layer: 0
   m_Name: Tests
   m_TagString: Untagged
@@ -519,8 +520,8 @@ MonoBehaviour:
   demoENodeSize: 1.5
   serverUrl: http://localhost:5000/classify
   serverEnabled: 1
-  sizeByDegreeKey: 49
-  sizeByGPAKey: 50
+  sizeByDegreeKey: 257
+  sizeByGPAKey: 258
   colorByGradeKey: 51
   colorBySexKey: 52
   colorByGPAKey: 103
@@ -556,6 +557,21 @@ Transform:
   - {fileID: 1603893772}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4380609
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4380606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5bccf3ac01045b141976c11e61208e0d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _networkManager: {fileID: 101019196}
+  _databaseStorage: {fileID: 75714786}
+  _stepLabel: {fileID: 388439400}
 --- !u!43 &8668836
 Mesh:
   m_ObjectHideFlags: 0
@@ -12686,7 +12702,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: e2a2106a8b4e6dc4eb9e2f0f1a6bf85f, type: 2}
+  - {fileID: 10306, guid: 0000000000000000f000000000000000, type: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -30765,7 +30781,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "<size=120%><align=\"center\"><b>Possible Tasks Commands</b></align>\r</size>\n<size=80%>
+  m_text: "<size=120%><align=\"center\"><b>CONTROLS</b></align>\r</size>\n<size=80%>
     </size>\nTask 1: Are socially central students concentrated in certain grades,
     and are they also involved in bullying?\n<size=50%> </size>\n* 1-1 Highlight
     the top 3 nodes that have the most friendship links\n<size=50%> </size>\n* 1-2
@@ -47723,7 +47739,6 @@ MonoBehaviour:
   nodeMetallic: 0
   nodeSmoothness: 0.82
   linkEndpointSize: 0.02
-  linkEndpointColor: {r: 1, g: 1, b: 1, a: 1}
   linkEndpointMaterial: {fileID: 0}
 --- !u!1 &758052430
 GameObject:
@@ -145607,6 +145622,38 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1508416571456095218, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.01
+      objectReference: {fileID: 0}
+    - target: {fileID: 1508416571456095218, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.31999993
+      objectReference: {fileID: 0}
+    - target: {fileID: 1508416571456095218, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -0.46
+      objectReference: {fileID: 0}
+    - target: {fileID: 1508416571456095218, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.9965463
+      objectReference: {fileID: 0}
+    - target: {fileID: 1508416571456095218, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.08204533
+      objectReference: {fileID: 0}
+    - target: {fileID: 1508416571456095218, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0.0010508447
+      objectReference: {fileID: 0}
+    - target: {fileID: 1508416571456095218, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0.012763853
+      objectReference: {fileID: 0}
+    - target: {fileID: 1508416571456095218, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -9.413
+      objectReference: {fileID: 0}
     - target: {fileID: 2612384607647218003, guid: 81306eb785632ff42ab8e5e135b9a5d0, type: 3}
       propertyPath: m_Name
       value: XR Origin (XR Rig)

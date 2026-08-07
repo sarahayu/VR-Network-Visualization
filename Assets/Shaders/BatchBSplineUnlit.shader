@@ -6,10 +6,14 @@ Shader "Custom/Batch BSpline Unlit"
     }
     SubShader
     {
-        Tags { "RenderType"="Transparent" }
+        // Queue=Transparent + ZWrite Off are required for the alpha blend to work:
+        // in the default (Geometry) queue the ribbons draw before/among opaque
+        // geometry and write depth, so faded links blend against the clear color
+        // and occlude what's behind them — they look like solid dark strips.
+        Tags { "RenderType"="Transparent" "Queue"="Transparent" "IgnoreProjector"="True" }
         LOD 200
         Blend SrcAlpha OneMinusSrcAlpha
-        // ZWrite Off
+        ZWrite Off
 
         Pass
         {

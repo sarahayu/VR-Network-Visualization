@@ -31,10 +31,20 @@ namespace VidiGraph
         [Range(0f, 1f)] [SerializeField] float nodeSmoothness = 0.4f;
 
         [Header("Link Endpoints")]
-        [Tooltip("Diameter of the sphere placed on the node surface at each link connection.")]
-        [SerializeField] float linkEndpointSize = 0.015f;
-        [Tooltip("Optional override material. Leave empty to automatically copy the material from the node the sphere is attached to.")]
+        [Tooltip("Marker diameter (bowl rim) as a multiple of the link width — keep close to 1 so the marker reads as a cap on the ribbon, not a bead.")]
+        [SerializeField] float linkEndpointWidthFactor = 1.4f;
+        [Tooltip("Bowl depth as a fraction of its rim diameter — small values read as a shallow dish, large values as a deep cup.")]
+        [SerializeField] float linkEndpointDepthFactor = 0.35f;
+        [Tooltip("Optional override material. Leave empty to automatically copy the material from the node the bowl is attached to.")]
         [SerializeField] Material linkEndpointMaterial;
+
+        float _endpointDiameter;   // = LinkWidth * linkEndpointWidthFactor, resolved once in Initialize
+        float _endpointDepth;      // = _endpointDiameter * linkEndpointDepthFactor
+        static Mesh _bowlMesh;     // shared concave-hemisphere mesh, rim radius 0.5 at y=0, pole at y=-0.5
+
+        // Fraction of the bowl's depth left sunk into the node surface; the rest
+        // protrudes outward so the bowl is actually visible against the node.
+        const float EndpointEmbedFraction = 0.25f;
 
         Dictionary<int, GameObject> _nodeGameObjs = new Dictionary<int, GameObject>();
         Dictionary<int, GameObject> _linkGameObjs = new Dictionary<int, GameObject>();
@@ -81,6 +91,8 @@ namespace VidiGraph
             _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
             _networkGlobal = _networkManager.NetworkGlobal;
             _networkContext = (MultiLayoutContext)networkContext;
+            _endpointDiameter = _networkContext.ContextSettings.LinkWidth * linkEndpointWidthFactor;
+            _endpointDepth = _endpointDiameter * linkEndpointDepthFactor;
 
             InitializeShaders();
 
@@ -122,7 +134,7 @@ namespace VidiGraph
 
         public override Transform GetNodeTransform(int nodeID)
         {
-            return _nodeGameObjs[nodeID].transform;
+            return _nodeGameObjs.TryGetValue(nodeID, out var nodeObj) ? nodeObj.transform : null;
         }
 
         public override Transform GetCommTransform(int commID)
@@ -230,21 +242,21 @@ namespace VidiGraph
                 if (_networkGlobal.Nodes[srcID].IsVirtualNode || _networkGlobal.Nodes[tgtID].IsVirtualNode)
                     continue;
 
-                _endpointMarkers.Add(new EndpointMarker { rend = MakeEndpointSphere(srcID), nodeID = srcID, otherNodeID = tgtID, linkID = linkID, isStart = true });
-                _endpointMarkers.Add(new EndpointMarker { rend = MakeEndpointSphere(tgtID), nodeID = tgtID, otherNodeID = srcID, linkID = linkID, isStart = false });
+                _endpointMarkers.Add(new EndpointMarker { rend = MakeEndpointDisk(srcID), nodeID = srcID, otherNodeID = tgtID, linkID = linkID, isStart = true });
+                _endpointMarkers.Add(new EndpointMarker { rend = MakeEndpointDisk(tgtID), nodeID = tgtID, otherNodeID = srcID, linkID = linkID, isStart = false });
             }
 
             UpdateLinkEndpoints();
         }
 
-        Renderer MakeEndpointSphere(int nodeID)
+        Renderer MakeEndpointDisk(int nodeID)
         {
-            var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            Destroy(sphere.GetComponent<Collider>());
-            sphere.transform.SetParent(transform);
-            sphere.transform.localScale = Vector3.one * linkEndpointSize;
+            var bowl = new GameObject("LinkEndpointBowl");
+            bowl.transform.SetParent(transform);
+            bowl.transform.localScale = new Vector3(_endpointDiameter, _endpointDepth * 2f, _endpointDiameter);
 
-            var rend = sphere.GetComponent<Renderer>();
+            bowl.AddComponent<MeshFilter>().sharedMesh = GetOrCreateBowlMesh();
+            var rend = bowl.AddComponent<MeshRenderer>();
 
             // Use the node's own material so lighting matches exactly.
             // Fall back to the user-assigned override or the node shader if no renderer found.
@@ -265,25 +277,144 @@ namespace VidiGraph
             return rend;
         }
 
+        // Builds (and caches) a small concave-hemisphere "bowl" mesh: rim circle of
+        // radius 0.5 at y=0, curving down to a pinched pole at y=-0.5. Only the
+        // curved wall is generated — the rim is left open so the concave interior
+        // is visible. Local +Y is the bowl's opening direction.
+        //
+        // The shell is double-sided: a single-sided open cup is only ever visible
+        // from the narrow cone of angles looking into its opening — from every
+        // other direction it's a backface-culled, literally empty gap (which is
+        // exactly what made the first version disappear). Front and back use
+        // separate duplicated vertices so RecalculateNormals doesn't average their
+        // opposite-facing normals into garbage.
+        static Mesh GetOrCreateBowlMesh()
+        {
+            if (_bowlMesh != null) return _bowlMesh;
+
+            const int segments = 12;
+            const int rings = 4;
+            const float radius = 0.5f;
+
+            var baseVerts = new List<Vector3>(1 + rings * segments);
+            var outwardTris = new List<int>(); // winds with front faces pointing outward (convex side)
+
+            baseVerts.Add(new Vector3(0f, -radius, 0f)); // bottom pole
+
+            for (int ring = 1; ring <= rings; ring++)
+            {
+                float phi = (float)ring / rings * (Mathf.PI * 0.5f); // 0 at pole .. PI/2 at rim
+                float y = -radius * Mathf.Cos(phi);
+                float ringRadius = radius * Mathf.Sin(phi);
+
+                for (int seg = 0; seg < segments; seg++)
+                {
+                    float theta = (float)seg / segments * Mathf.PI * 2f;
+                    baseVerts.Add(new Vector3(ringRadius * Mathf.Cos(theta), y, ringRadius * Mathf.Sin(theta)));
+                }
+            }
+
+            // Fan connecting the pole to the first ring.
+            for (int seg = 0; seg < segments; seg++)
+            {
+                int b = 1 + seg;
+                int c = 1 + (seg + 1) % segments;
+                outwardTris.Add(0); outwardTris.Add(b); outwardTris.Add(c);
+            }
+
+            // Quad strips between consecutive rings.
+            for (int ring = 1; ring < rings; ring++)
+            {
+                int ringStart = 1 + (ring - 1) * segments;
+                int nextStart = 1 + ring * segments;
+                for (int seg = 0; seg < segments; seg++)
+                {
+                    int a = ringStart + seg;
+                    int b = ringStart + (seg + 1) % segments;
+                    int c = nextStart + seg;
+                    int d = nextStart + (seg + 1) % segments;
+                    outwardTris.Add(a); outwardTris.Add(b); outwardTris.Add(d);
+                    outwardTris.Add(a); outwardTris.Add(d); outwardTris.Add(c);
+                }
+            }
+
+            // Inward-facing copy (reverse winding) — visible looking into the cup.
+            var inwardTris = new List<int>(outwardTris.Count);
+            for (int i = 0; i < outwardTris.Count; i += 3)
+            {
+                inwardTris.Add(outwardTris[i]);
+                inwardTris.Add(outwardTris[i + 2]);
+                inwardTris.Add(outwardTris[i + 1]);
+            }
+
+            int vertCount = baseVerts.Count;
+            var vertices = new List<Vector3>(vertCount * 2);
+            vertices.AddRange(baseVerts);
+            vertices.AddRange(baseVerts);
+
+            var triangles = new List<int>(inwardTris.Count + outwardTris.Count);
+            triangles.AddRange(inwardTris);                                  // front: seen looking into the cup
+            foreach (var idx in outwardTris) triangles.Add(idx + vertCount); // back: seen from outside
+
+            var mesh = new Mesh { name = "LinkEndpointBowl" };
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            mesh.RecalculateTangents();
+
+            _bowlMesh = mesh;
+            return mesh;
+        }
+
         void UpdateLinkEndpoints()
         {
-            float sphereRadius = linkEndpointSize * 0.5f;
+            int subnID = _networkContext.SubnetworkID;
+
+            // Markers are opaque geometry, so they can't fade with the ribbon.
+            // Instead, hide them once their link drops below normal opacity
+            // (e.g. de-emphasized links in a highlight state), or when either
+            // node it connects to has been swapped onto the transparent material.
+            float visibilityThreshold = _networkContext.ContextSettings.LinkNormalAlphaFactor * 0.5f;
+
             foreach (var marker in _endpointMarkers)
             {
+                var linkCtx = _networkContext.Links[marker.linkID];
+                var c = marker.isStart ? linkCtx.ColorStart : linkCtx.ColorEnd;
+
+                bool linkVisible = c.a * linkCtx.Alpha >= visibilityThreshold;
+                bool nodesOpaque = !_networkManager.IsNodeTransparent(marker.nodeID, subnID)
+                    && !_networkManager.IsNodeTransparent(marker.otherNodeID, subnID);
+                bool visible = linkVisible && nodesOpaque;
+
+                if (marker.rend.enabled != visible) marker.rend.enabled = visible;
+                if (!visible) continue;
+
                 var nodeCtx  = _networkContext.Nodes[marker.nodeID];
                 var otherCtx = _networkContext.Nodes[marker.otherNodeID];
-                float nodeRadius = nodeCtx.Size * 0.5f;
                 var dir = otherCtx.Position - nodeCtx.Position;
                 if (dir.sqrMagnitude < 1e-6f) dir = Vector3.up;
                 dir.Normalize();
 
-                // Embed the sphere so only ~half its radius protrudes from the node surface.
-                marker.rend.transform.position = nodeCtx.Position + dir * (nodeRadius - sphereRadius * 0.5f);
+                // Distance from node center to its surface along dir depends on shape:
+                // a sphere's surface is a constant radius in every direction, but a
+                // cube's surface distance shrinks toward its corners.
+                float halfExtent = nodeCtx.Size * 0.5f;
+                string shape = _networkManager.GetNodeShape(marker.nodeID, subnID);
+                float surfaceDist = shape == "cube"
+                    ? halfExtent / Mathf.Max(Mathf.Abs(dir.x), Mathf.Abs(dir.y), Mathf.Abs(dir.z), 1e-4f)
+                    : halfExtent;
+
+                // The bowl's local origin is its rim (the wide open end — mesh rim
+                // sits at local y=0, pole at y=-0.5 before scaling), so `position`
+                // places the rim, not the shape's center. The wide rim sits against
+                // (slightly sunk into) the node surface, and the narrow pole tapers
+                // outward along the link — like a small funnel mounted on the node.
+                marker.rend.transform.position = nodeCtx.Position + dir * (surfaceDist - _endpointDepth * EndpointEmbedFraction);
+                marker.rend.transform.rotation = Quaternion.FromToRotation(Vector3.down, dir);
 
                 // Color follows the link's start/end color (same gradient the edge ribbon uses).
-                var linkCtx = _networkContext.Links[marker.linkID];
-                var c = marker.isStart ? linkCtx.ColorStart : linkCtx.ColorEnd;
-                c.a = 1f; // endpoints are opaque; ignore the link's transparency alpha
+                c.a = 1f; // marker geometry itself stays opaque
                 if (marker.rend.material.HasProperty("_Color"))     marker.rend.material.SetColor("_Color", c);
                 if (marker.rend.material.HasProperty("_BaseColor")) marker.rend.material.SetColor("_BaseColor", c);
             }

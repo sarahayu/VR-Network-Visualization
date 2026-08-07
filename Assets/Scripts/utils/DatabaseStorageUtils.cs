@@ -617,6 +617,5 @@ namespace VidiGraph
             }
             return result;
         }
-
     }
 }
