@@ -10,7 +10,7 @@ Shader "Custom/Batch BSpline Unlit"
         // in the default (Geometry) queue the ribbons draw before/among opaque
         // geometry and write depth, so faded links blend against the clear color
         // and occlude what's behind them — they look like solid dark strips.
-        Tags { "RenderType"="Transparent" "Queue"="Transparent" "IgnoreProjector"="True" }
+        Tags { "Queue"="Transparent" "RenderType"="Transparent" }
         LOD 200
         Blend SrcAlpha OneMinusSrcAlpha
         ZWrite Off
@@ -21,6 +21,7 @@ Shader "Custom/Batch BSpline Unlit"
             #pragma target 5.0
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile_instancing
 
             #define SHADER_CODE
             #include "UnityCG.cginc"
@@ -28,19 +29,31 @@ Shader "Custom/Batch BSpline Unlit"
 
             float _LineWidth; // Used to adjust the line thickness
 
+            struct appdata
+            {
+                uint vertexID : SV_VertexID;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
             struct v2f
             {
                 float4 vertex : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 float4 color : COLOR;
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
-            v2f vert (uint vid : SV_VertexID)
+            v2f vert (appdata v)
             {
+                UNITY_SETUP_INSTANCE_ID(v);
+
+                uint vid = v.vertexID;
                 // Find current sample point index
                 uint SplineSampleIdx = vid/6; // Every samplepoint translates to 6 vertices = 2 triangles
 
                 v2f o;
+                UNITY_INITIALIZE_OUTPUT(v2f, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 // Skip early if this is the end of a line
                 if (OutSamplePointData[SplineSampleIdx].SplineIdx != OutSamplePointData[SplineSampleIdx + 1].SplineIdx) {
                     // Set some invalid values
@@ -103,6 +116,8 @@ Shader "Custom/Batch BSpline Unlit"
 
             fixed4 frag (v2f i) : SV_Target
             {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+
                 // Discard line ends if the marker was set
                 if (i.color.a <= 0.001) {
                     discard;
