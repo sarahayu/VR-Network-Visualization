@@ -48,8 +48,22 @@ public class DemoSequence : MonoBehaviour
     [SerializeField] KeyCode _aggressionDegreeKey = KeyCode.A;
 
     [Header("Captions")]
-    [Tooltip("Optional plain label. Leave empty to caption through the command panel below.")]
+    [Tooltip("The label the demo writes its commands into. One object, rewritten " +
+             "each step — this is the display that actually shows up in the scene.")]
     [SerializeField] TextMeshProUGUI _stepLabel;
+
+    [Tooltip("How many commands stay on screen. Adding one past this drops the oldest " +
+             "off the top and shifts the rest up.")]
+    [SerializeField, Min(1)] int _maxVisibleCommands = 3;
+
+    [Tooltip("Blank lines placed between commands so the steps read as separate blocks.")]
+    [SerializeField, Min(0)] int _blankLinesBetweenCommands = 1;
+
+    [Tooltip("Also append each command as a new entry in the scrolling command log. " +
+             "Off by default: entries are created correctly but sit outside the visible " +
+             "area of that scroll view, so they show up as nothing.")]
+    [SerializeField] bool _alsoPostToCommandLog;
+
     [Tooltip("Command-log panel used by the other demos. Auto-borrowed from StreamingSampleMic if left empty.")]
     [SerializeField] GameObject _commandPrefab;
     [SerializeField] GameObject _commandParent;
@@ -64,6 +78,11 @@ public class DemoSequence : MonoBehaviour
     List<int> _friendLinkIDs = new List<int>();
     Coroutine _scrollRoutine;  // pending scroll-to-bottom, cancelled if another entry lands first
     string _pendingAnswer;     // reply to a question command, posted once the step has computed it
+
+    // Everything currently on screen; the label is rewritten from this, so new text
+    // appears under the old rather than replacing it. Once the list is full the
+    // oldest entry drops off the top and the rest shift up.
+    readonly List<string> _captionHistory = new List<string>();
 
     const float BlueHue = 0.60f;
 
@@ -94,24 +113,28 @@ public class DemoSequence : MonoBehaviour
     // they read as things you'd say out loud, so numerals are spelled out and the
     // measured values live in the result line underneath. A step can say more than
     // one thing (an action, then a question about it).
-    static readonly string[][] StepCommands =
+    // One sentence per step — each Enter press is exactly one command.
+    static readonly string[] StepCommands =
     {
-        new[]
-        {
-            "Select the fifteen students who bully the most and color them red.",
-            "What is their average number of friends?",
-        },
-        new[] { "Encode gender with shapes." },
-        new[] { "Show the aggression links of the selected students in orange." },
-        new[] { "Show their friendship links in green." },
+        "Select the fifteen students who bully the most and color them red.",
+        "What is their average number of friends?",
+        "Encode gender with shapes.",
+        "Show the aggression links of the selected students in orange.",
+        "Show their friendship links in green.",
     };
 
     void Start()
     {
+        // Null-safe: a missing Network Manager used to throw here, which aborted the
+        // rest of Start() — including the panel wiring — and left the command log
+        // silently dead for the whole session.
         if (_networkManager == null)
-            _networkManager = GameObject.Find("/Network Manager").GetComponent<NetworkManager>();
+            _networkManager = GameObject.Find("/Network Manager")?.GetComponent<NetworkManager>();
         if (_databaseStorage == null)
             _databaseStorage = GameObject.Find("/Database")?.GetComponent<DatabaseStorage>();
+
+        if (_networkManager == null)
+            Debug.LogError("[DemoSequence] No NetworkManager found — the demo cannot run.");
 
         ResolveUiPanels();
 
@@ -126,6 +149,7 @@ public class DemoSequence : MonoBehaviour
         if (Input.GetKeyDown(_startDemoKey))
         {
             _step = 0;
+            ClearCaptions();   // fresh run — don't leave the previous one on screen
             ShowCommand("Show me all the students");
             StartDemoSession("Status Struggle");
             SelectAllNodes();
@@ -135,6 +159,7 @@ public class DemoSequence : MonoBehaviour
         // ── Standalone saturation demos ───────────────────────────────────────
         if (Input.GetKeyDown(_friendshipDegreeKey))
         {
+            ClearCaptions();
             ShowCommand("Color the students by how many friends they have");
             StartSaturationDemo("friendship", "Friendship Degree");
             return;
@@ -142,6 +167,7 @@ public class DemoSequence : MonoBehaviour
 
         if (Input.GetKeyDown(_aggressionDegreeKey))
         {
+            ClearCaptions();
             ShowCommand("Color the students by how aggressive they are");
             StartSaturationDemo("aggression", "Aggression Degree");
             return;
@@ -152,22 +178,19 @@ public class DemoSequence : MonoBehaviour
         {
             if (_step < 0 || _demoSubnID < 0) { Debug.Log("[DemoSequence] Press B first."); return; }
 
-            // Caption the commands, then run the step — same order as the voice
-            // demos, so the log reads as a conversation rather than a step counter.
-            foreach (var command in StepCommands[_step])
-            {
-                // A command phrased as a question is labelled Q, and its reply is
-                // posted as A just below — so the pair reads as a exchange.
-                ShowCommand(IsQuestion(command) ? $"Q: {command}" : command);
-                Debug.Log($"[Status Struggle] ── {command} ──");
-            }
+            string command = StepCommands[_step];
+            Debug.Log($"[Status Struggle] ── {command} ──");
 
+            // Run first: a question's answer doesn't exist until the step computes
+            // it, and a question and its answer share one caption, so it can only
+            // be written once both halves are known.
             _pendingAnswer = null;
             RunStep();
 
-            // A step whose command was a question posts its reply here, so the answer
-            // lands directly under the question that asked for it.
-            if (!string.IsNullOrEmpty(_pendingAnswer)) PostToCommandLog($"A: {_pendingAnswer}");
+            string caption = IsQuestion(command) ? $"Q: {command}" : command;
+            if (!string.IsNullOrEmpty(_pendingAnswer)) caption += $"\nA: {_pendingAnswer}";
+
+            ShowCommand(caption);
 
             _step++;
             if (_step >= StepCommands.Length)
@@ -183,9 +206,10 @@ public class DemoSequence : MonoBehaviour
         switch (_step)
         {
             case 0: SelectTopAggressorsRed(); break;
-            case 1: EncodeGenderWithShapes(); break;
-            case 2: ShowAggressionLinksOrange(); break;
-            case 3: ColorFriendshipLinksGreen(); break;
+            case 1: AnswerAverageFriends(); break;
+            case 2: EncodeGenderWithShapes(); break;
+            case 3: ShowAggressionLinksOrange(); break;
+            case 4: ColorFriendshipLinksGreen(); break;
         }
     }
 
@@ -204,24 +228,6 @@ public class DemoSequence : MonoBehaviour
             .Select(kv => kv.Key)
             .ToList();
 
-        // Compare against school-wide friendship degree. Sum of undirected degrees
-        // = 2 * edge count, so the average follows directly from the degree map.
-        var friendDegree = ComputeUndirectedDegree("friendship");
-        float schoolAvg  = global.RealNodes.Count > 0 ? (float)friendDegree.Values.Sum() / global.RealNodes.Count : 0f;
-        float bulliesAvg = _bulliesIDs.Count > 0
-            ? (float)_bulliesIDs.Sum(id => friendDegree.TryGetValue(id, out var d) ? d : 0) / _bulliesIDs.Count
-            : 0f;
-
-        float ratio = schoolAvg > 0f ? bulliesAvg / schoolAvg : 0f;
-        // Answers "What is their average number of friends?" — goes in the log,
-        // right under the question.
-        _pendingAnswer = $"{bulliesAvg:F1} friends on average, compared with {schoolAvg:F1} "
-                       + "for the school as a whole"
-                       + (ratio > 1f ? $" — about {Mathf.RoundToInt((ratio - 1f) * 100f)}% higher." : ".");
-
-        ReportFinding(_pendingAnswer + " The red students sit in the dense core, not the fringe: "
-                    + "aggression here is status competition, not marginality. "
-                    + "(Faris & Felmlee 2011, \"Status Struggles.\")");
         Debug.Log($"[Status Struggle] Top-15 aggression counts: {string.Join(", ", _bulliesIDs.Select(id => aggrOut[id]))}");
 
         // Bucket every link incident to the top-15 by type in one pass — steps 2/3
@@ -262,9 +268,37 @@ public class DemoSequence : MonoBehaviour
         _networkManager.ClearSelection();
     }
 
-    // ─── Step 2: shape = gender; aggression links = orange ─────────────────────
+    // ─── Step 2: answer the friendship-average question ───────────────────────
+    // No visual change — this step exists purely to answer, so the question gets
+    // its own beat in the walkthrough.
+
+    void AnswerAverageFriends()
+    {
+        var global = _networkManager.NetworkGlobal;
+
+        // Sum of undirected degrees = 2 * edge count, so the school-wide average
+        // follows directly from the degree map.
+        var friendDegree = ComputeUndirectedDegree("friendship");
+        float schoolAvg  = global.RealNodes.Count > 0
+            ? (float)friendDegree.Values.Sum() / global.RealNodes.Count
+            : 0f;
+        float bulliesAvg = _bulliesIDs.Count > 0
+            ? (float)_bulliesIDs.Sum(id => friendDegree.TryGetValue(id, out var d) ? d : 0) / _bulliesIDs.Count
+            : 0f;
+
+        // Kept to one short line — it shares the caption with the question, and the
+        // full interpretation goes to the console for narration instead.
+        float ratio = schoolAvg > 0f ? bulliesAvg / schoolAvg : 0f;
+        _pendingAnswer = $"{bulliesAvg:F1} vs {schoolAvg:F1} school-wide"
+                       + (ratio > 1f ? $" — {Mathf.RoundToInt((ratio - 1f) * 100f)}% higher." : ".");
+
+        ReportFinding($"{bulliesAvg:F1} friends on average against {schoolAvg:F1} school-wide. "
+                    + "The red students sit in the dense core, not the fringe: aggression here is "
+                    + "status competition, not marginality. (Faris & Felmlee 2011, \"Status Struggles.\")");
+    }
+
+    // ─── Step 3: shape = gender ────────────────────────────────────────────────
     // Sphere encodes female students, cube encodes male students.
-    // Aggression links of the top-15 are colored orange.
 
     void EncodeGenderWithShapes()
     {
@@ -522,8 +556,11 @@ public class DemoSequence : MonoBehaviour
     // the owner may not be enabled when this runs).
     void ResolveUiPanels()
     {
-        var mic = FindObjectOfType<StreamingSampleMic>(true);
-        if (mic != null)
+        // The scene holds more than one of these components and not all of them have
+        // the panel wired up, so every instance is checked and each field is taken
+        // from the first one that actually has it — picking a single "best" object
+        // would land on the one with null references.
+        foreach (var mic in FindObjectsOfType<StreamingSampleMic>(true))
         {
             if (_commandPrefab == null) _commandPrefab = mic.command_prefab;
             if (_commandParent == null) _commandParent = mic.command_parent;
@@ -531,16 +568,12 @@ public class DemoSequence : MonoBehaviour
             if (_legend == null) _legend = mic.legendManager;
         }
 
-        if (_commandPrefab == null || _commandParent == null || _legend == null)
+        foreach (var tester in FindObjectsOfType<KeyboardCommandTester>(true))
         {
-            var tester = FindObjectOfType<KeyboardCommandTester>(true);
-            if (tester != null)
-            {
-                if (_commandPrefab == null) _commandPrefab = tester.command_prefab;
-                if (_commandParent == null) _commandParent = tester.command_parent;
-                if (_commandScroll == null) _commandScroll = tester.scroll;
-                if (_legend == null) _legend = tester.legendManager;
-            }
+            if (_commandPrefab == null) _commandPrefab = tester.command_prefab;
+            if (_commandParent == null) _commandParent = tester.command_parent;
+            if (_commandScroll == null) _commandScroll = tester.scroll;
+            if (_legend == null) _legend = tester.legendManager;
         }
 
         if (_legend == null)
@@ -551,7 +584,8 @@ public class DemoSequence : MonoBehaviour
             Debug.LogWarning("[DemoSequence] No command panel found — captions will only go to the console. "
                            + "Assign Command Prefab / Command Parent on the component.");
         else
-            Debug.Log($"[DemoSequence] Captioning into '{_commandParent.name}'.");
+            Debug.Log($"[DemoSequence] Captioning into '{_commandParent.name}' "
+                    + $"(prefab '{_commandPrefab.name}', {_commandParent.transform.childCount} existing entries).");
     }
 
     // ─── Narrative statistics ─────────────────────────────────────────────────
@@ -689,8 +723,64 @@ public class DemoSequence : MonoBehaviour
     // before comparison — otherwise A→B aggression would miss a B–A friendship.
     static (int, int) UnorderedPair(int a, int b) => a < b ? (a, b) : (b, a);
 
-    // The spoken command that drives a step — posted before the step runs.
-    void ShowCommand(string text) => PostToCommandLog(text);
+    // Appends this step's caption underneath everything said so far, so the one
+    // label builds up a running history — new text under the old, chatroom style.
+    // Writing into the label that's already visible avoids the scroll-view clipping
+    // that swallowed separately instantiated entries.
+    void ShowCommand(string text)
+    {
+        _captionHistory.Add(text);
+
+        // Past the limit the first entry is dropped; rebuilding from the trimmed
+        // list is what makes the remaining ones appear to shift up.
+        while (_captionHistory.Count > _maxVisibleCommands) _captionHistory.RemoveAt(0);
+
+        if (_stepLabel == null) ResolveStepLabel();
+
+        // One newline holds a Q and its A together; the extra blank lines separate
+        // one command from the next.
+        string separator = "\n" + new string('\n', _blankLinesBetweenCommands);
+        if (_stepLabel != null) _stepLabel.text = string.Join(separator, _captionHistory);
+        else Debug.LogWarning("[DemoSequence] No text object to write into — assign Step Label "
+                            + "on the DemoSequence component.");
+
+        if (_alsoPostToCommandLog) PostToCommandLog(text);
+    }
+
+    // Finds the text object to write into when none was assigned: first anything
+    // named like the panel's runtime text objects, then any text already living
+    // inside the command panel. Logs its full path so it's obvious which object
+    // the demo is driving.
+    void ResolveStepLabel()
+    {
+        foreach (var candidate in FindObjectsOfType<TextMeshProUGUI>(true))
+        {
+            if (!candidate.name.Contains("New Text Instance")) continue;
+            _stepLabel = candidate;
+            break;
+        }
+
+        if (_stepLabel == null && _commandParent != null)
+            _stepLabel = _commandParent.GetComponentInChildren<TextMeshProUGUI>(true);
+
+        if (_stepLabel != null)
+            Debug.Log($"[DemoSequence] Writing captions into '{PathOf(_stepLabel.transform)}'.");
+    }
+
+    static string PathOf(Transform t)
+    {
+        var path = t.name;
+        while (t.parent != null) { t = t.parent; path = t.name + "/" + path; }
+        return path;
+    }
+
+    // Starts the running history over — called when a demo (re)starts, so the panel
+    // doesn't still show the previous run.
+    void ClearCaptions()
+    {
+        _captionHistory.Clear();
+        if (_stepLabel != null) _stepLabel.text = "";
+    }
 
     static bool IsQuestion(string command) => command.TrimEnd().EndsWith("?");
 
@@ -704,19 +794,29 @@ public class DemoSequence : MonoBehaviour
     // older messages up out of frame. Nothing is overwritten or cleared.
     void PostToCommandLog(string text)
     {
-        if (_stepLabel != null) _stepLabel.text = text;
+        // Resolve on demand as well as in Start(): if Start() ran before the panel's
+        // owner was awake — or bailed early — the refs would otherwise stay null for
+        // the whole session and every entry would be silently dropped.
+        if (_commandPrefab == null || _commandParent == null) ResolveUiPanels();
 
-        if (_commandPrefab == null || _commandParent == null) return;
+        if (_commandPrefab == null || _commandParent == null)
+        {
+            Debug.LogWarning($"[DemoSequence] No command panel — dropping entry: {text}");
+            return;
+        }
 
         // worldPositionStays: false — keeps the prefab's own anchors/offsets/scale
         // relative to the panel instead of re-deriving them from world space, which
         // is what makes the entry land where the panel's layout expects it.
         var msgObj = Instantiate(_commandPrefab, _commandParent.transform, false);
         msgObj.transform.SetAsLastSibling();   // newest entry at the bottom of the history
+        msgObj.SetActive(true);                // prefab may ship disabled as a template
 
-        var tmp = msgObj.GetComponent<TMP_Text>();
+        var tmp = msgObj.GetComponentInChildren<TMP_Text>(true);
         if (tmp != null) tmp.text = text;
+        else Debug.LogWarning("[DemoSequence] Command prefab has no TMP_Text — entry will be blank.");
 
+        Debug.Log($"[DemoSequence] Command log now has {_commandParent.transform.childCount} entries.");
         ScrollToNewest();
     }
 

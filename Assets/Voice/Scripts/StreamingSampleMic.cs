@@ -47,6 +47,11 @@ namespace Whisper.Samples
         public GameObject command_parent;
         public TMP_InputField textCommandInput;
 
+        [Tooltip("Legacy 3-step snapshot demo on the Enter key (creates a session, saves a " +
+                 "snapshot with the fly-to-wall animation). Leave OFF — Enter now advances " +
+                 "the Status Struggle demo in DemoSequence.")]
+        public bool enableEnterSnapshotDemo = false;
+
         // Reference to the whisper stream
         private WhisperStream _stream;
         private float whisperStartTime;
@@ -131,7 +136,10 @@ namespace Whisper.Samples
                 Indicator.SetPropertyBlock(props);
             }
 
-            if (Input.GetKeyDown(KeyCode.Return))
+            // Off by default: Enter drives DemoSequence's Status Struggle walkthrough.
+            // Leaving this on ran a second demo on the same key — it created its own
+            // working session and fired the snapshot-save animation on every step.
+            if (enableEnterSnapshotDemo && Input.GetKeyDown(KeyCode.Return))
             {
                 RunDemoStep();
             }

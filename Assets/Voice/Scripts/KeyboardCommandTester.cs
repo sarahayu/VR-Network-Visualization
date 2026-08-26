@@ -1795,11 +1795,12 @@ namespace Whisper.Samples
 
         // Free-look player movement. Always active (not gated to a demo), so the
         // camera can be repositioned at any time while recording.
-        //   Arrow keys  — Up/Down walk forward/back, Left/Right strafe
-        //   , / .       — turn left/right
-        // NOTE: rotation is on comma/period rather than Q/E because Q and E are
-        // demo trigger keys (demos 3 and 5) — sharing them would fire a demo
-        // every time you turned the camera.
+        //   Up / Down     — walk forward / back
+        //   Left / Right  — turn left / right, so you can face a direction and then
+        //                   walk into it (movement follows where you're looking)
+        //   , / .         — strafe left / right without turning
+        // NOTE: turning is not on Q/E because those are demo trigger keys (demos 3
+        // and 5) — sharing them would fire a demo every time you turned.
         private void UpdatePlayerMovement()
         {
             var cam = demoDCamera;
@@ -1814,10 +1815,10 @@ namespace Whisper.Samples
 
             if (Input.GetKey(KeyCode.UpArrow))    moveF += moveSpeed * Time.deltaTime;
             if (Input.GetKey(KeyCode.DownArrow))  moveF -= moveSpeed * Time.deltaTime;
-            if (Input.GetKey(KeyCode.LeftArrow))  moveH -= moveSpeed * Time.deltaTime;
-            if (Input.GetKey(KeyCode.RightArrow)) moveH += moveSpeed * Time.deltaTime;
-            if (Input.GetKey(KeyCode.Comma))      rot   -= rotSpeed  * Time.deltaTime;
-            if (Input.GetKey(KeyCode.Period))     rot   += rotSpeed  * Time.deltaTime;
+            if (Input.GetKey(KeyCode.LeftArrow))  rot   -= rotSpeed  * Time.deltaTime;
+            if (Input.GetKey(KeyCode.RightArrow)) rot   += rotSpeed  * Time.deltaTime;
+            if (Input.GetKey(KeyCode.Comma))      moveH -= moveSpeed * Time.deltaTime;
+            if (Input.GetKey(KeyCode.Period))     moveH += moveSpeed * Time.deltaTime;
 
             if (moveF == 0f && moveH == 0f && rot == 0f) return;
 
