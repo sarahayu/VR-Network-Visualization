@@ -5,8 +5,11 @@
  *          Wipes all sessions, creates a fresh working subgraph from ALL real nodes
  *          in force-directed layout. No initial encoding — let the layout speak.
  *
+ * Each step posts its command to the shared command log in plain language (the
+ * way the voice demos caption themselves), then posts what it found underneath.
+ *
  *   Enter 1  Top-15 aggressors (most outgoing aggression links) → selected + red.
- *             Shows their avg friendship degree vs school-wide avg on the label.
+ *             Reports their avg friendship degree vs the school-wide average.
  *             All other nodes become transparent ghosts; all links fade out.
  *
  *   Enter 2  Encode sex with shapes: sphere = girl, cube = boy.
@@ -15,30 +18,52 @@
  *   Enter 3  Color friendship links of the top-15 in green.
  *             (Aggression orange and shapes remain — cumulative layering.)
  *
- *   1      Standalone: new subgraph, all nodes colored by friendship degree (blue saturation).
- *   2      Standalone: new subgraph, all nodes colored by aggression degree (blue saturation).
+ *   F      Standalone: new subgraph, all nodes colored by friendship degree (blue saturation).
+ *   A      Standalone: new subgraph, all nodes colored by aggression degree (blue saturation).
+ *
+ * Key choice: F/A rather than 1/2 because KeyboardCommandTester (which is live in
+ * the scene) already binds Alpha1/Alpha2 to "size by grade"/"size by GPA" — sharing
+ * them would fire both actions on one press. All three keys are Inspector-editable.
  *
  * Requires: NetworkManager at "/Network Manager", DatabaseStorage at "/Database"
  */
 
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 using VidiGraph;
+using Whisper.Samples;
 
 public class DemoSequence : MonoBehaviour
 {
     [SerializeField] NetworkManager _networkManager;
     [SerializeField] DatabaseStorage _databaseStorage;
+
+    [Header("Keys")]
+    [SerializeField] KeyCode _startDemoKey = KeyCode.B;
+    [SerializeField] KeyCode _friendshipDegreeKey = KeyCode.F;
+    [SerializeField] KeyCode _aggressionDegreeKey = KeyCode.A;
+
+    [Header("Captions")]
+    [Tooltip("Optional plain label. Leave empty to caption through the command panel below.")]
     [SerializeField] TextMeshProUGUI _stepLabel;
+    [Tooltip("Command-log panel used by the other demos. Auto-borrowed from StreamingSampleMic if left empty.")]
+    [SerializeField] GameObject _commandPrefab;
+    [SerializeField] GameObject _commandParent;
+    [SerializeField] ScrollRect _commandScroll;
+    [Tooltip("Persistent legend panel. Auto-borrowed from StreamingSampleMic if left empty.")]
+    [SerializeField] LegendManager _legend;
 
     int _step = -1;
     int _demoSubnID = -1;
     List<int> _bulliesIDs = new List<int>();
     List<int> _aggrLinkIDs = new List<int>();
     List<int> _friendLinkIDs = new List<int>();
-    string _lastResult = "";   // finding from the step that just ran, shown on the label
+    Coroutine _scrollRoutine;  // pending scroll-to-bottom, cancelled if another entry lands first
+    string _pendingAnswer;     // reply to a question command, posted once the step has computed it
 
     const float BlueHue = 0.60f;
 
@@ -49,8 +74,15 @@ public class DemoSequence : MonoBehaviour
     // orange/green highlights of steps 2-3).
     const float FocusLinkAlpha = 0.50f;
 
-    static readonly Color OrangeAggression = ParseHex("#D67229");
-    static readonly Color GreenFriendship  = ParseHex("#3B8132");
+    // Hex is the source of truth: the same string colors the geometry and labels
+    // the legend, so the two can't drift apart.
+    const string RedHex    = "#FF0000";   // matches the legend's red palette slot
+    const string OrangeHex = "#D67229";
+    const string GreenHex  = "#3B8132";
+
+    static readonly Color RedAggressor     = ParseHex(RedHex);
+    static readonly Color OrangeAggression = ParseHex(OrangeHex);
+    static readonly Color GreenFriendship  = ParseHex(GreenHex);
 
     static Color ParseHex(string hex)
     {
@@ -58,11 +90,20 @@ public class DemoSequence : MonoBehaviour
         return c;
     }
 
-    static readonly string[] StepLabels =
+    // The spoken script for each step. These are for the audience, not the engine —
+    // they read as things you'd say out loud, so numerals are spelled out and the
+    // measured values live in the result line underneath. A step can say more than
+    // one thing (an action, then a question about it).
+    static readonly string[][] StepCommands =
     {
-        "Step 1 / 3 — Top-15 aggressors → red; others dimmed",
-        "Step 2 / 3 — Encode gender (sphere=girl, cube=boy) + aggression links orange",
-        "Step 3 / 3 — Friendship links of top-15 → green",
+        new[]
+        {
+            "Select the fifteen students who bully the most and color them red.",
+            "What is their average number of friends?",
+        },
+        new[] { "Encode gender with shapes." },
+        new[] { "Show the aggression links of the selected students in orange." },
+        new[] { "Show their friendship links in green." },
     };
 
     void Start()
@@ -72,32 +113,37 @@ public class DemoSequence : MonoBehaviour
         if (_databaseStorage == null)
             _databaseStorage = GameObject.Find("/Database")?.GetComponent<DatabaseStorage>();
 
-        ShowLabel("Press B — Status Struggle demo");
-        Debug.Log("[DemoSequence] Ready — press B to start, Enter for each step.");
+        ResolveUiPanels();
+
+        // Console only — don't seed the command log with a key hint.
+        Debug.Log($"[DemoSequence] Ready — {_startDemoKey} to start, Enter for each step, "
+                + $"{_friendshipDegreeKey}/{_aggressionDegreeKey} for the degree demos.");
     }
 
     void Update()
     {
-        // ── B: Status Struggle setup ───────────────────────────────────────────
-        if (Input.GetKeyDown(KeyCode.B))
+        // ── Status Struggle setup ─────────────────────────────────────────────
+        if (Input.GetKeyDown(_startDemoKey))
         {
             _step = 0;
+            ShowCommand("Show me all the students");
             StartDemoSession("Status Struggle");
             SelectAllNodes();
-            ShowLabel("Press Enter — " + StepLabels[0]);
             return;
         }
 
-        // ── Key 1 / Key 2: standalone saturation demos ─────────────────────────
-        if (Input.GetKeyDown(KeyCode.Alpha1))
+        // ── Standalone saturation demos ───────────────────────────────────────
+        if (Input.GetKeyDown(_friendshipDegreeKey))
         {
-            StartSaturationDemo("friendship", "Friendship Degree", "Demo 1 — friendship degree");
+            ShowCommand("Color the students by how many friends they have");
+            StartSaturationDemo("friendship", "Friendship Degree");
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.Alpha2))
+        if (Input.GetKeyDown(_aggressionDegreeKey))
         {
-            StartSaturationDemo("aggression", "Aggression Degree", "Demo 2 — aggression degree");
+            ShowCommand("Color the students by how aggressive they are");
+            StartSaturationDemo("aggression", "Aggression Degree");
             return;
         }
 
@@ -106,22 +152,28 @@ public class DemoSequence : MonoBehaviour
         {
             if (_step < 0 || _demoSubnID < 0) { Debug.Log("[DemoSequence] Press B first."); return; }
 
-            Debug.Log($"[Status Struggle] ── {StepLabels[_step]} ──");
-            _lastResult = "";
+            // Caption the commands, then run the step — same order as the voice
+            // demos, so the log reads as a conversation rather than a step counter.
+            foreach (var command in StepCommands[_step])
+            {
+                // A command phrased as a question is labelled Q, and its reply is
+                // posted as A just below — so the pair reads as a exchange.
+                ShowCommand(IsQuestion(command) ? $"Q: {command}" : command);
+                Debug.Log($"[Status Struggle] ── {command} ──");
+            }
+
+            _pendingAnswer = null;
             RunStep();
 
+            // A step whose command was a question posts its reply here, so the answer
+            // lands directly under the question that asked for it.
+            if (!string.IsNullOrEmpty(_pendingAnswer)) PostToCommandLog($"A: {_pendingAnswer}");
+
             _step++;
-            string resultLine = string.IsNullOrEmpty(_lastResult) ? "" : _lastResult + "\n";
-            if (_step >= StepLabels.Length)
+            if (_step >= StepCommands.Length)
             {
                 _step = -1;
-                ShowLabel(resultLine + "Demo complete — press B to restart");
                 Debug.Log("[Status Struggle] ══ Demo complete. Press B to restart. ══");
-            }
-            else
-            {
-                ShowLabel(resultLine + "Press Enter — " + StepLabels[_step]);
-                Debug.Log($"[Status Struggle] → Next: {StepLabels[_step]}");
             }
         }
     }
@@ -131,8 +183,9 @@ public class DemoSequence : MonoBehaviour
         switch (_step)
         {
             case 0: SelectTopAggressorsRed(); break;
-            case 1: EncodeGenderAndAggressionLinks(); break;
-            case 2: ColorFriendshipLinksGreen(); break;
+            case 1: EncodeGenderWithShapes(); break;
+            case 2: ShowAggressionLinksOrange(); break;
+            case 3: ColorFriendshipLinksGreen(); break;
         }
     }
 
@@ -159,8 +212,16 @@ public class DemoSequence : MonoBehaviour
             ? (float)_bulliesIDs.Sum(id => friendDegree.TryGetValue(id, out var d) ? d : 0) / _bulliesIDs.Count
             : 0f;
 
-        _lastResult = $"Top-15 avg friends: {bulliesAvg:F1} vs school-wide: {schoolAvg:F1}";
-        Debug.Log($"[Status Struggle] {_lastResult}");
+        float ratio = schoolAvg > 0f ? bulliesAvg / schoolAvg : 0f;
+        // Answers "What is their average number of friends?" — goes in the log,
+        // right under the question.
+        _pendingAnswer = $"{bulliesAvg:F1} friends on average, compared with {schoolAvg:F1} "
+                       + "for the school as a whole"
+                       + (ratio > 1f ? $" — about {Mathf.RoundToInt((ratio - 1f) * 100f)}% higher." : ".");
+
+        ReportFinding(_pendingAnswer + " The red students sit in the dense core, not the fringe: "
+                    + "aggression here is status competition, not marginality. "
+                    + "(Faris & Felmlee 2011, \"Status Struggles.\")");
         Debug.Log($"[Status Struggle] Top-15 aggression counts: {string.Join(", ", _bulliesIDs.Select(id => aggrOut[id]))}");
 
         // Bucket every link incident to the top-15 by type in one pass — steps 2/3
@@ -196,7 +257,8 @@ public class DemoSequence : MonoBehaviour
 
         // Top-15: vivid red, selected, opaque.
         _networkManager.SetSelectedNodes(_bulliesIDs, true, _demoSubnID);
-        _networkManager.SetMLNodesColorDirect(_bulliesIDs, new Color(1f, 0.067f, 0.067f, 1f), _demoSubnID);
+        _networkManager.SetMLNodesColorDirect(_bulliesIDs, RedAggressor, _demoSubnID);
+        _legend?.SetNodeColorLabel(RedHex, "Most aggressive students");
         _networkManager.ClearSelection();
     }
 
@@ -204,12 +266,11 @@ public class DemoSequence : MonoBehaviour
     // Sphere encodes female students, cube encodes male students.
     // Aggression links of the top-15 are colored orange.
 
-    void EncodeGenderAndAggressionLinks()
+    void EncodeGenderWithShapes()
     {
-        // Encode sex via shapes. Read the sex attribute straight from the loaded
-        // network file (same path the degree computations use) — no DB round-trip,
-        // no GUID translation. Node IDs are shared with the subgraph, so we target
-        // _demoSubnID directly.
+        // Read the sex attribute straight from the loaded network file (same path
+        // the degree computations use) — no DB round-trip, no GUID translation.
+        // Node IDs are shared with the subgraph, so we target _demoSubnID directly.
         var global    = _networkManager.NetworkGlobal;
         var fileNodes = _networkManager.FileLoader.SphericalLayout.nodes;
 
@@ -219,27 +280,50 @@ public class DemoSequence : MonoBehaviour
 
         foreach (var id in global.RealNodes)
         {
-            string sex = fileNodes[global.Nodes[id].IdxProcessed].props?.sex;
-            if (string.IsNullOrEmpty(sex)) continue;
-            seenValues.Add(sex);
+            string raw = fileNodes[global.Nodes[id].IdxProcessed].props?.sex;
+            if (!string.IsNullOrEmpty(raw)) seenValues.Add(raw);
 
-            char first = char.ToLowerInvariant(sex[0]);
-            if (first == 'f' || first == 'g' || first == 'w') femaleIDs.Add(id);       // female / girl / woman
-            else if (first == 'm' || first == 'b')            maleIDs.Add(id);         // male / boy
+            switch (SexOf(id))
+            {
+                case 'f': femaleIDs.Add(id); break;
+                case 'm': maleIDs.Add(id);   break;
+            }
         }
 
         Debug.Log($"[Status Struggle] sex values in file: [{string.Join(", ", seenValues)}]");
 
         _networkManager.SetMLNodesShape(femaleIDs, "sphere", _demoSubnID);
         _networkManager.SetMLNodesShape(maleIDs, "cube", _demoSubnID);
-        Debug.Log($"[Status Struggle] Shapes: {femaleIDs.Count} girls → sphere, {maleIDs.Count} boys → cube.");
 
-        // Aggression links of the top-15 (bucketed back in step 1) → orange at
-        // uniform full opacity.
+        // Legend shape slots are ordered [sphere, cube, triangle].
+        _legend?.SetShapeMapping(new[] { "Girls", "Boys" });
+
+        // Gender rides on shape rather than color so it stays legible under the red
+        // aggressor highlight — a cross-gender act is then one glance: red sphere → cube.
+        ReportFinding($"Spheres are girls ({femaleIDs.Count}), cubes are boys ({maleIDs.Count}). "
+                    + "Gender is on shape, not color, so it survives the red highlight.");
+    }
+
+    // ─── Step 3: aggression links of the top-15 → orange ──────────────────────
+
+    void ShowAggressionLinksOrange()
+    {
+        // Bucketed back in step 1 — orange at uniform full opacity.
         _networkManager.SetMLLinksColorDirect(_aggrLinkIDs, OrangeAggression, OrangeAggression, _demoSubnID, alpha: 1f);
+        _legend?.SetEdgeColorLabel(OrangeHex, "Aggression");
         Debug.Log($"[Status Struggle] {_aggrLinkIDs.Count} aggression links → orange.");
 
-        _lastResult = $"Sphere = girl ({femaleIDs.Count}), cube = boy ({maleIDs.Count}); {_aggrLinkIDs.Count} aggression links orange";
+        string finding = "";
+        float crossAggr   = CrossGenderShare("aggression");
+        float crossFriend = CrossGenderShare("friendship");
+        if (crossAggr >= 0f && crossFriend >= 0f)
+        {
+            finding = $"{crossAggr:F0}% of aggression crosses gender, against only "
+                    + $"{crossFriend:F0}% of friendships — ";
+        }
+
+        ReportFinding(finding + "aggression breaches the gender boundary that ordinary "
+                    + "affiliation respects. (Faris & Felmlee 2011, gender segregation.)");
     }
 
     // ─── Step 3: friendship links of top-15 → green ───────────────────────────
@@ -261,20 +345,38 @@ public class DemoSequence : MonoBehaviour
         if (_friendLinkIDs.Count > 0)
             _networkManager.SetMLLinksColorDirect(_friendLinkIDs, GreenFriendship, GreenFriendship, _demoSubnID, alpha: 1f);
 
+        _legend?.SetEdgeColorLabel(GreenHex, "Friendship");
+
         _networkManager.ClearSelection();
-        _lastResult = $"{_friendLinkIDs.Count} friendship links green, {_aggrLinkIDs.Count} aggression links orange";
+
         Debug.Log($"[Status Struggle] Links: {allSubgraphLinkIDs.Count} reset to default, {_aggrLinkIDs.Count} orange (aggression), {_friendLinkIDs.Count} green (friendship).");
+
+        // Green and orange occupy the same region and partly coincide — the point
+        // of the overlay is that aggression runs between structural equals.
+        string finding = "The green friendship web and the orange aggression links share the same region";
+
+        float alongFriendship = AggressionAlongFriendshipShare();
+        if (alongFriendship >= 0f)
+            finding += $", and partly coincide: {alongFriendship:F0}% of aggressive acts run "
+                     + "along a declared friendship tie";
+
+        float sharedRatio = SharedFriendRatio();
+        if (sharedRatio > 0f)
+            finding += $", and aggressor and victim share friends at {sharedRatio:F1} times "
+                     + "the rate of a random pair";
+
+        ReportFinding(finding + ". Aggression arises from amity and equivalence — between peers "
+                    + "who move in the same circles. (Faris, Felmlee & McMillan 2020, \"With Friends Like These.\")");
     }
 
-    // ─── Key 1 / Key 2: standalone saturation demos ───────────────────────────
+    // ─── Standalone saturation demos ──────────────────────────────────────────
 
-    void StartSaturationDemo(string linkType, string sessionName, string label)
+    void StartSaturationDemo(string linkType, string sessionName)
     {
         _step = -1;
         StartDemoSession(sessionName);
-        ColorBySaturation(linkType, label);
+        ColorBySaturation(linkType, sessionName);
         SelectAllNodes();
-        ShowLabel(label);
     }
 
     // Blue-saturation encoding: low degree → near-gray (sat≈0.05), high → vivid (sat≈0.90).
@@ -303,6 +405,18 @@ public class DemoSequence : MonoBehaviour
         }
         _networkManager.SetMLNodesColorDirect(nodeColors, _demoSubnID);
 
+        // Sample the same ramp at five stops so the legend swatch matches the nodes.
+        var ramp = new string[5];
+        for (int i = 0; i < ramp.Length; i++)
+        {
+            float t = (float)i / (ramp.Length - 1);
+            var c = Color.HSVToRGB(BlueHue, Mathf.Lerp(0.05f, 0.90f, t), Mathf.Lerp(0.60f, 0.90f, t));
+            ramp[i] = "#" + ColorUtility.ToHtmlStringRGB(c);
+        }
+        _legend?.SetNodeGradient(label, ramp);
+
+        ReportFinding($"{counts.Count} students, from {minC} to {maxC} connections each. "
+                    + "The brighter the blue, the more connected.");
         Debug.Log($"[DemoSequence] {label}: {counts.Count} nodes, degree range {minC}–{maxC}.");
     }
 
@@ -318,6 +432,7 @@ public class DemoSequence : MonoBehaviour
         _friendLinkIDs.Clear();
 
         _networkManager.ResetAll();
+        _legend?.ResetAll();   // the visuals are gone, so the legend shouldn't still describe them
 
         var global = _networkManager.NetworkGlobal;
         _networkManager.CreateWorkingSubgraph(global.RealNodes, sessionName, sessionName);
@@ -400,8 +515,231 @@ public class DemoSequence : MonoBehaviour
         return (all, aggression, friendship);
     }
 
-    void ShowLabel(string text)
+    // Reuse the command log and legend the voice/keyboard demos already drive, so
+    // demo entries inherit their existing anchoring, layout, and palette instead of
+    // needing their own. Inspector assignments always win; anything left empty is
+    // borrowed from whichever script owns it (searching inactive objects too, since
+    // the owner may not be enabled when this runs).
+    void ResolveUiPanels()
+    {
+        var mic = FindObjectOfType<StreamingSampleMic>(true);
+        if (mic != null)
+        {
+            if (_commandPrefab == null) _commandPrefab = mic.command_prefab;
+            if (_commandParent == null) _commandParent = mic.command_parent;
+            if (_commandScroll == null) _commandScroll = mic.scroll;
+            if (_legend == null) _legend = mic.legendManager;
+        }
+
+        if (_commandPrefab == null || _commandParent == null || _legend == null)
+        {
+            var tester = FindObjectOfType<KeyboardCommandTester>(true);
+            if (tester != null)
+            {
+                if (_commandPrefab == null) _commandPrefab = tester.command_prefab;
+                if (_commandParent == null) _commandParent = tester.command_parent;
+                if (_commandScroll == null) _commandScroll = tester.scroll;
+                if (_legend == null) _legend = tester.legendManager;
+            }
+        }
+
+        if (_legend == null)
+            Debug.LogWarning("[DemoSequence] No LegendManager found — the legend won't update. "
+                           + "Assign Legend on the component.");
+
+        if (_commandPrefab == null || _commandParent == null)
+            Debug.LogWarning("[DemoSequence] No command panel found — captions will only go to the console. "
+                           + "Assign Command Prefab / Command Parent on the component.");
+        else
+            Debug.Log($"[DemoSequence] Captioning into '{_commandParent.name}'.");
+    }
+
+    // ─── Narrative statistics ─────────────────────────────────────────────────
+    // These are measured from the loaded dataset rather than quoted, so the demo
+    // reports what this network actually shows. Each returns -1 when the data
+    // needed isn't present, and the caller then drops that clause rather than
+    // printing a made-up figure.
+
+    // 'f' / 'm', or '\0' when the node has no usable sex recorded.
+    char SexOf(int nodeID)
+    {
+        var global = _networkManager.NetworkGlobal;
+        var fileNodes = _networkManager.FileLoader.SphericalLayout.nodes;
+
+        // NodeCollection indexes by node ID, but only IdToIndex can be probed
+        // safely — the indexer throws on an unknown ID.
+        if (!global.Nodes.IdToIndex.TryGetValue(nodeID, out int idx)) return '\0';
+
+        string sex = fileNodes[global.Nodes.NodeArray[idx].IdxProcessed].props?.sex;
+        if (string.IsNullOrEmpty(sex)) return '\0';
+
+        char first = char.ToLowerInvariant(sex[0]);
+        if (first == 'f' || first == 'g' || first == 'w') return 'f';   // female / girl / woman
+        if (first == 'm' || first == 'b') return 'm';                   // male / boy
+        return '\0';
+    }
+
+    // Percentage of links of this type whose endpoints differ in recorded sex.
+    // Links missing sex on either end are excluded from both numerator and
+    // denominator instead of being counted as same-gender.
+    float CrossGenderShare(string linkType)
+    {
+        var global = _networkManager.NetworkGlobal;
+        var fileLinks = _networkManager.FileLoader.SphericalLayout.links;
+
+        int cross = 0, total = 0;
+        foreach (var (_, link) in global.Links)
+        {
+            if (fileLinks[link.IdxProcessed].props?.type != linkType) continue;
+
+            char a = SexOf(link.SourceNodeID), b = SexOf(link.TargetNodeID);
+            if (a == '\0' || b == '\0') continue;
+
+            total++;
+            if (a != b) cross++;
+        }
+
+        return total > 0 ? 100f * cross / total : -1f;
+    }
+
+    // Percentage of aggression links whose two students are also declared friends.
+    float AggressionAlongFriendshipShare()
+    {
+        var global = _networkManager.NetworkGlobal;
+        var fileLinks = _networkManager.FileLoader.SphericalLayout.links;
+
+        var friendPairs = new HashSet<(int, int)>();
+        foreach (var (_, link) in global.Links)
+            if (fileLinks[link.IdxProcessed].props?.type == "friendship")
+                friendPairs.Add(UnorderedPair(link.SourceNodeID, link.TargetNodeID));
+
+        int along = 0, total = 0;
+        foreach (var (_, link) in global.Links)
+        {
+            if (fileLinks[link.IdxProcessed].props?.type != "aggression") continue;
+
+            total++;
+            if (friendPairs.Contains(UnorderedPair(link.SourceNodeID, link.TargetNodeID))) along++;
+        }
+
+        return total > 0 ? 100f * along / total : -1f;
+    }
+
+    // How much more often an aggressor and their victim share friends than two
+    // students picked at random. The baseline is exact rather than sampled: a
+    // student with d friends is the mutual friend of exactly C(d,2) pairs, so the
+    // mean over all pairs is sum(C(d,2)) / C(n,2) — one pass, no random draws.
+    float SharedFriendRatio()
+    {
+        var global = _networkManager.NetworkGlobal;
+        var fileLinks = _networkManager.FileLoader.SphericalLayout.links;
+
+        var friends = new Dictionary<int, HashSet<int>>();
+        foreach (var (_, link) in global.Links)
+        {
+            if (fileLinks[link.IdxProcessed].props?.type != "friendship") continue;
+            Befriend(friends, link.SourceNodeID, link.TargetNodeID);
+            Befriend(friends, link.TargetNodeID, link.SourceNodeID);
+        }
+
+        long n = global.RealNodes.Count;
+        if (n < 2) return -1f;
+
+        double totalCommon = 0;
+        foreach (var id in global.RealNodes)
+        {
+            long d = friends.TryGetValue(id, out var set) ? set.Count : 0;
+            totalCommon += d * (d - 1) / 2.0;
+        }
+
+        double baseline = totalCommon / (n * (n - 1) / 2.0);
+        if (baseline <= 0) return -1f;
+
+        var counted = new HashSet<(int, int)>();
+        double sharedTotal = 0;
+        int pairs = 0;
+
+        foreach (var (_, link) in global.Links)
+        {
+            if (fileLinks[link.IdxProcessed].props?.type != "aggression") continue;
+            if (!counted.Add(UnorderedPair(link.SourceNodeID, link.TargetNodeID))) continue;
+
+            int shared = 0;
+            if (friends.TryGetValue(link.SourceNodeID, out var a)
+                && friends.TryGetValue(link.TargetNodeID, out var b))
+            {
+                foreach (var mutual in a)
+                    if (b.Contains(mutual)) shared++;
+            }
+
+            sharedTotal += shared;
+            pairs++;
+        }
+
+        return pairs > 0 ? (float)(sharedTotal / pairs / baseline) : -1f;
+    }
+
+    static void Befriend(Dictionary<int, HashSet<int>> friends, int of, int with)
+    {
+        if (!friends.TryGetValue(of, out var set)) friends[of] = set = new HashSet<int>();
+        set.Add(with);
+    }
+
+    // Friendship is undirected but aggression is directed, so pairs are normalised
+    // before comparison — otherwise A→B aggression would miss a B–A friendship.
+    static (int, int) UnorderedPair(int a, int b) => a < b ? (a, b) : (b, a);
+
+    // The spoken command that drives a step — posted before the step runs.
+    void ShowCommand(string text) => PostToCommandLog(text);
+
+    static bool IsQuestion(string command) => command.TrimEnd().EndsWith("?");
+
+    // Findings deliberately stay OUT of the command history — that panel shows only
+    // the spoken commands. They go to the console so the presenter has the exact
+    // measured numbers to narrate from.
+    void ReportFinding(string text) => Debug.Log($"[Status Struggle] → {text}");
+
+    // Appends one entry to the shared command log, chat-style: each message is added
+    // below the previous one and the view scrolls so the newest is visible, pushing
+    // older messages up out of frame. Nothing is overwritten or cleared.
+    void PostToCommandLog(string text)
     {
         if (_stepLabel != null) _stepLabel.text = text;
+
+        if (_commandPrefab == null || _commandParent == null) return;
+
+        // worldPositionStays: false — keeps the prefab's own anchors/offsets/scale
+        // relative to the panel instead of re-deriving them from world space, which
+        // is what makes the entry land where the panel's layout expects it.
+        var msgObj = Instantiate(_commandPrefab, _commandParent.transform, false);
+        msgObj.transform.SetAsLastSibling();   // newest entry at the bottom of the history
+
+        var tmp = msgObj.GetComponent<TMP_Text>();
+        if (tmp != null) tmp.text = text;
+
+        ScrollToNewest();
+    }
+
+    // Scrolling has to wait a frame: the layout group / size fitter hasn't measured
+    // the entry that was just added, so scrolling now would clamp against a stale
+    // content height and stop short of the newest message.
+    void ScrollToNewest()
+    {
+        if (_commandScroll == null || !isActiveAndEnabled) return;
+
+        if (_scrollRoutine != null) StopCoroutine(_scrollRoutine);
+        _scrollRoutine = StartCoroutine(ScrollToBottomNextFrame());
+    }
+
+    IEnumerator ScrollToBottomNextFrame()
+    {
+        yield return null;
+
+        if (_commandParent != null && _commandParent.transform is RectTransform contentRect)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+
+        Canvas.ForceUpdateCanvases();
+        _commandScroll.verticalNormalizedPosition = 0f;   // 0 == bottom == newest
+        _scrollRoutine = null;
     }
 }

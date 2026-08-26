@@ -386,16 +386,13 @@ namespace Whisper.Samples
                 RunDemoStep(_activeDemoId, _demoStep);
             }
 
-            // Demo D — keyboard movement (active while _activeDemoId == 7)
-            if (_demoRunning && _activeDemoId == 7)
-            {
-                UpdateDemoDMovement();
+            // Player movement — always available (arrow keys), not just during a demo
+            UpdatePlayerMovement();
 
-                if (Input.GetKeyDown(KeyCode.Escape))
-                {
-                    _demoRunning = false;
-                    Debug.Log("[DEMO D] Exited.");
-                }
+            if (_demoRunning && _activeDemoId == 7 && Input.GetKeyDown(KeyCode.Escape))
+            {
+                _demoRunning = false;
+                Debug.Log("[DEMO D] Exited.");
             }
 
             if (Input.GetKeyDown(KeyCode.Return) && _demoRunning)
@@ -1796,7 +1793,14 @@ namespace Whisper.Samples
             }
         }
 
-        private void UpdateDemoDMovement()
+        // Free-look player movement. Always active (not gated to a demo), so the
+        // camera can be repositioned at any time while recording.
+        //   Arrow keys  — Up/Down walk forward/back, Left/Right strafe
+        //   , / .       — turn left/right
+        // NOTE: rotation is on comma/period rather than Q/E because Q and E are
+        // demo trigger keys (demos 3 and 5) — sharing them would fire a demo
+        // every time you turned the camera.
+        private void UpdatePlayerMovement()
         {
             var cam = demoDCamera;
             if (cam == null) return;
@@ -1812,8 +1816,8 @@ namespace Whisper.Samples
             if (Input.GetKey(KeyCode.DownArrow))  moveF -= moveSpeed * Time.deltaTime;
             if (Input.GetKey(KeyCode.LeftArrow))  moveH -= moveSpeed * Time.deltaTime;
             if (Input.GetKey(KeyCode.RightArrow)) moveH += moveSpeed * Time.deltaTime;
-            if (Input.GetKey(KeyCode.Q))          rot   -= rotSpeed  * Time.deltaTime;
-            if (Input.GetKey(KeyCode.E))          rot   += rotSpeed  * Time.deltaTime;
+            if (Input.GetKey(KeyCode.Comma))      rot   -= rotSpeed  * Time.deltaTime;
+            if (Input.GetKey(KeyCode.Period))     rot   += rotSpeed  * Time.deltaTime;
 
             if (moveF == 0f && moveH == 0f && rot == 0f) return;
 

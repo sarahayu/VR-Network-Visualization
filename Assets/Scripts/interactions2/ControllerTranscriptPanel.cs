@@ -10,6 +10,10 @@ public class ControllerTranscriptPanel : MonoBehaviour
     private bool hasSphereReferenceForward;
 
     [Header("Position")]
+    [Tooltip("OFF (default): the panel stays exactly where you place it in the scene. " +
+             "ON: the panel continuously trails the camera — intended for recording a demo video, " +
+             "where the hint needs to stay in frame.")]
+    [SerializeField] private bool followCamera;
     [SerializeField] private Vector3 localOffset = new Vector3(0f, 0.08f, 0.18f);
 
     [Header("Spherical Placement")]
@@ -230,6 +234,12 @@ public class ControllerTranscriptPanel : MonoBehaviour
 
     private void LateUpdate()
     {
+        // Parked mode: leave the panel at its authored transform. Everything below
+        // (spherical placement, lag, collision, facing) only runs when the panel is
+        // meant to follow the camera.
+        if (!followCamera)
+            return;
+
         Transform positionReference = GetSphereOrigin();
         Transform rotationReference = positionReference;
 

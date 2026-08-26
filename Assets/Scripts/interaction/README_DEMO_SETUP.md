@@ -27,11 +27,19 @@ by keyboard input and reads all its data from the already-loaded network file.
    resolves them automatically via `GameObject.Find("/Network Manager")` and
    `GameObject.Find("/Database")`, both of which already exist at the scene
    root. Only assign them manually if you've renamed those objects.
-4. (Optional but recommended) Assign a `TextMeshProUGUI` to **Step Label** —
-   e.g. a world-space or screen-space Text (TMP) element — so the current
-   step and its finding ("Top-15 avg friends: 5.3 vs school-wide: 4.0", etc.)
-   are visible in-headset, not just in the console. The demo runs fine
-   without one; step text just won't be displayed anywhere but `Debug.Log`.
+4. Captions need no wiring. Each step posts its command to the existing
+   command-log panel in plain language — the way the voice demos caption
+   themselves — followed by what it found, in italics, directly underneath:
+
+   > Select the 15 students with the most aggression links and color them red
+   > *These 15 students average 5.3 friends each — the school average is 4.0.*
+
+   `Start()` borrows that panel's prefab/parent/scroll from
+   `StreamingSampleMic` (falling back to `KeyboardCommandTester`), so entries
+   inherit the panel's existing anchoring and layout. Watch for
+   `[DemoSequence] Captioning into '<panel>'` in the console to confirm it
+   resolved. Override the **Captions** fields only to target a different panel,
+   or assign **Step Label** to also mirror the text to a plain TMP label.
 
 ### 2. Confirm the dataset
 
@@ -72,8 +80,39 @@ material out of the box — no manual material setup needed.
 |-------------|--------|
 | `B`         | Start/restart the demo — wipes any session, opens a fresh working subgraph over the whole network in force-directed layout. |
 | `Enter`     | Advance to the next step (3 steps total after `B`). |
-| `1`         | Standalone demo — new subgraph, all nodes colored by **friendship** degree (blue saturation). |
-| `2`         | Standalone demo — new subgraph, all nodes colored by **aggression** degree (blue saturation). |
+| `F`         | Standalone demo — new subgraph, all nodes colored by **friendship** degree (blue saturation). |
+| `A`         | Standalone demo — new subgraph, all nodes colored by **aggression** degree (blue saturation). |
+
+All three are Inspector-editable (**Keys** section on the component).
+
+> **Why `F`/`A` and not `1`/`2`?** `KeyboardCommandTester` (live in the scene on
+> the `Tests` object) already binds `1` → "size by grade" and `2` → "size by
+> GPA". Sharing those keys fires both actions on a single press. `B`, `F`, and
+> `A` are unclaimed. `Enter` is shared with that script's demo-advance, but it's
+> gated behind *its* `_demoRunning` flag, so the two don't collide in practice.
+
+### Camera movement
+
+Handled separately by `KeyboardCommandTester`, active at all times:
+
+| Key            | Effect |
+|----------------|--------|
+| `↑` / `↓`      | Walk forward / back |
+| `←` / `→`      | Strafe left / right |
+| `,` / `.`      | Turn left / right |
+
+Rotation sits on comma/period rather than `Q`/`E` because those are demo trigger
+keys in the same script. Movement drives whichever camera is assigned to **Demo
+D Camera** on the `Tests` object (currently the `Recording` camera) — note that
+camera's component is disabled in the scene by default, so enable it when you
+want to see/record from it.
+
+### Mic hint panel
+
+`ControllerTranscriptPanel` has a **Follow Camera** toggle (Position section),
+**off by default** — the panel stays exactly where you place it in the scene.
+Turn it on only when recording a demo video, where the hint needs to trail the
+camera to stay in frame.
 
 ### The 3 `Enter` steps after `B`
 
