@@ -3,6 +3,7 @@ from langgraph.graph import StateGraph
 from typing import TypedDict, Annotated
 import asyncio
 import json
+import re
 import time
 
 from langchain_openai import ChatOpenAI
@@ -20,6 +21,94 @@ def override(_: str | None, new: str) -> str:
 def merge_dicts(old: dict[str, float] | None, new: dict[str, float]) -> dict[str, float]:
     return {**(old or {}), **new}
 
+# Check if the Statistical Queries are within allowed range
+# Maybe not needed.
+def is_safe_statistical_query(query: str) -> bool:
+    """Reject common invalid/expensive LLM-generated Cypher shapes."""
+    if re.search(r"\bIN\s*\(\s*MATCH\b", query, re.IGNORECASE):
+        return False
+    
+    if re.search(r"\b(?:avg|sum|min|max)\s*\(\s*(?:toFloat\s*\(\s*)?count\s*\(", query, re.IGNORECASE):
+        return False
+    
+    if re.search(r"\bsize\s*\(\s*\([^)]*\)\s*-[\[<]", query, re.IGNORECASE):
+        return False
+    
+    return True
+
+# This may be brute forcing it, need to change for a better design
+def repair_aggressor_friend_statistics(user_input: str, actions: list, queries: list, stats: list):
+    """Repair the known 'average/variance friends for aggressors' intent."""
+    text = user_input.lower()
+    asks_about_aggressors = re.search(r"\baggressors?\b|\bbull(?:y|ies)\b", text)
+    
+    asks_about_friends = re.search(r"\bfriends?(?:hip)?\b", text)
+    asks_average = re.search(r"\b(?:average|avg|mean)\b", text)
+    
+    asks_variance = re.search(r"\bvariance\b", text)
+    
+    if not (asks_about_aggressors and asks_about_friends and (asks_average or asks_variance)):
+        return actions, queries, stats
+
+    # A question that only requests a number must not accidentally resize or
+    # select nodes. Combined commands such as "select ... and tell me ..." keep
+    # their explicitly requested visualization actions.
+    visualization_requested = re.search(
+        r"\b(?:select|highlight|color|colour|show|display|encode|shape|size|move|layout|deselect|reset|save|delete)\b",
+        text,
+    )
+    if not visualization_requested:
+        actions, queries = [], []
+
+    pipeline = (
+        "CALL { MATCH (n:Node)-[a:POINTS_TO]->() WHERE a.type = 'aggression' "
+        "WITH n, count(a) AS aggressionCount ORDER BY aggressionCount DESC LIMIT 15 RETURN n } "
+        "OPTIONAL MATCH (n)-[f:POINTS_TO]-() WHERE f.type = 'friendship' "
+        "WITH n, count(DISTINCT f) AS friendCount "
+    )
+    
+    repaired_stats = []
+    
+    if asks_average:
+        repaired_stats.append({
+            "label": "Top 15 aggressors — average friends",
+            "query": pipeline + "RETURN coalesce(avg(toFloat(friendCount)), 0.0)",
+        })
+    
+    if asks_variance:
+        repaired_stats.append({
+            "label": "Top 15 aggressors — friend-count variance",
+            "query": pipeline + "WITH stDevP(toFloat(friendCount)) AS sd RETURN coalesce(sd * sd, 0.0)",
+        })
+    return actions, queries, repaired_stats
+
+# Normalization of friend statistic labels based on user input
+def normalize_friend_statistic_labels(user_input: str, stats: list):
+    """Keep friend-count report labels aligned with the user's wording.
+
+    Labels are generated independently from Cypher, so the model can produce a
+    correct friendship query but call it "average number of nodes".  The input
+    provides the authoritative meaning for this common request.
+    """
+    text = user_input.lower()
+    asks_about_friends = re.search(r"\bfriends?(?:hip)?\b", text)
+    asks_average = re.search(r"\b(?:average|avg|mean)\b", text)
+    
+    if not (asks_about_friends and asks_average):
+        return stats
+
+    normalized = []
+    for statistic in stats:
+        item = dict(statistic)
+        query = item.get("query", "")
+        if re.search(r"\btype\s*=\s*['\"]friendship['\"]", query, re.IGNORECASE):
+            if re.search(r"\baggressors?\b|\bbull(?:y|ies)\b", text):
+                item["label"] = "Top 15 aggressors — average number of friends"
+            else:
+                item["label"] = "Average number of friends"
+        normalized.append(item)
+    return normalized
+
 
 # ==========================================================
 # LangGraph Shared State Definition
@@ -33,6 +122,7 @@ class AgentState(TypedDict):
     timings: Annotated[dict[str, float], merge_dicts]
     clarify: Annotated[str, override]
     judgment: Annotated[str, override]
+    stats: Annotated[list[dict[str, str]], override]
 
 
 # ==========================================================
@@ -134,11 +224,18 @@ Ask ONE short clarification question."""
 # The static rules go in the system message so OpenAI's prompt cache applies
 # after the first few requests, shaving ~20-30 % off input-token processing.
 
-ACTION_CYPHER_SYSTEM = """You are a graph visualization assistant. Given a user command, return a JSON object with exactly two keys:
+# three keys
+ACTION_CYPHER_SYSTEM = """You are a graph visualization assistant. Given a user command, return a JSON object with exactly three keys:
 - "actions": list of [actionName, param] pairs
 - "queries": list of Cypher query strings, one per action ("" for actions that need no database query)
+- "stats": list of objects with exactly two string fields: "label" and "query".
+  "label" is a concise, human-readable name for the statistic, and "query" is
+  its statistical Cypher query. Return [] only when there are no recognized
+  actions and no statistical question. This list is independent of the
+  per-action "queries" list.
 
-The arrays must be the same length and index-aligned.
+Only "actions" and "queries" must have the same length and be index-aligned.
+"stats" is independent.
 
 ════════════════════════════════════════════════════
 ACTIONS
@@ -158,10 +255,19 @@ When generating colorNode or colorLink, convert color names to hex:
   teal→#008080, navy→#000080, gold→#FFD700, brown→#A52A2A, violet→#EE82EE
 Any hex color (e.g. #1565C0) may also be passed directly.
 
-── GPA COLORING (highest priority) ──
-ANY mention of "GPA" in a coloring context → ALWAYS use colorByGPA, never colorByAttribute.
+── GPA COLORING AND EXPLICIT COLORS ──
+Use colorByGPA only when the user asks to encode/visualize GPA as color.
+A GPA selection/ranking criterion does NOT request a GPA color gradient.
+An explicit paint color applies to the selected nodes, even when selection uses GPA.
+Never substitute a gradient for an explicit color such as green or a hex code.
   "color nodes by GPA" → [["colorByGPA","gpa"]]
   "visualize GPA"      → [["colorByGPA","gpa"]]
+  "select the top 15 students with the highest GPAs and turn them green"
+    → [["selectNode","top_15_gpa"],["colorNode","#00FF00"]]
+  "select the top 15's, highest GPAs and turn on green"
+    → [["selectNode","top_15_gpa"],["colorNode","#00FF00"]]
+  "select the top 15 by GPA and color them by GPA"
+    → [["selectNode","top_15_gpa"],["colorByGPA","gpa"]]
 
 ── "color BY attribute" vs "color IN a color" ──
   "color nodes by grade"      → [["colorByAttribute","grade"]]      (categorical)
@@ -175,7 +281,9 @@ Append ":selected" to scope to currently selected nodes.
   "color aggression links of selected red"→ [["selectLink","aggression:selected"],["colorLink","#FF0000"]]
 
 ── NODE SELECTION ──
-"top N nodes by metric" → always pair selectNode + colorNode.
+"top N nodes by metric" → selectNode using the metric actually named by the user.
+Append colorNode for a requested paint color, or colorByGPA for an explicit GPA encoding.
+Do not default to friendship degree when GPA (or another property) is specified.
   "highlight top 3 friendship nodes" → [["selectNode","top_3_friendship_degree"],["colorNode","#FF0000"]]
 "selected nodes" / "highlighted nodes" = use current selection, do NOT add new selectNode.
 
@@ -218,6 +326,9 @@ Delete the currently active session/subgraph. No query needed.
     → MATCH (n:Node)-[r:POINTS_TO]-(m) WHERE r.type='friendship' WITH n,COUNT(r) AS d ORDER BY d DESC LIMIT 3 RETURN n
   Top N incoming: ["selectNode","top_3_incoming_aggression"]
     → MATCH (n:Node)<-[r:POINTS_TO]-(m) WHERE r.type='aggression' WITH n,COUNT(r) AS c ORDER BY c DESC LIMIT 3 RETURN n
+  Top N by GPA: ["selectNode","top_15_gpa"]
+    → MATCH (n:Node) WHERE n.gpa IS NOT NULL WITH n ORDER BY n.gpa DESC, n.GUID ASC LIMIT 15 RETURN n
+  GPA ranking uses n.gpa, never a count of friendship links. Exclude missing GPA values.
 
 ── selectLink ──
   All:     ["selectLink","all"]          → MATCH (n:Node)-[r:POINTS_TO]-(m:Node) RETURN r
@@ -237,9 +348,46 @@ Delete the currently active session/subgraph. No query needed.
   → MATCH (n:Node) WHERE n.selected=true RETURN <expr>
 
 ════════════════════════════════════════════════════
+STATISTICAL REPORTS
+════════════════════════════════════════════════════
+
+Use "stats" only when the user explicitly asks for a number or statistic.
+For a statistics-only request, return "actions":[] and "queries":[]. Words
+such as number, count, average, minimum, and maximum never imply sizeNode or
+arithmetic. Do not add unrequested contextual statistics to visual actions.
+
+Each stats item is:
+  {"label":"meaningful label","query":"Cypher returning one numeric value"}
+
+Rules:
+- Return only the statistic requested; do not add min/max/average automatically.
+- Each query returns exactly one row and one numeric column.
+- Ignore missing numeric values. Never nest aggregates such as avg(count(...)).
+- `grade` is 9-12; there is no `year`. GPA is numeric `gpa`.
+- Relationships are `POINTS_TO` with `r.type='friendship'` or `'aggression'`.
+- To average relationships per student, start from students, OPTIONAL MATCH the
+  relationships, count per student in WITH, then average those counts.
+- Unity colors and selection are not stored in Neo4j. If a group is described
+  only as "red", "selected", "those", etc. and its defining database condition
+  is absent from the current command, do not guess a Cypher predicate.
+
+Examples:
+  "average GPA" → actions:[], stats:[
+    {"label":"Average GPA","query":"MATCH (n:Node) WHERE n.gpa IS NOT NULL RETURN avg(n.gpa)"}]
+  "average number of friends per student" → actions:[], stats:[
+    {"label":"Average friends per student","query":"MATCH (n:Node) OPTIONAL MATCH (n)-[r:POINTS_TO]-() WHERE r.type='friendship' WITH n,count(DISTINCT r) AS c RETURN avg(toFloat(c))"}]
+  "students in grade 10: average friends" → actions:[], stats:[
+    {"label":"Grade 10 average friends","query":"MATCH (n:Node) WHERE n.grade=10 OPTIONAL MATCH (n)-[r:POINTS_TO]-() WHERE r.type='friendship' WITH n,count(DISTINCT r) AS c RETURN avg(toFloat(c))"}]
+  "average GPA of each year" → actions:[], stats:[
+    {"label":"Grade 9 average GPA","query":"MATCH (n:Node) WHERE n.grade=9 AND n.gpa IS NOT NULL RETURN avg(n.gpa)"},
+    {"label":"Grade 10 average GPA","query":"MATCH (n:Node) WHERE n.grade=10 AND n.gpa IS NOT NULL RETURN avg(n.gpa)"},
+    {"label":"Grade 11 average GPA","query":"MATCH (n:Node) WHERE n.grade=11 AND n.gpa IS NOT NULL RETURN avg(n.gpa)"},
+    {"label":"Grade 12 average GPA","query":"MATCH (n:Node) WHERE n.grade=12 AND n.gpa IS NOT NULL RETURN avg(n.gpa)"}]
+
+════════════════════════════════════════════════════
 Return ONLY a JSON object. No markdown. No explanation.
 Example output:
-{"actions":[["selectNode","n.grade=9"],["colorNode","#FF0000"]],"queries":["MATCH (n:Node) WHERE n.grade=9 RETURN n",""]}
+{"actions":[["colorByAttribute","grade"]],"queries":["MATCH (n:Node) RETURN DISTINCT n.grade AS value ORDER BY value"],"stats":[{"label":"Grade 9","query":"MATCH (n:Node) WHERE n.grade = 9 RETURN count(n)"},{"label":"Grade 10","query":"MATCH (n:Node) WHERE n.grade = 10 RETURN count(n)"},{"label":"Grade 11","query":"MATCH (n:Node) WHERE n.grade = 11 RETURN count(n)"},{"label":"Grade 12","query":"MATCH (n:Node) WHERE n.grade = 12 RETURN count(n)"}]}
 ════════════════════════════════════════════════════"""
 
 
@@ -300,9 +448,103 @@ async def action_cypher_agent(state: AgentState):
     actions = data.get("actions", [])
     queries = data.get("queries", [""] * len(actions))
 
+    # For Statistical Queries
+    raw_stats = data.get("stats", [])
+    stats = []
+
+    for statistic in raw_stats if isinstance(raw_stats, list) else []:
+        if isinstance(statistic, dict):  
+            # Instances of statistical queries are expected to be dictionaries with "query" and optional "label" keys.
+            query = statistic.get("query", "")
+            
+            if isinstance(query, str) and query.strip():
+                query = query.strip()
+                
+                if not is_safe_statistical_query(query):
+                    print_colored(f"Rejected invalid statistical query: {query}", "red")
+                    continue
+                
+                label = statistic.get("label", "Statistical report")
+                
+                if not isinstance(label, str) or not label.strip():
+                    label = "Statistical report"
+                
+                stats.append({"label": label.strip(), "query": query})
+        elif isinstance(statistic, str) and statistic.strip():
+            # Backward-compatible guard if the model emits the old bare-string format.
+            query = statistic.strip()
+            if is_safe_statistical_query(query):
+                stats.append({"label": "Statistical report", "query": query})
+            else:
+                print_colored(f"Rejected invalid statistical query: {query}", "red")
+
     # Ensure arrays are same length
     while len(queries) < len(actions):
         queries.append("")
+
+    # A numeric question is a report, not a request to resize nodes. Keep an
+    # explicitly requested visualization action, but discard hallucinated ones.
+    input_text = state["input"].lower()
+
+    # Keys for types of queries in the input text.
+    asks_for_statistic = re.search(
+        r"\b(?:average|avg|mean|number|count|minimum|maximum|min|max|sum|total|percentage|variance)\b",
+        input_text,
+    )
+    asks_for_visualization = re.search(
+        r"\b(?:select|highlight|color|colour|shape|size|resize|move|layout|deselect|reset|save|delete)\b",
+        input_text,
+    )
+
+    if asks_for_statistic and not asks_for_visualization:
+        actions, queries = [], []
+
+    # Enforce action/query contracts before Unity executes them.
+    validated_actions, validated_queries = [], []
+
+    # Maybe need to revamp this whole design
+    # Currently, it only checks for specific action/query patterns and rejects invalid ones.
+    # Does not really use Agents to fullest potential.
+
+    # This Validation step Rejects invalid action/query pairs based on predefined patterns.
+    # This may be problematic please check later.
+    for action, query in zip(actions, queries):
+        action_name = action[0] if isinstance(action, list) and action else ""
+        if (
+            action_name == "sizeNode"
+            and not (
+                re.search(r"\bAS\s+minValue\b", query, re.IGNORECASE)
+                and re.search(r"\bAS\s+maxValue\b", query, re.IGNORECASE)
+            )
+        ):
+            print_colored(f"Rejected sizeNode query without minValue/maxValue: {query}", "red")
+            continue
+        if action_name == "selectNode" and not re.search(
+            r"\bRETURN\s+(?:DISTINCT\s+)?n\s*$", query, re.IGNORECASE
+        ):
+            print_colored(f"Rejected selectNode query that does not return n: {query}", "red")
+            continue
+        if action_name == "selectLink" and not re.search(
+            r"\bRETURN\s+(?:DISTINCT\s+)?r\s*$", query, re.IGNORECASE
+        ):
+            print_colored(f"Rejected selectLink query that does not return r: {query}", "red")
+            continue
+        
+        validated_actions.append(action)
+        validated_queries.append(query)
+    actions, queries = validated_actions, validated_queries
+
+    # Unity display color and selection state are not Neo4j properties. Drop
+    # fabricated statistics rather than reporting a plausible but false value.
+    stats = [
+        statistic for statistic in stats
+        if not re.search(r"\bn\.(?:color|selected)\b", statistic["query"], re.IGNORECASE)
+    ]
+
+    actions, queries, stats = repair_aggressor_friend_statistics(
+        state["input"], actions, queries, stats
+    )
+    stats = normalize_friend_statistic_labels(state["input"], stats)
 
     # Normalize color names → hex for colorNode / colorLink
     import re as _re
@@ -319,6 +561,7 @@ async def action_cypher_agent(state: AgentState):
         "action_queue": actions,
         "code_list": queries,
         "timings": {"action_cypher_agent": elapsed},
+        "stats": stats,
     }
 
 
@@ -371,12 +614,12 @@ def classify():
     try:
         data       = request.get_json(force=True)
         user_input = data.get("userText", "")
-
         state = {
             "input":          user_input,
             "original_input": user_input,
             "code_list":      [],
             "action_queue":   [],
+            "stats":          [],
             "timings":        {},
             "clarify":        "",
             "judgment":       "",
@@ -392,6 +635,7 @@ def classify():
             "corrected_input": result.get("input", ""),
             "queries":         result.get("code_list", []),
             "actions":         result.get("action_queue", []),
+            "stats":           result.get("stats", []),
             "clarify":         result.get("clarify", ""),
             "timings":         result.get("timings", {}),
         })

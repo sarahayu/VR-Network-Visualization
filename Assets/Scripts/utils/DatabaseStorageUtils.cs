@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Neo4j.Driver;
 using UnityEditor;
 using UnityEngine;
@@ -10,6 +13,123 @@ namespace VidiGraph
 {
     public class DatabaseStorageUtils
     {
+        static readonly Regex PropertyNamePattern = new(
+            @"^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
+
+        static string ValidatePropertyName(string attribute)
+        {
+            if (string.IsNullOrWhiteSpace(attribute) || !PropertyNamePattern.IsMatch(attribute))
+                throw new ArgumentException($"Invalid Neo4j property name: '{attribute}'.", nameof(attribute));
+            return attribute;
+        }
+
+        // Non-blocking bulk initialization of the network
+        public static async Task BulkInitNetworkAsync(NetworkFileData networkFile, NetworkGlobal networkGlobal,
+            MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
+            IDriver driver, bool convertWinPaths, int timeoutSeconds, CancellationToken cancellationToken)
+        {
+            await DeleteDatabaseContentsAsync(driver, timeoutSeconds, cancellationToken);
+            await CreateConstraintsAsync(driver, timeoutSeconds, cancellationToken);
+            await UpdateNetworkAsync(networkFile, networkGlobal, context, subnetworkContexts, driver,
+                convertWinPaths, false, timeoutSeconds, cancellationToken);
+        }
+
+        // Non-blocking bulk update of the network
+        public static Task BulkUpdateNetworkAsync(NetworkFileData networkFile, NetworkGlobal networkGlobal,
+            MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
+            IDriver driver, bool convertWinPaths, int timeoutSeconds, CancellationToken cancellationToken)
+        {
+            return UpdateNetworkAsync(networkFile, networkGlobal, context, subnetworkContexts, driver,
+                convertWinPaths, true, timeoutSeconds, cancellationToken);
+        }
+
+        // Non-blocking deletion of the database contents
+        public static async Task DeleteDatabaseContentsAsync(
+            IDriver driver, int timeoutSeconds, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await RunAutoCommitAsync(driver, "MATCH (n) DETACH DELETE n", null, timeoutSeconds);
+            await DeleteConstraintsAsync(driver, timeoutSeconds, cancellationToken);
+        }
+
+        static async Task CreateConstraintsAsync(IDriver driver, int timeoutSeconds, CancellationToken cancellationToken)
+        {
+            string[] commands = {
+                "CREATE CONSTRAINT NodeID IF NOT EXISTS FOR (n:Node) REQUIRE n.GUID IS UNIQUE",
+                "CREATE CONSTRAINT CommID IF NOT EXISTS FOR (c:Community) REQUIRE c.GUID IS UNIQUE",
+                "CREATE CONSTRAINT PointsTo IF NOT EXISTS FOR ()-[p:POINTS_TO]-() REQUIRE p.GUID IS UNIQUE"
+            };
+            foreach (string command in commands)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await RunAutoCommitAsync(driver, command, null, timeoutSeconds);
+            }
+        }
+
+        static async Task DeleteConstraintsAsync(IDriver driver, int timeoutSeconds, CancellationToken cancellationToken)
+        {
+            string[] commands = {
+                "DROP CONSTRAINT NodeID IF EXISTS",
+                "DROP CONSTRAINT CommID IF EXISTS",
+                "DROP CONSTRAINT PointsTo IF EXISTS"
+            };
+            foreach (string command in commands)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await RunAutoCommitAsync(driver, command, null, timeoutSeconds);
+            }
+        }
+
+        static async Task RunAutoCommitAsync(
+            IDriver driver, string command, IDictionary<string, object> parameters, int timeoutSeconds)
+        {
+            if (driver == null) throw new InvalidOperationException("Neo4j driver is not initialized.");
+            IAsyncSession session = driver.AsyncSession();
+            try
+            {
+                IResultCursor cursor = parameters == null
+                    ? await session.RunAsync(command, config => config.WithTimeout(TimeSpan.FromSeconds(timeoutSeconds)))
+                    : await session.RunAsync(command, parameters, config => config.WithTimeout(TimeSpan.FromSeconds(timeoutSeconds)));
+                await cursor.ConsumeAsync();
+            }
+            finally
+            {
+                await session.CloseAsync();
+            }
+        }
+
+        static async Task UpdateNetworkAsync(NetworkFileData networkFile, NetworkGlobal networkGlobal,
+            MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
+            IDriver driver, bool convertWinPaths, bool onlyDirty, int timeoutSeconds,
+            CancellationToken cancellationToken)
+        {
+            DumpNetwork(networkFile, networkGlobal, context, subnetworkContexts,
+                out var fs, out var fc, out var fn, out var fn2n, onlyDirty);
+            try
+            {
+                var imports = new (string Query, string Filename)[] {
+                    ("LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';' CALL (row) { MERGE (s:Subnetwork { subnetworkId: toInteger(row.subnetworkId) }) SET s.subnetworkId = toInteger(row.subnetworkId) } IN TRANSACTIONS OF 500 ROWS", ConvertToNeoPath(fs, convertWinPaths)),
+                    ("LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';' CALL (row) { MERGE (c:Community { GUID: row.GUID }) SET c.commId = toInteger(row.commId) SET c.selected = toBoolean(row.selected) SET c.GUID = row.GUID SET c.mass = toFloat(row.mass) SET c.massCenter = row.massCenter SET c.size = toFloat(row.size) SET c.state = row.state WITH * MATCH (s:Subnetwork { subnetworkId: toInteger(row.subnetworkId) }) MERGE (c)-[:PART_OF]->(s) } IN TRANSACTIONS OF 500 ROWS", ConvertToNeoPath(fc, convertWinPaths)),
+                    ("LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';' CALL (row) { MERGE (n:Node { GUID: row.GUID }) SET n.nodeId = toInteger(row.nodeId) SET n.label = row.label SET n.degree = toFloat(row.degree) SET n.selected = toBoolean(row.selected) SET n.GUID = row.GUID SET n.size = toFloat(row.size) SET n.pos = row.pos SET n.color = row.color " + ToQuery("n", networkFile.nodes[0].props) + "WITH * MATCH (c:Community { GUID: row.commRenderGUID }) MERGE (n)-[:PART_OF]->(c) } IN TRANSACTIONS OF 500 ROWS", ConvertToNeoPath(fn, convertWinPaths)),
+                    ("LOAD CSV WITH HEADERS FROM $filename AS row FIELDTERMINATOR ';' CALL (row) { MATCH (from:Node { GUID: row.sourceRenderGUID }) MATCH (to:Node { GUID: row.targetRenderGUID }) MERGE (from)-[l:POINTS_TO { GUID: row.GUID } ]->(to) SET l.linkId = toInteger(row.linkId) SET l.selected = toBoolean(row.selected) SET l.GUID = row.GUID SET l.bundlingStrength = toFloat(row.bundlingStrength) SET l.width = toFloat(row.width) SET l.colorStart = row.colorStart SET l.colorEnd = row.colorEnd SET l.alpha = toFloat(row.alpha) " + ToQuery("l", networkFile.links[0].props) + "} IN TRANSACTIONS OF 500 ROWS", ConvertToNeoPath(fn2n, convertWinPaths))
+                };
+                foreach (var import in imports)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await RunAutoCommitAsync(driver, import.Query,
+                        new Dictionary<string, object> { ["filename"] = import.Filename }, timeoutSeconds);
+                }
+                Debug.Log("Loaded to Neo4J database.");
+            }
+            finally
+            {
+                FileUtil.DeleteFileOrDirectory(fs);
+                FileUtil.DeleteFileOrDirectory(fc);
+                FileUtil.DeleteFileOrDirectory(fn);
+                FileUtil.DeleteFileOrDirectory(fn2n);
+            }
+        }
+
         public static void BulkInitNetwork(NetworkFileData networkFile, NetworkGlobal networkGlobal,
             MultiLayoutContext context, IEnumerable<MultiLayoutContext> subnetworkContexts,
             IDriver driver, bool convertWinPaths)
@@ -423,6 +543,70 @@ namespace VidiGraph
             return new List<string>();
         }
 
+        public static async Task<List<string>> GetNodesFromStoreAsync(
+            NetworkGlobal networkGlobal, string command, IDriver driver, int timeoutSeconds = 10,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            IAsyncSession session = driver.AsyncSession();
+            try
+            {
+                IResultCursor cursor = await session.RunAsync(command,
+                    config => config.WithTimeout(TimeSpan.FromSeconds(timeoutSeconds)));
+                List<IRecord> records = await cursor.ToListAsync();
+                
+                cancellationToken.ThrowIfCancellationRequested();
+                
+                return records.Select(record => record[0].As<INode>()
+                    .Properties["GUID"].As<string>()).ToList();
+            }
+            finally
+            {
+                await session.CloseAsync();
+            }
+        }
+
+        public static async Task<List<string>> GetLinksFromStoreAsync(
+            NetworkGlobal networkGlobal, string command, IDriver driver, int timeoutSeconds = 10,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            IAsyncSession session = driver.AsyncSession();
+            try
+            {
+                IResultCursor cursor = await session.RunAsync(command,
+                    config => config.WithTimeout(TimeSpan.FromSeconds(timeoutSeconds)));
+                
+                List<IRecord> records = await cursor.ToListAsync();
+                
+                cancellationToken.ThrowIfCancellationRequested();
+                
+                var relationshipGuids = new List<string>();
+                
+                foreach (IRecord record in records)
+                {
+                    object value = record[0];
+                    if (!(value is IRelationship relationship))
+                    {
+                        Debug.LogError(
+                            $"Link query must return relationships, but returned " +
+                            $"{value?.GetType().Name ?? "null"}: {command}"
+                        );
+                        continue;
+                    }
+
+                    if (relationship.Properties.TryGetValue("GUID", out object guid))
+                        relationshipGuids.Add(guid.As<string>());
+                }
+                return relationshipGuids;
+            }
+            finally
+            {
+                await session.CloseAsync();
+            }
+        }
+
         public static double GetValueFromStore(NetworkGlobal networkGlobal, string command, IDriver driver, bool convertWinPaths = true)
         {
             try
@@ -447,6 +631,45 @@ namespace VidiGraph
             }
 
             return 0.0; // Return default value on error
+        }
+
+        public static async Task<double> GetValueFromStoreAsync(
+            NetworkGlobal networkGlobal,
+            string command,
+            IDriver driver,
+            int timeoutSeconds = 10,
+            bool convertWinPaths = true,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (driver == null)
+                throw new InvalidOperationException("Neo4j driver is not initialized.");
+
+            IAsyncSession session = driver.AsyncSession();
+            try
+            {
+                IResultCursor cursor = await session.RunAsync(
+                    command,
+                    config => config.WithTimeout(TimeSpan.FromSeconds(timeoutSeconds))
+                );
+                IRecord record = await cursor.SingleAsync();
+                cancellationToken.ThrowIfCancellationRequested();
+                object rawValue = record[0];
+                if (rawValue == null)
+                {
+                    Debug.LogWarning($"Numeric query returned no data: {command}");
+                    return double.NaN;
+                }
+
+                double value = rawValue.As<double>();
+
+                Debug.Log($"Arithmetic result: {value}");
+                return value;
+            }
+            finally
+            {
+                await session.CloseAsync();
+            }
         }
 
         public struct MinMaxResult
@@ -480,6 +703,32 @@ namespace VidiGraph
             }
 
             return (min, max);
+        }
+
+        public static async Task<(float Min, float Max)> GetMinMaxFromStoreAsync(
+            NetworkGlobal networkGlobal, string command, IDriver driver, int timeoutSeconds = 10,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            IAsyncSession session = driver.AsyncSession();
+            
+            try
+            {
+                IResultCursor cursor = await session.RunAsync(command,
+                    config => config.WithTimeout(TimeSpan.FromSeconds(timeoutSeconds)));
+                
+                IRecord record = await cursor.SingleAsync();
+                
+                cancellationToken.ThrowIfCancellationRequested();
+                
+                return ((float)record["minValue"].As<double>(),
+                    (float)record["maxValue"].As<double>());
+            }
+            finally
+            {
+                await session.CloseAsync();
+            }
         }
 
         public static List<string> GetDistinctValuesFromStore(NetworkGlobal networkGlobal, string command, IDriver driver, bool convertWinPaths = true)
@@ -585,6 +834,49 @@ namespace VidiGraph
             return result;
         }
 
+        // Async version of GetNodesGroupedByAttribute, returns a dictionary of attribute value → list of node GUIDs.
+        public static async Task<Dictionary<string, List<string>>> GetNodesGroupedByAttributeAsync(
+            NetworkGlobal networkGlobal, string attribute, IDriver driver, int timeoutSeconds = 10,
+            CancellationToken cancellationToken = default)
+        {
+            // Check for cancellation before proceeding with the query.
+            cancellationToken.ThrowIfCancellationRequested();
+            attribute = ValidatePropertyName(attribute);
+            
+            var result = new Dictionary<string, List<string>>();
+            
+            string command = $"MATCH (n:Node) WHERE n.{attribute} IS NOT NULL RETURN n.GUID AS guid, n.{attribute} AS value";
+            IAsyncSession session = driver.AsyncSession();
+            try
+            {
+                IResultCursor cursor = await session.RunAsync(command,
+                    config => config.WithTimeout(TimeSpan.FromSeconds(timeoutSeconds)));
+                
+                List<IRecord> records = await cursor.ToListAsync();
+                cancellationToken.ThrowIfCancellationRequested();
+                
+                // For each record, extract the GUID and attribute value, and group by the attribute value.
+                foreach (IRecord record in records)
+                {
+                    string guid = record["guid"].As<string>();
+                    object raw = record["value"].As<object>();
+                    if (raw == null) continue;
+                    
+                    string key = raw is string text ? $"'{text}'" : raw.ToString();
+                    
+                    if (!result.TryGetValue(key, out List<string> list))
+                        result[key] = list = new List<string>();
+                    
+                    list.Add(guid);
+                }
+                return result;
+            }
+            finally
+            {
+                await session.CloseAsync();
+            }
+        }
+
         // Single query that returns a dict of GUID → numeric attribute value for all nodes that have the attribute.
         // Used to do client-side bucketing for gradient color encodings, replacing N bucket queries.
         public static Dictionary<string, float> GetNodesWithNumericValues(
@@ -616,6 +908,34 @@ namespace VidiGraph
                 Debug.LogError($"GetNodesWithNumericValues Error: {e.Message}");
             }
             return result;
+        }
+
+        public static async Task<Dictionary<string, float>> GetNodesWithNumericValuesAsync(
+            NetworkGlobal networkGlobal, string attribute, IDriver driver, int timeoutSeconds = 10,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            attribute = ValidatePropertyName(attribute);
+            var result = new Dictionary<string, float>();
+            string command = $"MATCH (n:Node) WHERE n.{attribute} IS NOT NULL RETURN n.GUID AS guid, n.{attribute} AS value";
+            IAsyncSession session = driver.AsyncSession();
+            try
+            {
+                IResultCursor cursor = await session.RunAsync(command,
+                    config => config.WithTimeout(TimeSpan.FromSeconds(timeoutSeconds)));
+                List<IRecord> records = await cursor.ToListAsync();
+                cancellationToken.ThrowIfCancellationRequested();
+                foreach (IRecord record in records)
+                {
+                    string guid = record["guid"].As<string>();
+                    result[guid] = Convert.ToSingle(record["value"].As<object>());
+                }
+                return result;
+            }
+            finally
+            {
+                await session.CloseAsync();
+            }
         }
     }
 }

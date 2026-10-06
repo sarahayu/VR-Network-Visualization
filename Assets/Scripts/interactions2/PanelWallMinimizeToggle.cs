@@ -5,7 +5,6 @@ public class PanelWallMinimizeToggle : MonoBehaviour
 {
     [SerializeField] private Transform wallAnchor;
     [SerializeField] private float moveDuration = 0.35f;
-    [SerializeField, Range(0.01f, 1f)] private float minimizedScaleMultiplier = 0.35f;
 
     private Transform originalParent;
     private Vector3 originalPosition;
@@ -45,7 +44,7 @@ public class PanelWallMinimizeToggle : MonoBehaviour
             moveRoutine = StartCoroutine(MoveTo(
                 wallAnchor.position,
                 wallAnchor.rotation,
-                originalScale * minimizedScaleMultiplier
+                wallAnchor.lossyScale
             ));
         }
 

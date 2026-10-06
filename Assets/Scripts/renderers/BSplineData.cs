@@ -88,11 +88,12 @@ namespace VidiGraph
         public Color StartColorRGBA;        // Start color of the spline
         public Color EndColorRGBA;          // End color of the spline
         public uint LinkType;              // StraightLink (0), BundledLink (1)
+        public float Width;                // Per-link world-space width, matching context values.
 
         public SplineData(uint Idx, uint NumSegments,
             uint BeginSplineSegmentIdx, uint NumSamples, uint BeginSamplePointIdx,
             Vector3 StartPosition, Vector3 EndPosition,
-            Color StartColorRGBA, Color EndColorRGBA, uint LinkType)
+            Color StartColorRGBA, Color EndColorRGBA, uint LinkType, float Width = 0.005f)
         {
             this.Idx = Idx;
             this.NumSegments = NumSegments;
@@ -105,11 +106,12 @@ namespace VidiGraph
             this.StartColorRGBA = StartColorRGBA;
             this.EndColorRGBA = EndColorRGBA;
             this.LinkType = LinkType;
+            this.Width = Width;
         }
 
         public static int size()
         {
-            return sizeof(uint) * 5 + sizeof(float) * 3 * 2 + sizeof(float) * 4 * 2 + sizeof(uint) * 1;
+            return sizeof(uint) * 5 + sizeof(float) * 3 * 2 + sizeof(float) * 4 * 2 + sizeof(uint) * 1 + sizeof(float);
         }
     }
 }

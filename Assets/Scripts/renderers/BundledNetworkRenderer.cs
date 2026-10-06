@@ -4,7 +4,9 @@
 *
 */
 
+using System.Collections;
 using System.Collections.Generic;
+using Stopwatch = System.Diagnostics.Stopwatch;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
@@ -29,6 +31,10 @@ namespace VidiGraph
         [Range(0f, 1f)] [SerializeField] float nodeMetallic = 0.0f;
         [Tooltip("0 = matte, 1 = mirror. ~0.4 gives a subtle highlight without heavy reflections.")]
         [Range(0f, 1f)] [SerializeField] float nodeSmoothness = 0.4f;
+
+        [Header("Frame-Budgeted Rendering")]
+        [Tooltip("Maximum time spent updating this renderer before yielding to the next frame.")]
+        [Range(0.25f, 8f)] [SerializeField] float renderBudgetMilliseconds = 2f;
 
         [Header("Link Endpoints")]
         [Tooltip("Marker diameter (bowl rim) as a multiple of the link width — keep close to 1 so the marker reads as a cap on the ribbon, not a bead.")]
@@ -66,9 +72,23 @@ namespace VidiGraph
         MultiLayoutContext _networkContext;
         int _lastHoveredNode = -1;
         int _lastHoveredComm = -1;
+        Coroutine _renderRoutine;
+        bool _renderRequested;
+        bool _initializing;
+        bool _readyToDraw;
 
         void Reset()
-        {
+        {   
+            // Stop any ongoing render coroutine and reset state.
+            if (_renderRoutine != null && _networkManager != null)
+                _networkManager.StopCoroutine(_renderRoutine);
+           
+            _renderRoutine = null;
+            _renderRequested = false;
+            
+            _initializing = false;
+            _readyToDraw = false;
+
             if (Application.isEditor)
             {
                 GameObjectUtils.ChildrenDestroyImmediate(transform);
@@ -95,22 +115,106 @@ namespace VidiGraph
             _endpointDepth = _endpointDiameter * linkEndpointDepthFactor;
 
             InitializeShaders();
+            _renderRequested = true;
+            _initializing = true;
+            // Host the coroutine on NetworkManager so hidden snapshot networks
+            // can finish building after their own GameObject is deactivated.
+            _renderRoutine = _networkManager.StartCoroutine(InitializeAcrossFrames());
+        }
 
-            CreateNodes();
-            CreateCommunities();
-            CreateMeshLinks();
-            CreateGPULinks();
-            CreateLinkEndpoints();
+        IEnumerator InitializeAcrossFrames()
+        {
+            var budget = Stopwatch.StartNew();
+
+            foreach (var (nodeID, nodeProps) in _networkContext.Nodes)
+            {
+                var node = _networkGlobal.Nodes[nodeID];
+                if (DrawVirtualNodes || !node.IsVirtualNode)
+                {
+                    var nodeObj = NodeLinkRenderUtils.MakeNode(
+                        NodePrefab, transform, node, nodeProps, sphereSubdivisions);
+                    _nodeGameObjs[nodeID] = nodeObj;
+                    var nodeRenderer = nodeObj.GetComponentInChildren<Renderer>();
+                    _nodeRenderers[nodeID] = nodeRenderer;
+
+                    var mpb = new MaterialPropertyBlock();
+                    nodeRenderer.GetPropertyBlock(mpb);
+                    mpb.SetFloat("_Metallic", nodeMetallic);
+                    mpb.SetFloat("_Glossiness", nodeSmoothness);
+                    mpb.SetFloat("_Smoothness", nodeSmoothness);
+                    mpb.SetFloat("_GlossyReflections", 0f);
+                    mpb.SetFloat("_EnvironmentReflections", 0f);
+                    nodeRenderer.SetPropertyBlock(mpb);
+                    AddNodeInteraction(nodeObj, node);
+                }
+                if (ShouldYield(budget)) { yield return null; budget.Restart(); }
+            }
+
+            foreach (var (commID, communityProps) in _networkContext.Communities)
+            {
+                var community = _networkGlobal.Communities[commID];
+                var commObj = CommunityRenderUtils.MakeCommunity(
+                    CommunityPrefab, transform, communityProps);
+                _communityGameObjs[commID] = commObj;
+                _commRenderers[commID] = commObj.GetComponentInChildren<Renderer>();
+                AddCommunityInteraction(commObj, community);
+                if (ShouldYield(budget)) { yield return null; budget.Restart(); }
+            }
+
+            if (DrawTreeStructure)
+            {
+                foreach (var link in _networkGlobal.TreeLinks)
+                {
+                    Vector3 startPos = _networkContext.Nodes[link.SourceNodeID].Position;
+                    Vector3 endPos = _networkContext.Nodes[link.TargetNodeID].Position;
+                    _linkGameObjs[link.ID] = NodeLinkRenderUtils.MakeStraightLink(
+                        StraightLinkPrefab, transform, startPos, endPos,
+                        _networkContext.ContextSettings.LinkWidth);
+                    if (ShouldYield(budget)) { yield return null; budget.Restart(); }
+                }
+            }
+
+            yield return ComputeControlPointsAcrossFrames();
+            PrepareBuffers();
+            _readyToDraw = true;
+
+            foreach (var linkID in _networkContext.Links.Keys)
+            {
+                var link = _networkGlobal.Links[linkID];
+                int srcID = link.SourceNodeID;
+                int tgtID = link.TargetNodeID;
+                if (!_networkGlobal.Nodes[srcID].IsVirtualNode &&
+                    !_networkGlobal.Nodes[tgtID].IsVirtualNode)
+                {
+                    _endpointMarkers.Add(new EndpointMarker {
+                        rend = MakeEndpointDisk(srcID), nodeID = srcID,
+                        otherNodeID = tgtID, linkID = linkID, isStart = true });
+                    _endpointMarkers.Add(new EndpointMarker {
+                        rend = MakeEndpointDisk(tgtID), nodeID = tgtID,
+                        otherNodeID = srcID, linkID = linkID, isStart = false });
+                }
+                if (ShouldYield(budget)) { yield return null; budget.Restart(); }
+            }
+
             CreateShell();
-
+            _initializing = false;
+            _renderRoutine = null;
             UpdateRenderElements();
         }
 
         public override void Destroy()
         {
+            if (_renderRoutine != null && _networkManager != null)
+                _networkManager.StopCoroutine(_renderRoutine);
+            
+            _renderRoutine = null;
+            _renderRequested = false;
+            
             GameObjectUtils.ChildrenDestroy(transform);
+            
             _nodeGameObjs.Clear();
             _linkGameObjs.Clear();
+            
             _communityGameObjs.Clear();
             _endpointMarkers.Clear();
 
@@ -119,17 +223,93 @@ namespace VidiGraph
 
         public override void UpdateRenderElements()
         {
-            UpdateNodes();
-            UpdateCommunities();
-            UpdateMeshLinks();
+            if (AppearanceDeferred) return;
+            _renderRequested = true;
+            if (!_initializing && _renderRoutine == null && isActiveAndEnabled)
+                _renderRoutine = _networkManager.StartCoroutine(UpdateRenderElementsAcrossFrames());
+        }
+
+        public override bool IsReadyForAnimation => _readyToDraw && !_initializing;
+
+        public override void SetAppearanceDeferred(bool deferred)
+        {
+            base.SetAppearanceDeferred(deferred);
+            if (!deferred || _initializing) return;
+            if (_renderRoutine != null) _networkManager.StopCoroutine(_renderRoutine);
+            _renderRoutine = null;
+            _renderRequested = false;
+        }
+
+        public override void UpdateAppearanceFrame(HashSet<int> nodes, HashSet<int> links, bool geometryChanged)
+        {
+            if (!IsReadyForAnimation) return;
+            CompleteImmediately(UpdateNodesAcrossFrames(nodes));
+            // Resizing moves the surface endpoints; color-only updates reuse the paths.
+            if (geometryChanged) UpdateGPULinks();
+            else if (links.Count > 0 && _controlPointsMap.Count > 0)
+                _shaderWrapper.UpdateAppearanceBuffers(_networkGlobal, _networkContext, _controlPointsMap, links);
+            if (geometryChanged || links.Count > 0) UpdateLinkEndpoints();
+        }
+
+        public override void UpdateAnimationFrame()
+        {
+            // Never cancel the incremental creation of render objects.
+            if (!IsReadyForAnimation) return;
+            if (_renderRoutine != null) _networkManager.StopCoroutine(_renderRoutine);
+            _renderRoutine = null;
+            _renderRequested = false;
+
+            CompleteImmediately(UpdateNodesAcrossFrames());
+            CompleteImmediately(UpdateCommunitiesAcrossFrames());
+            CompleteImmediately(UpdateMeshLinksAcrossFrames());
             UpdateGPULinks();
             UpdateLinkEndpoints();
             UpdateShell();
         }
 
+        static void CompleteImmediately(IEnumerator routine)
+        {
+            // These passes yield only frame boundaries, not nested coroutines.
+            while (routine.MoveNext()) { }
+        }
+
+        IEnumerator UpdateRenderElementsAcrossFrames()
+        {
+            while (_renderRequested)
+            {
+                _renderRequested = false;
+
+                yield return UpdateNodesAcrossFrames();
+                yield return UpdateCommunitiesAcrossFrames();
+                yield return UpdateMeshLinksAcrossFrames();
+                yield return ComputeControlPointsAcrossFrames();
+
+                // Uploading a compute buffer is atomic, but all CPU preparation has
+                // already been distributed across frames before reaching this point.
+                if (_controlPointsMap.Count > 0)
+                    _shaderWrapper.UpdateBuffers(_networkGlobal, _networkContext,
+                        _networkContext.SelectedNodes, _controlPointsMap);
+
+                yield return UpdateLinkEndpointsAcrossFrames();
+                UpdateShell();
+            }
+
+            _renderRoutine = null;
+
+            // A request can arrive between the final loop check and clearing the
+            // coroutine reference. Do not leave that work stranded.
+            if (_renderRequested && isActiveAndEnabled)
+                _renderRoutine = _networkManager.StartCoroutine(UpdateRenderElementsAcrossFrames());
+        }
+
+        bool ShouldYield(Stopwatch budget)
+        {
+            return budget.Elapsed.TotalMilliseconds >= renderBudgetMilliseconds;
+        }
+
         public override void Draw()
         {
-            _shaderWrapper.Draw();
+            if (_readyToDraw) _shaderWrapper.Draw();
         }
 
         public override Transform GetNodeTransform(int nodeID)
@@ -367,9 +547,10 @@ namespace VidiGraph
             return mesh;
         }
 
-        void UpdateLinkEndpoints()
+        IEnumerator UpdateLinkEndpointsAcrossFrames()
         {
             int subnID = _networkContext.SubnetworkID;
+            var budget = Stopwatch.StartNew();
 
             // Markers are opaque geometry, so they can't fade with the ribbon.
             // Instead, hide them once their link drops below normal opacity
@@ -388,11 +569,25 @@ namespace VidiGraph
                 bool visible = linkVisible && nodesOpaque;
 
                 if (marker.rend.enabled != visible) marker.rend.enabled = visible;
-                if (!visible) continue;
+                if (!visible)
+                {
+                    if (ShouldYield(budget)) { yield return null; budget.Restart(); }
+                    continue;
+                }
 
                 var nodeCtx  = _networkContext.Nodes[marker.nodeID];
                 var otherCtx = _networkContext.Nodes[marker.otherNodeID];
+                
+                // Keep endpoint caps proportional when the ribbon width changes.
+                float markerDiameter = linkCtx.Width * linkEndpointWidthFactor;
+                float markerDepth = markerDiameter * linkEndpointDepthFactor;
+                
+                // Scale the marker based on the link's width and the predefined factors for width and depth.
+                marker.rend.transform.localScale = new Vector3(
+                    markerDiameter, markerDepth * 2f, markerDiameter);
+                
                 var dir = otherCtx.Position - nodeCtx.Position;
+                
                 if (dir.sqrMagnitude < 1e-6f) dir = Vector3.up;
                 dir.Normalize();
 
@@ -404,14 +599,22 @@ namespace VidiGraph
                 // places the rim, not the shape's center. The wide rim sits against
                 // (slightly sunk into) the node surface, and the narrow pole tapers
                 // outward along the link — like a small funnel mounted on the node.
-                marker.rend.transform.position = nodeCtx.Position + dir * (surfaceDist - _endpointDepth * EndpointEmbedFraction);
+                marker.rend.transform.position = nodeCtx.Position + dir * (surfaceDist - markerDepth * EndpointEmbedFraction);
                 marker.rend.transform.rotation = Quaternion.FromToRotation(Vector3.down, dir);
 
                 // Color follows the link's start/end color (same gradient the edge ribbon uses).
                 c.a = 1f; // marker geometry itself stays opaque
                 if (marker.rend.material.HasProperty("_Color"))     marker.rend.material.SetColor("_Color", c);
                 if (marker.rend.material.HasProperty("_BaseColor")) marker.rend.material.SetColor("_BaseColor", c);
+
+                if (ShouldYield(budget)) { yield return null; budget.Restart(); }
             }
+        }
+
+        void UpdateLinkEndpoints()
+        {
+            IEnumerator routine = UpdateLinkEndpointsAcrossFrames();
+            while (routine.MoveNext()) { }
         }
 
         // Distance from a node's center to its surface along dir, shape-aware:
@@ -426,9 +629,10 @@ namespace VidiGraph
                 : halfExtent;
         }
 
-        void ComputeControlPoints()
+        IEnumerator ComputeControlPointsAcrossFrames()
         {
             int subnID = _networkContext.SubnetworkID;
+            var budget = Stopwatch.StartNew();
 
             foreach (var (linkID, linkProps) in _networkContext.Links)
             {
@@ -485,7 +689,14 @@ namespace VidiGraph
                 cpDistributed[length - 1] = target;
 
                 _controlPointsMap[link.ID] = new List<Vector3>(cpDistributed);
+                if (ShouldYield(budget)) { yield return null; budget.Restart(); }
             }
+        }
+
+        void ComputeControlPoints()
+        {
+            IEnumerator routine = ComputeControlPointsAcrossFrames();
+            while (routine.MoveNext()) { }
         }
 
         void PrepareBuffers()
@@ -494,10 +705,13 @@ namespace VidiGraph
             _shaderWrapper.PrepareBuffers(_networkGlobal, _networkContext, _controlPointsMap);
         }
 
-        void UpdateNodes()
+        IEnumerator UpdateNodesAcrossFrames(HashSet<int> changedNodes = null)
         {
-            foreach (var (nodeID, contextNode) in _networkContext.Nodes)
+            var budget = Stopwatch.StartNew();
+            IEnumerable<int> nodeIDs = changedNodes != null ? (IEnumerable<int>)changedNodes : _networkContext.Nodes.Keys;
+            foreach (var nodeID in nodeIDs)
             {
+                var contextNode = _networkContext.Nodes[nodeID];
                 Node globalNode = _networkGlobal.Nodes[nodeID];
 
                 if (DrawVirtualNodes || !globalNode.IsVirtualNode)
@@ -547,13 +761,15 @@ namespace VidiGraph
                         globalNode.Dirty = contextNode.Dirty = false;
                     }
                 }
+                if (ShouldYield(budget)) { yield return null; budget.Restart(); }
             }
 
             BookkeepHoverNode();
         }
 
-        void UpdateCommunities()
+        IEnumerator UpdateCommunitiesAcrossFrames()
         {
+            var budget = Stopwatch.StartNew();
             foreach (var commID in _networkContext.Communities.Keys)
             {
                 Community globalComm = _networkGlobal.Communities[commID];
@@ -583,13 +799,15 @@ namespace VidiGraph
                 }
 
 
+                if (ShouldYield(budget)) { yield return null; budget.Restart(); }
             }
 
             BookkeepHoverCommunity();
         }
 
-        void UpdateMeshLinks()
+        IEnumerator UpdateMeshLinksAcrossFrames()
         {
+            var budget = Stopwatch.StartNew();
             if (DrawTreeStructure)
             {
                 foreach (var link in _networkGlobal.TreeLinks)
@@ -598,6 +816,7 @@ namespace VidiGraph
                         endPos = _networkContext.Nodes[link.TargetNodeID].Position;
                     NodeLinkRenderUtils.UpdateStraightLink(_linkGameObjs[link.ID],
                         startPos, endPos, _networkContext.ContextSettings.LinkWidth);
+                    if (ShouldYield(budget)) { yield return null; budget.Restart(); }
                 }
             }
         }

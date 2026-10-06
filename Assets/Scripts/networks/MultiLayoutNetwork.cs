@@ -89,6 +89,7 @@ namespace VidiGraph
         void TransformNetworkFast(string transformer, Action onFinished = null,
             bool updateCommunityProps = true, bool updateStorage = true, bool updateRenderElements = true)
         {
+            _manager.CurrentVisualStep?.ShowMessage();
             if (CoroutineUtils.StopIfRunning(this, ref _curAnim))
             {
                 // update network since we cancelled coroutine prematurely
@@ -148,6 +149,8 @@ namespace VidiGraph
         protected IEnumerator CRAnimateTransformationFast(string transformer, Action onFinished = null,
             bool updateCommunityProps = true, bool updateStorage = false, bool updateRenderElements = true)
         {
+            while (updateRenderElements && !_renderer.IsReadyForAnimation) yield return null;
+
             float dur = 1.0f;
             var interpolator = _transformers[transformer]?.GetInterpolator();
 
@@ -162,8 +165,9 @@ namespace VidiGraph
                 UpdateNetwork(
                     updateCommunityProps: false,
                     updateStorage: false,
-                    updateRenderElements: true
+                    updateRenderElements: false
                 );
+                if (updateRenderElements) _renderer.UpdateAnimationFrame();
             });
 
             interpolator.Interpolate(1f);
@@ -171,8 +175,9 @@ namespace VidiGraph
             UpdateNetwork(
                 updateCommunityProps: updateCommunityProps,
                 updateStorage: updateStorage,
-                updateRenderElements: updateRenderElements
+                updateRenderElements: false
             );
+            if (updateRenderElements) _renderer.UpdateAnimationFrame();
 
             _curAnim = null;
 

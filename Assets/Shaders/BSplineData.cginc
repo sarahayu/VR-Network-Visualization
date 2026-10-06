@@ -14,6 +14,7 @@ struct SplineData {
 	float4 StartColorRGBA;
 	float4 EndColorRGBA;
 	uint LinkType;
+    float Width; // Matches the C# SplineData buffer layout.
 };
 
 struct SplineSegmentData {

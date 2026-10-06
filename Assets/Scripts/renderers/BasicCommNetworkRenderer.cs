@@ -5,7 +5,9 @@
 */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using Stopwatch = System.Diagnostics.Stopwatch;
 using UnityEngine;
 
 namespace VidiGraph
@@ -20,11 +22,14 @@ namespace VidiGraph
         [Range(0.0f, 0.1f)]
         public float LinkWidth = 0.005f;
         public Transform NetworkTransform;
+        [Range(0.25f, 8f)] [SerializeField] float renderBudgetMilliseconds = 2f;
 
         Dictionary<int, GameObject> _nodeGameObjs = new Dictionary<int, GameObject>();
         Dictionary<Tuple<int, int>, GameObject> _linkGameObjs = new Dictionary<Tuple<int, int>, GameObject>();
         NetworkGlobal _networkData;
         MinimapContext _networkProperties;
+        Coroutine _renderRoutine;
+        bool _renderRequested;
 
         void Reset()
         {
@@ -55,19 +60,45 @@ namespace VidiGraph
 
         public override void UpdateRenderElements()
         {
-            foreach (var linkpair in _networkProperties.Links)
+            _renderRequested = true;
+            if (_renderRoutine == null && isActiveAndEnabled)
+                _renderRoutine = StartCoroutine(UpdateAcrossFrames());
+        }
+
+        public override void UpdateAnimationFrame()
+        {
+            if (_renderRoutine != null) StopCoroutine(_renderRoutine);
+            _renderRoutine = null;
+            _renderRequested = true;
+            var routine = UpdateAcrossFrames();
+            while (routine.MoveNext()) { }
+        }
+
+        IEnumerator UpdateAcrossFrames()
+        {
+            while (_renderRequested)
             {
-                var linkID = linkpair.Key;
-                var link = linkpair.Value;
+                _renderRequested = false;
+                var budget = Stopwatch.StartNew();
+                foreach (var linkpair in _networkProperties.Links)
+                {
+                    var linkID = linkpair.Key;
+                    var link = linkpair.Value;
 
-                if (!_linkGameObjs.TryGetValue(linkID, out var linkObj)) continue;
+                    if (!_linkGameObjs.TryGetValue(linkID, out var linkObj)) continue;
 
-                int c1 = linkID.Item1, c2 = linkID.Item2;
-                Vector3 startPos = _networkProperties.CommunityNodes[c1].Position,
-                    endPos = _networkProperties.CommunityNodes[c2].Position;
+                    int c1 = linkID.Item1, c2 = linkID.Item2;
+                    Vector3 startPos = _networkProperties.CommunityNodes[c1].Position,
+                        endPos = _networkProperties.CommunityNodes[c2].Position;
 
-                NodeLinkRenderUtils.UpdateStraightLink(linkObj, startPos, endPos, LinkWidth * link.Weight);
+                    NodeLinkRenderUtils.UpdateStraightLink(linkObj, startPos, endPos, LinkWidth * link.Weight);
+                    if (budget.Elapsed.TotalMilliseconds >= renderBudgetMilliseconds)
+                    { yield return null; budget.Restart(); }
+                }
             }
+            _renderRoutine = null;
+            if (_renderRequested && isActiveAndEnabled)
+                _renderRoutine = StartCoroutine(UpdateAcrossFrames());
         }
 
         public override void Draw()

@@ -6,6 +6,7 @@
 */
 
 using UnityEngine;
+using System.Collections.Generic;
 using UnityEngine.XR.Interaction.Toolkit;
 
 namespace VidiGraph
@@ -17,6 +18,13 @@ namespace VidiGraph
 
         // call when networkdatastructure has updates that need to be known by renderer e.g. position, color
         public abstract void UpdateRenderElements();
+        // Animated layouts must display one complete interpolation step per frame.
+        public virtual bool IsReadyForAnimation => true;
+        public virtual void UpdateAnimationFrame() => UpdateRenderElements();
+        protected bool AppearanceDeferred { get; private set; }
+        public virtual void SetAppearanceDeferred(bool deferred) => AppearanceDeferred = deferred;
+        public virtual void UpdateAppearanceFrame(HashSet<int> nodes, HashSet<int> links, bool geometryChanged)
+            => UpdateAnimationFrame();
         public abstract void Draw();
 
         public abstract Transform GetNodeTransform(int nodeID);

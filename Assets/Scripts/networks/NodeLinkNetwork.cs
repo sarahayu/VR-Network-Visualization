@@ -51,6 +51,11 @@ namespace VidiGraph
         protected MLEditTransformer _editTransformer;
 
         protected Coroutine _curAnim = null;
+        public bool IsVisualAnimating => _curAnim != null;
+        public bool IsVisualReady => _renderer != null && _renderer.IsReadyForAnimation;
+        public void SetAppearanceDeferred(bool deferred) => _renderer.SetAppearanceDeferred(deferred);
+        public void RenderAppearance(HashSet<int> nodes, HashSet<int> links, bool geometryChanged)
+            => _renderer.UpdateAppearanceFrame(nodes, links, geometryChanged);
         protected Coroutine _curMover = null;
 
 
@@ -709,6 +714,7 @@ namespace VidiGraph
         {
             if (animated)
             {
+                _manager.CurrentVisualStep?.ShowMessage();
                 if (CoroutineUtils.StopIfRunning(this, ref _curAnim))
                 {
                     // update network since we cancelled coroutine prematurely
@@ -730,12 +736,17 @@ namespace VidiGraph
             }
             else
             {
+                // Record targets before applying them, without displaying the final values early.
+                var step = _manager.CurrentVisualStep;
+                bool capture = step != null && updateRenderElements &&
+                    (transformer == "edit" || transformer == "encoding");
+                if (capture) step.Capture(this, updateStorage);
                 _transformers[transformer]?.ApplyTransformation();
 
                 UpdateNetwork(
                     updateCommunityProps: updateCommunityProps,
-                    updateStorage: updateStorage,
-                    updateRenderElements: updateRenderElements
+                    updateStorage: updateStorage && !capture,
+                    updateRenderElements: updateRenderElements && !capture
                 );
 
                 onFinished?.Invoke();
@@ -758,6 +769,8 @@ namespace VidiGraph
         protected IEnumerator CRAnimateTransformation(string transformer, Action onFinished = null,
             bool updateCommunityProps = true, bool updateStorage = false, bool updateRenderElements = true)
         {
+            while (updateRenderElements && !_renderer.IsReadyForAnimation) yield return null;
+
             float dur = 1.0f;
             var interpolator = _transformers[transformer]?.GetInterpolator();
 
@@ -772,8 +785,9 @@ namespace VidiGraph
                 UpdateNetwork(
                     updateCommunityProps: updateCommunityProps,
                     updateStorage: false,
-                    updateRenderElements: updateRenderElements
+                    updateRenderElements: false
                 );
+                if (updateRenderElements) _renderer.UpdateAnimationFrame();
             });
 
             interpolator.Interpolate(1f);
@@ -781,8 +795,9 @@ namespace VidiGraph
             UpdateNetwork(
                 updateCommunityProps: updateCommunityProps,
                 updateStorage: updateStorage,
-                updateRenderElements: updateRenderElements
+                updateRenderElements: false
             );
+            if (updateRenderElements) _renderer.UpdateAnimationFrame();
 
             _curAnim = null;
 

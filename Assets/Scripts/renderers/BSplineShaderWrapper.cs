@@ -29,6 +29,7 @@ namespace VidiGraph
         List<SplineData> _splines;
         List<SplineSegmentData> _splineSegments;
         List<SplineControlPointData> _splineControlPoints;
+        readonly Dictionary<int, int> _linkSplineIndices = new();
 
         ComputeShader _batchComputeShader;
         Material _splineMaterial;
@@ -60,6 +61,7 @@ namespace VidiGraph
 
             _splineMaterial.SetFloat("_LineWidth", _contextSettings.LinkWidth);
             _splineMaterial.SetBuffer("OutSamplePointData", _outSampleControlPointData);
+            _splineMaterial.SetBuffer("InSplineData", _inSplineData);
         }
 
         public void UpdateBuffers(NetworkGlobal networkGlobal, MultiLayoutContext networkContext,
@@ -76,6 +78,19 @@ namespace VidiGraph
             _inSplineSegmentData.SetData(_splineSegments);
 
             _splineMaterial.SetFloat("_LineWidth", _contextSettings.LinkWidth);
+        }
+
+        public void UpdateAppearanceBuffers(NetworkGlobal global, MultiLayoutContext context,
+            Dictionary<int, List<Vector3>> controlPoints, HashSet<int> changedLinks)
+        {
+            // Upload appearance metadata without rebuilding control points or segments.
+            foreach (int id in changedLinks)
+            {
+                if (!_linkSplineIndices.TryGetValue(id, out int index)) continue;
+                UpdateSpline((uint)index, _splines[index].BeginSplineSegmentIdx,
+                    controlPoints[id], context.SelectedNodes, id, context, global);
+            }
+            _inSplineData.SetData(_splines);
         }
 
         public void Draw()
@@ -102,6 +117,7 @@ namespace VidiGraph
         {
             // Initialize Compute Shader data
             _splines = new List<SplineData>();
+            _linkSplineIndices.Clear();
             _splineSegments = new List<SplineSegmentData>();
             _splineControlPoints = new List<SplineControlPointData>();
 
@@ -111,6 +127,7 @@ namespace VidiGraph
 
             foreach (var (linkID, linkContext) in networkContext.Links)
             {
+                _linkSplineIndices[linkID] = (int)curSplineIdx;
                 var cp = linksToCP[linkID];
 
                 AddSpline(
@@ -147,7 +164,8 @@ namespace VidiGraph
                 EndPosition: cp[cp.Count - 1],
                 StartColorRGBA: linkContext.ColorStart,
                 EndColorRGBA: linkContext.ColorEnd,
-                LinkType: (uint)LinkType.BundledLink
+                LinkType: (uint)LinkType.BundledLink,
+                Width: linkContext.Width
                 ));
         }
 
@@ -218,6 +236,7 @@ namespace VidiGraph
             spline.EndPosition = cp[cp.Count - 1];
             spline.StartColorRGBA = contextLink.ColorStart;
             spline.EndColorRGBA = contextLink.ColorEnd;
+            spline.Width = contextLink.Width;
 
             uint linkType = (uint)LinkType.BundledLink;
             spline.StartColorRGBA.a *= contextLink.Alpha;

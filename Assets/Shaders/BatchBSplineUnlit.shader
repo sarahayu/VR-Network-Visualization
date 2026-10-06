@@ -93,7 +93,9 @@ Shader "Custom/Batch BSpline Unlit"
                 float3 viewDir = normalize(curr.xyz - _WorldSpaceCameraPos.xyz);
                 float3 normal = normalize(cross(viewDir, tangent));
 
-                float3 offset = normalize(mul(UNITY_MATRIX_MV, normal)) * (_LineWidth/2);
+                // Width changes affect ribbon thickness without changing its path.
+                float width = InSplineData[OutSamplePointData[SplineSampleIdx].SplineIdx].Width;
+                float3 offset = normalize(mul(UNITY_MATRIX_MV, normal)) * (width / 2);
 
                 // Transform the point to ViewSpace and add the offset
                 curr = UnityObjectToViewPos(OutSamplePointData[SplineSampleIdx].Position);

@@ -182,7 +182,7 @@ public class InputManager : MonoBehaviour
 
     }
 
-    public void CallTestingFunctionWork1()
+    public async void CallTestingFunctionWork1()
     {
         if (_databaseStorage == null) return;
 
@@ -190,13 +190,13 @@ public class InputManager : MonoBehaviour
 
         Debug.Log("Selecting nodes with query: " + query);
 
-        var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
+        var nodes = await _databaseStorage.GetNodesFromStoreAsync(_networkManager.NetworkGlobal, query);
         TimerUtils.StartTime("SetWorkingSubgraph");
         _networkManager.CreateWorkingSubgraph(_networkManager.SortNodeGUIDs(nodes)[0], "Select smokers", "Select smokers");
         TimerUtils.EndTime("SetWorkingSubgraph");
     }
 
-    public void CallTestingFunctionWork2()
+    public async void CallTestingFunctionWork2()
     {
         if (_databaseStorage == null) return;
 
@@ -204,7 +204,7 @@ public class InputManager : MonoBehaviour
 
         Debug.Log("Selecting nodes with query: " + query);
 
-        var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, query);
+        var nodes = await _databaseStorage.GetNodesFromStoreAsync(_networkManager.NetworkGlobal, query);
         TimerUtils.StartTime("SetWorkingSubgraph");
         _networkManager.CreateWorkingSubgraph(_networkManager.SortNodeGUIDs(nodes)[0], "Select females", "Select females");
         TimerUtils.EndTime("SetWorkingSubgraph");

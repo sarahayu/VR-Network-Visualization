@@ -8,6 +8,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 
@@ -23,6 +25,12 @@ namespace VidiGraph
         [SerializeField] ConsoleInput _console;
         Dictionary<int, BasicSubnetwork> _subnetworks = new();
         Dictionary<int, NodeLinkNetwork> _allNetworks = new();
+        // The command parser owns the current step; renderers only consume its changes.
+        public VisualCommandStep CurrentVisualStep { get; set; }
+        public bool HasActiveVisualAnimation => _allNetworks.Values.Any(n => n != null && n.IsVisualAnimating);
+        public bool HasPendingVisualInitialization => _allNetworks.Values.Any(n => n != null && n.isActiveAndEnabled && !n.IsVisualReady);
+        public VisualTransitionScheduler VisualScheduler => GetComponent<VisualTransitionScheduler>()
+            ?? gameObject.AddComponent<VisualTransitionScheduler>();
 
         public NetworkFilesLoader FileLoader { get { return _fileLoader; } }
         public NetworkGlobal NetworkGlobal { get { return _networkGlobal; } }
@@ -229,20 +237,42 @@ namespace VidiGraph
 
         bool _updatingStorage = true;
         bool _updatingRenderElements = true;
+        readonly SemaphoreSlim _storageUpdateGate = new(1, 1);
+        CancellationTokenSource _storageLifetime;
 
-        void Start()
+        async void Start()
         {
+            _storageLifetime = new CancellationTokenSource();
             InitForEditorMode();
 
             _storage = GameObject.Find("/Database")?.GetComponent<NetworkStorage>();
-            _storage?.InitialStore(_fileLoader.ClusterLayout, _networkGlobal,
-                _multiLayoutNetwork.Context, _subnetworks.Values.Select(sn => sn.Context));
+            if (_storage != null)
+            {
+                try
+                {
+                    await _storage.InitialStoreAsync(_fileLoader.ClusterLayout, _networkGlobal,
+                        _multiLayoutNetwork.Context, _subnetworks.Values.Select(sn => sn.Context),
+                        _storageLifetime.Token);
+                }
+                catch (OperationCanceledException) { return; }
+                catch (Exception exception)
+                {
+                    Debug.LogError($"Initial database storage failed: {exception}", this);
+                }
+            }
 
             _multiLayoutNetwork.SetStorageUpdateCallback(UpdateStorage);
 
             _surfaceManager = GameObject.Find("Surface Manager")?.GetComponent<SurfaceManager>();
 
             SetQueryMode(true);
+        }
+
+        void OnDestroy()
+        {
+            _storageLifetime?.Cancel();
+            _storageLifetime?.Dispose();
+            _storageLifetime = null;
         }
 
         public void InitForEditorMode()
@@ -577,6 +607,22 @@ namespace VidiGraph
 
         // figures out which nodeGUIDs are on current working subgraph and only marks as selected those
         // and sets query mode to false
+        public HashSet<string> ReplaceWorkingNodeSelection(IEnumerable<string> nodeGUIDs)
+        {
+            if (!_allNetworks.TryGetValue(_curWorkingSubgraph, out var network)) return new();
+            var sorted = SortNodeGUIDs(nodeGUIDs);
+            var targets = sorted.TryGetValue(_curWorkingSubgraph, out var ids) ? ids : new HashSet<int>();
+            // A query replaces its previous scope, including when it returns no matches.
+            network.Context.SetSelectedNodes(network.SelectedNodes.Except(targets).ToArray(), false);
+            network.Context.SetSelectedNodes(targets, true);
+            network.UpdateSelectedElements();
+            var selected = new HashSet<string>(network.SelectedNodeGUIDs);
+            if (selected.Count > 0) _handheldNetwork.PushSelectionEvent(selected);
+            UpdateHandheld();
+            UpdateOptions();
+            return selected;
+        }
+
         public void SetWorkingSelectedNodes(IEnumerable<string> nodeGUIDs, bool selected)
         {
             var sorted = SortNodeGUIDs(nodeGUIDs);
@@ -1522,13 +1568,14 @@ namespace VidiGraph
         }
 
         // Changes the global link width for a subnetwork's render context.
-        // The BSpline renderer uses a single global _LineWidth shader parameter for all links,
-        // so per-link width is not supported — this is the only way to visually change link thickness.
+        // Previously this only changed the shader's global _LineWidth parameter.
+        // Update per-link targets as well so existing width commands participate in transitions.
         public void SetSubnetworkGlobalLinkWidth(float width, int subnetworkID = MainNetworkID)
         {
             if (!_allNetworks.TryGetValue(subnetworkID, out var network)) return;
             network.Context.ContextSettings.LinkWidth = width;
-            TriggerRenderUpdate();
+            network.SetLinksWidth(network.Context.Links.Keys, 1f, _updatingStorage, _updatingRenderElements);
+            // TriggerRenderUpdate(); // The network update above now handles rendering.
         }
 
         public void SetMLLinksColorStart(IEnumerable<string> linkGUIDs, string color)
@@ -1908,10 +1955,27 @@ namespace VidiGraph
 
         /*=============== start private methods ===================*/
 
-        void UpdateStorage()
+        async void UpdateStorage()
         {
-            _storage?.UpdateStore(_fileLoader.ClusterLayout, _networkGlobal, _multiLayoutNetwork.Context,
-                    _subnetworks.Values.Select(sn => sn.Context));
+            if (_storage == null || _storageLifetime == null) return;
+            bool enteredGate = false;
+            try
+            {
+                await _storageUpdateGate.WaitAsync(_storageLifetime.Token);
+                enteredGate = true;
+                await _storage.UpdateStoreAsync(_fileLoader.ClusterLayout, _networkGlobal,
+                    _multiLayoutNetwork.Context, _subnetworks.Values.Select(sn => sn.Context),
+                    _storageLifetime.Token);
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception exception)
+            {
+                Debug.LogError($"Database storage update failed: {exception}", this);
+            }
+            finally
+            {
+                if (enteredGate) _storageUpdateGate.Release();
+            }
         }
 
         // clears both nodes and communities

@@ -542,6 +542,13 @@ namespace Whisper.Samples
 
         private IEnumerator SendToServerAndExecute(string userInput)
         {
+            if (streamingSampleMic == null || streamingSampleMic._networkManager == null) yield break;
+            // Queue before the HTTP request so response timing cannot reorder commands.
+            yield return streamingSampleMic._networkManager.VisualScheduler.Schedule(ExecuteServerCommand(userInput));
+        }
+
+        private IEnumerator ExecuteServerCommand(string userInput)
+        {
             Debug.Log($"[SERVER] Sending to server: {userInput}");
 
             ClassificationRequest requestBody = new ClassificationRequest { userText = userInput };
@@ -582,13 +589,22 @@ namespace Whisper.Samples
                     else
                     {
                         // Execute the actions
-                        StartCoroutine(ExecuteActionsDirectly(classification.actions, classification.queries, userInput));
+                        // Already inside the shared queue; execute these steps directly.
+                        yield return ExecuteActionSteps(classification.actions, classification.queries, userInput);
                     }
                 }
             }
         }
 
         private IEnumerator ExecuteActionsDirectly(string[][] actions, string[] queries, string originalCommand, string legendNodeLabel = null)
+        {
+            if (streamingSampleMic == null || streamingSampleMic._networkManager == null) yield break;
+            // Desktop demos share the same queue as spoken commands.
+            yield return streamingSampleMic._networkManager.VisualScheduler.Schedule(
+                ExecuteActionSteps(actions, queries, originalCommand, legendNodeLabel));
+        }
+
+        private IEnumerator ExecuteActionSteps(string[][] actions, string[] queries, string originalCommand, string legendNodeLabel = null)
         {
             if (streamingSampleMic == null)
             {
@@ -601,6 +617,7 @@ namespace Whisper.Samples
 
             // Store link GUIDs from selectLink so colorLink can use them without marking links as Selected
             HashSet<string> _lastQueriedLinkGUIDs = new HashSet<string>();
+            HashSet<string> commandSelectedNodes = null; // An empty query must not mean all nodes.
             // Track last selectLink type for legend labeling
             string _lastLinkSelectLabel = "Links";
             // Track last selectNode param to derive short legend label
@@ -625,475 +642,502 @@ namespace Whisper.Samples
 
             for (int i = 0; i < actions.Length; i++)
             {
+                while (_networkManager.HasActiveVisualAnimation || _networkManager.HasPendingVisualInitialization)
+                    yield return null;
+                if (actions[i] == null || actions[i].Length < 2 || queries == null || i >= queries.Length)
+                {
+                    Debug.LogWarning($"Skipping malformed action {i + 1}.");
+                    continue;
+                }
                 string actionName = actions[i][0];
                 string actionParam = actions[i][1];
 
                 Debug.Log($"[ACTION {i + 1}/{actions.Length}] {actionName}({actionParam})");
 
-                switch (actionName)
+                using (var visualStep = new VisualCommandStep(() =>
                 {
-                    case "selectNode":
-                        Debug.Log($"  Selecting nodes with query: {queries[i]}");
-                        var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, queries[i]);
-
-                        if (_networkManager.OnQueryMode || !_networkManager.HasWorkingSession)
+                    if (command_prefab == null || command_parent == null) return;
+                    var message = Instantiate(command_prefab, command_parent.transform);
+                    message.GetComponent<TMP_Text>().text = StreamingSampleMic.DescribeVisualAction(actionName, actionParam);
+                    ScrollToBottom();
+                }))
+                {
+                    _networkManager.CurrentVisualStep = visualStep;
+                    try
+                    {
+                        switch (actionName)
                         {
-                            // No session yet — create one with ALL nodes first, then select the queried subset
-                            Debug.Log($"  [No Session] Creating working subgraph with ALL nodes first");
-                            var allNodesForSel = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                            var sortedSel = _networkManager.SortNodeGUIDs(allNodesForSel);
-                            if (!sortedSel.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
-                            _networkManager.CreateWorkingSubgraph(sortedSel[VidiGraph.NetworkManager.MainNetworkID], originalCommand, originalCommand);
-                            _networkManager.SetQueryMode(false);
-                            var subnGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(nodes);
-                            _networkManager.SetWorkingSelectedNodes(subnGUIDs, true);
-                            Debug.Log($"  ✓ Session with {_networkManager.WorkingSubgraphAllNodeGUIDs.Count} total nodes, {subnGUIDs.Count} selected");
-                        }
-                        else
-                        {
-                            Debug.Log($"  [Session Exists] Selecting within working subgraph");
-                            var subnGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(nodes);
-                            _networkManager.SetWorkingSelectedNodes(subnGUIDs, true);
-                            Debug.Log($"  ✓ {subnGUIDs.Count} nodes selected in working subgraph");
-                        }
-                        _lastSelectNodeLabel = ToShortLabel(actionParam);
-                        break;
+                            case "selectNode":
+                                Debug.Log($"  Selecting nodes with query: {queries[i]}");
+                                var nodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, queries[i]);
 
-                    case "sizeNode":
-                        string sizeParam = actionParam;
-                        string attributeName = sizeParam.Contains(":") ? sizeParam.Split(':')[0] : sizeParam;
-                        string scope = sizeParam.Contains(":") ? sizeParam.Split(':')[1] : "all";
-
-                        Debug.Log($"  Sizing nodes by: {attributeName} (scope: {scope})");
-                        var (minV, maxV) = _databaseStorage.GetMinMaxFromStore(_networkManager.NetworkGlobal, queries[i]);
-                        Debug.Log($"  Min/Max: {minV}, {maxV}");
-                        _networkManager.SetMLNodeSizeEncoding(attributeName, minV, maxV, VidiGraph.NetworkManager.MainNetworkID);
-                        Debug.Log($"  ✓ Size encoding applied");
-                        break;
-
-                    case "colorNode":
-                        Debug.Log($"  Coloring nodes: {actionParam}");
-                        HashSet<string> nodes_color;
-                        if (_networkManager.HasWorkingSession)
-                        {
-                            nodes_color = _networkManager.WorkingSelectedNodeGUIDs;
-                            if (nodes_color.Count == 0)
-                                nodes_color = _networkManager.WorkingSubgraphAllNodeGUIDs;
-                        }
-                        else
-                        {
-                            // No session — create one with all nodes
-                            Debug.Log($"  No session, creating one with all nodes");
-                            var allNodesForColor = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                            var sortedColorAll = _networkManager.SortNodeGUIDs(allNodesForColor);
-                            if (!sortedColorAll.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
-                            _networkManager.CreateWorkingSubgraph(sortedColorAll[VidiGraph.NetworkManager.MainNetworkID], "Color all nodes", "Color Nodes");
-                            nodes_color = _networkManager.WorkingSubgraphAllNodeGUIDs;
-                        }
-                        Debug.Log($"  Found {nodes_color.Count} nodes to color");
-                        _networkManager.SetMLNodesColor(nodes_color, actionParam);
-                        Debug.Log($"  ✓ {nodes_color.Count} nodes colored");
-                        legendManager?.SetNodeColorLabel(actionParam, legendNodeLabel ?? _lastSelectNodeLabel);
-                        break;
-
-                    case "colorByAttribute":
-                        Debug.Log($"  Categorical coloring by: {actionParam}");
-                        string attributeName_color = actionParam;
-
-                        // If no session yet, create one with all nodes
-                        if (!_networkManager.HasWorkingSession)
-                        {
-                            Debug.Log($"  No session, creating one with all nodes");
-                            var allNodesForCBA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                            var sortedCBA = _networkManager.SortNodeGUIDs(allNodesForCBA);
-                            if (!sortedCBA.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
-                            _networkManager.CreateWorkingSubgraph(sortedCBA[VidiGraph.NetworkManager.MainNetworkID], $"Color by {attributeName_color}", $"Color by {attributeName_color}");
-                            _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
-                        }
-
-                        // Get distinct values
-                        var distinctValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, queries[i]);
-                        Debug.Log($"  Found {distinctValues.Count} distinct values");
-
-                        // Sort for deterministic color assignment regardless of DB return order
-                        distinctValues.Sort();
-
-                        // Palette for auto-pick when user doesn't specify colors
-                        string[] allowedColors = new string[] {
-                            "#7FFFFF",  // cyan
-                            "#7F7FFF",  // blue
-                            "#FFFF7F",  // yellow
-                            "#BF7FBF"   // purple
-                        };
-
-                        // Parse any user-specified colors from action params (actions[i][2+] = "category:colorHex")
-                        var userColors = new Dictionary<string, string>();
-                        for (int k = 2; k < actions[i].Length; k++)
-                        {
-                            var parts = actions[i][k].Split(new char[] { ':' }, 2);
-                            if (parts.Length == 2 && parts[1].StartsWith("#"))
-                                userColors[parts[0].Trim()] = parts[1].Trim();
-                        }
-
-                        // Build color mapping — use user-specified if available, else auto-pick from palette
-                        var colorMapping = new List<(string cypherValue, string colorHex)>();
-                        int autoColorIdx = 0;
-                        foreach (var val in distinctValues)
-                        {
-                            string colorHex = userColors.TryGetValue(val, out string specifiedColor)
-                                ? specifiedColor
-                                : allowedColors[autoColorIdx++ % allowedColors.Length];
-                            colorMapping.Add((val, colorHex));
-                        }
-
-                        if (userColors.Count == 0 && distinctValues.Count > allowedColors.Length)
-                            Debug.LogWarning($"  ⚠ {distinctValues.Count} categories but only {allowedColors.Length} colors. Colors will repeat.");
-
-                        // Color each category using the mapping
-                        foreach (var (cypherValue, colorHex) in colorMapping)
-                        {
-                            string categoryQuery = $"MATCH (n:Node) WHERE n.{attributeName_color} = {cypherValue} RETURN n";
-                            Debug.Log($"    Category '{cypherValue}' → {colorHex}");
-                            var categoryNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, categoryQuery);
-                            var subnColorGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(categoryNodes);
-                            _networkManager.SetMLNodesColor(subnColorGUIDs, colorHex);
-                        }
-
-                        // Build legend from the SAME mapping — guaranteed to match what was applied
-                        Debug.Log($"  ✓ Categorical coloring complete");
-                        Debug.Log($"  === Color Legend for '{attributeName_color}' ===");
-                        foreach (var (cypherValue, colorHex) in colorMapping)
-                            Debug.Log($"    ■ {LegendManager.PrettifyLabel(attributeName_color, cypherValue)} = {colorHex}");
-                        legendManager?.SetNodeColorMapping(colorMapping.Select(cm => (LegendManager.PrettifyLabel(attributeName_color, cm.cypherValue), cm.colorHex)));
-
-                        if (command_prefab != null && command_parent != null)
-                        {
-                            var _colorLegend = Instantiate(command_prefab, command_parent.transform);
-                            var _colorLegend_text = _colorLegend.GetComponent<TMP_Text>();
-
-                            System.Text.StringBuilder uiLegendBuilder = new System.Text.StringBuilder();
-                            uiLegendBuilder.AppendLine($"<b>Colored by {attributeName_color}</b>");
-                            foreach (var (cypherValue, colorHex) in colorMapping)
-                            {
-                                string colorName = GetColorName(colorHex);
-                                uiLegendBuilder.AppendLine($"  <color={colorHex}>{colorName}</color> for {LegendManager.PrettifyLabel(attributeName_color, cypherValue)}");
-                            }
-
-                            _colorLegend_text.text = uiLegendBuilder.ToString();
-                            ScrollToBottom();
-                        }
-                        break;
-
-                    case "colorByGPA":
-                        Debug.Log($"  Linear GPA coloring");
-
-                        TimerUtils.StartTime("ColorByGPA");
-
-                        // Create session with all nodes if none exists (same as colorByAttribute)
-                        if (!_networkManager.HasWorkingSession)
-                        {
-                            Debug.Log($"  No session, creating one with all nodes");
-                            var allNodesForGPA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                            var sortedGPA = _networkManager.SortNodeGUIDs(allNodesForGPA);
-                            if (!sortedGPA.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
-                            _networkManager.CreateWorkingSubgraph(sortedGPA[VidiGraph.NetworkManager.MainNetworkID], "Color by GPA", "Color by GPA");
-                            _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
-                        }
-
-                        {
-                            string[] gpaGradient = { "#E3F2FD", "#90CAF9", "#42A5F5", "#1976D2", "#1565C0" };
-                            var (gpaMin, gpaMax) = _databaseStorage.GetMinMaxFromStore(
-                                _networkManager.NetworkGlobal,
-                                "MATCH (n:Node) WHERE n.gpa IS NOT NULL RETURN min(n.gpa) AS minValue, max(n.gpa) AS maxValue");
-                            if (gpaMax > gpaMin)
-                            {
-                                float step = (gpaMax - gpaMin) / gpaGradient.Length;
-                                for (int b = 0; b < gpaGradient.Length; b++)
+                                if (_networkManager.OnQueryMode || !_networkManager.HasWorkingSession)
                                 {
-                                    float low = gpaMin + b * step;
-                                    float high = (b == gpaGradient.Length - 1) ? gpaMax + 0.001f : gpaMin + (b + 1) * step;
-                                    string bucketQuery = $"MATCH (n:Node) WHERE n.gpa >= {low.ToString(System.Globalization.CultureInfo.InvariantCulture)} AND n.gpa < {high.ToString(System.Globalization.CultureInfo.InvariantCulture)} RETURN n";
-                                    var bucketNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, bucketQuery);
-                                    var bucketGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(bucketNodes);
-                                    _networkManager.SetMLNodesColor(bucketGUIDs, gpaGradient[b]);
+                                    // No session yet — create one with ALL nodes first, then select the queried subset
+                                    Debug.Log($"  [No Session] Creating working subgraph with ALL nodes first");
+                                    var allNodesForSel = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+                                    var sortedSel = _networkManager.SortNodeGUIDs(allNodesForSel);
+                                    if (!sortedSel.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) yield break;
+                                    _networkManager.CreateWorkingSubgraph(sortedSel[VidiGraph.NetworkManager.MainNetworkID], originalCommand, originalCommand);
+                                    _networkManager.SetQueryMode(false);
+                                    var subnGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(nodes);
+                                    commandSelectedNodes = _networkManager.ReplaceWorkingNodeSelection(subnGUIDs);
+                                    Debug.Log($"  ✓ Session with {_networkManager.WorkingSubgraphAllNodeGUIDs.Count} total nodes, {subnGUIDs.Count} selected");
                                 }
-                            }
+                                else
+                                {
+                                    Debug.Log($"  [Session Exists] Selecting within working subgraph");
+                                    var subnGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(nodes);
+                                    commandSelectedNodes = _networkManager.ReplaceWorkingNodeSelection(subnGUIDs);
+                                    Debug.Log($"  ✓ {subnGUIDs.Count} nodes selected in working subgraph");
+                                }
+                                _lastSelectNodeLabel = ToShortLabel(actionParam);
+                                break;
 
-                            TimerUtils.EndTime("ColorByGPA");
-                            legendManager?.SetNodeGradient("GPA", gpaGradient);
+                            case "sizeNode":
+                                string sizeParam = actionParam;
+                                string attributeName = sizeParam.Contains(":") ? sizeParam.Split(':')[0] : sizeParam;
+                                string scope = sizeParam.Contains(":") ? sizeParam.Split(':')[1] : "all";
 
-                            if (command_prefab != null && command_parent != null)
-                            {
-                                var _gpaLegend = Instantiate(command_prefab, command_parent.transform);
-                                var gpaLegendBuilder = new System.Text.StringBuilder();
-                                gpaLegendBuilder.Append("<b>gpa</b>   low  ");
-                                foreach (var c in gpaGradient) gpaLegendBuilder.Append($"<color={c}>■</color>");
-                                gpaLegendBuilder.Append("  high");
-                                _gpaLegend.GetComponent<TMP_Text>().text = gpaLegendBuilder.ToString();
-                                ScrollToBottom();
-                            }
+                                Debug.Log($"  Sizing nodes by: {attributeName} (scope: {scope})");
+                                var (minV, maxV) = _databaseStorage.GetMinMaxFromStore(_networkManager.NetworkGlobal, queries[i]);
+                                Debug.Log($"  Min/Max: {minV}, {maxV}");
+                                _networkManager.SetMLNodeSizeEncoding(attributeName, minV, maxV, VidiGraph.NetworkManager.MainNetworkID);
+                                Debug.Log($"  ✓ Size encoding applied");
+                                break;
+
+                            case "colorNode":
+                                Debug.Log($"  Coloring nodes: {actionParam}");
+                                HashSet<string> nodes_color;
+                                if (_networkManager.HasWorkingSession)
+                                {
+                                    nodes_color = _networkManager.WorkingSelectedNodeGUIDs;
+                                    if (nodes_color.Count == 0)
+                                        nodes_color = _networkManager.WorkingSubgraphAllNodeGUIDs;
+                                }
+                                else
+                                {
+                                    // No session — create one with all nodes
+                                    Debug.Log($"  No session, creating one with all nodes");
+                                    var allNodesForColor = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+                                    var sortedColorAll = _networkManager.SortNodeGUIDs(allNodesForColor);
+                                    if (!sortedColorAll.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
+                                    _networkManager.CreateWorkingSubgraph(sortedColorAll[VidiGraph.NetworkManager.MainNetworkID], "Color all nodes", "Color Nodes");
+                                    nodes_color = _networkManager.WorkingSubgraphAllNodeGUIDs;
+                                }
+                                if (commandSelectedNodes != null) nodes_color = commandSelectedNodes;
+                                Debug.Log($"  Found {nodes_color.Count} nodes to color");
+                                _networkManager.SetMLNodesColor(nodes_color, actionParam);
+                                Debug.Log($"  ✓ {nodes_color.Count} nodes colored");
+                                legendManager?.SetNodeColorLabel(actionParam, legendNodeLabel ?? _lastSelectNodeLabel);
+                                break;
+
+                            case "colorByAttribute":
+                                Debug.Log($"  Categorical coloring by: {actionParam}");
+                                string attributeName_color = actionParam;
+
+                                // If no session yet, create one with all nodes
+                                if (!_networkManager.HasWorkingSession)
+                                {
+                                    Debug.Log($"  No session, creating one with all nodes");
+                                    var allNodesForCBA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+                                    var sortedCBA = _networkManager.SortNodeGUIDs(allNodesForCBA);
+                                    if (!sortedCBA.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
+                                    _networkManager.CreateWorkingSubgraph(sortedCBA[VidiGraph.NetworkManager.MainNetworkID], $"Color by {attributeName_color}", $"Color by {attributeName_color}");
+                                    _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
+                                }
+
+                                // Get distinct values
+                                var distinctValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, queries[i]);
+                                Debug.Log($"  Found {distinctValues.Count} distinct values");
+
+                                // Sort for deterministic color assignment regardless of DB return order
+                                distinctValues.Sort();
+
+                                // Palette for auto-pick when user doesn't specify colors
+                                string[] allowedColors = new string[] {
+                                    "#7FFFFF",  // cyan
+                                    "#7F7FFF",  // blue
+                                    "#FFFF7F",  // yellow
+                                    "#BF7FBF"   // purple
+                                };
+
+                                // Parse any user-specified colors from action params (actions[i][2+] = "category:colorHex")
+                                var userColors = new Dictionary<string, string>();
+                                for (int k = 2; k < actions[i].Length; k++)
+                                {
+                                    var parts = actions[i][k].Split(new char[] { ':' }, 2);
+                                    if (parts.Length == 2 && parts[1].StartsWith("#"))
+                                        userColors[parts[0].Trim()] = parts[1].Trim();
+                                }
+
+                                // Build color mapping — use user-specified if available, else auto-pick from palette
+                                var colorMapping = new List<(string cypherValue, string colorHex)>();
+                                int autoColorIdx = 0;
+                                foreach (var val in distinctValues)
+                                {
+                                    string colorHex = userColors.TryGetValue(val, out string specifiedColor)
+                                        ? specifiedColor
+                                        : allowedColors[autoColorIdx++ % allowedColors.Length];
+                                    colorMapping.Add((val, colorHex));
+                                }
+
+                                if (userColors.Count == 0 && distinctValues.Count > allowedColors.Length)
+                                    Debug.LogWarning($"  ⚠ {distinctValues.Count} categories but only {allowedColors.Length} colors. Colors will repeat.");
+
+                                // Color each category using the mapping
+                                foreach (var (cypherValue, colorHex) in colorMapping)
+                                {
+                                    string categoryQuery = $"MATCH (n:Node) WHERE n.{attributeName_color} = {cypherValue} RETURN n";
+                                    Debug.Log($"    Category '{cypherValue}' → {colorHex}");
+                                    var categoryNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, categoryQuery);
+                                    var subnColorGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(categoryNodes);
+                                    _networkManager.SetMLNodesColor(subnColorGUIDs, colorHex);
+                                }
+
+                                // Build legend from the SAME mapping — guaranteed to match what was applied
+                                Debug.Log($"  ✓ Categorical coloring complete");
+                                Debug.Log($"  === Color Legend for '{attributeName_color}' ===");
+                                foreach (var (cypherValue, colorHex) in colorMapping)
+                                    Debug.Log($"    ■ {LegendManager.PrettifyLabel(attributeName_color, cypherValue)} = {colorHex}");
+                                legendManager?.SetNodeColorMapping(colorMapping.Select(cm => (LegendManager.PrettifyLabel(attributeName_color, cm.cypherValue), cm.colorHex)));
+
+                                if (command_prefab != null && command_parent != null)
+                                {
+                                    var _colorLegend = Instantiate(command_prefab, command_parent.transform);
+                                    var _colorLegend_text = _colorLegend.GetComponent<TMP_Text>();
+
+                                    System.Text.StringBuilder uiLegendBuilder = new System.Text.StringBuilder();
+                                    uiLegendBuilder.AppendLine($"<b>Colored by {attributeName_color}</b>");
+                                    foreach (var (cypherValue, colorHex) in colorMapping)
+                                    {
+                                        string colorName = GetColorName(colorHex);
+                                        uiLegendBuilder.AppendLine($"  <color={colorHex}>{colorName}</color> for {LegendManager.PrettifyLabel(attributeName_color, cypherValue)}");
+                                    }
+
+                                    _colorLegend_text.text = uiLegendBuilder.ToString();
+                                    ScrollToBottom();
+                                }
+                                break;
+
+                            case "colorByGPA":
+                                Debug.Log($"  Linear GPA coloring");
+
+                                TimerUtils.StartTime("ColorByGPA");
+
+                                // Create session with all nodes if none exists (same as colorByAttribute)
+                                if (!_networkManager.HasWorkingSession)
+                                {
+                                    Debug.Log($"  No session, creating one with all nodes");
+                                    var allNodesForGPA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+                                    var sortedGPA = _networkManager.SortNodeGUIDs(allNodesForGPA);
+                                    if (!sortedGPA.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
+                                    _networkManager.CreateWorkingSubgraph(sortedGPA[VidiGraph.NetworkManager.MainNetworkID], "Color by GPA", "Color by GPA");
+                                    _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
+                                }
+
+                                {
+                                    string[] gpaGradient = { "#E3F2FD", "#90CAF9", "#42A5F5", "#1976D2", "#1565C0" };
+                                    // Keep GPA colors within the same scope as the selection step.
+                                    var gpaScope = commandSelectedNodes ?? (_networkManager.WorkingSelectedNodeGUIDs.Count > 0
+                                        ? _networkManager.WorkingSelectedNodeGUIDs : _networkManager.WorkingSubgraphAllNodeGUIDs);
+                                    var (gpaMin, gpaMax) = _databaseStorage.GetMinMaxFromStore(
+                                        _networkManager.NetworkGlobal,
+                                        "MATCH (n:Node) WHERE n.gpa IS NOT NULL RETURN min(n.gpa) AS minValue, max(n.gpa) AS maxValue");
+                                    if (gpaMax > gpaMin)
+                                    {
+                                        float step = (gpaMax - gpaMin) / gpaGradient.Length;
+                                        for (int b = 0; b < gpaGradient.Length; b++)
+                                        {
+                                            float low = gpaMin + b * step;
+                                            float high = (b == gpaGradient.Length - 1) ? gpaMax + 0.001f : gpaMin + (b + 1) * step;
+                                            string bucketQuery = $"MATCH (n:Node) WHERE n.gpa >= {low.ToString(System.Globalization.CultureInfo.InvariantCulture)} AND n.gpa < {high.ToString(System.Globalization.CultureInfo.InvariantCulture)} RETURN n";
+                                            var bucketNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, bucketQuery);
+                                            var bucketGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(bucketNodes);
+                                            bucketGUIDs.IntersectWith(gpaScope);
+                                            _networkManager.SetMLNodesColor(bucketGUIDs, gpaGradient[b]);
+                                        }
+                                    }
+
+                                    TimerUtils.EndTime("ColorByGPA");
+                                    legendManager?.SetNodeGradient("GPA", gpaGradient);
+
+                                    if (command_prefab != null && command_parent != null)
+                                    {
+                                        var _gpaLegend = Instantiate(command_prefab, command_parent.transform);
+                                        var gpaLegendBuilder = new System.Text.StringBuilder();
+                                        gpaLegendBuilder.Append("<b>gpa</b>   low  ");
+                                        foreach (var c in gpaGradient) gpaLegendBuilder.Append($"<color={c}>■</color>");
+                                        gpaLegendBuilder.Append("  high");
+                                        _gpaLegend.GetComponent<TMP_Text>().text = gpaLegendBuilder.ToString();
+                                        ScrollToBottom();
+                                    }
+                                }
+                                break;
+
+                            case "colorByValue":
+                                Debug.Log($"  Linear color encoding by value: {actionParam}");
+                                string cbvAttribute = actionParam;
+
+                                // Ensure session exists
+                                if (!_networkManager.HasWorkingSession)
+                                {
+                                    var allNodesForCBV = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+                                    var sortedCBV = _networkManager.SortNodeGUIDs(allNodesForCBV);
+                                    if (!sortedCBV.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
+                                    _networkManager.CreateWorkingSubgraph(sortedCBV[VidiGraph.NetworkManager.MainNetworkID], $"Color by {cbvAttribute}", $"Color by {cbvAttribute}");
+                                    _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
+                                }
+
+                                // Get value range from min/max query
+                                var (cbvMin, cbvMax) = _databaseStorage.GetMinMaxFromStore(_networkManager.NetworkGlobal, queries[i]);
+                                Debug.Log($"  {cbvAttribute} range: [{cbvMin}, {cbvMax}]");
+
+                                // Linear encoding: same hue, lighter = lower, darker = higher
+                                string cbvLinearHue = "#003388";
+                                bool cbvEncodingSuccess = _networkManager.SetMLNodeColorEncoding(
+                                    cbvAttribute, cbvMin, cbvMax, cbvLinearHue);
+
+                                if (!cbvEncodingSuccess)
+                                {
+                                    // Fall back to bucket approach
+                                    string[] cbvGradient = { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" };
+                                    float cbvRange = cbvMax - cbvMin;
+                                    if (cbvRange <= 0f) cbvRange = 1f;
+                                    float cbvStep = cbvRange / cbvGradient.Length;
+                                    for (int b = 0; b < cbvGradient.Length; b++)
+                                    {
+                                        float lo = cbvMin + b * cbvStep;
+                                        float hi = b == cbvGradient.Length - 1 ? cbvMax + 0.001f : cbvMin + (b + 1) * cbvStep;
+                                        string bucketQuery = $"MATCH (n:Node) WHERE n.{cbvAttribute} >= {lo:F4} AND n.{cbvAttribute} < {hi:F4} RETURN n";
+                                        var bucketNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, bucketQuery);
+                                        _networkManager.SetMLNodesColor(_networkManager.TranslateToWorkingSubgraphNodeGUIDs(bucketNodes), cbvGradient[b]);
+                                    }
+                                }
+
+                                // Legend: gradient strip with lighter/darker meaning (no min/max numbers)
+                                legendManager?.SetNodeGradient(cbvAttribute, new string[] { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" });
+                                if (command_prefab != null && command_parent != null)
+                                {
+                                    var _cbvLegend = Instantiate(command_prefab, command_parent.transform);
+                                    var cbvBuilder = new System.Text.StringBuilder();
+                                    string[] cbvGradientDisplay = { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" };
+                                    cbvBuilder.Append($"<b>{cbvAttribute}</b>   low  ");
+                                    foreach (var c in cbvGradientDisplay)
+                                        cbvBuilder.Append($"<color={c}>■</color>");
+                                    cbvBuilder.Append("  high");
+                                    _cbvLegend.GetComponent<TMP_Text>().text = cbvBuilder.ToString();
+                                    ScrollToBottom();
+                                }
+                                break;
+
+                            case "shapeByAttribute":
+                                Debug.Log($"  Categorical shape encoding by: {actionParam}");
+                                string attributeName_shape = actionParam;
+
+                                // If no session yet, create one with all nodes
+                                if (!_networkManager.HasWorkingSession)
+                                {
+                                    Debug.Log($"  No session, creating one with all nodes");
+                                    var allNodesForSBA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+                                    var sortedSBA = _networkManager.SortNodeGUIDs(allNodesForSBA);
+                                    if (!sortedSBA.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
+                                    _networkManager.CreateWorkingSubgraph(sortedSBA[VidiGraph.NetworkManager.MainNetworkID], $"Shape by {attributeName_shape}", $"Shape by {attributeName_shape}");
+                                }
+
+                                // Get distinct values
+                                var distinctShapeValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, queries[i]);
+                                Debug.Log($"  Found {distinctShapeValues.Count} distinct values");
+
+                                // Define 3 allowed shapes
+                                string[] allowedShapes = new string[] {
+                                    "sphere",
+                                    "cube",
+                                    "tetrahedron"
+                                };
+
+                                if (distinctShapeValues.Count > 3)
+                                {
+                                    Debug.LogWarning($"  ⚠ {distinctShapeValues.Count} categories but only 3 shapes - shapes will repeat");
+                                }
+
+                                // Assign shape to each category
+                                for (int j = 0; j < distinctShapeValues.Count; j++)
+                                {
+                                    string categoryValue = distinctShapeValues[j];
+                                    string shapeName = allowedShapes[j % allowedShapes.Length];
+
+                                    string categoryQuery = $"MATCH (n:Node) WHERE n.{attributeName_shape} = {categoryValue} RETURN n";
+                                    Debug.Log($"    Category {categoryValue} → {shapeName}");
+
+                                    var categoryNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, categoryQuery);
+                                    var subnShapeGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(categoryNodes);
+                                    _networkManager.SetMLNodesShape(subnShapeGUIDs, shapeName);
+                                }
+
+                                // Print shape legend to console
+                                Debug.Log($"  ✓ Categorical shape encoding complete");
+                                Debug.Log($"  === Shape Legend for '{attributeName_shape}' ===");
+                                legendManager?.SetShapeMapping(distinctShapeValues.Select(v => LegendManager.PrettifyLabel(attributeName_shape, v)));
+
+                                string[] shapeSymbols = new string[] { "●", "■", "▲" };
+                                for (int j = 0; j < distinctShapeValues.Count; j++)
+                                {
+                                    string categoryValue = distinctShapeValues[j].Replace("'", "");
+                                    string shapeName = allowedShapes[j % allowedShapes.Length];
+                                    string shapeSymbol = shapeSymbols[j % shapeSymbols.Length];
+                                    Debug.Log($"    {shapeSymbol} {categoryValue} = {shapeName}");
+                                }
+
+                                // Create UI legend display (if UI elements are assigned and command is non-empty)
+                                if (!string.IsNullOrEmpty(originalCommand) && command_prefab != null && command_parent != null)
+                                {
+                                    var _shapeLegend = Instantiate(command_prefab, command_parent.transform);
+                                    var _shapeLegend_text = _shapeLegend.GetComponent<TMP_Text>();
+
+                                    System.Text.StringBuilder uiShapeLegendBuilder = new System.Text.StringBuilder();
+                                    uiShapeLegendBuilder.AppendLine($"<b>Shaped by {attributeName_shape}</b>");
+
+                                    for (int j = 0; j < distinctShapeValues.Count; j++)
+                                    {
+                                        string categoryValue = distinctShapeValues[j].Replace("'", "");
+                                        string shapeName = allowedShapes[j % allowedShapes.Length];
+                                        string shapeSymbol = shapeSymbols[j % shapeSymbols.Length];
+                                        uiShapeLegendBuilder.AppendLine($"  {shapeSymbol} {categoryValue} = {shapeName}");
+                                    }
+
+                                    _shapeLegend_text.text = uiShapeLegendBuilder.ToString();
+                                    ScrollToBottom();
+                                }
+                                break;
+
+                            case "selectLink":
+                                Debug.Log($"  Querying links with: {queries[i]}");
+                                // Track link type for legend labeling
+                                if (actionParam == "all") _lastLinkSelectLabel = "All links";
+                                else if (actionParam.Contains("aggression")) _lastLinkSelectLabel = "Aggression links";
+                                else if (actionParam.Contains("friendship")) _lastLinkSelectLabel = "Friendship links";
+                                else _lastLinkSelectLabel = actionParam + " links";
+                                var links = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, queries[i]);
+                                _lastQueriedLinkGUIDs = new HashSet<string>(links);
+
+                                // n.selected=true is Unity state, not stored in Neo4j — filter by selected nodes in Unity
+                                if (queries[i].Contains("n.selected = true") && _networkManager.HasWorkingSession
+                                    && _networkManager.WorkingSelectedNodeGUIDs.Count > 0)
+                                {
+                                    string queryWithoutSelected = queries[i]
+                                        .Replace("n.selected = true AND ", "")
+                                        .Replace(" AND n.selected = true", "");
+                                    var allTypeLinks = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, queryWithoutSelected);
+                                    var selectedNodeIDs = _networkManager.SortNodeGUIDs(_networkManager.WorkingSelectedNodeGUIDs)
+                                        .Values.SelectMany(x => x).ToHashSet();
+                                    _lastQueriedLinkGUIDs = new HashSet<string>(allTypeLinks.Where(linkGuid =>
+                                    {
+                                        if (!_networkManager.LinkGUIDToID.TryGetValue(linkGuid, out var tup)) return false;
+                                        if (!_networkManager.NetworkGlobal.Links.TryGetValue(tup.Item2, out var link)) return false;
+                                        return selectedNodeIDs.Contains(link.SourceNodeID) || selectedNodeIDs.Contains(link.TargetNodeID);
+                                    }));
+                                    Debug.Log($"  Filtered to {_lastQueriedLinkGUIDs.Count} links for selected nodes");
+                                }
+
+                                Debug.Log($"  ✓ Found {_lastQueriedLinkGUIDs.Count} links from query");
+                                break;
+
+                            case "colorLink":
+                                Debug.Log($"  Coloring links: {actionParam}");
+                                HashSet<string> linkGUIDs_color;
+                                if (_networkManager.HasWorkingSession)
+                                {
+                                    linkGUIDs_color = _networkManager.TranslateToWorkingSubgraphLinkGUIDs(_lastQueriedLinkGUIDs);
+                                    if (linkGUIDs_color.Count == 0)
+                                    {
+                                        // Fall back to selected nodes' links, not ALL links
+                                        var selectedNodeLinks = _networkManager.GetLinksForNodes(_networkManager.WorkingSelectedNodeGUIDs);
+                                        linkGUIDs_color = selectedNodeLinks.Count > 0
+                                            ? selectedNodeLinks
+                                            : _networkManager.WorkingSubgraphAllLinkGUIDs;
+                                    }
+                                }
+                                else
+                                {
+                                    if (_lastQueriedLinkGUIDs.Count == 0)
+                                    {
+                                        string selectAllLinksQuery = "MATCH ()-[r:POINTS_TO]-() RETURN r";
+                                        var allLinks = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, selectAllLinksQuery);
+                                        _lastQueriedLinkGUIDs = new HashSet<string>(allLinks);
+                                    }
+                                    linkGUIDs_color = _lastQueriedLinkGUIDs;
+                                }
+                                _networkManager.SetMLLinksColorStart(linkGUIDs_color, actionParam);
+                                _networkManager.SetMLLinksColorEnd(linkGUIDs_color, actionParam);
+                                Debug.Log($"  ✓ {linkGUIDs_color.Count} links colored {actionParam}");
+                                legendManager?.SetEdgeColorLabel(actionParam, _lastLinkSelectLabel);
+                                break;
+
+                            case "widthLink":
+                                Debug.Log($"  Setting global link width: {actionParam}");
+                                if (float.TryParse(actionParam, System.Globalization.NumberStyles.Float,
+                                    System.Globalization.CultureInfo.InvariantCulture, out float linkWidth))
+                                {
+                                    int targetSubn = _networkManager.HasWorkingSession
+                                        ? _networkManager.WorkingSubgraphID
+                                        : VidiGraph.NetworkManager.MainNetworkID;
+                                    _networkManager.SetSubnetworkGlobalLinkWidth(linkWidth, targetSubn);
+                                    Debug.Log($"  ✓ Global link width set to {linkWidth} for subnetwork {targetSubn}");
+                                }
+                                break;
+
+                            case "reset":
+                                Debug.Log($"  Reset — coloring all nodes yellow and links gray");
+                                _lastQueriedLinkGUIDs.Clear();
+                                if (!_networkManager.HasWorkingSession)
+                                {
+                                    var allNodesForReset = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
+                                    var sortedReset = _networkManager.SortNodeGUIDs(allNodesForReset);
+                                    if (!sortedReset.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
+                                    _networkManager.CreateWorkingSubgraph(sortedReset[VidiGraph.NetworkManager.MainNetworkID], "Reset", "Reset");
+                                    _networkManager.BringMLNodes(_networkManager.WorkingSubgraphAllNodeGUIDs);
+                                }
+                                _networkManager.SetMLNodesColor(_networkManager.WorkingSubgraphAllNodeGUIDs, "#FFFF00");
+                                _networkManager.SetMLLinksColorStart(_networkManager.WorkingSubgraphAllLinkGUIDs, "#808080");
+                                _networkManager.SetMLLinksColorEnd(_networkManager.WorkingSubgraphAllLinkGUIDs, "#808080");
+                                _networkManager.ClearSelection();
+                                Debug.Log($"  ✓ Reset complete — nodes yellow, links gray");
+                                legendManager?.ResetAll();
+                                break;
+
+                            case "deselect":
+                                Debug.Log($"  Deselecting all nodes");
+                                _networkManager.ClearSelection();
+                                _lastQueriedLinkGUIDs.Clear();
+                                Debug.Log($"  ✓ Selection cleared");
+                                break;
+
+                            case "move":
+                                Debug.Log($"  Moving selected nodes");
+                                var nodes_move = _networkManager.SelectedNodeGUIDs;
+                                _networkManager.BringMLNodes(nodes_move);
+                                Debug.Log($"  ✓ {nodes_move.Count} nodes moved");
+                                break;
+
+                            case "layout":
+                                Debug.Log($"  Changing layout to: {actionParam}");
+                                var comms = _networkManager.WorkingSelectedCommunityGUIDs;
+                                _networkManager.SetMLLayout(comms, actionParam);
+                                Debug.Log($"  ✓ Layout changed");
+                                break;
+
+                            default:
+                                Debug.LogWarning($"  ⚠ Unknown action: {actionName}");
+                                break;
                         }
-                        break;
 
-                    case "colorByValue":
-                        Debug.Log($"  Linear color encoding by value: {actionParam}");
-                        string cbvAttribute = actionParam;
-
-                        // Ensure session exists
-                        if (!_networkManager.HasWorkingSession)
-                        {
-                            var allNodesForCBV = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                            var sortedCBV = _networkManager.SortNodeGUIDs(allNodesForCBV);
-                            if (!sortedCBV.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
-                            _networkManager.CreateWorkingSubgraph(sortedCBV[VidiGraph.NetworkManager.MainNetworkID], $"Color by {cbvAttribute}", $"Color by {cbvAttribute}");
-                            _networkManager.SetWorkingSelectedNodes(_networkManager.WorkingSubgraphAllNodeGUIDs, true);
-                        }
-
-                        // Get value range from min/max query
-                        var (cbvMin, cbvMax) = _databaseStorage.GetMinMaxFromStore(_networkManager.NetworkGlobal, queries[i]);
-                        Debug.Log($"  {cbvAttribute} range: [{cbvMin}, {cbvMax}]");
-
-                        // Linear encoding: same hue, lighter = lower, darker = higher
-                        string cbvLinearHue = "#003388";
-                        bool cbvEncodingSuccess = _networkManager.SetMLNodeColorEncoding(
-                            cbvAttribute, cbvMin, cbvMax, cbvLinearHue);
-
-                        if (!cbvEncodingSuccess)
-                        {
-                            // Fall back to bucket approach
-                            string[] cbvGradient = { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" };
-                            float cbvRange = cbvMax - cbvMin;
-                            if (cbvRange <= 0f) cbvRange = 1f;
-                            float cbvStep = cbvRange / cbvGradient.Length;
-                            for (int b = 0; b < cbvGradient.Length; b++)
-                            {
-                                float lo = cbvMin + b * cbvStep;
-                                float hi = b == cbvGradient.Length - 1 ? cbvMax + 0.001f : cbvMin + (b + 1) * cbvStep;
-                                string bucketQuery = $"MATCH (n:Node) WHERE n.{cbvAttribute} >= {lo:F4} AND n.{cbvAttribute} < {hi:F4} RETURN n";
-                                var bucketNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, bucketQuery);
-                                _networkManager.SetMLNodesColor(_networkManager.TranslateToWorkingSubgraphNodeGUIDs(bucketNodes), cbvGradient[b]);
-                            }
-                        }
-
-                        // Legend: gradient strip with lighter/darker meaning (no min/max numbers)
-                        legendManager?.SetNodeGradient(cbvAttribute, new string[] { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" });
-                        if (command_prefab != null && command_parent != null)
-                        {
-                            var _cbvLegend = Instantiate(command_prefab, command_parent.transform);
-                            var cbvBuilder = new System.Text.StringBuilder();
-                            string[] cbvGradientDisplay = { "#E6F2FF", "#99C5FF", "#4499FF", "#0066CC", "#003388" };
-                            cbvBuilder.Append($"<b>{cbvAttribute}</b>   low  ");
-                            foreach (var c in cbvGradientDisplay)
-                                cbvBuilder.Append($"<color={c}>■</color>");
-                            cbvBuilder.Append("  high");
-                            _cbvLegend.GetComponent<TMP_Text>().text = cbvBuilder.ToString();
-                            ScrollToBottom();
-                        }
-                        break;
-
-                    case "shapeByAttribute":
-                        Debug.Log($"  Categorical shape encoding by: {actionParam}");
-                        string attributeName_shape = actionParam;
-
-                        // If no session yet, create one with all nodes
-                        if (!_networkManager.HasWorkingSession)
-                        {
-                            Debug.Log($"  No session, creating one with all nodes");
-                            var allNodesForSBA = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                            var sortedSBA = _networkManager.SortNodeGUIDs(allNodesForSBA);
-                            if (!sortedSBA.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
-                            _networkManager.CreateWorkingSubgraph(sortedSBA[VidiGraph.NetworkManager.MainNetworkID], $"Shape by {attributeName_shape}", $"Shape by {attributeName_shape}");
-                        }
-
-                        // Get distinct values
-                        var distinctShapeValues = _databaseStorage.GetDistinctValuesFromStore(_networkManager.NetworkGlobal, queries[i]);
-                        Debug.Log($"  Found {distinctShapeValues.Count} distinct values");
-
-                        // Define 3 allowed shapes
-                        string[] allowedShapes = new string[] {
-                            "sphere",
-                            "cube",
-                            "tetrahedron"
-                        };
-
-                        if (distinctShapeValues.Count > 3)
-                        {
-                            Debug.LogWarning($"  ⚠ {distinctShapeValues.Count} categories but only 3 shapes - shapes will repeat");
-                        }
-
-                        // Assign shape to each category
-                        for (int j = 0; j < distinctShapeValues.Count; j++)
-                        {
-                            string categoryValue = distinctShapeValues[j];
-                            string shapeName = allowedShapes[j % allowedShapes.Length];
-
-                            string categoryQuery = $"MATCH (n:Node) WHERE n.{attributeName_shape} = {categoryValue} RETURN n";
-                            Debug.Log($"    Category {categoryValue} → {shapeName}");
-
-                            var categoryNodes = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, categoryQuery);
-                            var subnShapeGUIDs = _networkManager.TranslateToWorkingSubgraphNodeGUIDs(categoryNodes);
-                            _networkManager.SetMLNodesShape(subnShapeGUIDs, shapeName);
-                        }
-
-                        // Print shape legend to console
-                        Debug.Log($"  ✓ Categorical shape encoding complete");
-                        Debug.Log($"  === Shape Legend for '{attributeName_shape}' ===");
-                        legendManager?.SetShapeMapping(distinctShapeValues.Select(v => LegendManager.PrettifyLabel(attributeName_shape, v)));
-
-                        string[] shapeSymbols = new string[] { "●", "■", "▲" };
-                        for (int j = 0; j < distinctShapeValues.Count; j++)
-                        {
-                            string categoryValue = distinctShapeValues[j].Replace("'", "");
-                            string shapeName = allowedShapes[j % allowedShapes.Length];
-                            string shapeSymbol = shapeSymbols[j % shapeSymbols.Length];
-                            Debug.Log($"    {shapeSymbol} {categoryValue} = {shapeName}");
-                        }
-
-                        // Create UI legend display (if UI elements are assigned and command is non-empty)
-                        if (!string.IsNullOrEmpty(originalCommand) && command_prefab != null && command_parent != null)
-                        {
-                            var _shapeLegend = Instantiate(command_prefab, command_parent.transform);
-                            var _shapeLegend_text = _shapeLegend.GetComponent<TMP_Text>();
-
-                            System.Text.StringBuilder uiShapeLegendBuilder = new System.Text.StringBuilder();
-                            uiShapeLegendBuilder.AppendLine($"<b>Shaped by {attributeName_shape}</b>");
-
-                            for (int j = 0; j < distinctShapeValues.Count; j++)
-                            {
-                                string categoryValue = distinctShapeValues[j].Replace("'", "");
-                                string shapeName = allowedShapes[j % allowedShapes.Length];
-                                string shapeSymbol = shapeSymbols[j % shapeSymbols.Length];
-                                uiShapeLegendBuilder.AppendLine($"  {shapeSymbol} {categoryValue} = {shapeName}");
-                            }
-
-                            _shapeLegend_text.text = uiShapeLegendBuilder.ToString();
-                            ScrollToBottom();
-                        }
-                        break;
-
-                    case "selectLink":
-                        Debug.Log($"  Querying links with: {queries[i]}");
-                        // Track link type for legend labeling
-                        if (actionParam == "all") _lastLinkSelectLabel = "All links";
-                        else if (actionParam.Contains("aggression")) _lastLinkSelectLabel = "Aggression links";
-                        else if (actionParam.Contains("friendship")) _lastLinkSelectLabel = "Friendship links";
-                        else _lastLinkSelectLabel = actionParam + " links";
-                        var links = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, queries[i]);
-                        _lastQueriedLinkGUIDs = new HashSet<string>(links);
-
-                        // n.selected=true is Unity state, not stored in Neo4j — filter by selected nodes in Unity
-                        if (queries[i].Contains("n.selected = true") && _networkManager.HasWorkingSession
-                            && _networkManager.WorkingSelectedNodeGUIDs.Count > 0)
-                        {
-                            string queryWithoutSelected = queries[i]
-                                .Replace("n.selected = true AND ", "")
-                                .Replace(" AND n.selected = true", "");
-                            var allTypeLinks = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, queryWithoutSelected);
-                            var selectedNodeIDs = _networkManager.SortNodeGUIDs(_networkManager.WorkingSelectedNodeGUIDs)
-                                .Values.SelectMany(x => x).ToHashSet();
-                            _lastQueriedLinkGUIDs = new HashSet<string>(allTypeLinks.Where(linkGuid =>
-                            {
-                                if (!_networkManager.LinkGUIDToID.TryGetValue(linkGuid, out var tup)) return false;
-                                if (!_networkManager.NetworkGlobal.Links.TryGetValue(tup.Item2, out var link)) return false;
-                                return selectedNodeIDs.Contains(link.SourceNodeID) || selectedNodeIDs.Contains(link.TargetNodeID);
-                            }));
-                            Debug.Log($"  Filtered to {_lastQueriedLinkGUIDs.Count} links for selected nodes");
-                        }
-
-                        Debug.Log($"  ✓ Found {_lastQueriedLinkGUIDs.Count} links from query");
-                        break;
-
-                    case "colorLink":
-                        Debug.Log($"  Coloring links: {actionParam}");
-                        HashSet<string> linkGUIDs_color;
-                        if (_networkManager.HasWorkingSession)
-                        {
-                            linkGUIDs_color = _networkManager.TranslateToWorkingSubgraphLinkGUIDs(_lastQueriedLinkGUIDs);
-                            if (linkGUIDs_color.Count == 0)
-                            {
-                                // Fall back to selected nodes' links, not ALL links
-                                var selectedNodeLinks = _networkManager.GetLinksForNodes(_networkManager.WorkingSelectedNodeGUIDs);
-                                linkGUIDs_color = selectedNodeLinks.Count > 0
-                                    ? selectedNodeLinks
-                                    : _networkManager.WorkingSubgraphAllLinkGUIDs;
-                            }
-                        }
-                        else
-                        {
-                            if (_lastQueriedLinkGUIDs.Count == 0)
-                            {
-                                string selectAllLinksQuery = "MATCH ()-[r:POINTS_TO]-() RETURN r";
-                                var allLinks = _databaseStorage.GetLinksFromStore(_networkManager.NetworkGlobal, selectAllLinksQuery);
-                                _lastQueriedLinkGUIDs = new HashSet<string>(allLinks);
-                            }
-                            linkGUIDs_color = _lastQueriedLinkGUIDs;
-                        }
-                        _networkManager.SetMLLinksColorStart(linkGUIDs_color, actionParam);
-                        _networkManager.SetMLLinksColorEnd(linkGUIDs_color, actionParam);
-                        Debug.Log($"  ✓ {linkGUIDs_color.Count} links colored {actionParam}");
-                        legendManager?.SetEdgeColorLabel(actionParam, _lastLinkSelectLabel);
-                        break;
-
-                    case "widthLink":
-                        Debug.Log($"  Setting global link width: {actionParam}");
-                        if (float.TryParse(actionParam, System.Globalization.NumberStyles.Float,
-                            System.Globalization.CultureInfo.InvariantCulture, out float linkWidth))
-                        {
-                            int targetSubn = _networkManager.HasWorkingSession
-                                ? _networkManager.WorkingSubgraphID
-                                : VidiGraph.NetworkManager.MainNetworkID;
-                            _networkManager.SetSubnetworkGlobalLinkWidth(linkWidth, targetSubn);
-                            Debug.Log($"  ✓ Global link width set to {linkWidth} for subnetwork {targetSubn}");
-                        }
-                        break;
-
-                    case "reset":
-                        Debug.Log($"  Reset — coloring all nodes yellow and links gray");
-                        _lastQueriedLinkGUIDs.Clear();
-                        if (!_networkManager.HasWorkingSession)
-                        {
-                            var allNodesForReset = _databaseStorage.GetNodesFromStore(_networkManager.NetworkGlobal, "MATCH (n:Node) RETURN n");
-                            var sortedReset = _networkManager.SortNodeGUIDs(allNodesForReset);
-                            if (!sortedReset.ContainsKey(VidiGraph.NetworkManager.MainNetworkID)) break;
-                            _networkManager.CreateWorkingSubgraph(sortedReset[VidiGraph.NetworkManager.MainNetworkID], "Reset", "Reset");
-                            _networkManager.BringMLNodes(_networkManager.WorkingSubgraphAllNodeGUIDs);
-                        }
-                        _networkManager.SetMLNodesColor(_networkManager.WorkingSubgraphAllNodeGUIDs, "#FFFF00");
-                        _networkManager.SetMLLinksColorStart(_networkManager.WorkingSubgraphAllLinkGUIDs, "#808080");
-                        _networkManager.SetMLLinksColorEnd(_networkManager.WorkingSubgraphAllLinkGUIDs, "#808080");
-                        _networkManager.ClearSelection();
-                        Debug.Log($"  ✓ Reset complete — nodes yellow, links gray");
-                        legendManager?.ResetAll();
-                        break;
-
-                    case "deselect":
-                        Debug.Log($"  Deselecting all nodes");
-                        _networkManager.ClearSelection();
-                        _lastQueriedLinkGUIDs.Clear();
-                        Debug.Log($"  ✓ Selection cleared");
-                        break;
-
-                    case "move":
-                        Debug.Log($"  Moving selected nodes");
-                        var nodes_move = _networkManager.SelectedNodeGUIDs;
-                        _networkManager.BringMLNodes(nodes_move);
-                        Debug.Log($"  ✓ {nodes_move.Count} nodes moved");
-                        break;
-
-                    case "layout":
-                        Debug.Log($"  Changing layout to: {actionParam}");
-                        var comms = _networkManager.WorkingSelectedCommunityGUIDs;
-                        _networkManager.SetMLLayout(comms, actionParam);
-                        Debug.Log($"  ✓ Layout changed");
-                        break;
-
-                    default:
-                        Debug.LogWarning($"  ⚠ Unknown action: {actionName}");
-                        break;
+                        // Finish this step's visuals before showing the next explanation.
+                        while (_networkManager.HasActiveVisualAnimation) yield return null;
+                        yield return visualStep.Play();
+                    }
+                    finally { _networkManager.CurrentVisualStep = null; }
                 }
-
-                // Small delay between actions for visibility
-                yield return new WaitForSeconds(0.1f);
             }
 
             Debug.Log($"[COMPLETE] All actions executed for: {originalCommand}");
