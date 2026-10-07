@@ -28,6 +28,15 @@ These are the tools used at our time of development, and by no means are hard re
 
 ## Running
 
+Before the first run of a fresh checkout, install the Whisper model weights locally.
+The main scene's voice controller uses `Assets/Voice/Whisper/ggml-tiny.en.bin`;
+these large files are excluded from Git. Copy that file from a working checkout
+or download the matching model using the Whisper link below. Keep the filename
+and the Whisper component's Model Path in agreement. A missing or invalid model
+disables voice transcription; typed commands remain available. The scene also
+contains a legacy Whisper configuration referencing `ggml-small.bin`, which needs
+its own matching weights if that configuration is enabled.
+
 1. Run Neo4J server.
 
 2. Run language server.

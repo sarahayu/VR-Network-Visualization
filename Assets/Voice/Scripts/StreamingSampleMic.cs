@@ -87,19 +87,52 @@ namespace Whisper.Samples
 
 
         private async void Start()
-        {   
+        {
+            // Typed commands and visual feedback do not depend on voice initialization.
+            textCommandInput?.onSubmit.AddListener(OnTextCommandSubmit);
+            CommandPress.EnableDirectActionIfModeUsed();
+            loadingComet ??= FindObjectOfType<VidiGraph.NetworkLoadingComet>();
+
+            try
+            {
+                await InitializeVoiceAsync();
+            }
+            catch (System.Exception exception)
+            {
+                if (this != null)
+                    Debug.LogError($"Voice initialization failed: {exception}. Typed commands remain available.", this);
+            }
+        }
+
+        private async Task InitializeVoiceAsync()
+        {
+            if (whisper == null || microphoneRecord == null)
+            {
+                Debug.LogError("Voice requires assigned WhisperManager and MicrophoneRecord components. Typed commands remain available.", this);
+                return;
+            }
 
             // Ensure the microphone is ready before proceeding
             if (!await EnsureMicrophoneReady())
                 return;
+            if (this == null || whisper == null || microphoneRecord == null) return;
 
             // Push-to-talk already defines the speech window. Stream VAD can
             // misclassify quiet headset input and discard every audio chunk.
             whisper.useVad = false;
 
             // Create a whisper stream from the microphone
-            _stream = await whisper.CreateStream(microphoneRecord);
-            // OnButtonPressed();
+            var stream = await whisper.CreateStream(microphoneRecord);
+            if (this == null || whisper == null || microphoneRecord == null) return;
+            if (stream == null)
+            {
+                Debug.LogError(
+                    $"Whisper could not create a voice stream. Check the earlier model-loading error and " +
+                    $"the WhisperManager model path '{whisper.ModelPath}'. Model weights are excluded from Git " +
+                    "and must be installed locally. Typed commands remain available.", this);
+                return;
+            }
+            _stream = stream;
 
             // Subscribe to events
             _stream.OnResultUpdated += OnResult;
@@ -114,6 +147,7 @@ namespace Whisper.Samples
             // Microphone.Start can succeed while the device position remains at zero.
             // Verify that real samples are arriving before accepting voice commands.
             await Task.Delay(500);
+            if (this == null || microphoneRecord == null) return;
             int microphonePosition = Microphone.GetPosition(microphoneRecord.RecordStartMicDevice);
             if (microphonePosition <= 0)
             {
@@ -130,11 +164,26 @@ namespace Whisper.Samples
                 Debug.Log($"Microphone active: {deviceName}, sample position {microphonePosition}.");
             }
 
-            textCommandInput?.onSubmit.AddListener(OnTextCommandSubmit);
+        }
 
-            CommandPress.EnableDirectActionIfModeUsed();
-
-            loadingComet ??= FindObjectOfType<VidiGraph.NetworkLoadingComet>();
+        private void OnDestroy()
+        {
+            textCommandInput?.onSubmit.RemoveListener(OnTextCommandSubmit);
+            button?.onClick.RemoveListener(OnButtonPressed);
+            CommandPress.DisableDirectActionIfModeUsed();
+            if (_stream != null)
+            {
+                _stream.OnResultUpdated -= OnResult;
+                _stream.OnSegmentUpdated -= OnSegmentUpdated;
+                _stream.OnSegmentFinished -= OnSegmentFinished;
+                _stream.OnStreamFinished -= OnFinished;
+                if (_voiceListening) _stream.StopStream();
+            }
+            if (microphoneRecord != null)
+            {
+                microphoneRecord.OnRecordStop -= OnRecordStop;
+                if (_stream != null && microphoneRecord.IsRecording) microphoneRecord.StopRecord();
+            }
         }
 
         // Ensure the microphone is ready before starting the voice command
