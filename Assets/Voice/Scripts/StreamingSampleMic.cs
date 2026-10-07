@@ -181,15 +181,11 @@ namespace Whisper.Samples
                 _keyboardTalking = false;
                 StopVoiceCommand();
             }
-<<<<<<< Updated upstream
 
             // Off by default: Enter drives DemoSequence's Status Struggle walkthrough.
             // Leaving this on ran a second demo on the same key — it created its own
             // working session and fired the snapshot-save animation on every step.
             if (enableEnterSnapshotDemo && Input.GetKeyDown(KeyCode.Return))
-=======
-            if (Input.GetKeyDown(KeyCode.Return))
->>>>>>> Stashed changes
             {
                 RunDemoStep();
             }
