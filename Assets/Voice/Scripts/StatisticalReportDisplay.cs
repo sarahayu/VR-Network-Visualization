@@ -26,14 +26,26 @@ namespace Whisper.Samples
         [SerializeField, Min(1)] private int queryTimeoutSeconds = 10;
 
         private int reportVersion;
+        private string activeCommandId;
 
         /// <summary>
         /// Executes the deserialized `stats` portion of ClassificationResponse.
         /// Each item supplies a display label and a Cypher query that returns one numeric value.
         /// </summary>
-        public async void DisplayReports(StatisticalQuery[] statisticalQueries)
+        public void BeginCommand()
+        {
+            activeCommandId = null;
+            ++reportVersion; // Invalidate an earlier asynchronous statistical report.
+            if (outputText != null && clearPreviousReport) outputText.text = string.Empty;
+        }
+
+        public void DisplayReports(StatisticalQuery[] statisticalQueries)
+            => DisplayCommandReport(null, statisticalQueries);
+
+        public async void DisplayCommandReport(CommandExecutionReport execution, StatisticalQuery[] statisticalQueries)
         {
             int currentVersion = ++reportVersion;
+            activeCommandId = execution?.CommandId;
 
             if (outputText == null)
             {
@@ -41,32 +53,33 @@ namespace Whisper.Samples
                 return;
             }
 
-            if (networkManager == null || databaseStorage == null)
-            {
-                ShowMessage("Statistical report unavailable: data references are not assigned.");
-                Debug.LogError("StatisticalReportDisplay requires Network Manager and Database Storage references.", this);
-                return;
-            }
-
+            string previousText = clearPreviousReport ? string.Empty : outputText.text;
+            var report = new StringBuilder();
+            string summary = execution?.Summary();
+            if (!string.IsNullOrWhiteSpace(summary))
+                report.AppendLine("<b>Command result</b>").AppendLine(EscapeText(summary));
             if (statisticalQueries == null || statisticalQueries.Length == 0)
             {
-                if (clearPreviousReport)
-                    outputText.text = string.Empty;
+                outputText.text = JoinReports(previousText, report.ToString().TrimEnd());
                 return;
             }
-
-            var report = new StringBuilder();
             if (!string.IsNullOrWhiteSpace(reportHeading))
-                report.AppendLine($"<b>{reportHeading}</b>");
-
-            outputText.text = report + "Calculating…";
+                report.AppendLine($"<b>{EscapeText(reportHeading)}</b>");
+            if (networkManager == null || databaseStorage == null)
+            {
+                report.AppendLine("Statistical report unavailable: data references are not assigned.");
+                outputText.text = JoinReports(previousText, report.ToString().TrimEnd());
+                return;
+            }
+            outputText.text = JoinReports(previousText, report + "Calculating…");
 
             foreach (StatisticalQuery statistic in statisticalQueries)
             {
+                if (currentVersion != reportVersion || outputText == null) return;
                 if (statistic == null || string.IsNullOrWhiteSpace(statistic.query))
                     continue;
 
-                string label = GetDisplayLabel(statistic);
+                string label = EscapeText(GetDisplayLabel(statistic));
 
                 try
                 {
@@ -102,23 +115,27 @@ namespace Whisper.Samples
             if (currentVersion != reportVersion || outputText == null)
                 return;
 
-            string reportText = report.ToString().TrimEnd();
-            if (clearPreviousReport)
-                outputText.text = reportText;
-            else if (!string.IsNullOrEmpty(reportText))
-                outputText.text += (string.IsNullOrEmpty(outputText.text) ? "" : "\n") + reportText;
+            outputText.text = JoinReports(previousText, report.ToString().TrimEnd());
         }
 
-        private void ShowMessage(string message)
+        public void ShowPlanProgress(string commandId, string plan, int step, int total, string description)
         {
-            if (outputText == null)
-                return;
-
-            if (clearPreviousReport)
-                outputText.text = message;
-            else
-                outputText.text += (string.IsNullOrEmpty(outputText.text) ? "" : "\n") + message;
+            ++reportVersion;
+            activeCommandId = commandId;
+            if (outputText != null)
+                outputText.text = $"<b>Plan</b>\n{EscapeText(plan)}\nStep {step}/{total}: {EscapeText(description)}\nSay or type 'cancel' to stop after the current step.";
         }
+
+        public void AppendExplanation(string commandId, string explanation)
+        {
+            if (outputText == null || commandId != activeCommandId || string.IsNullOrWhiteSpace(explanation)) return;
+            outputText.text += "\n\n<b>Jev summary</b>\n" + EscapeText(explanation);
+        }
+
+        private static string JoinReports(string previous, string current) =>
+            string.IsNullOrEmpty(previous) ? current : string.IsNullOrEmpty(current) ? previous : previous + "\n" + current;
+
+        private static string EscapeText(string value) => value.Replace("<", "‹").Replace(">", "›");
 
         private static string GetDisplayLabel(StatisticalQuery statistic)
         {

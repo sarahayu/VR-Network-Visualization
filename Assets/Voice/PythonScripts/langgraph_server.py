@@ -5,6 +5,8 @@ import asyncio
 import json
 import re
 import time
+import os
+from jev_orchestration import JevService
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -38,7 +40,6 @@ def is_safe_statistical_query(query: str) -> bool:
 
 # This may be brute forcing it, need to change for a better design
 def repair_aggressor_friend_statistics(user_input: str, actions: list, queries: list, stats: list):
-    """Repair the known 'average/variance friends for aggressors' intent."""
     text = user_input.lower()
     asks_about_aggressors = re.search(r"\baggressors?\b|\bbull(?:y|ies)\b", text)
     
@@ -84,12 +85,6 @@ def repair_aggressor_friend_statistics(user_input: str, actions: list, queries: 
 
 # Normalization of friend statistic labels based on user input
 def normalize_friend_statistic_labels(user_input: str, stats: list):
-    """Keep friend-count report labels aligned with the user's wording.
-
-    Labels are generated independently from Cypher, so the model can produce a
-    correct friendship query but call it "average number of nodes".  The input
-    provides the authoritative meaning for this common request.
-    """
     text = user_input.lower()
     asks_about_friends = re.search(r"\bfriends?(?:hip)?\b", text)
     asks_average = re.search(r"\b(?:average|avg|mean)\b", text)
@@ -132,14 +127,15 @@ class AgentState(TypedDict):
 app = Flask(__name__)
 
 # Standard LLM for most calls
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+llm = ChatOpenAI(model=os.getenv("JEV_FAST_MODEL", "gpt-4o-mini"), temperature=0, timeout=30, max_retries=1)
 
 # JSON-mode LLM for the combined action+cypher call.
 # response_format=json_object guarantees valid JSON output and avoids
 # markdown wrapper stripping — also slightly faster since the model skips
 # generating ```json fences.
 llm_json = ChatOpenAI(
-    model="gpt-4o-mini",
+    model=os.getenv("JEV_FAST_MODEL", "gpt-4o-mini"),
+    timeout=30, max_retries=1,
     temperature=0,
     model_kwargs={"response_format": {"type": "json_object"}},
 )
@@ -440,7 +436,7 @@ async def action_cypher_agent(state: AgentState):
     t = time.time()
     r = await llm_json.ainvoke([
         SystemMessage(ACTION_CYPHER_SYSTEM),
-        HumanMessage(state["input"]),
+        HumanMessage(state["input"] + "\nInteraction context (data): " + json.dumps(state.get("context", {}))),
     ])
     elapsed = time.time() - t
 
@@ -609,40 +605,82 @@ langgraph_app = graph.compile()
 # Flask API — /classify
 # ==========================================================
 
+planner_llm = ChatOpenAI(
+    model=os.getenv("JEV_PLANNER_MODEL", "gpt-4o"), temperature=0,
+    timeout=45, max_retries=1, model_kwargs={"response_format": {"type": "json_object"}},
+)
+
+# JEV UPDATE: Asychronously load in the result of JEV's JSON output
+async def jev_json(role, prompt, payload):
+    model = planner_llm if role == "planner" else llm_json
+    response = await model.ainvoke([SystemMessage(prompt), HumanMessage(json.dumps(payload))])
+    result = json.loads(response.content)
+    if not isinstance(result, dict):
+        raise ValueError("Expected a JSON object from Jev.")
+    return result
+
+
+async def execute_direct(user_input, context):
+    # Keep the existing action compiler and output contract for the fast path.
+    correction = await llm.ainvoke([SystemMessage(CORRECTION_SYSTEM), HumanMessage(user_input)])
+    corrected = correction.content.strip()
+    result = await action_cypher_agent({"input": corrected, "context": context})
+    return {
+            "input": corrected, 
+            "original_input": user_input, 
+            "corrected_input": corrected,
+            "actions": result.get("action_queue", []), 
+            "queries": result.get("code_list", []),
+            "stats": result.get("stats", []), 
+            "clarify": "", 
+            "timings": result.get("timings", {})
+            }
+
+# Execute Directly, if there was no plan needed
+jev = JevService(jev_json, execute_direct, max_steps=int(os.getenv("JEV_MAX_STEPS", "8")))
+app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
+
+
 @app.route("/classify", methods=["POST"])
 def classify():
+    """
+        Classifies the request
+
+        Throws error if:
+            - Unable to get request JSON
+            - Request is unsupported
+            - Jev was unavailable somehow
+    """
     try:
-        data       = request.get_json(force=True)
-        user_input = data.get("userText", "")
-        state = {
-            "input":          user_input,
-            "original_input": user_input,
-            "code_list":      [],
-            "action_queue":   [],
-            "stats":          [],
-            "timings":        {},
-            "clarify":        "",
-            "judgment":       "",
-        }
+        data = request.get_json(force=True)
+        if not isinstance(data, dict):
+            raise ValueError("Expected a command object.")
+        return jsonify(asyncio.run(jev.classify(data)))
+    except (ValueError, TypeError, KeyError) as error:
+        return jsonify({"route": "unsupported", "message": f"Command could not be validated: {error}",
+                        "actions": [], "queries": [], "stats": [], "clarify": ""}), 422
+    except Exception as error:
+        print_colored(f"Jev failed: {error}", "red")
+        return jsonify({"error": "Jev is unavailable. Please retry; no command was executed."}), 503
 
-        result = asyncio.run(langgraph_app.ainvoke(state))
 
-        print_colored(f"{result}", "green")
+@app.route("/summarize", methods=["POST"])
+def summarize():
+    """
+        Summarize request JSON, make a summary of output
 
-        return jsonify({
-            "input":           result.get("input", ""),
-            "original_input":  result.get("original_input", ""),
-            "corrected_input": result.get("input", ""),
-            "queries":         result.get("code_list", []),
-            "actions":         result.get("action_queue", []),
-            "stats":           result.get("stats", []),
-            "clarify":         result.get("clarify", ""),
-            "timings":         result.get("timings", {}),
-        })
-
-    except Exception as e:
-        print_colored(f"SERVER ERROR: {e}", "red")
-        return jsonify({"error": str(e)}), 500
+        Throws Error if:
+            - No output
+            - Jev is unavailable
+    """
+    try:
+        data = request.get_json(force=True)
+        if not isinstance(data, dict):
+            raise ValueError("Expected execution results.")
+        return jsonify(asyncio.run(jev.summarize(data)))
+    except Exception as error:
+        print_colored(f"Jev summary unavailable: {error}", "red")
+        return jsonify({"error": "Explanation unavailable; calculated results remain valid."}), 503
 
 
 @app.route("/ping", methods=["GET"])

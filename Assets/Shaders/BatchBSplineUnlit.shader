@@ -28,6 +28,7 @@ Shader "Custom/Batch BSpline Unlit"
             #include "BSplineData.cginc"
 
             float _LineWidth; // Used to adjust the line thickness
+            float3 _TranslationOffset;
 
             struct appdata
             {
@@ -76,13 +77,13 @@ Shader "Custom/Batch BSpline Unlit"
                 SplineSampleIdx += idxOffset;
 
                 // Calculate the normal and from that the offset for the current line segment
-                float3 curr = OutSamplePointData[SplineSampleIdx].Position;
-                float3 next = OutSamplePointData[SplineSampleIdx + 1].Position;
+                float3 curr = OutSamplePointData[SplineSampleIdx].Position + _TranslationOffset;
+                float3 next = OutSamplePointData[SplineSampleIdx + 1].Position + _TranslationOffset;
                 float3 prev;
 
                 if (SplineSampleIdx != 0)
                 {
-                    prev = OutSamplePointData[SplineSampleIdx - 1].Position;
+                    prev = OutSamplePointData[SplineSampleIdx - 1].Position + _TranslationOffset;
                 }
                 else
                 {
@@ -98,7 +99,7 @@ Shader "Custom/Batch BSpline Unlit"
                 float3 offset = normalize(mul(UNITY_MATRIX_MV, normal)) * (width / 2);
 
                 // Transform the point to ViewSpace and add the offset
-                curr = UnityObjectToViewPos(OutSamplePointData[SplineSampleIdx].Position);
+                curr = UnityObjectToViewPos(curr);
                 if (vid % 6 == 1 || vid % 6 == 2 || vid % 6 == 5) { // Checks if the vertex that vid indicates lies on the bottom or top of the line
                     curr -= offset;
                     } else {

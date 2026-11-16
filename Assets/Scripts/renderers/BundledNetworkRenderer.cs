@@ -76,9 +76,41 @@ namespace VidiGraph
         bool _renderRequested;
         bool _initializing;
         bool _readyToDraw;
+        bool _translatingWholeGraph;
+        Vector3 _translationOrigin;
+
+        public override bool CanTranslateWholeGraph => IsReadyForAnimation && !AppearanceDeferred;
+
+        public override void BeginWholeGraphTranslation()
+        {
+            // Finish any partially applied render pass before freezing its geometry.
+            UpdateAnimationFrame();
+            _translationOrigin = transform.position;
+            _translatingWholeGraph = true;
+        }
+
+        public override void PreviewWholeGraphTranslation(Vector3 offset)
+        {
+            if (!_translatingWholeGraph) return;
+            transform.position = _translationOrigin + offset;
+            _shaderWrapper.TranslationOffset = offset;
+        }
+
+        public override void EndWholeGraphTranslation()
+        {
+            if (!_translatingWholeGraph) return;
+            transform.position = _translationOrigin;
+            _shaderWrapper.TranslationOffset = Vector3.zero;
+            _translatingWholeGraph = false;
+            // Commit all visuals together, avoiding a frame with old edges/new nodes.
+            UpdateAnimationFrame();
+        }
 
         void Reset()
         {   
+            if (_translatingWholeGraph) transform.position = _translationOrigin;
+            _translatingWholeGraph = false;
+            _shaderWrapper.TranslationOffset = Vector3.zero;
             // Stop any ongoing render coroutine and reset state.
             if (_renderRoutine != null && _networkManager != null)
                 _networkManager.StopCoroutine(_renderRoutine);
@@ -223,6 +255,7 @@ namespace VidiGraph
 
         public override void UpdateRenderElements()
         {
+            if (_translatingWholeGraph) return;
             if (AppearanceDeferred) return;
             _renderRequested = true;
             if (!_initializing && _renderRoutine == null && isActiveAndEnabled)
@@ -242,6 +275,7 @@ namespace VidiGraph
 
         public override void UpdateAppearanceFrame(HashSet<int> nodes, HashSet<int> links, bool geometryChanged)
         {
+            if (_translatingWholeGraph) return;
             if (!IsReadyForAnimation) return;
             CompleteImmediately(UpdateNodesAcrossFrames(nodes));
             // Resizing moves the surface endpoints; color-only updates reuse the paths.
@@ -253,6 +287,7 @@ namespace VidiGraph
 
         public override void UpdateAnimationFrame()
         {
+            if (_translatingWholeGraph) return;
             // Never cancel the incremental creation of render objects.
             if (!IsReadyForAnimation) return;
             if (_renderRoutine != null) _networkManager.StopCoroutine(_renderRoutine);
@@ -716,48 +751,16 @@ namespace VidiGraph
 
                 if (DrawVirtualNodes || !globalNode.IsVirtualNode)
                 {
-                    if ((nodeID == _networkGlobal.HoveredNode?.ID)
-                        && !_networkContext.SelectedNodes.Contains(nodeID))
-                    {
-                        var hoverCol = _networkContext.ContextSettings.NodeHoverColor;
-                        NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], Color.Lerp(hoverCol, contextNode.Color, 0.5f), _nodeRenderers[nodeID]);
-                    }
+                    NodeHighlightHalo.Set(_nodeGameObjs[nodeID], _nodeRenderers[nodeID],
+                        nodeID == _networkGlobal.HoveredNode?.ID,
+                        _networkContext.SelectedNodes.Contains(nodeID),
+                        _networkContext.ContextSettings.NodeHoverColor,
+                        _networkContext.ContextSettings.NodeSelectColor, contextNode.Color);
 
                     if (NodeNeedsRenderUpdate(nodeID))
                     {
+                        // The highlight component applies a temporary tint after this base-color update.
                         NodeLinkRenderUtils.UpdateNode(_nodeGameObjs[nodeID], globalNode, contextNode, _nodeRenderers[nodeID]);
-
-                        bool hovered = nodeID == _networkGlobal.HoveredNode?.ID;
-                        bool selected = _networkContext.SelectedNodes.Contains(nodeID);
-
-                        var hoverCol = _networkContext.ContextSettings.NodeHoverColor;
-                        var selectCol = _networkContext.ContextSettings.NodeSelectColor;
-                        var defaultCol = _networkContext.ContextSettings.NodeDefaultColor;
-                        bool hasCustomColor = contextNode.Color != defaultCol;
-
-                        Color finalColor = contextNode.Color;
-
-                        if (hovered && selected)
-                        {
-                            // For custom-colored nodes, only apply hover — skip selection yellow blend
-                            if (hasCustomColor)
-                                finalColor = Color.Lerp(hoverCol, contextNode.Color, 0.5f);
-                            else
-                                finalColor = Color.Lerp(Color.Lerp(hoverCol, contextNode.Color, 0.5f), selectCol, 0.67f);
-                        }
-                        else if (hovered)
-                        {
-                            finalColor = Color.Lerp(hoverCol, contextNode.Color, 0.5f);
-                        }
-                        else if (selected)
-                        {
-                            // Only apply selection yellow tint for default-colored nodes
-                            if (!hasCustomColor)
-                                finalColor = Color.Lerp(selectCol, contextNode.Color, 0.5f);
-                        }
-
-                        NodeLinkRenderUtils.SetNodeColor(_nodeGameObjs[nodeID], finalColor, _nodeRenderers[nodeID]);
-
                         globalNode.Dirty = contextNode.Dirty = false;
                     }
                 }

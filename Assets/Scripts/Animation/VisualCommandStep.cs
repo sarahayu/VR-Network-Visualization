@@ -69,12 +69,13 @@ namespace VidiGraph
                 while (pair.Key != null && !pair.Key.IsVisualReady) yield return null;
 
             ShowMessage();
-            float elapsed = 0f;
-            while (elapsed < duration)
+            double startedAt = Time.realtimeSinceStartupAsDouble;
+            while (true)
             {
+                float elapsed = (float)(Time.realtimeSinceStartupAsDouble - startedAt);
+                if (elapsed >= duration) break;
                 Apply(elapsed);
                 yield return null;
-                elapsed += Time.deltaTime;
             }
             Apply(float.MaxValue);
         }
@@ -104,7 +105,7 @@ namespace VidiGraph
             {
                 if (from.Equals(to)) return;
                 changes.Transitions.Add(new VisualTransition<Color>(id, property, from, to,
-                    0.4f, Color.LerpUnclamped, apply));
+                    0.15f, Color.LerpUnclamped, apply));
                 Track(id, property);
             }
 

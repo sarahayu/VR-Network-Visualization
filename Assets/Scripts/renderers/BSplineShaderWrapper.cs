@@ -33,6 +33,8 @@ namespace VidiGraph
 
         ComputeShader _batchComputeShader;
         Material _splineMaterial;
+        bool _samplesDirty;
+        public Vector3 TranslationOffset { get; set; }
 
         MultiLayoutContext.Settings _contextSettings;
 
@@ -58,6 +60,7 @@ namespace VidiGraph
             _inSplineData.SetData(_splines);
             _inSplineControlPointData.SetData(_splineControlPoints);
             _inSplineSegmentData.SetData(_splineSegments);
+            _samplesDirty = true;
 
             _splineMaterial.SetFloat("_LineWidth", _contextSettings.LinkWidth);
             _splineMaterial.SetBuffer("OutSamplePointData", _outSampleControlPointData);
@@ -76,6 +79,7 @@ namespace VidiGraph
             _inSplineData.SetData(_splines);
             _inSplineControlPointData.SetData(_splineControlPoints);
             _inSplineSegmentData.SetData(_splineSegments);
+            _samplesDirty = true;
 
             _splineMaterial.SetFloat("_LineWidth", _contextSettings.LinkWidth);
         }
@@ -91,6 +95,7 @@ namespace VidiGraph
                     controlPoints[id], context.SelectedNodes, id, context, global);
             }
             _inSplineData.SetData(_splines);
+            _samplesDirty = true;
         }
 
         public void Draw()
@@ -101,15 +106,19 @@ namespace VidiGraph
 
             _splineMaterial.SetFloat("_LineWidth", _contextSettings.LinkWidth);
 
-            _batchComputeShader.SetBuffer(kernel, "InSplineData", _inSplineData);
-            _batchComputeShader.SetBuffer(kernel, "InSplineControlPointData", _inSplineControlPointData);
-            _batchComputeShader.SetBuffer(kernel, "InSplineSegmentData", _inSplineSegmentData);
-            _batchComputeShader.SetBuffer(kernel, "OutSamplePointData", _outSampleControlPointData);
-
-            _batchComputeShader.Dispatch(kernel, Math.Max(1, _splineSegments.Count / 32), 1, 1);
+            if (_samplesDirty)
+            {
+                _batchComputeShader.SetBuffer(kernel, "InSplineData", _inSplineData);
+                _batchComputeShader.SetBuffer(kernel, "InSplineControlPointData", _inSplineControlPointData);
+                _batchComputeShader.SetBuffer(kernel, "InSplineSegmentData", _inSplineSegmentData);
+                _batchComputeShader.SetBuffer(kernel, "OutSamplePointData", _outSampleControlPointData);
+                _batchComputeShader.Dispatch(kernel, Math.Max(1, _splineSegments.Count / 32), 1, 1);
+                _samplesDirty = false;
+            }
+            _splineMaterial.SetVector("_TranslationOffset", TranslationOffset);
 
             // TODO don't render ghost links
-            Graphics.DrawProcedural(_splineMaterial, new Bounds(Vector3.zero, Vector3.one * 500),
+            Graphics.DrawProcedural(_splineMaterial, new Bounds(TranslationOffset, Vector3.one * 500),
                 MeshTopology.Triangles, _splineSegments.Count * BSplineSamplesPerSegment * 6);
         }
 

@@ -27,6 +27,11 @@ namespace VidiGraph
             => UpdateAnimationFrame();
         public abstract void Draw();
 
+        public virtual bool CanTranslateWholeGraph => false;
+        public virtual void BeginWholeGraphTranslation() { }
+        public virtual void PreviewWholeGraphTranslation(Vector3 offset) { }
+        public virtual void EndWholeGraphTranslation() { }
+
         public abstract Transform GetNodeTransform(int nodeID);
         public abstract Transform GetCommTransform(int commID);
         public abstract Transform GetNetworkTransform();

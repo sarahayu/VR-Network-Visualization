@@ -573,3 +573,88 @@ The `select by attribute` 17-second spike is gone. Worst-case is now under 4 s.
 3. Static system prompts use `SystemMessage` + `HumanMessage` split so OpenAI's prompt cache applies to the large rule sections after warm-up
 
 **Remaining opportunity**: moving Neo4j queries off the Unity main thread with `async/await` would eliminate frame hitches during command execution (~5–23 ms currently blocks rendering).
+
+## Jev changes
+
+This section documents the changes to the original pipeline described above. Where the earlier sections differ, the behavior documented here applies to the Jev pipeline.
+
+### Architecture and historical measurements
+
+The `/classify` endpoint now uses the Jev server, which routes requests to the direct compiler, clarification, or a bounded planner. The old LangGraph graph remains available as legacy code.
+
+The latency measurements and performance claims in the earlier sections predate Jev routing and planning. They are historical baselines, not latency promises for the new pipeline.
+
+**Shared execution:** `KeyboardCommandTester` now delegates to `StreamingSampleMic.ExecuteActionSteps`, including the cached attribute-query path and automatic command feedback. This supersedes the earlier note about the desktop tester using the old N-query pattern.
+
+### Automatic command feedback and sequential execution
+
+Voice, typed commands, and desktop demos use `StreamingSampleMic.ExecuteActionSteps` inside the existing visual scheduler. The legacy `actions`/`queries` arrays are adapted into a `CommandExecutionReport`, available as `LastExecutionReport` and logged as JSON. No additional model call is needed for automatic feedback.
+
+Each step has a command-local ID, preceding-step dependency, operation, parameter, query, status, and affected GUIDs. Supported selection/color operations also record matched counts, actual changes, graph scope, and denominator. Other operations currently return completion status without quantitative metrics. The legacy adapter executes sequentially alongside the typed planner described below. Neither path runs parallel agents.
+
+- Node selection reports the resulting selection as a fraction of the working graph, with newly selected and deselected counts in the receipt.
+- Node coloring (single color, attribute, GPA, or numeric value) counts distinct assigned nodes and compares their live colors before/after execution. Counts cover assignments actually performed, not missing-value guesses.
+- Link coloring distinguishes matches from actual color changes. A selected single-node scope also reports distinct neighbors and the fraction of all incident links of the same direction in the working graph. Self-loops count once as links and do not count as neighbors; parallel relationships count separately as links.
+- `n.selected = true` is resolved using current Unity selection, not Neo4j state. Incoming/outgoing relationships are respected. An explicit empty link query or empty node scope never falls back to all links.
+- A failed step stops the remaining steps. Successful earlier receipts are retained; failures warn that changes may be partial. There is no rollback or retry implementation in this milestone.
+
+`StatisticalReportDisplay` shows one combined command result, even when `stats` is empty. Explicitly requested statistics appear underneath. Versioning prevents older asynchronous reports from overwriting a newer command's display. The existing scene references are reused.
+
+#### Verification
+
+Run `dotnet run --project Tests/CommandFeedback/CommandFeedback.csproj` with .NET 9 or a compatible newer SDK. The standalone harness compiles the production receipt and display code against lightweight graph/UI fixtures; it covers counts, scope, direction, repeated coloring, empty queries, partial failure, and asynchronous display behavior. It does not replace Unity play-mode testing or a live Neo4j integration check.
+
+For a live smoke check, run a node selection and aggression-link coloring command through both voice and desktop input. Repeat the color, try an isolated node, try incoming/outgoing links, and include a requested statistic. Confirm the report matches the graph and that unrelated links remain untouched after an empty query.
+
+### Jev routing and bounded planning
+
+`/classify` now accepts `userText`, `conversationId`, optional `clarificationId`, and an interaction `context`. Unity captures the dataset/session identity, scope node/link IDs, selected node IDs, available attributes and numeric attributes, relationship types, and supported direct operations. Large scope ID arrays remain execution data; Jev receives counts plus the selection and schema.
+
+The response route is `direct`, `clarify`, `plan`, or `unsupported`:
+
+- `direct` retains the legacy `actions`, `queries`, and `stats` response. The existing compiler and ASR correction remain in use.
+- `clarify` returns the actual question and an opaque clarification ID. A reply continues the original request against its original snapshot. Pending state is isolated per conversation, bounded to 128 entries, and expires after 30 minutes. Say/type `cancel` to discard the pending request, or prefix an unrelated request with `new request:`. A changed graph requires a fresh request.
+- `plan` returns a plan ID, overview, and typed steps with descriptions, arguments, dependencies, and named outputs. Both Python and Unity validate the entire plan before mutations. Unknown operations, forward references, wrong set types, malformed arguments, and excessive step counts are rejected.
+- `unsupported` explains the missing capability and has no executable actions.
+
+Supported planner operations:
+
+| Operation | Input and result |
+|---|---|
+| `rank_nodes` | Rank a saved node set by incoming/outgoing/both relationship count; save top N |
+| `filter_numeric` | Filter a saved node set by `gt/gte/lt/lte/eq` on a numeric attribute |
+| `select_nodes` | Select an explicit saved node set |
+| `find_links` | Save links of a specified type/direction touching a saved node set |
+| `color_nodes`, `color_links` | Apply a validated hex color to a saved set |
+| `compare_numeric` | Compare a saved node set with its complement in the original scope |
+
+`scope` and `selection` are immutable starting sets. Each other input references a prior named output and declares a dependency on its producing step. No arbitrary generated Cypher or code is accepted in a plan. Relationship and numeric reads use existing database APIs and are cached within the plan. Ranking counts unique relationship IDs (parallel links remain separate); ties break by ascending application node ID, and zero-degree nodes remain eligible. Numeric comparisons report totals, valid/missing counts, means, and signed mean differences. Missing or non-finite values are excluded; empty groups produce `no data`, never zero. These are descriptive comparisons, not significance tests.
+
+Voice, the text field, desktop server commands, and the HTTP testing bridge share `SubmitCommand` and the same response handler. Supported plans execute internally without a plan preview or step-by-step narration; the user receives the final execution report. If the planner proposes a different supported analysis, its explanation and proposed outline are returned through the clarification route for acceptance before execution. The saved clarification token preserves the proposal and graph snapshot for the reply. Saved sets are not recomputed from live selection, so hand selection changes cannot redirect later steps. A graph/session change aborts the plan.
+
+Say or type `cancel` (also `stop`, `cancel plan`, or `stop analysis`) to stop at the next step boundary. The current step finishes and completed changes remain. Cancellation bypasses the normal command scheduler. Failure stops later steps, retains successful receipts, and does not roll back earlier effects.
+
+After execution, `/summarize` receives the actual receipts and numerical evidence. Jev chooses up to three verified result sentences to emphasize; it cannot author new numbers or claims. Failures/cancellations are always retained. The Unity report remains available if summarization times out or fails, and command IDs prevent stale explanations from being appended to another command's report.
+
+#### Configuration
+
+Existing API-key setup is unchanged. Optional variables (also in `example.env`):
+
+```
+JEV_FAST_MODEL=gpt-4o-mini
+JEV_PLANNER_MODEL=gpt-4o
+JEV_MAX_STEPS=8
+```
+
+Model names are configurable rather than an assertion about current model availability. Use chat models compatible with the existing JSON-mode integration. The server caps the limit at 12; the Unity `maxPlanSteps` Inspector setting also defaults to 8, and the lower limit wins. No new dependencies are required. Restart the Python server after updating the code/environment and allow Unity to recompile.
+
+#### Testing the new workflow
+
+Example: **“Select the five nodes with the most outgoing aggression links, color those links red, and compare their average GPA with the remaining nodes.”** The plan should rank, select, find links, color, and compare. The original snapshot defines both the ranked population and comparison remainder.
+
+Automated checks:
+
+- `python -m unittest discover -s Tests -p 'test_jev*.py' -v`: routing, clarification, invalid plans, and evidence-constrained summaries. Flask contract checks require the project's server environment; all model calls are mocked and no API key is read from `.env`.
+- `dotnet run --project Tests/CommandFeedback/CommandFeedback.csproj`: production plan validator, executor, statistics, and display logic compiled against lightweight graph/UI/database fixtures. Covers saved-set stability, ties, missing values, empty sets, cancellation, late failures, repeated coloring, and graph changes.
+
+These tests do not validate live model routing quality or headset interaction. In Unity Play mode with Neo4j and the restarted server, run the example by typing and voice, change selection during the plan, cancel between steps, and inspect the report. Parallel agents, significance tests, automatic retries, rollback, and open-ended replanning remain outside this milestone.

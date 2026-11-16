@@ -70,6 +70,28 @@ namespace VidiGraph
                 ? net.Context.ContextSettings.LinkDefaultColor
                 : Color.gray;
 
+        // Read the live appearance, including working-subgraph overrides, for command receipts.
+        public bool TryGetCommandNodeColor(string guid, out Color color)
+        {
+            color = default;
+            if (!NodeGUIDToID.TryGetValue(guid, out var id) ||
+                !_allNetworks.TryGetValue(id.Item1, out var network) ||
+                !network.Context.Nodes.TryGetValue(id.Item2, out var node)) return false;
+            color = node.Color;
+            return true;
+        }
+
+        public bool TryGetCommandLinkColors(string guid, out Color start, out Color end)
+        {
+            start = end = default;
+            if (!LinkGUIDToID.TryGetValue(guid, out var id) ||
+                !_allNetworks.TryGetValue(id.Item1, out var network) ||
+                !network.Context.Links.TryGetValue(id.Item2, out var link)) return false;
+            start = link.ColorStart;
+            end = link.ColorEnd;
+            return true;
+        }
+
         Coroutine _transformMoverCR;
 
         int _curWorkingSubgraph = -1;
@@ -84,6 +106,11 @@ namespace VidiGraph
                     .ToHashSet();
             }
         }
+
+        // Hidden sessions retain selections, but must not block interaction with visible graphs.
+        public HashSet<string> HandSelectedNodeGUIDs => _allNetworks.Values
+            .Where(network => network != null && network.isActiveAndEnabled)
+            .SelectMany(network => network.SelectedNodeGUIDs).ToHashSet();
 
         public HashSet<string> SelectedLinkGUIDs
         {
@@ -2160,7 +2187,7 @@ namespace VidiGraph
             }).SelectMany(i => i);
         }
 
-        IEnumerable<string> GetMoveableNodes(IEnumerable<string> nodeGUIDs)
+        public IEnumerable<string> GetMoveableNodes(IEnumerable<string> nodeGUIDs)
         {
             List<string> moveableNodeGUIDs = new();
 
@@ -2177,6 +2204,67 @@ namespace VidiGraph
             }
 
             return moveableNodeGUIDs;
+        }
+
+        // Batch hand movement through the graph context, rather than leaving transforms
+        // and stored positions out of sync on the final frame of a gesture.
+        readonly List<NodeLinkNetwork> _handTranslatedNetworks = new List<NodeLinkNetwork>();
+        Vector3 _handTranslationOffset;
+
+        public bool BeginHandGraphTranslation()
+        {
+            if (_handTranslatedNetworks.Count > 0 || _allNetworks.Count == 0) return false;
+            var visibleNetworks = _allNetworks.Values
+                .Where(network => network != null && network.isActiveAndEnabled).ToList();
+            if (visibleNetworks.Count == 0) return false;
+            foreach (var network in visibleNetworks)
+                if (!network.CanTranslateWholeGraph) return false;
+            _handTranslationOffset = Vector3.zero;
+            foreach (var network in visibleNetworks)
+            {
+                network.BeginWholeGraphTranslation();
+                _handTranslatedNetworks.Add(network);
+            }
+            return true;
+        }
+
+        public void PreviewHandGraphTranslation(Vector3 offset)
+        {
+            _handTranslationOffset = offset;
+            foreach (var network in _handTranslatedNetworks)
+                if (network != null) network.PreviewWholeGraphTranslation(offset);
+        }
+
+        public void FinishHandGraphTranslation()
+        {
+            if (_handTranslatedNetworks.Count == 0) return;
+            foreach (var network in _handTranslatedNetworks)
+                if (network != null) network.CommitWholeGraphTranslation(_handTranslationOffset);
+            _handTranslatedNetworks.Clear();
+            _handTranslationOffset = Vector3.zero;
+            UpdateHandheld();
+        }
+
+        public void ApplyHandNodePositions(Dictionary<string, Vector3> positions, bool commit, bool wholeGraph = false)
+        {
+            foreach (var network in _allNetworks.Values)
+            {
+                if (!commit)
+                {
+                    network.PreviewHandNodePositions(positions, wholeGraph);
+                    continue;
+                }
+                var ids = new List<int>();
+                var targets = new List<Vector3>();
+                foreach (var node in network.Context.Nodes)
+                    if ((wholeGraph || node.Value.Moveable) && positions.TryGetValue(node.Value.GUID, out var position))
+                    {
+                        ids.Add(node.Key);
+                        targets.Add(position);
+                    }
+                if (ids.Count > 0) network.SetNodesPosition(ids, targets, commit, true);
+            }
+            if (commit) UpdateHandheld();
         }
 
         IEnumerator CRNodesFollow(string toFollowGUID, IEnumerable<string> nodeGUIDs)

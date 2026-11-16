@@ -56,6 +56,27 @@ namespace VidiGraph
         public void SetAppearanceDeferred(bool deferred) => _renderer.SetAppearanceDeferred(deferred);
         public void RenderAppearance(HashSet<int> nodes, HashSet<int> links, bool geometryChanged)
             => _renderer.UpdateAppearanceFrame(nodes, links, geometryChanged);
+        public bool CanTranslateWholeGraph => _renderer != null && _renderer.CanTranslateWholeGraph && !IsVisualAnimating;
+        public void BeginWholeGraphTranslation() => _renderer.BeginWholeGraphTranslation();
+        public void PreviewWholeGraphTranslation(Vector3 offset) => _renderer.PreviewWholeGraphTranslation(offset);
+        public void CommitWholeGraphTranslation(Vector3 offset)
+        {
+            try
+            {
+                var ids = new List<int>(_context.Nodes.Count);
+                var positions = new List<Vector3>(_context.Nodes.Count);
+                foreach (var node in _context.Nodes)
+                {
+                    ids.Add(node.Key);
+                    positions.Add(node.Value.Position + offset);
+                }
+                SetNodesPosition(ids, positions, updateStorage: true, updateRenderElements: false);
+            }
+            finally
+            {
+                _renderer.EndWholeGraphTranslation();
+            }
+        }
         protected Coroutine _curMover = null;
 
 
@@ -111,7 +132,9 @@ namespace VidiGraph
         public void SetSelectedNodes(IEnumerable<int> nodeIDs, bool isSelected)
         {
             var validNodes = Context.Nodes.Keys.Intersect(nodeIDs);
-            var updateNodes = nodeIDs.Except(SelectedNodes);        // only update necessary nodes
+            var updateNodes = isSelected
+                ? validNodes.Except(SelectedNodes)
+                : validNodes.Intersect(SelectedNodes);
 
             if (validNodes.Count() != nodeIDs.Count())
             {
@@ -340,6 +363,38 @@ namespace VidiGraph
                 updateStorage: updateStorage, updateRenderElements: updateRenderElements);
         }
 
+
+        private float _nextHandPreviewRefresh;
+        private bool _handPreviewPending;
+        [Tooltip("Maximum surrounding-graph refresh rate during hand movement. Node transforms still follow every frame.")]
+        [Range(1f, 60f)] public float HandPreviewRefreshRate = 15f;
+
+        public void PreviewHandNodePositions(Dictionary<string, Vector3> positions, bool wholeGraph)
+        {
+            foreach (var entry in _context.Nodes)
+            {
+                var node = entry.Value;
+                if (_manager.NetworkGlobal.Nodes[entry.Key].IsVirtualNode) continue;
+                if ((!wholeGraph && !node.Moveable) || !positions.TryGetValue(node.GUID, out var position))
+                    continue;
+                if ((node.Position - position).sqrMagnitude < 0.00000001f) continue;
+                node.Position = position;
+                node.Dirty = true;
+                _context.Communities[node.CommunityID].Dirty = true;
+                var visual = GetNodeTransform(entry.Key);
+                if (visual != null) visual.position = position;
+                _handPreviewPending = true;
+            }
+            // Avoid the edit transformer, storage writes, and full render requests at headset rate.
+            // The normal commit path refreshes all derived data once the hand releases.
+            if (_handPreviewPending && Time.unscaledTime >= _nextHandPreviewRefresh)
+            {
+                _handPreviewPending = false;
+                _nextHandPreviewRefresh = Time.unscaledTime + 1f / Mathf.Max(1f, HandPreviewRefreshRate);
+                UpdateCommunityProps();
+                UpdateRenderElements();
+            }
+        }
 
         public void SetNodesPosition(IEnumerable<int> nodeIDs, Vector3 position, bool updateStorage, bool updateRenderElements)
         {

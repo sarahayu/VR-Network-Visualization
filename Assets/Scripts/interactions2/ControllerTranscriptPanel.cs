@@ -66,7 +66,7 @@ public class ControllerTranscriptPanel : MonoBehaviour
     [SerializeField] private XRInputButtonReader visibilityToggleButton = new XRInputButtonReader("VisibilityToggleButton");
     [SerializeField] private bool startVisible = false;
     [FormerlySerializedAs("fadeDuration")]
-    [SerializeField] private float popDuration = 0.25f;
+    [SerializeField] private float popDuration = 0.08f;
 
     private Vector3 previousReferencePosition;
     private bool hasPreviousReferencePosition;
@@ -78,6 +78,14 @@ public class ControllerTranscriptPanel : MonoBehaviour
     private Transform panelVisualTransform;
     private Vector3 panelVisualScale;
     private Coroutine visibilityRoutine;
+    private Whisper.Samples.StreamingSampleMic handVoice;
+    [Header("Hand Transcript")]
+    [Tooltip("Transcript height relative to the headset. Horizontal position and depth follow the hand.")]
+    [SerializeField] private float handTranscriptHeadHeightOffset = -0.2f;
+    private bool handPlacement;
+    private float handHideAt = float.PositiveInfinity;
+    private Vector3 parkedPosition;
+    private Quaternion parkedRotation;
 
     private void Awake()
     {
@@ -115,6 +123,40 @@ public class ControllerTranscriptPanel : MonoBehaviour
 
     private void Update()
     {
+        if (handVoice == null || !handVoice.isActiveAndEnabled)
+            handVoice = FindObjectOfType<Whisper.Samples.StreamingSampleMic>();
+        bool talking = handVoice != null && handVoice.isActiveAndEnabled && handVoice.IsFistTalking;
+        if (talking && !handPlacement)
+        {
+            parkedPosition = transform.position;
+            parkedRotation = transform.rotation;
+            handPlacement = true;
+            transform.position = GetHandTranscriptPosition();
+            panelVisible = true;
+            SetPanelVisible(true);
+        }
+        if (handPlacement)
+        {
+            if (talking)
+            {
+                handHideAt = float.PositiveInfinity;
+                if (!panelVisible) { panelVisible = true; SetPanelVisible(true); }
+            }
+            else if (float.IsPositiveInfinity(handHideAt)
+                && (handVoice == null || !handVoice.isActiveAndEnabled || !handVoice.IsVoiceFinishing))
+                handHideAt = Time.unscaledTime + 3f;
+            if (Time.unscaledTime >= handHideAt && panelVisible)
+            {
+                panelVisible = false;
+                SetPanelVisible(false);
+            }
+            if (!panelVisible && visibilityRoutine == null)
+            {
+                handPlacement = false;
+                transform.SetPositionAndRotation(parkedPosition, parkedRotation);
+            }
+            return;
+        }
         if (visibilityToggleButton != null && visibilityToggleButton.ReadWasPerformedThisFrame())
         {
             panelVisible = !panelVisible;
@@ -168,7 +210,7 @@ public class ControllerTranscriptPanel : MonoBehaviour
             float smooth = Mathf.SmoothStep(0f, 1f, t);
             panelCanvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, smooth);
             panelVisualTransform.localScale = Vector3.Lerp(startScale, targetScale, smooth);
-            elapsed += Time.deltaTime;
+            elapsed += Time.unscaledDeltaTime;
             yield return null;
         }
 
@@ -234,6 +276,24 @@ public class ControllerTranscriptPanel : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (handPlacement)
+        {
+            if (cameraTransform == null && Camera.main != null) cameraTransform = Camera.main.transform;
+            if (handVoice != null && handVoice.IsFistTalking)
+            {
+                Vector3 target = GetHandTranscriptPosition();
+                float blend = 1f - Mathf.Exp(-positionSmooth * Time.unscaledDeltaTime);
+                transform.position = Vector3.Lerp(transform.position, target, blend);
+            }
+            if (cameraTransform != null)
+            {
+                Vector3 facing = transform.position - cameraTransform.position;
+                facing.y = 0f;
+                if (facing.sqrMagnitude > 0.0001f)
+                    transform.rotation = Quaternion.LookRotation(facing, Vector3.up) * Quaternion.Euler(rotationOffsetEuler);
+            }
+            return;
+        }
         // Parked mode: leave the panel at its authored transform. Everything below
         // (spherical placement, lag, collision, facing) only runs when the panel is
         // meant to follow the camera.
@@ -276,6 +336,16 @@ public class ControllerTranscriptPanel : MonoBehaviour
 
         transform.position = Vector3.Lerp(transform.position, targetPosition, posT);
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotT);
+    }
+
+    private Vector3 GetHandTranscriptPosition()
+    {
+        if (cameraTransform == null && Camera.main != null)
+            cameraTransform = Camera.main.transform;
+        Vector3 target = handVoice.VoiceHandPosition;
+        if (cameraTransform != null)
+            target.y = cameraTransform.position.y + handTranscriptHeadHeightOffset;
+        return target;
     }
 
     private void ApplyRightJoystickRadiusControl()
