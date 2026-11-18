@@ -1,6 +1,6 @@
 // Coordinates right-hand node movement: aimed swipes, pinch/pull, near-hand grabs,
 // and selected-node palm contact. Gesture thresholds and smoothing are Inspector
-// settings. Shares state with the pointing, box-selection, and voice components
+// settings. Shares state with the touch, box-selection, and voice components
 // to arbitrate interaction; releases temporary contact/visual state on cleanup.
 
 using System.Collections.Generic;
@@ -34,8 +34,6 @@ namespace VidiGraph
         Vector3 grabOffset;
         public string PullTarget { get; private set; }
         public bool IsPulling => PullTarget != null;
-        public string GestureTarget => PullTarget ?? aimedNode;
-        public Vector3 GestureOrigin => palmCollider != null ? palmCollider.transform.position : transform.position;
         string aimedNode;
         bool pinched, pinchNeedsRelease;
         bool swipeAvailable = true;
@@ -43,7 +41,6 @@ namespace VidiGraph
         [SerializeField] bool movingWholeGraph;
         public bool IsMoving => moving;
         HandNodeInteractor interactor;
-        HandGestureInput input;
         TwoHandBoxSelector box;
         StreamingSampleMic voice;
         NetworkManager moveManager;
@@ -60,7 +57,6 @@ namespace VidiGraph
         void Start()
         {
             interactor = GetComponent<HandNodeInteractor>();
-            input = GetComponent<HandGestureInput>();
             box = GetComponent<TwoHandBoxSelector>();
             voice = FindObjectOfType<StreamingSampleMic>();
             var contactObject = new GameObject("Right palm contact");
@@ -73,11 +69,10 @@ namespace VidiGraph
         // Arbitrate movement gestures from tracking, selection, and competing interaction state.
         void Update()
         {
-            if (!Application.isFocused || interactor == null || !interactor.isActiveAndEnabled || input == null
-                || !input.isActiveAndEnabled || input.TrackingSpace == null || interactor.NetworkManager == null)
+            if (!Application.isFocused || interactor == null || !interactor.isActiveAndEnabled || interactor.TrackingSpace == null || interactor.NetworkManager == null)
             { Cancel(); return; }
             var manager = interactor.NetworkManager;
-            if ((box != null && box.IsSelecting) || manager.IsLayoutAnimating || manager.HasActiveVisualAnimation
+            if (interactor.IsTouchingNode || (box != null && box.IsSelecting) || manager.IsLayoutAnimating || manager.HasActiveVisualAnimation
                 || manager.DraggedNodeGUID != null || (voice != null && voice.IsVoiceListening))
             { Cancel(); return; }
             var currentSelection = manager.HandSelectedNodeGUIDs;
@@ -103,9 +98,9 @@ namespace VidiGraph
             float dt = Time.unscaledDeltaTime;
             // Discard tracking discontinuities rather than interpreting them as a swipe.
             if (dt <= 0 || dt > 0.1f) { Cancel(); return; }
-            Vector3 position = input.TrackingSpace.TransformPoint(palm.position);
+            Vector3 position = interactor.TrackingSpace.TransformPoint(palm.position);
             Vector3 displacement = hasPalmSample
-                ? input.TrackingSpace.TransformVector(palm.position - previousPalm) : Vector3.zero;
+                ? interactor.TrackingSpace.TransformVector(palm.position - previousPalm) : Vector3.zero;
             Vector3 palmVelocity = displacement / dt;
             previousPalm = palm.position;
             hasPalmSample = true;
@@ -143,7 +138,7 @@ namespace VidiGraph
         bool UpdateDirectGrab(NetworkManager manager, HashSet<string> currentSelection,
             XRHand hand, Pose palm, bool open)
         {
-            Vector3 position = input.TrackingSpace.TransformPoint(palm.position);
+            Vector3 position = interactor.TrackingSpace.TransformPoint(palm.position);
             palmCollider.transform.position = position;
             if (open) grabNeedsOpen = false;
             float middle, ring, little;
@@ -216,7 +211,7 @@ namespace VidiGraph
                 velocity = Vector3.ClampMagnitude(filteredVelocity * PullGain, MaximumSpeed);
                 return;
             }
-            // Acquire directly on pinch onset, without depending on the pointing interactor's hover.
+            // Acquire directly on pinch onset, without depending on the touch interactor.
             if (!pinched || wasPinched || pinchNeedsRelease || aimedNode == null) return;
             if (currentSelection.Count == 1 && !currentSelection.Contains(aimedNode)) return;
             var target = manager.GetMLNodeTransform(aimedNode);
@@ -246,7 +241,7 @@ namespace VidiGraph
             // Head-to-hand aim remains stable when fingers open or curl into a pinch.
             var camera = Camera.main;
             Vector3 direction = camera != null ? palmPosition - camera.transform.position
-                : input.AimValid ? input.AimRay.direction : Vector3.zero;
+                : Vector3.zero;
             if (direction.sqrMagnitude < 0.0001f) return null;
             direction.Normalize();
             string best = null;

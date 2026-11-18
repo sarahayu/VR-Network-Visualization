@@ -1,7 +1,7 @@
 // Previews a world-aligned node-selection box between two tracked pinch midpoints.
 // Pinch activation/release thresholds and minimum thickness are configurable.
 // Owns temporary box edges, count text, and node previews; coordinates with the
-// node interactor so pointing and box selection do not compete.
+// node interactor so touch and box selection do not compete.
 
 using System.Collections.Generic;
 using UnityEngine;
@@ -23,7 +23,6 @@ namespace VidiGraph
         public int PreviewCount => previewCount;
 
         HandNodeInteractor interactor;
-        HandGestureInput input;
         readonly List<XRHandSubsystem> subsystems = new List<XRHandSubsystem>();
         readonly HashSet<string> candidates = new HashSet<string>();
         readonly Dictionary<string, NodeHighlightHalo> previews = new Dictionary<string, NodeHighlightHalo>();
@@ -39,7 +38,6 @@ namespace VidiGraph
         void Start()
         {
             interactor = GetComponent<HandNodeInteractor>();
-            input = GetComponent<HandGestureInput>();
             visuals = new GameObject("Pinch selection box");
             var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
             if (shader == null) shader = Shader.Find("Sprites/Default");
@@ -71,8 +69,7 @@ namespace VidiGraph
         // Track both pinch midpoints, update the preview box, and commit the enclosed set on release.
         void Update()
         {
-            if (input == null || !input.isActiveAndEnabled || input.TrackingSpace == null
-                || interactor == null || !interactor.isActiveAndEnabled || interactor.NetworkManager == null)
+            if (interactor == null || interactor.TrackingSpace == null || !interactor.isActiveAndEnabled || interactor.NetworkManager == null)
             { Cancel(); return; }
             SubsystemManager.GetSubsystems(subsystems);
             XRHandSubsystem subsystem = null;
@@ -105,7 +102,7 @@ namespace VidiGraph
                 Cancel();
                 return;
             }
-            Vector3 a = input.TrackingSpace.TransformPoint(left), b = input.TrackingSpace.TransformPoint(right);
+            Vector3 a = interactor.TrackingSpace.TransformPoint(left), b = interactor.TrackingSpace.TransformPoint(right);
             Vector3 size = b - a;
             size = new Vector3(Mathf.Max(Mathf.Abs(size.x), MinimumThickness),
                 Mathf.Max(Mathf.Abs(size.y), MinimumThickness), Mathf.Max(Mathf.Abs(size.z), MinimumThickness));

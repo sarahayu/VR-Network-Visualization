@@ -1,4 +1,4 @@
-// Creates and updates temporary node highlight/preview visuals and progress arcs.
+// Creates and updates temporary node highlight/preview visuals.
 // Keeps interaction feedback separate from the stored node appearance, so preview
 // cleanup does not need to restore graph colors.
 
@@ -63,17 +63,5 @@ namespace VidiGraph
         void LateUpdate() { Apply(); }
         void OnDisable() { if (nodeRenderer != null) GameObjectUtils.SetColor(nodeRenderer, baseColor); }
 
-        // Used only by the optional dwell-progress indicator, not by node selection.
-        public static void DrawArc(LineRenderer line, Vector3 center, Vector3 right, Vector3 up, float radius, float progress)
-        {
-            int segments = Mathf.Max(1, Mathf.CeilToInt(64 * progress));
-            line.loop = false;
-            line.positionCount = segments + 1;
-            for (int i = 0; i <= segments; i++)
-            {
-                float angle = Mathf.PI * 2f * progress * i / segments;
-                line.SetPosition(i, center + radius * (Mathf.Sin(angle) * right + Mathf.Cos(angle) * up));
-            }
-        }
     }
 }

@@ -45,7 +45,7 @@ namespace Whisper.Samples
         [Min(0.05f)] public float fistHoldSeconds = 0.15f;
         [Tooltip("Maximum palm distance below eye level when arming voice, in metres.")]
         [Min(0)] public float fistMaxBelowEyes = 0.55f;
-        private HandGestureInput _handInput;
+        private HandNodeInteractor _handInteractor;
         private RightHandNodeMover _handMover;
         private TwoHandBoxSelector _handBox;
         private Camera _handCamera;
@@ -206,7 +206,7 @@ namespace Whisper.Samples
 
         private async void Start()
         {
-            _handInput = FindObjectOfType<HandGestureInput>();
+            _handInteractor = FindObjectOfType<HandNodeInteractor>();
             _handMover = FindObjectOfType<RightHandNodeMover>();
             _handBox = FindObjectOfType<TwoHandBoxSelector>();
             _handCamera = Camera.main;
@@ -416,7 +416,7 @@ namespace Whisper.Samples
                 & FingerBend(hand, XRHandJointID.LittleProximal, XRHandJointID.LittleIntermediate, XRHandJointID.LittleDistal, out little);
             if (!valid) { ResetFistVoice(); return; }
             if (_handCamera == null) _handCamera = Camera.main;
-            Transform trackingSpace = _handInput != null ? _handInput.TrackingSpace : null;
+            Transform trackingSpace = _handInteractor != null ? _handInteractor.TrackingSpace : null;
             if (trackingSpace == null || _handCamera == null
                 || !hand.GetJoint(XRHandJointID.Palm).TryGetPose(out var palm))
             { ResetFistVoice(); return; }

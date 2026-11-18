@@ -1,213 +1,116 @@
-// Resolves the right-hand aim ray into node hover and optional dwell selection.
-// Configure node and blocking layers to avoid selecting through opaque UI/world
-// colliders. Dwell selection is optional; two-hand box selection is the default
-// selection gesture. Movement is delegated to RightHandNodeMover.
-
+// Select nodes by touching their colliders with either index fingertip.
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.XR.Hands;
 
 namespace VidiGraph
 {
-    /// <summary>Point to hover and dwell to replace the node selection. No movement is performed.</summary>
-    [RequireComponent(typeof(HandGestureInput), typeof(LineRenderer))]
+    [DefaultExecutionOrder(-30)]
     public sealed class HandNodeInteractor : MonoBehaviour
     {
-        public HandGestureInput HandInput;
+        [Tooltip("Tracking-space parent of the headset camera (Camera Offset).")]
+        public Transform TrackingSpace;
         public NetworkManager NetworkManager;
         public LayerMask NodeLayers = 1 << 10;
-        [Tooltip("Opaque world/UI collider layers. Exclude hands, nodes, community and network shells.")]
+        [Tooltip("Opaque world/UI layers; exclude hands, nodes and network shells.")]
         public LayerMask BlockingLayers;
+        [Tooltip("Maximum range for movement gestures.")]
         [Min(0.01f)] public float MaxDistance = 10f;
-        [Min(0.0001f)] public float LineWidth = 0.003f;
-        public Color RayColor = Color.cyan;
-        public Color HoverColor = Color.yellow;
-        public Color SelectionColor = Color.green;
-        [Tooltip("Off by default: use the two-hand pinch box to select, pointing to hover.")]
-        public bool EnableDwellSelection;
+        [Tooltip("World-space fingertip contact radius in metres.")]
+        [Min(0.001f)] public float TouchRadius = 0.008f;
+        [Min(0)] public float ReleaseMargin = 0.005f;
+        public bool IsTouchingNode { get; private set; }
+
+        readonly List<XRHandSubsystem> subsystems = new List<XRHandSubsystem>();
+        readonly bool[] armed = new bool[2];
+        readonly bool[] hasPrevious = new bool[2];
+        readonly Vector3[] previous = new Vector3[2];
         TwoHandBoxSelector boxSelector;
         RightHandNodeMover mover;
-        [Min(0.01f)] public float DwellSeconds = 0.35f;
-        [SerializeField, Range(0, 1)] float dwellProgress;
-        [SerializeField] bool selectionLatched;
-        public float DwellProgress => dwellProgress;
-        [SerializeField] string hoveredNodeGuid;
-        public string HoveredNodeGuid => hoveredNodeGuid;
 
-        LineRenderer line;
-        LineRenderer progressRing;
-        Material ownedMaterial;
-        int hoveredNodeId;
-        float dwellElapsed;
-        string confirmedGuid;
-
-        void Reset()
-        {
-            HandInput = GetComponent<HandGestureInput>();
-            NodeLayers = LayerMask.GetMask("Node");
-        }
+        void Reset() { TrackingSpace = transform.parent; NodeLayers = LayerMask.GetMask("Node"); }
 
         void Awake()
         {
-            if (HandInput == null) HandInput = GetComponent<HandGestureInput>();
             boxSelector = GetComponent<TwoHandBoxSelector>();
             if (boxSelector == null) boxSelector = gameObject.AddComponent<TwoHandBoxSelector>();
-            if (GetComponent<RightHandNodeMover>() == null) gameObject.AddComponent<RightHandNodeMover>();
             mover = GetComponent<RightHandNodeMover>();
+            if (mover == null) mover = gameObject.AddComponent<RightHandNodeMover>();
             if (NetworkManager == null) NetworkManager = FindObjectOfType<NetworkManager>();
-            line = GetComponent<LineRenderer>();
-            line.useWorldSpace = true;
-            line.positionCount = 2;
-            line.enabled = false;
-            if (line.sharedMaterial == null)
-            {
-                var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-                if (shader == null) shader = Shader.Find("Sprites/Default");
-                if (shader != null) { ownedMaterial = new Material(shader); line.sharedMaterial = ownedMaterial; }
-            }
-            if (NetworkManager == null) Debug.LogError("HandNodeInteractor needs the scene's Network Manager.", this);
-            var progressObject = new GameObject("Dwell progress");
-            progressObject.transform.SetParent(transform, false);
-            progressRing = progressObject.AddComponent<LineRenderer>();
-            progressRing.useWorldSpace = true;
-            progressRing.sharedMaterial = line.sharedMaterial;
-            progressRing.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            progressRing.receiveShadows = false;
-            progressRing.enabled = false;
         }
 
-        // Resolve hover/dwell only when the ray is valid and competing box/movement gestures permit it.
         void Update()
         {
-            if (mover != null && mover.GestureTarget != null && NetworkManager != null)
-            {
-                var target = NetworkManager.GetMLNodeTransform(mover.GestureTarget);
-                if (hoveredNodeGuid != mover.GestureTarget)
-                {
-                    ClearHover();
-                    foreach (var entry in NetworkManager.NodeIDToGUID)
-                    {
-                        if (entry.Value != mover.GestureTarget) continue;
-                        NetworkManager.HoverNode(entry.Key.Item2, entry.Key.Item1);
-                        hoveredNodeGuid = entry.Value;
-                        hoveredNodeId = entry.Key.Item2;
-                        break;
-                    }
-                }
-                line.enabled = target != null && HandInput != null && HandInput.IsTracked;
-                progressRing.enabled = false;
-                if (line.enabled)
-                {
-                    line.startWidth = line.endWidth = LineWidth * 0.5f;
-                    line.startColor = line.endColor = mover.IsPulling ? SelectionColor : HoverColor;
-                    line.SetPosition(0, mover.GestureOrigin);
-                    line.SetPosition(1, target.position);
-                }
-                return;
-            }
-            // Losing aim or missing a node resets dwell, but does not re-arm a completed
-            // selection. The user must release the pointing pose while hand tracking is valid.
-            if (HandInput != null && HandInput.isActiveAndEnabled
-                && HandInput.IsTracked && !HandInput.IsPointing)
-            {
-                selectionLatched = false;
-                confirmedGuid = null;
-            }
-            if ((boxSelector != null && boxSelector.IsSelecting) || HandInput == null || !HandInput.isActiveAndEnabled || !HandInput.IsPointing
-                || !HandInput.AimValid || NetworkManager == null)
-            {
-                line.enabled = false;
-                ClearHover();
-                return;
-            }
-            Ray ray = HandInput.AimRay;
-            float distance = MaxDistance;
-            if (Physics.Raycast(ray, out var blocker, distance, BlockingLayers, QueryTriggerInteraction.Collide))
-                distance = blocker.distance;
+            if (!Application.isFocused || TrackingSpace == null || NetworkManager == null
+                || boxSelector.IsSelecting || (mover != null && mover.IsPulling)
+                || NetworkManager.IsLayoutAnimating || NetworkManager.HasActiveVisualAnimation
+                || NetworkManager.DraggedNodeGUID != null)
+            { Clear(); return; }
+            SubsystemManager.GetSubsystems(subsystems);
+            XRHandSubsystem running = null;
+            foreach (var candidate in subsystems)
+                if (candidate.running) { running = candidate; break; }
+            if (running == null) { Clear(); return; }
+            Physics.SyncTransforms();
+            IsTouchingNode = false;
+            Touch(running.leftHand, 0);
+            Touch(running.rightHand, 1);
+        }
 
-            string guid = null;
-            int nodeId = 0, networkId = 0;
-            if (Physics.Raycast(ray, out var hit, distance, NodeLayers, QueryTriggerInteraction.Collide))
+        void Touch(XRHand hand, int index)
+        {
+            if (!hand.isTracked || !hand.GetJoint(XRHandJointID.IndexTip).TryGetPose(out var tip)
+                || !hand.GetJoint(XRHandJointID.ThumbTip).TryGetPose(out var thumb))
+            { armed[index] = hasPrevious[index] = false; return; }
+            // Yield to pinches before the box selector's activation delay finishes.
+            if (Vector3.Distance(tip.position, thumb.position) <= boxSelector.PinchReleaseDistance)
+            { armed[index] = hasPrevious[index] = false; return; }
+            Vector3 position = TrackingSpace.TransformPoint(tip.position);
+            Vector3 start = hasPrevious[index] && Time.unscaledDeltaTime <= 0.1f
+                && Vector3.Distance(previous[index], position) < 0.15f ? previous[index] : position;
+            previous[index] = position;
+            hasPrevious[index] = true;
+            float radius = Mathf.Max(0.001f, TouchRadius);
+            var hits = Physics.OverlapCapsule(start, position,
+                radius + (armed[index] ? 0 : Mathf.Max(0, ReleaseMargin)),
+                NodeLayers, QueryTriggerInteraction.Collide);
+            string closest = null;
+            float bestDistance = float.PositiveInfinity;
+            foreach (var entry in NetworkManager.NodeIDToGUID)
             {
-                distance = hit.distance;
-                // Resolve against current graph identities: works with dynamically created subnetworks
-                // and does not depend on collider names or a modification to node prefabs.
-                foreach (var entry in NetworkManager.NodeIDToGUID)
+                var node = NetworkManager.GetMLNodeTransform(entry.Key.Item2, entry.Key.Item1);
+                if (node == null || !node.gameObject.activeInHierarchy) continue;
+                var visual = node.GetComponent<Renderer>();
+                if (visual == null || !visual.enabled || visual.forceRenderingOff) continue;
+                foreach (var hit in hits)
                 {
-                    Transform node = NetworkManager.GetMLNodeTransform(entry.Key.Item2, entry.Key.Item1);
-                    if (node != null && (hit.transform == node || hit.transform.IsChildOf(node)))
-                    {
-                        guid = entry.Value;
-                        networkId = entry.Key.Item1;
-                        nodeId = entry.Key.Item2;
-                        break;
-                    }
+                    if (hit.transform != node && !hit.transform.IsChildOf(node)) continue;
+                    Vector3 toSurface = hit.ClosestPoint(start) - start;
+                    float distance = toSurface.magnitude;
+                    if (distance >= bestDistance) continue;
+                    if (distance > 0.001f && Physics.Raycast(start, toSurface / distance, distance,
+                        BlockingLayers, QueryTriggerInteraction.Collide)) continue;
+                    closest = entry.Value;
+                    bestDistance = distance;
                 }
             }
+            if (closest == null) { armed[index] = true; return; }
+            IsTouchingNode = true;
+            // Require separation before another tap, including after tracking resumes.
+            if (!armed[index]) return;
+            armed[index] = false;
             var selected = NetworkManager.HandSelectedNodeGUIDs;
-            if (selected.Count > 1 || (selected.Count == 1 && !selected.Contains(guid))) guid = null;
-            if (guid != hoveredNodeGuid)
-            {
-                ClearHover();
-                if (guid != null)
-                {
-                    NetworkManager.HoverNode(nodeId, networkId);
-                    hoveredNodeGuid = guid;
-                    hoveredNodeId = nodeId;
-                }
-            }
-            if (EnableDwellSelection && guid != null && !selectionLatched)
-            {
-                dwellElapsed += Time.unscaledDeltaTime;
-                dwellProgress = Mathf.Clamp01(dwellElapsed / Mathf.Max(0.01f, DwellSeconds));
-                if (dwellProgress >= 1f)
-                {
-                    // Snapshot before mutating selection; preserve selections of other element types.
-                    var previousNodes = NetworkManager.HandSelectedNodeGUIDs;
-                    if (previousNodes.Count > 0) NetworkManager.SetSelectedNodes(previousNodes, false);
-                    NetworkManager.SetSelectedNodes(new[] { guid }, true);
-                    selectionLatched = true;
-                    confirmedGuid = guid;
-                }
-            }
-            line.enabled = true; // Show accepted pointing even when no node is hit.
-            line.startWidth = line.endWidth = LineWidth * 0.5f;
-            line.startColor = line.endColor = guid == null ? RayColor
-                : guid == confirmedGuid ? SelectionColor
-                : Color.Lerp(HoverColor, SelectionColor, dwellProgress);
-            line.SetPosition(0, ray.origin);
-            line.SetPosition(1, ray.GetPoint(distance));
-            var camera = Camera.main;
-            progressRing.enabled = camera != null && guid != null && !selectionLatched && dwellProgress > 0;
-            if (progressRing.enabled)
-            {
-                progressRing.startWidth = progressRing.endWidth = LineWidth;
-                progressRing.startColor = progressRing.endColor = HoverColor;
-                NodeHighlightHalo.DrawArc(progressRing, ray.GetPoint(Mathf.Max(0, distance - 0.005f)),
-                    camera.transform.right, camera.transform.up, Mathf.Max(0.008f, distance * 0.008f), dwellProgress);
-            }
+            if (selected.Count == 1 && selected.Contains(closest)) return;
+            if (selected.Count > 0) NetworkManager.SetSelectedNodes(selected, false);
+            NetworkManager.SetSelectedNodes(new[] { closest }, true);
         }
 
-        // Remove transient hover feedback and reset dwell state without changing stored node colors.
-        void ClearHover()
+        void Clear()
         {
-            dwellElapsed = dwellProgress = 0f;
-            if (progressRing != null) progressRing.enabled = false;
-            // Do not clear a hover subsequently acquired by a different input source.
-            if (hoveredNodeGuid != null && NetworkManager != null && NetworkManager.HoveredNode == hoveredNodeGuid)
-                NetworkManager.UnhoverNode(hoveredNodeId);
-            hoveredNodeGuid = null;
+            IsTouchingNode = false;
+            for (int i = 0; i < armed.Length; i++) armed[i] = hasPrevious[i] = false;
         }
-
-        void OnDisable()
-        {
-            ClearHover();
-            selectionLatched = false;
-            confirmedGuid = null;
-            if (line != null) line.enabled = false;
-        }
-        void OnDestroy()
-        {
-            if (progressRing != null) Destroy(progressRing.gameObject);
-            if (ownedMaterial != null) Destroy(ownedMaterial);
-        }
+        void OnDisable() { Clear(); }
+        void OnApplicationFocus(bool focused) { if (!focused) Clear(); }
     }
 }
